@@ -4513,13 +4513,12 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/app/layout.tsx:19 The only descriptive metadata in this context is the app's own HTML title and description, which the application renders itself (public-claim-provenance territory by the golden path's own seam), not the repository host's front page or About-box fields; searching src/app, src/hooks and src/stores for shields.io, img.shields, badge.svg, 'landing document' and 'front page' found nothing.",
-          "evaluatedAt": "2026-10-25",
-          "evaluatedAgainst": "sha256-b2:6f6a6c4541bc949b",
-          "evaluatedRevision": 4,
+          "evidence": "src/app/layout.tsx:19 The only descriptive text here is the app's own HTML metadata, which the application renders itself (the golden path sends that to public-claim-provenance), not the repository host's front page or About-box fields; searching src/app, src/stores and src/hooks for shields.io, README, img.shields, badge.svg and 'landing document' found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5,
           "source": "retained",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"
@@ -27619,7 +27618,11 @@
           "revision": 5,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/visual-gen/library/route.ts:14 This context is a set of Next.js API route handlers for the asset library and style DNA; none of its files is or composes a repository front page, and searching src/app for shields.io, README, img.shields, badge.svg and 'landing document' found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:21e7be3c68f38a9a",
+          "evaluatedRevision": 5
         },
         {
           "subject": "render-submission-economy",

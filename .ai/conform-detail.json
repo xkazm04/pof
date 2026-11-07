@@ -16786,30 +16786,37 @@
       "context": "visual-gen-library",
       "subject": "repository-landing-document",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T00:34:10.829Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
-        "state": "not-applicable",
-        "at": "2026-10-25T00:34:39.603677+00:00",
-        "reason": "reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:03:34.495Z",
+      "worker": "e7cc7822-91e1-496b-857b-f5e67632824a",
+      "techniques": [
+        {
+          "technique": "landing-document-as-router",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/library/route.ts:14 An API handler, not a landing document."
+        }
+      ]
     },
     "aece38a1-8119-45ea-a968-6441cb31ee70/repository-landing-document": {
       "context": "asset-forge",
       "subject": "repository-landing-document",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T00:34:10.829Z",
-      "techniques": [],
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:03:34.495Z",
+      "techniques": [
+        {
+          "technique": "evidence-linked-badges",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-forge/AssetForgeView.tsx:57 In-app UI badges are application-rendered claims (public-claim-provenance), not front-page badges."
+        }
+      ],
       "withdrawn": {
-        "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+        "worker": "e7cc7822-91e1-496b-857b-f5e67632824a",
         "state": "not-applicable",
-        "at": "2026-10-25T00:34:39.603677+00:00",
-        "reason": "reviewer (sonnet): The anchors are incidental header comments: providers.ts:2 is the doc-comment line 'Registry of 3D generation providers', the library route.ts:2 comment lists the GET endpoint, AssetForgeView.tsx:17 comments on the 2D forge tab, and style-dna-db.ts:2 describes Style DNA persistence. None of them sho"
+        "at": "2026-11-07T05:04:16.916741+00:00",
+        "reason": "reviewer (sonnet): The anchor AssetForgeView.tsx:57 is the closing `</div>` of the layout. The file never references CritiqueBadge (grep found no match), so the anchor does not show the claimed in-app badge."
       }
     },
     "9a11b0c7-a013-434b-8325-086ee4151f70/repository-landing-document": {
@@ -16832,10 +16839,25 @@
       "subject": "repository-landing-document",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T00:34:10.829Z",
-      "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
-      "techniques": []
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:03:34.495Z",
+      "worker": "e7cc7822-91e1-496b-857b-f5e67632824a",
+      "techniques": [
+        {
+          "technique": "landing-document-as-router",
+          "verdict": "not-applicable",
+          "evidence": "src/app/layout.tsx:19 App shell metadata, not a repository front page; the repo's README.md sits at the root, outside this context."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/app/layout.tsx:19 The only descriptive metadata in this context is the app's own HTML title and description, which the application renders itself (public-claim-provenance territory by the golden path's own seam), not the repository host's front page or About-box fields; searching src/app, src/hooks and src/stores for shields.io, img.shields, badge.svg, 'landing document' and 'front page' found nothing.",
+          "evaluatedAt": "2026-10-25T00:34:10.829Z",
+          "worker": "0a42d8f3-081c-4a95-9a51-03505dfc31da",
+          "reason": "replaced by e7cc7822-91e1-496b-857b-f5e67632824a"
+        }
+      ]
     },
     "3f0f619b-52a3-4238-b72a-8df88fd452fd/retrieval": {
       "context": "item-catalog-pipeline",

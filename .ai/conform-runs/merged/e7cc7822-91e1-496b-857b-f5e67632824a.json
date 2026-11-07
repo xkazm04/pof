@@ -1,0 +1,111 @@
+{
+  "schema": "conform-run/1",
+  "worker": "e7cc7822-91e1-496b-857b-f5e67632824a",
+  "subject": "repository-landing-document",
+  "evaluatedAt": "2026-11-07T05:03:34.495625+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "app-navigation",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/layout.tsx:19 The only descriptive text here is the app's own HTML metadata, which the application renders itself (the golden path sends that to public-claim-provenance), not the repository host's front page or About-box fields; searching src/app, src/stores and src/hooks for shields.io, README, img.shields, badge.svg and 'landing document' found nothing.",
+      "techniques": [
+        {
+          "technique": "landing-document-as-router",
+          "verdict": "not-applicable",
+          "evidence": "src/app/layout.tsx:19 App shell metadata, not a repository front page; the repo's README.md sits at the root, outside this context."
+        }
+      ],
+      "absenceTerms": [
+        "shields.io",
+        "README",
+        "img.shields",
+        "badge.svg"
+      ]
+    },
+    {
+      "context": "visual-gen-library",
+      "subject": "repository-landing-document",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/api/visual-gen/library/route.ts:14 This context is a set of Next.js API route handlers for the asset library and style DNA; none of its files is or composes a repository front page, and searching src/app for shields.io, README, img.shields, badge.svg and 'landing document' found nothing.",
+      "techniques": [
+        {
+          "technique": "landing-document-as-router",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/library/route.ts:14 An API handler, not a landing document."
+        }
+      ],
+      "absenceTerms": [
+        "shields.io",
+        "README",
+        "img.shields",
+        "badge.svg"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "repository-landing-document",
+      "context": "image-generation",
+      "reason": "absence contradicted: src/lib/visual-gen/skintokens-runner.ts:28 contains 'README' (2 hit(s) in the context's directories)"
+    },
+    {
+      "subject": "repository-landing-document",
+      "context": "visual-gen-style-asset-library",
+      "reason": "absence contradicted: src/lib/visual-gen/skintokens-runner.ts:28 contains 'README' (2 hit(s) in the context's directories)"
+    },
+    {
+      "subject": "repository-landing-document",
+      "context": "asset-forge",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor AssetForgeView.tsx:57 is the closing `</div>` of the layout. The file never references CritiqueBadge (grep found no match), so the anchor does not show the claimed in-app badge."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T05:03:34.495625+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [
+        "landing-document-as-router"
+      ],
+      "deviations": 0,
+      "context": "app-navigation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:03:34.495625+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [
+        "landing-document-as-router"
+      ],
+      "deviations": 0,
+      "context": "visual-gen-library",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:03:34.495625+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "repository-landing-document"
+      ],
+      "techniques": [
+        "evidence-linked-badges"
+      ],
+      "deviations": 0,
+      "context": "asset-forge",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
