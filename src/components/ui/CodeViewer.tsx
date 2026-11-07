@@ -79,9 +79,13 @@ export function CodeViewer({
     if (html !== null) return;
 
     let cancelled = false;
-    highlight(trimmed, lang).then((result) => {
-      if (!cancelled) setHighlighted({ code: trimmed, lang, html: result });
-    });
+    highlight(trimmed, lang).then(
+      (result) => {
+        if (!cancelled) setHighlighted({ code: trimmed, lang, html: result });
+      },
+      // The plain <pre> stays up; a failed grammar load is not an unhandled rejection.
+      () => {},
+    );
 
     return () => { cancelled = true; };
   }, [trimmed, lang, html]);
