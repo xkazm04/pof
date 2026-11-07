@@ -36,6 +36,7 @@ export function BestiaryFilters({
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
           <input
             type="text"
+            aria-label="Search archetypes"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search archetypes..."
@@ -43,25 +44,25 @@ export function BestiaryFilters({
           />
         </div>
 
-        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as 'all' | EnemyRole)}
+        <select aria-label="Filter by role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as 'all' | EnemyRole)}
           className="px-2 py-1.5 rounded-md border border-border/30 bg-surface-deep/60 text-xs font-mono text-text outline-none cursor-pointer">
           <option value="all">All roles</option>
           {ALL_ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
         </select>
 
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as 'all' | ArchetypeConfig['category'])}
+        <select aria-label="Filter by category" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value as 'all' | ArchetypeConfig['category'])}
           className="px-2 py-1.5 rounded-md border border-border/30 bg-surface-deep/60 text-xs font-mono text-text outline-none cursor-pointer">
           <option value="all">All categories</option>
           {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value as 'all' | ArchetypeConfig['tier'])}
+        <select aria-label="Filter by tier" value={tierFilter} onChange={(e) => setTierFilter(e.target.value as 'all' | ArchetypeConfig['tier'])}
           className="px-2 py-1.5 rounded-md border border-border/30 bg-surface-deep/60 text-xs font-mono text-text outline-none cursor-pointer">
           <option value="all">All tiers</option>
           {ALL_TIERS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
         </select>
 
-        <select value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}
+        <select aria-label="Filter by area" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}
           className="px-2 py-1.5 rounded-md border border-border/30 bg-surface-deep/60 text-xs font-mono text-text outline-none cursor-pointer">
           <option value="all">All areas</option>
           {ALL_AREAS.map(a => <option key={a} value={a}>{a}</option>)}
