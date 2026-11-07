@@ -21844,6 +21844,54 @@
           "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:90 the gate names concrete criteria the reviewer compares the face against before 3D spend"
         }
       ]
+    },
+    "3aa2c4eb-2fdb-4429-b2f1-611fa0626af5/docs-sync": {
+      "context": "coach-and-guidance",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:09:50.304Z",
+      "worker": "6ee6b209-d5c2-41e2-8ed5-2fdc7b269d3e",
+      "techniques": [
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "deviation",
+          "evidence": "docs/research/impact-map.md:56 Claim false at birth: stepEvidence and StepLibraryPicker are manifest rows (.claude/rules/catalog-pipeline.md:36-37), but coachProvenance and ProduceLogPanel never were. No check compares this claim with the manifest."
+        },
+        {
+          "technique": "source-doc-mapping",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/coachProvenance.ts:2 ui-shell.md's file table covers GlobalCoach, NextStepCoach, coachLadder, globalCoachModel, ProduceErrorBanner, DriftBanner and RefreshFromServer. coachProvenance.ts and RefreshCatalogFromServer.tsx appear in no docs/architecture or docs/catalog file, and no coverage check reports the gap."
+        },
+        {
+          "technique": "dated-corrections",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/coachProvenance.ts:10 The figure behind the correction is dated and carries its predicate (316/342 shape-only, from the 2026-07-07 gap audit), not a bare number."
+        }
+      ]
+    },
+    "80cab220-4eac-4a25-8873-f1c42c257174/docs-sync": {
+      "context": "core-engine-scan-telemetry",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:09:50.304Z",
+      "worker": "6ee6b209-d5c2-41e2-8ed5-2fdc7b269d3e",
+      "techniques": [
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "deviation",
+          "evidence": "docs/architecture/state-and-persistence.md:43 src/stores/moduleStore.ts:417 is `partialize: (state) => ({` and :428 holds the comment `restored from DB on mount via ScanTab's fetchAndMergeFindings`. Lines 222 and 228 hold unrelated code."
+        },
+        {
+          "technique": "source-doc-mapping",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/TelemetryEvolution/index.tsx:17 Half of this context, TelemetryEvolution, is named by no docs/architecture, docs/catalog or docs/README.md file; only harness scan reports mention it. No map makes the gap visible. ScanTab is covered (state-and-persistence.md:714-721, claims verified against useScanTab.ts:72-90)."
+        }
+      ],
+      "registryProposal": "Line-number references in prose (\"at line 222\") are a distinct high-rot coupling form; doc-rot-detection could name them as a cheap mechanical staleness signal (resolve the cited line, compare the quoted symbol)."
     }
   }
 }

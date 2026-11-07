@@ -10918,7 +10918,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "docs/research/impact-map.md:56 The doc claims that this context's coachProvenance and ProduceLogPanel are in the Shared Component Manifest. Neither name appears in any .claude/*.md, now or in history (git log -S found no commit adding either), so the claim was false when written and nothing caught it.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "mcp-tools",
@@ -12698,7 +12702,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "docs/architecture/state-and-persistence.md:43 The doc that explains how ScanTab's fetchAndMergeFindings rebuilds scanResults pins moduleStore's partialize to line 222 and the exclusion comment to line 228, but they now sit at lines 417 and 428. The stale line claims shipped with no check to catch them.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "agent-runtime-assembly",
