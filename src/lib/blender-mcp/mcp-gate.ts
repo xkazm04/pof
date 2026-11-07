@@ -83,9 +83,15 @@ export interface McpGate extends ForgeGateProjection {
  * from the file already on disk, which `fetchMeshForGrading` reports as cached.
  */
 const graded = new Map<string, McpGate>();
+/**
+ * Grades in progress, so two overlapping polls (the critique can outlast the poll
+ * interval) join ONE download + critique instead of each starting their own — the same
+ * rule `ledger.importOnce` applies to imports. Removed when the grade settles.
+ */
+const grading = new Map<string, Promise<McpGate>>();
 
 /** Test-only: forget every memoised verdict between cases. */
-export function __resetMcpGrades(): void { graded.clear(); }
+export function __resetMcpGrades(): void { graded.clear(); grading.clear(); }
 
 /**
  * The gate fields for one MCP job — grading the delivered mesh when it can be fetched.
@@ -102,6 +108,15 @@ export async function mcpGateForJob(job: McpJobRef, deps: McpGradeDeps = {}): Pr
   // left it. That is the structural gap the header names, and it is not fetchable.
   if (!job.resultUrl) return mcpGateProjection('completed');
 
+  const pending = grading.get(job.jobId);
+  if (pending) return pending;
+  const run = gradeDelivered(job.jobId, job.resultUrl, deps).finally(() => grading.delete(job.jobId));
+  grading.set(job.jobId, run);
+  return run;
+}
+
+async function gradeDelivered(jobId: string, resultUrl: string, deps: McpGradeDeps): Promise<McpGate> {
+  const job = { jobId, resultUrl };
   const fetchMesh = deps.fetchMesh ?? ((url: string, jobId: string) => fetchMeshForGrading(url, jobId));
   const critique = deps.critique ?? ((path: string) => critiqueMesh(path));
 
