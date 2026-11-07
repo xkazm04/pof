@@ -21330,13 +21330,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T02:41:24.505Z",
+      "evaluatedTs": "2026-11-07T02:49:09.482Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "aec4bfd1-9d47-4009-989b-ed4e7039835e",
+        "worker": "22b03be0-678c-4aae-9344-05e09ec3c027",
         "state": "not-applicable",
-        "at": "2026-11-07T02:42:27.794615+00:00",
-        "reason": "reviewer (sonnet): The anchor items.ts:80 sits in a step-data block (`engine: 'Hand-authored'` and UE field mappings). It does not show that the context has no tool protocol, so a grep miss is the only support, and the anchor is incidental."
+        "at": "2026-11-07T02:50:03.234556+00:00",
+        "reason": "reviewer (sonnet): The anchor characters.ts:89 is just the registerCatalogPipeline call and does not show that no tool contract exists. The claim that the only tool-name hits are TODO comments is also wrong: character-pipeline.ts:126 references pof_tripo.mjs, and the directory has a contracts/ subfolder (contracts.ts,"
       }
     }
   }
