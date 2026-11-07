@@ -275,3 +275,4 @@ KIND is one of:
 - [2026-11-06] [gtai] DELIVERED: d8 day run merged to rtai main 8e9eeb78 (gates green incl. reel 19/19 in top/tilt/tilt70/combo); night n8 (view, street, vehicles, city, hud) launched 20:25 on the subscription.
 - [2026-11-07] [gtai] DECISION: owner approved Rivet production (v01 + amber visor, all 17 equipped sheets except the plasma sword redraw) and kept Codex for images (Leonardo A/B closed); `top` stays rtai's default until Rivet's whole-figure frames land, then combo.
 - [2026-11-07] [gtai] DELIVERED: n8 (five lanes) merged and pushed to rtai main 3982af1a with gates green; day run d9 (rivet, seams) launched in kiro/gtai-d9; old worktrees and runner roots cleaned (+48 GB).
+- [2026-11-07] [gtai] DELIVERED: d9 (rivet, seams, perf, handheld) merged and pushed to rtai main da108c13 on owner verdicts; night n9 (rivet 1.65 m + planted walk, world: combo default + bikes 6 % + BC7, perf, handheld) launches 21:00 from kiro/gtai-n9.
