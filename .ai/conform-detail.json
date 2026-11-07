@@ -15317,14 +15317,14 @@
       "subject": "spatial-audio-scene-authoring",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T04:59:22.257Z",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:11:57.517Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "3b5082cf-e75a-42bd-9a43-fb8da3fa8937",
+        "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
         "state": "not-applicable",
-        "at": "2026-10-24T04:59:57.649209+00:00",
-        "reason": "reviewer (sonnet): The anchor MovementTab.tsx:10 is a bare `interface Props { moduleId }` line that does not show the audio precondition is absent; the claim rests only on a grep, so the anchor is incidental."
+        "at": "2026-11-07T05:12:41.743307+00:00",
+        "reason": "reviewer (sonnet): The anchor, MovementTab.tsx:10, is only the component's function signature. It doesn't show that audio is absent, and the dodge-cooldown claim in the evidence rests on files I didn't trace."
       }
     },
     "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/combat-pacing-and-dramatic-arc": {
@@ -22317,6 +22317,77 @@
           "evidence": "src/lib/visual-gen/contact-sheet.ts:2 The multi-cell composition here is for set coherence of still icons, not for row-correspondence between two views of one instant."
         }
       ]
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/spatial-audio-scene-authoring": {
+      "context": "catalog-pipelines",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:11:57.517Z",
+      "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
+      "techniques": [
+        {
+          "technique": "occlusion-to-volume-and-filter",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:518 Each occlusion level is a dB value only, with no paired cutoff in Hz. Obstruction and occlusion are kept separate (obstructionDb vs occlusionDb), and transitions crossfade over 400-800 ms, both of which are good. Per-emitter filtering is left to Wwise ('no manual curves needed'), but the authored preset table itself never carries a filter."
+        },
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:321 The curve is logarithmic and units are stated (cm), which is good. But the shared ATT preset uses a constant inner radius of 150 cm against a 2000 cm max, about 7.5%, not a fraction of the zone radius. It has no distance low-pass sweep, so distance attenuation is volume-only."
+        },
+        {
+          "technique": "reverb-parameter-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:521 The presets REV_ExteriorSmall and REV_SmallRuin are named but resolve to no decay/diffusion/density/wet/early/late table anywhere in src; a grep finds only these two references. A tail length is also typed inline beside the preset name, which creates a second authority for it. Outdoor is not modelled as dry, which is good."
+        },
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:310 Concurrency is one pool shared by all one-shot classes rather than a limit per class. Cooldowns exist as minimumRetriggerSec at line 434 (in seconds, not ms, but the unit is named). No class carries a priority band. Ducking of the ambient bed during combat is declared at line 706, but no choice between priority and ducking is recorded per class."
+        },
+        {
+          "technique": "two-d-vs-three-d-spatialization-choice",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:287 The zone bed is positionless, and a rationale is given at lines 290-292. Detail loops and one-shots are positioned 3D mono on the source actors. The silence-beat stinger is 2D with spatialisation: null."
+        }
+      ]
+    },
+    "27a34084-b33e-4538-8173-600d5162f922/spatial-audio-scene-authoring": {
+      "context": "catalog-gap-analysis",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:11:57.517Z",
+      "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
+      "techniques": []
+    },
+    "c7fb4de3-6779-431b-9860-639fef9f98ea/spatial-audio-scene-authoring": {
+      "context": "progression-rewards-internals",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:11:57.517Z",
+      "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
+      "techniques": []
+    },
+    "93d7df50-4139-4c17-be90-ded49dd49f69/spatial-audio-scene-authoring": {
+      "context": "inventory-catalog",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:11:57.517Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
+        "state": "not-applicable",
+        "at": "2026-11-07T05:12:41.826289+00:00",
+        "reason": "reviewer (sonnet): The anchor, CatalogGearTab.tsx:42, is an incidental line (the function declaration and ITEMS_PER_PAGE). It doesn't show a 2-D stash grid or that audio is absent, so the claim about the context's 'spatial' code is unconfirmed."
+      }
     }
   }
 }

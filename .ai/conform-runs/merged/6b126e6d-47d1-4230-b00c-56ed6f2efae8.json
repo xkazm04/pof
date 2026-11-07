@@ -1,0 +1,151 @@
+{
+  "schema": "conform-run/1",
+  "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
+  "subject": "spatial-audio-scene-authoring",
+  "evaluatedAt": "2026-11-07T05:11:57.517467+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "catalog-pipelines",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/catalog/pipelines/ambient.ts:518 The ambient pipeline's occlusion presets (OCL_Outdoor_Open / OCL_Indoor_Ruined) carry only decibel attenuation values with no low-pass cutoff in the same row, which is the 'occlusion as a volume fade' failure the standard names; the attenuation and reverb steps also show their own gaps.",
+      "techniques": [
+        {
+          "technique": "occlusion-to-volume-and-filter",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:518 Each occlusion level is a dB value only, with no paired cutoff in Hz. Obstruction and occlusion are kept separate (obstructionDb vs occlusionDb), and transitions crossfade over 400-800 ms, both of which are good. Per-emitter filtering is left to Wwise ('no manual curves needed'), but the authored preset table itself never carries a filter."
+        },
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:321 The curve is logarithmic and units are stated (cm), which is good. But the shared ATT preset uses a constant inner radius of 150 cm against a 2000 cm max, about 7.5%, not a fraction of the zone radius. It has no distance low-pass sweep, so distance attenuation is volume-only."
+        },
+        {
+          "technique": "reverb-parameter-tables",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:521 The presets REV_ExteriorSmall and REV_SmallRuin are named but resolve to no decay/diffusion/density/wet/early/late table anywhere in src; a grep finds only these two references. A tail length is also typed inline beside the preset name, which creates a second authority for it. Outdoor is not modelled as dry, which is good."
+        },
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:310 Concurrency is one pool shared by all one-shot classes rather than a limit per class. Cooldowns exist as minimumRetriggerSec at line 434 (in seconds, not ms, but the unit is named). No class carries a priority band. Ducking of the ambient bed during combat is declared at line 706, but no choice between priority and ducking is recorded per class."
+        },
+        {
+          "technique": "two-d-vs-three-d-spatialization-choice",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/ambient.ts:287 The zone bed is positionless, and a rationale is given at lines 290-292. Detail loops and one-shots are positioned 3D mono on the source actors. The silence-beat stinger is 2D with spatialisation: null."
+        }
+      ]
+    },
+    {
+      "context": "catalog-gap-analysis",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/lib/catalog/gap-analysis/plugins/audio.ts:4 The audio and ambient gap plugins only histogram catalog attributes (surface, license, biome) to measure coverage, and a grep of src/lib/catalog/gap-analysis for reverb, occlusion and attenuation finds nothing, so no spatial audio scene is placed or budgeted here.",
+      "techniques": [],
+      "absenceTerms": [
+        "reverb",
+        "occlusion",
+        "attenuation"
+      ]
+    },
+    {
+      "context": "progression-rewards-internals",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_progression/_internals/progression-data.ts:15 This context covers XP curves, rewards and progression generators. A grep of sub_progression for audio, reverb, occlusion and attenuation finds nothing, so no sound scene is authored here.",
+      "techniques": [],
+      "absenceTerms": [
+        "audio",
+        "reverb",
+        "occlusion",
+        "attenuation"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "spatial-audio-scene-authoring",
+      "context": "character-movement-playground",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor, MovementTab.tsx:10, is only the component's function signature. It doesn't show that audio is absent, and the dodge-cooldown claim in the evidence rests on files I didn't trace."
+    },
+    {
+      "subject": "spatial-audio-scene-authoring",
+      "context": "inventory-catalog",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor, CatalogGearTab.tsx:42, is an incidental line (the function declaration and ITEMS_PER_PAGE). It doesn't show a 2-D stash grid or that audio is absent, so the claim about the context's 'spatial' code is unconfirmed."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T05:11:57.517467+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [
+        "attenuation-falloff-and-distance-filtering",
+        "event-priority-concurrency-cooldown",
+        "occlusion-to-volume-and-filter",
+        "reverb-parameter-tables",
+        "two-d-vs-three-d-spatialization-choice"
+      ],
+      "deviations": 1,
+      "context": "catalog-pipelines",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:11:57.517467+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "catalog-gap-analysis",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:11:57.517467+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "character-movement-playground",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:11:57.517467+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "progression-rewards-internals",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:11:57.517467+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "spatial-audio-scene-authoring"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "inventory-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
