@@ -79,7 +79,7 @@ export function RadarComparison({ radarOverlays, onToggleOverlay, activeOverlays
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               aria-label="Filter radar overlay enemies"
               placeholder="Filter enemies..."
-              className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle outline-none focus:border-[var(--accent)]"
+              className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle focus-ring-inset"
             />
           </div>
 

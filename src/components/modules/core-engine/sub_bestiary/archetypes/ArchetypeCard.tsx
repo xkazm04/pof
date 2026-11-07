@@ -83,7 +83,7 @@ export function ArchetypeCard({
 
         <button
           onClick={() => onToggle(archetype.id)}
-          className="w-full text-left p-3 hover:bg-surface-hover/20 transition-colors relative z-10 focus:outline-none flex-1 flex flex-col cursor-pointer"
+          className="w-full text-left p-3 hover:bg-surface-hover/20 transition-colors relative z-10 focus-ring-inset flex-1 flex flex-col cursor-pointer"
         >
           {/* Header */}
           <div className="flex items-start justify-between mb-3">

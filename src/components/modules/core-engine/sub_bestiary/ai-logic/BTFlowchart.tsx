@@ -154,7 +154,7 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
           type="text" value={search} onChange={e => setSearch(e.target.value)}
           aria-label="Search behavior tree nodes"
           placeholder="Search BT nodes..."
-          className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle outline-none focus:border-[var(--accent)]"
+          className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle focus-ring-inset"
         />
         {search && (
           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted font-mono">
