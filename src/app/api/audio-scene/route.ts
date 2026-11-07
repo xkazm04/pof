@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   const docs = getAllAudioScenes();
-  const summary = getAudioSceneSummary();
+  const summary = getAudioSceneSummary(docs);
   return apiSuccess({ docs, summary });
 }
 

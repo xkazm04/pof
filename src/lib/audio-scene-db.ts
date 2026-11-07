@@ -126,8 +126,8 @@ export function deleteAudioScene(id: number): boolean {
 
 // ── Summary ──
 
-export function getAudioSceneSummary(): AudioSceneSummary {
-  const docs = getAllAudioScenes();
+/** Pass `docs` when the caller already read them, so the table is read and parsed once. */
+export function getAudioSceneSummary(docs: AudioSceneDocument[] = getAllAudioScenes()): AudioSceneSummary {
 
   const allZones = docs.flatMap((d) => d.zones);
   const allEmitters = docs.flatMap((d) => d.emitters);
