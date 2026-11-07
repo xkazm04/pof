@@ -9289,8 +9289,8 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "priorNotApplicable": 6,
+          "state": "unknown"
         },
         {
           "subject": "voice-io",
@@ -10623,8 +10623,12 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "state": "not-applicable",
+          "priorNotApplicable": 6,
+          "evidence": "src/lib/claude-terminal/mcp-config.ts:17 The shell renders the Claude CLI's stream-json events (tool_use/tool_result for built-in Edit/Write/Read). It never configures, lists or calls MCP servers; the --mcp-config opt-in lives only in autonomous routes. A case-insensitive search of src/components/cli for mcp, inputSchema, tools/call and jsonrpc found nothing. Its tool-event handling belongs to the agent-cli-transport subject, not this one.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:cb2b1c9f6fef5eb9",
+          "evaluatedRevision": 35
         },
         {
           "subject": "concurrent-vcs",
@@ -25670,8 +25674,12 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "state": "deviation",
+          "priorNotApplicable": 6,
+          "evidence": "src/app/api/ue5-bridge/build/route.ts:47 This route is the backend of the agent tool pof_ue_build (tools/pof-mcp/src/tools/ue.ts:276 posts here). It parses any POST body into a UBT spawn with no token and no origin check, and no middleware/proxy exists in the repo to add one. So the stdio tool server's capability is also served by an unauthenticated localhost HTTP door that any browser tab can drive with a text/plain simple request: the local-port trap.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:cb2b1c9f6fef5eb9",
+          "evaluatedRevision": 35
         },
         {
           "subject": "supply-chain",

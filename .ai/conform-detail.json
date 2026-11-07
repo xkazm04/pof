@@ -21287,6 +21287,57 @@
       "evaluatedTs": "2026-11-07T02:27:38.551Z",
       "worker": "23407e7e-64e7-40e8-b923-19df7a7f8d9c",
       "techniques": []
+    },
+    "a43ea6ff-3c0b-411c-8ace-f97992845e63/mcp-tools": {
+      "context": "ue5-bridge-client",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:41:24.505Z",
+      "worker": "aec4bfd1-9d47-4009-989b-ed4e7039835e",
+      "techniques": [
+        {
+          "technique": "transport-selection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/ue5-bridge/build/route.ts:47 The agent-tool backend sits on a local HTTP listener with no origin validation or token. The standard: a local listener must validate origin or require a token."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pof-bridge/status/route.ts:26 An unreachable bridge used to return apiSuccess({connected:false}). It now returns the failure envelope with a kind (unreachable/timeout/malformed), so a failed call can no longer read as a success."
+        },
+        {
+          "technique": "ambient-selection-is-not-an-argument",
+          "verdict": "conformant",
+          "evidence": "src/app/api/ue5-bridge/query/route.ts:90 Every editor action against the single-seat UE editor names an explicit object path. No argument refers to the current selection or the active level."
+        }
+      ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/mcp-tools": {
+      "context": "cli-terminal-shell",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:41:24.505Z",
+      "worker": "aec4bfd1-9d47-4009-989b-ed4e7039835e",
+      "techniques": []
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/mcp-tools": {
+      "context": "catalog-pipelines",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:41:24.505Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "aec4bfd1-9d47-4009-989b-ed4e7039835e",
+        "state": "not-applicable",
+        "at": "2026-11-07T02:42:27.794615+00:00",
+        "reason": "reviewer (sonnet): The anchor items.ts:80 sits in a step-data block (`engine: 'Hand-authored'` and UE field mappings). It does not show that the context has no tool protocol, so a grep miss is the only support, and the anchor is incidental."
+      }
     }
   }
 }

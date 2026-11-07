@@ -1,0 +1,128 @@
+{
+  "schema": "conform-run/1",
+  "worker": "aec4bfd1-9d47-4009-989b-ed4e7039835e",
+  "subject": "mcp-tools",
+  "evaluatedAt": "2026-11-07T02:41:24.505524+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "ue5-bridge-client",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/app/api/ue5-bridge/build/route.ts:47 This route is the backend of the agent tool pof_ue_build (tools/pof-mcp/src/tools/ue.ts:276 posts here). It parses any POST body into a UBT spawn with no token and no origin check, and no middleware/proxy exists in the repo to add one. So the stdio tool server's capability is also served by an unauthenticated localhost HTTP door that any browser tab can drive with a text/plain simple request: the local-port trap.",
+      "techniques": [
+        {
+          "technique": "transport-selection",
+          "verdict": "deviation",
+          "evidence": "src/app/api/ue5-bridge/build/route.ts:47 The agent-tool backend sits on a local HTTP listener with no origin validation or token. The standard: a local listener must validate origin or require a token."
+        },
+        {
+          "technique": "tool-schema-design",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pof-bridge/status/route.ts:26 An unreachable bridge used to return apiSuccess({connected:false}). It now returns the failure envelope with a kind (unreachable/timeout/malformed), so a failed call can no longer read as a success."
+        },
+        {
+          "technique": "ambient-selection-is-not-an-argument",
+          "verdict": "conformant",
+          "evidence": "src/app/api/ue5-bridge/query/route.ts:90 Every editor action against the single-seat UE editor names an explicit object path. No argument refers to the current selection or the active level."
+        }
+      ]
+    },
+    {
+      "context": "crash-analysis",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/CrashAnalyzerView/AiDiagnosisCard.tsx:82 These view components read the crash store and hand the AI fix prompt to the person's clipboard. They neither expose nor consume any tool protocol. A case-insensitive search of src/components/modules/evaluator for mcp, inputSchema, tools/call and tool_result found nothing. The pof_crash_analyze tool lives in tools/pof-mcp and reads /api/crash-analyzer, both outside this context.",
+      "techniques": [],
+      "absenceTerms": [
+        "mcp",
+        "inputSchema",
+        "tools/call",
+        "jsonrpc"
+      ]
+    },
+    {
+      "context": "cli-terminal-shell",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/lib/claude-terminal/mcp-config.ts:17 The shell renders the Claude CLI's stream-json events (tool_use/tool_result for built-in Edit/Write/Read). It never configures, lists or calls MCP servers; the --mcp-config opt-in lives only in autonomous routes. A case-insensitive search of src/components/cli for mcp, inputSchema, tools/call and jsonrpc found nothing. Its tool-event handling belongs to the agent-cli-transport subject, not this one.",
+      "techniques": [],
+      "absenceTerms": [
+        "mcp",
+        "inputSchema",
+        "tools/call",
+        "jsonrpc"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "mcp-tools",
+      "context": "blender-pipeline",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "catalog-pipelines",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor items.ts:80 sits in a step-data block (`engine: 'Hand-authored'` and UE field mappings). It does not show that the context has no tool protocol, so a grep miss is the only support, and the anchor is incidental."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T02:41:24.505524+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [
+        "ambient-selection-is-not-an-argument",
+        "tool-schema-design",
+        "transport-selection"
+      ],
+      "deviations": 1,
+      "context": "ue5-bridge-client",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T02:41:24.505524+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "crash-analysis",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T02:41:24.505524+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "cli-terminal-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T02:41:24.505524+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "catalog-pipelines",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
