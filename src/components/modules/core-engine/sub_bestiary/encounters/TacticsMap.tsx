@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import type { TacticsEnemy } from '../_shared/data';
 
 import { ACCENT_RED, OVERLAY_WHITE, MODULE_COLORS, withOpacity, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_40, OPACITY_8, OPACITY_3 } from '@/lib/chart-colors';
@@ -10,6 +11,9 @@ interface TacticsMapProps {
 }
 
 export function TacticsMap({ enemies, roleColors }: TacticsMapProps) {
+  // Per-instance marker id: "arrowhead" is also declared by other modules that stay
+  // mounted in the module LRU, and url(#id) resolves to the first match in the document.
+  const markerId = `tactics-arrow-${useId().replace(/:/g, '')}`;
   return (
     <svg width={200} height={200} viewBox="0 0 160 120" className="flex-shrink-0">
       {/* Arena bounds */}
@@ -50,9 +54,9 @@ export function TacticsMap({ enemies, roleColors }: TacticsMapProps) {
         );
       })}
       {/* Attack slot rotation arrow */}
-      <path d="M 36 24 C 28 12, 56 8, 60 20" fill="none" stroke={withOpacity(ACCENT_RED, OPACITY_30)} strokeWidth="1" markerEnd="url(#arrowhead)" />
+      <path d="M 36 24 C 28 12, 56 8, 60 20" fill="none" stroke={withOpacity(ACCENT_RED, OPACITY_30)} strokeWidth="1" markerEnd={`url(#${markerId})`} />
       <defs>
-        <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+        <marker id={markerId}markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
           <polygon points="0 0, 6 2, 0 4" fill={withOpacity(ACCENT_RED, OPACITY_40)} />
         </marker>
       </defs>
