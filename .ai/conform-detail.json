@@ -20975,6 +20975,52 @@
       "evaluatedTs": "2026-11-06T23:50:12.365Z",
       "worker": "e09c3bd9-373d-4fd2-a245-9f34ecc38daa",
       "techniques": []
+    },
+    "ac4cee9e-1527-46e9-8b16-f0f49affbe37/prompt-assembly": {
+      "context": "judge-craft-quality",
+      "subject": "prompt-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:07:50.956Z",
+      "worker": "1424f3dd-8e8a-4c0e-b6e6-637c9bc625be",
+      "techniques": [
+        {
+          "technique": "layered-composition",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:177 One assembler per family and absent sections are omitted (canonFraming returns '' and the list is filtered). But the order is policy -> canon -> subject -> siblings -> payload -> dimensions -> output contract, so the stable rubric layers come after the per-call payload, breaking the stability gradient."
+        },
+        {
+          "technique": "variable-interpolation",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:175 Inputs are typed in opts, but no variable declares a trust class. The model-produced payload (which once carried a full 5.7k-char produce instruction) is inserted raw, with no fencing or declared insertion policy."
+        },
+        {
+          "technique": "context-budgeting",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/siblingContext.ts:71 The sibling section has per-step and total caps in characters, not tokens, plus an omission notice (line 84). Payload and canon have no cap, and buildRubricPrompt enforces no whole-prompt budget, so nothing owns the sum."
+        },
+        {
+          "technique": "fingerprinting-and-cache-keys",
+          "verdict": "deviation",
+          "evidence": "src/lib/judge/rubrics.ts:25 The version stamp is a hand-bumped integer ('Bump this on ANY change'), not a digest derived from the standing text. Canon content that changes the prompt is not in it, and no digest or size of the sent prompt is recorded in the context's verdict or spend files."
+        },
+        {
+          "technique": "task-envelope",
+          "verdict": "conformant",
+          "evidence": "src/lib/judge/rubrics.ts:118 The task opens with the evaluation bar, not a role or expertise claim, and ends with an exact artifact-shaped done criterion that parseJudgeResult checks."
+        },
+        {
+          "technique": "history-compaction",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/judge/rubrics.ts:150 The judge prompt is a single-shot assembled artifact with no accumulated transcript to compact."
+        },
+        {
+          "technique": "pinned-prompt-clock",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/judge/rubrics.ts:156 Assembly takes only cls and opts and reads no date or clock, so there is no clock to pin."
+        }
+      ]
     }
   }
 }
