@@ -565,7 +565,26 @@ export function generateNodeLogic(
   ledger?: NodeLedger,
 ): string {
   const lines: string[] = [];
-  const visited = new Set<string>();
+  // Cycle guard, scoped to the CURRENT exec path. It used to be one set for the
+  // whole walk, so a node reached by both arms of a Branch (the "do A or B,
+  // then C" shape) was emitted under Then and silently skipped under Else —
+  // the C++ never ran C on the false path. A converged tail is now emitted on
+  // every path that reaches it; only a node already on this path (a loop) stops.
+  const onPath = new Set<string>();
+  // Re-emitting a shared tail must not double its warnings (one per node).
+  const warned = new Set<string>();
+  // Inlining converged tails can grow with nested diamonds; past this budget the
+  // walker refuses instead of emitting an unbounded body.
+  const stepBudget = Math.max(256, graph.nodes.length * 16);
+  let steps = 0;
+
+  function warn(w: TranspileWarning) {
+    if (w.nodeId !== undefined) {
+      if (warned.has(w.nodeId)) return;
+      warned.add(w.nodeId);
+    }
+    warnings.push(w);
+  }
 
   // Resolve every exec-edge endpoint (pin id *or* node id) to its owning node
   // in O(1). `linkedTo` holds pin ids in UE5 commandlet exports and node ids in
@@ -582,7 +601,7 @@ export function generateNodeLogic(
     const member = node.memberName ? ` — ${node.memberName}` : '';
     stub(node, indent, `[${node.type}] ${node.name}${member}`, reason);
     recordDisposition(ledger, node.id, 'refused', reason);
-    warnings.push({
+    warn({
       nodeId: node.id,
       message: `Node "${node.name}" (${node.type}) needs manual translation: ${reason}`,
       severity: 'info',
@@ -605,8 +624,20 @@ export function generateNodeLogic(
   }
 
   function walk(node: BlueprintNode, indent: string) {
-    if (visited.has(node.id)) return;
-    visited.add(node.id);
+    if (onPath.has(node.id)) return;
+    if (++steps > stepBudget) {
+      untranslated(node, indent, `exec paths converge too often to inline (over ${stepBudget} steps) — translate this tail by hand`);
+      return;
+    }
+    onPath.add(node.id);
+    try {
+      walkNode(node, indent);
+    } finally {
+      onPath.delete(node.id);
+    }
+  }
+
+  function walkNode(node: BlueprintNode, indent: string) {
 
     // Find exec output pin
     const execOut = node.pins.find((p) => p.direction === 'output' && p.type === 'exec');
@@ -712,11 +743,11 @@ export function generateNodeLogic(
     } else if (node.type.includes('SpawnActor')) {
       stub(node, indent, 'SpawnActor', 'use GetWorld()->SpawnActor<>()');
       recordDisposition(ledger, node.id, 'refused', 'SpawnActor requires manual completion — use GetWorld()->SpawnActor<>()');
-      warnings.push({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
+      warn({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
     } else if (!node.type.includes('Event') && !node.type.includes('FunctionEntry')) {
       stub(node, indent, `[${node.type}] ${node.name}${node.memberName ? ` — ${node.memberName}` : ''}`);
       recordDisposition(ledger, node.id, 'refused', `no translation rule for node type "${node.type}"`);
-      warnings.push({ nodeId: node.id, message: `Node type "${node.type}" needs manual translation`, severity: 'info' });
+      warn({ nodeId: node.id, message: `Node type "${node.type}" needs manual translation`, severity: 'info' });
     } else {
       // An event or function entry becomes the member itself, not a statement.
       recordDisposition(ledger, node.id, 'structural');
