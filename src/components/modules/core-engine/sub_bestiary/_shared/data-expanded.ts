@@ -549,8 +549,9 @@ export interface ExpandedWaveConfig {
   id: number;
   delay: string;
   count: number;
+  /** An `ArchetypeConfig.label` in the roster; tier and area must agree with that entry. */
   archetype: string;
-  tier: string;
+  tier: EnemyTier;
   area: string;
 }
 
@@ -574,7 +575,7 @@ export const EXPANDED_WAVES: ExpandedWaveConfig[] = [
   { id: 17, delay: '480s', count: 4, archetype: 'Reanimated Trooper', tier: 'minion', area: 'Star Forge' },
   { id: 18, delay: '510s', count: 2, archetype: 'Sith War Droid', tier: 'elite', area: 'Star Forge' },
   { id: 19, delay: '540s', count: 1, archetype: 'Terentatek', tier: 'boss', area: 'Korriban' },
-  { id: 20, delay: '570s', count: 2, archetype: 'Dark Marauder', tier: 'elite', area: 'Onderon' },
+  { id: 20, delay: '570s', count: 2, archetype: 'Dark Side Marauder', tier: 'elite', area: 'Onderon' },
   { id: 21, delay: '600s', count: 1, archetype: 'Dark Jedi Master', tier: 'boss', area: 'Star Forge' },
   { id: 22, delay: '630s', count: 8, archetype: 'Gizka Swarm', tier: 'minion', area: 'Taris' },
   { id: 23, delay: '660s', count: 1, archetype: 'Assault Sentinel', tier: 'boss', area: 'Star Forge' },
