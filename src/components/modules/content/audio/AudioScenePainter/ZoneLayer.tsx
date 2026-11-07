@@ -144,9 +144,12 @@ export function ZoneLayer({
 
                 {/* Delete button */}
                 <g
+                  data-testid={`zone-delete-${zone.id}`}
                   transform={zone.shape === 'circle'
                     ? `translate(${zone.x + zone.width / 2 - 8},${zone.y - zone.width / 2 - 24})`
                     : `translate(${zone.x + zone.width - 24},${zone.y + 8})`}
+                  // Own the press: bubbling to the canvas deselects, which unmounts this button before its click.
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); deleteZone(zone.id); }}
                   style={{ cursor: 'pointer' }}
                 >

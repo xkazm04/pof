@@ -139,7 +139,10 @@ export function EmitterLayer({
             {/* Delete on selection */}
             {isSelected && paintMode === 'select' && (
               <g
+                data-testid={`emitter-delete-${em.id}`}
                 transform={`translate(${em.x + 12},${em.y - 12})`}
+                // Own the press: bubbling to the canvas deselects, which unmounts this button before its click.
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); deleteEmitter(em.id); }}
                 style={{ cursor: 'pointer' }}
               >
