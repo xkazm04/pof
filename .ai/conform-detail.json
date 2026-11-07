@@ -21546,27 +21546,22 @@
       "context": "animation-combo-workflow",
       "subject": "generated-video-motion-extraction",
       "bundle": "game-production",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:33:29.184Z",
+      "evaluatedTs": "2026-11-07T04:51:57.732Z",
+      "worker": "28e7cd7a-93a9-43b0-8662-4748491ac241",
       "techniques": [
         {
           "technique": "contact-window-travels-with-the-clip",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/animations/AIComboChoreographer/helpers.ts:88 Hit windows come from templates over non-extracted motion. The technique applies only when the motion came out of a clip."
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/helpers.ts:88 Hit windows come from fixed per-type templates on abstract combo sections, not from a clip whose motion was extracted. If extracted attack clips are ever wired into the choreographer, these templates would become the 'second answer' the technique warns about."
         },
         {
           "technique": "motion-source-route-by-action-class",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/animations/MixamoImport.tsx:33 The technique's own 'when not to use' covers this: the project already has captured motion (Mixamo) for these actions."
+          "evidence": "src/components/modules/content/animations/MixamoImport.tsx:33 The source is captured motion. The technique's 'when not to use' clause excludes actions that already have captured motion."
         }
-      ],
-      "withdrawn": {
-        "worker": "8fb56fea-ac4e-4673-a5a9-a73f9df7e962",
-        "state": "not-applicable",
-        "at": "2026-11-07T03:34:12.742383+00:00",
-        "reason": "reviewer (sonnet): The main anchor, MixamoImport.tsx:33, is a doc comment in a sibling component that is not in this context's file list, so 'captured Mixamo clips' is not shown by the context's own code; only helpers.ts supports the template claim."
-      }
+      ]
     },
     "17c4352f-e2a0-4523-81ed-22180e6d1eb7/generated-video-motion-extraction": {
       "context": "anim-video-gen",
@@ -21590,13 +21585,13 @@
       "bundle": "game-production",
       "state": "unknown",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:33:29.184Z",
+      "evaluatedTs": "2026-11-07T04:51:57.732Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "8fb56fea-ac4e-4673-a5a9-a73f9df7e962",
+        "worker": "28e7cd7a-93a9-43b0-8662-4748491ac241",
         "state": "not-applicable",
-        "at": "2026-11-07T03:34:12.831449+00:00",
-        "reason": "reviewer (sonnet): The anchor, eqsComponents.ts:17, is an unrelated description string for ctx-target-actor and does not show that animation sourcing is absent. I did not open the SquadChoreographyEditor file or the other listed files, so the absence claim is unconfirmed."
+        "at": "2026-11-07T04:52:36.417426+00:00",
+        "reason": "reviewer (sonnet): The anchor, FormationView.tsx:8, is an import line (ROLE_DEFINITIONS, constants). It doesn't show that animation or motion sourcing is absent; the claim rests only on a grep over the wider game-systems directory, which is broader than this context's files."
       }
     },
     "24d18aef-2104-4889-9d67-d20a91d5fdea/generated-video-motion-extraction": {
@@ -22228,6 +22223,48 @@
           "technique": "direct-manipulation",
           "verdict": "deviation",
           "evidence": "src/hooks/useCanvasTransform.ts:44 The surface pan captures at press on e.target rather than when the movement threshold is crossed, endPan never releases the capture, and there is no pointercancel or lostpointercapture handling. By contrast useDragAngle.ts:58 captures on currentTarget and has window pointerup/pointercancel fallbacks."
+        }
+      ]
+    },
+    "2fb73390-0315-4551-953a-09c67b495733/generated-video-motion-extraction": {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:51:57.732Z",
+      "worker": "28e7cd7a-93a9-43b0-8662-4748491ac241",
+      "techniques": [
+        {
+          "technique": "twist-from-extra-points-and-joint-limits",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/skeleton-profiles.ts:5 Nothing here solves rotations from triangulated points. The rig modules check whether bones exist and how weights deform, not bone roll from tracked points."
+        },
+        {
+          "technique": "own-rig-synthetic-keypoint-training",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/metahuman-conform.ts:14 The only 'keypoint' here is MetaHuman's mesh-conform target, not a detector trained on rig renders to read video."
+        },
+        {
+          "technique": "two-view-reference-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:36 Here 'motion source' means a play blast that drives footage made for viewing (the reverse direction). The golden path's seam leaves that to generic generative-media craft, not to extraction."
+        }
+      ]
+    },
+    "d5a6e03e-f30b-4b3a-a583-3276d0636291/generated-video-motion-extraction": {
+      "context": "visual-gen-contact-sheet-ue5-export",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:51:57.732Z",
+      "worker": "28e7cd7a-93a9-43b0-8662-4748491ac241",
+      "techniques": [
+        {
+          "technique": "two-view-reference-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/contact-sheet.ts:2 The multi-cell composition here is for set coherence of still icons, not for row-correspondence between two views of one instant."
         }
       ]
     }

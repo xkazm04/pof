@@ -3316,7 +3316,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/animations/MixamoImport.tsx:33 This context gets its motion from Mixamo's captured library and from template-authored montage timings, not from generated video; a case-insensitive search of src/components/modules/content/animations for video, footage, mocap, keypoint and triangulat found nothing, so the subject's precondition (a generated clip as the motion source) does not hold here.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         },
         {
           "subject": "design-tokens",
@@ -27399,7 +27403,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/visual-gen/contact-sheet.ts:2 In this context a 'contact sheet' is a grid of still entity icons sliced by index, not a multi-panel motion-source clip, and the generators and UE import code handle meshes, materials and layouts; src/lib/visual-gen has no panel sync, contact window, text-to-motion or row-residual code.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -28396,7 +28404,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/visual-gen/skeleton-profiles.ts:5 This context builds and binds skeletons (bone groups, rig presets, MetaHuman conform), which the golden path assigns to mesh finishing rather than to extraction; the src/lib/visual-gen directory has no panel sync, contact window, text-to-motion or row-residual code, and its only video references are footage-gate.ts (a different context) and a footage-blocking cue in reference-roles.ts.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         },
         {
           "subject": "reference-parity-gating",
