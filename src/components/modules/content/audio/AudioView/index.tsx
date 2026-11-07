@@ -301,6 +301,7 @@ export function AudioView() {
                   key={activeDoc.id}
                   activeDoc={activeDoc}
                   commitSetting={commitSetting}
+                  scene={sceneSession.buffer}
                 />
               )}
 

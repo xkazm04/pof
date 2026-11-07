@@ -4,6 +4,7 @@ import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { REVERB_PRESETS } from '@/components/modules/content/audio/AudioPropertyPanel/constants';
 import type { AudioSceneDocument } from '@/types/audio-scene';
 import { useDebouncedCommit } from './useDebouncedCommit';
+import type { SceneBuffer } from './useSceneBuffer';
 import { BudgetStressPanel } from '@/components/modules/content/audio/AudioView/BudgetStressPanel';
 
 type SettingKey = 'soundPoolSize' | 'maxConcurrentSounds' | 'globalReverbPreset';
@@ -24,9 +25,17 @@ function clampSettingInt(raw: string, max: number): number {
 interface SettingsTabProps {
   activeDoc: AudioSceneDocument;
   commitSetting: (key: SettingKey, value: unknown) => Promise<void>;
+  /**
+   * The AudioView session's scene buffer. The Zone Overview renders the scene as
+   * the session has it (unsaved or refused painter edits included), as the
+   * Soundscapes tab does; without it, the server copy.
+   */
+  scene?: SceneBuffer;
 }
 
-export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
+export function SettingsTab({ activeDoc, commitSetting, scene }: SettingsTabProps) {
+  const zones = scene?.scene?.zones ?? activeDoc.zones;
+  const emitters = scene?.scene?.emitters ?? activeDoc.emitters;
   // Each control edits locally and writes once the user pauses — a spinner-click
   // run on a number input used to fire one PUT + one full refetch per increment.
   const poolSize = useDebouncedCommit(
@@ -118,7 +127,7 @@ export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
       </div>
 
       {/* Zone overview table */}
-      {activeDoc.zones.length > 0 && (
+      {zones.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-text mb-3">Zone Overview</h3>
           <div className="rounded-lg border border-border overflow-hidden">
@@ -134,8 +143,8 @@ export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {activeDoc.zones.map((zone) => {
-                  const emCount = activeDoc.emitters.filter((e) => e.zoneId === zone.id).length;
+                {zones.map((zone) => {
+                  const emCount = emitters.filter((e) => e.zoneId === zone.id).length;
                   return (
                     <tr key={zone.id} className="border-t border-border text-text-muted-hover">
                       <td className="px-3 py-2">
