@@ -10777,7 +10777,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/types/cli-task-registry.ts:11 The CLI task registry's closed status vocabulary has no indeterminate value, so when conflict recovery finds a stale 'running' agent run whose ending nobody observed it can only close it as 'failed' (the file's own comment at lines 23-25 describes recovery 'flipping the registry row to failed while the process keeps running'), which is the failure the technique names.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "agent-memory",
@@ -12662,7 +12666,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:164 ScanTab and TelemetryEvolution are review UI that, at most, ask the shared useModuleCLI dispatcher to start a scan or fix run. They compose no hooks around model or tool calls, load no contributed code and keep no conversation checkpoints: a search of both directories for toolCall, registerHook, loadExtension, subagent and checkpoint found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "engine-host-contract",
@@ -26468,7 +26476,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/blender-mcp/execute/route.ts:15 These routes are operator-guarded HTTP proxies to the UE file tree and the Blender TCP bridge (a tool server PoF calls). They compose no hook chain around model or tool calls, load no extensions into an agent runtime and hold no conversation state: a search of src/app/api/filesystem and src/app/api/blender-mcp for toolCall, registerHook, loadExtension, subagent and checkpoint found nothing. 'mcp' does appear there, but only as the Blender bridge's name, which is the wire side the golden path assigns to mcp-tools.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         }
       ],
       "governance": "governed"

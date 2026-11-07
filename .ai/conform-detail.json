@@ -19998,16 +19998,11 @@
       "context": "ue5-filesystem",
       "subject": "agent-runtime-assembly",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T01:42:41.020Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "e017b721-ca8a-437b-82ef-24987b67a5ba",
-        "state": "not-applicable",
-        "at": "2026-11-06T01:44:02.133397+00:00",
-        "reason": "reviewer (sonnet): The anchor at blender-mcp/generate/status/route.ts:34 is a comment on the mesh-gate verdict. It does not show that the UI forge queue (not a model loop) polls these jobs, or that no pof-mcp tool exposes them. pof-mcp's tools/assets.ts polls /api/visual-gen/generate/status, a different route, so I co"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:10:30.662Z",
+      "worker": "9508b301-bbfe-41c7-abfa-866e613f797e",
+      "techniques": []
     },
     "70030182-3a81-467f-979d-7bbad209473b/concept-scene-parity": {
       "context": "asset-viewer-and-browser",
@@ -21377,6 +21372,47 @@
       "evaluatedAt": "2026-11-07",
       "evaluatedTs": "2026-11-07T02:57:26.027Z",
       "worker": "a14d2911-73bb-420e-b6eb-7a110798f67e",
+      "techniques": []
+    },
+    "2a39555c-9199-48bf-b54a-6a13db05036c/agent-runtime-assembly": {
+      "context": "cli-terminal-system",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:10:30.662Z",
+      "worker": "9508b301-bbfe-41c7-abfa-866e613f797e",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/types/cli-task-registry.ts:11 Recovery of an outstanding run with an unknown outcome has nowhere to go but 'failed'. The rule is to add an indeterminate status rather than call an unobserved ending a failure."
+        }
+      ]
+    },
+    "fd7a2f11-0208-4ec9-9abc-192a14a0171b/agent-runtime-assembly": {
+      "context": "ue5-asset-generation-hooks",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:10:30.662Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "9508b301-bbfe-41c7-abfa-866e613f797e",
+        "state": "not-applicable",
+        "at": "2026-11-07T03:11:54.030475+00:00",
+        "reason": "reviewer (sonnet): The anchor src/hooks/useGeneration.ts is not one of this context's twelve paths, and the grep was run over all of src/hooks instead of the context's files, so the verdict rests on code outside the context."
+      }
+    },
+    "80cab220-4eac-4a25-8873-f1c42c257174/agent-runtime-assembly": {
+      "context": "core-engine-scan-telemetry",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:10:30.662Z",
+      "worker": "9508b301-bbfe-41c7-abfa-866e613f797e",
       "techniques": []
     }
   }

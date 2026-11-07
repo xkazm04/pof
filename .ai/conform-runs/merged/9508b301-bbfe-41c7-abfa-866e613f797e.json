@@ -1,0 +1,118 @@
+{
+  "schema": "conform-run/1",
+  "worker": "9508b301-bbfe-41c7-abfa-866e613f797e",
+  "subject": "agent-runtime-assembly",
+  "evaluatedAt": "2026-11-07T03:10:30.662442+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "cli-terminal-system",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/types/cli-task-registry.ts:11 The CLI task registry's closed status vocabulary has no indeterminate value, so when conflict recovery finds a stale 'running' agent run whose ending nobody observed it can only close it as 'failed' (the file's own comment at lines 23-25 describes recovery 'flipping the registry row to failed while the process keeps running'), which is the failure the technique names.",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/types/cli-task-registry.ts:11 Recovery of an outstanding run with an unknown outcome has nowhere to go but 'failed'. The rule is to add an indeterminate status rather than call an unobserved ending a failure."
+        }
+      ]
+    },
+    {
+      "context": "ue5-filesystem",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/api/blender-mcp/execute/route.ts:15 These routes are operator-guarded HTTP proxies to the UE file tree and the Blender TCP bridge (a tool server PoF calls). They compose no hook chain around model or tool calls, load no extensions into an agent runtime and hold no conversation state: a search of src/app/api/filesystem and src/app/api/blender-mcp for toolCall, registerHook, loadExtension, subagent and checkpoint found nothing. 'mcp' does appear there, but only as the Blender bridge's name, which is the wire side the golden path assigns to mcp-tools.",
+      "techniques": [],
+      "absenceTerms": [
+        "toolCall",
+        "registerHook",
+        "loadExtension",
+        "subagent",
+        "checkpoint"
+      ]
+    },
+    {
+      "context": "core-engine-scan-telemetry",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/ScanTab/useScanTab.ts:164 ScanTab and TelemetryEvolution are review UI that, at most, ask the shared useModuleCLI dispatcher to start a scan or fix run. They compose no hooks around model or tool calls, load no contributed code and keep no conversation checkpoints: a search of both directories for toolCall, registerHook, loadExtension, subagent and checkpoint found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "toolCall",
+        "registerHook",
+        "loadExtension",
+        "subagent",
+        "checkpoint"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-runtime-assembly",
+      "context": "visual-gen-3d-model-runners",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "agent-runtime-assembly",
+      "context": "ue5-asset-generation-hooks",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor src/hooks/useGeneration.ts is not one of this context's twelve paths, and the grep was run over all of src/hooks instead of the context's files, so the verdict rests on code outside the context."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T03:10:30.662442+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [
+        "indeterminate-closure-on-interruption"
+      ],
+      "deviations": 1,
+      "context": "cli-terminal-system",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:10:30.662442+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ue5-filesystem",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:10:30.662442+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ue5-asset-generation-hooks",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:10:30.662442+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-runtime-assembly"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "core-engine-scan-telemetry",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
