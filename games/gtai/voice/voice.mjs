@@ -9,11 +9,11 @@
  *   node games/gtai/voice/voice.mjs readback [--line <id>] [--quest <id>]   local Whisper read-back of takes not read yet
  *   node games/gtai/voice/voice.mjs takes --line <id> --n <k> --direction "<text>"
  *        [--quest <id>] [--voice <voiceRowId>] [--model eleven_v3|eleven_multilingual_v2]
- *        [--stability x] [--style x] [--speed x]
+ *        [--stability x] [--style x] [--speed x]   (defaults: the voice's take profile)
  *   node games/gtai/voice/voice.mjs design --character <id> [--n 3] [--description "<text>"]
  *   node games/gtai/voice/voice.mjs stock --character <id> --voice-id <provider id> --name <name> [--note <text>]
  *   node games/gtai/voice/voice.mjs stock --casting <casting.json>   every premade pick of a casting file (candidates)
- *   node games/gtai/voice/voice.mjs voices [--character <id>]
+ *   node games/gtai/voice/voice.mjs voices [--character <id>]       (prints each cast voice's take profile; set only in the room)
  *   node games/gtai/voice/voice.mjs casting [--character <id>]       casting rounds: candidates, verdicts, notes, round comments
  *   node games/gtai/voice/voice.mjs round --character <id> --file <round.json>   design one casting round (1-5 voices)
  *   node games/gtai/voice/voice.mjs export --quest <id>             writes ONLY approved takes into the game
@@ -135,6 +135,8 @@ async function main() {
       const settings = { model: opt('model'), stability: num(opt('stability')), style: num(opt('style')), speed: num(opt('speed')) };
       const r = await call('/takes', { questId: e.questId, lineId: e.lineId, n: Number(opt('n', '1')), direction: opt('direction', ''), voiceId: opt('voice'), settings });
       for (const t of r.takes) out(`  take ${t.id}${t.reason ? ` [${t.reason === 'audition' ? 'AUDITION: speaker has no cast voice' : `not current: ${t.reason}`}]` : ''} ${t.durationMs ?? '?'}ms ${t.loudnessLufs ?? '?'} LUFS sent="${t.sentText.slice(0, 80)}"`);
+      const s0 = r.takes[0]?.settings;
+      if (s0) out(`recipe: ${s0.model} speed ${s0.speed} stability ${s0.stability} style ${s0.style} (the voice's take profile unless a flag overrode it; the owner sets profiles in the Cast tab)`);
       out(`${r.takes.length} takes · ${r.chars} characters. The owner judges them in the Voice room.`);
       return;
     }
@@ -164,7 +166,7 @@ async function main() {
       const r = await call('/voices');
       const who = opt('character');
       for (const v of r.voices.filter((x) => !who || x.characterId === who)) {
-        out(`  ${pad(v.characterId, 20)} ${pad(v.status, 10)} ${pad(v.source, 9)} ${v.id} ${v.name}`);
+        out(`  ${pad(v.characterId, 20)} ${pad(v.status, 10)} ${pad(v.source, 9)} ${v.id} ${v.name}${v.takeProfile ? ` · profile ${v.takeProfile.model} speed ${v.takeProfile.speed} stab ${v.takeProfile.stability} style ${v.takeProfile.style}` : ''}`);
       }
       return;
     }

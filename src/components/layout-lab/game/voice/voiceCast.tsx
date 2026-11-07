@@ -12,6 +12,7 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import type { QueueEntry, VoiceRow } from '@/lib/voice/types';
 import { fmtMs, postVoice, previewAudioUrl } from './voiceRoomData';
 import { VoiceAudio } from './voiceAudio';
+import { VoiceProfile } from './voiceProfile';
 import { NO_CLONE_NOTE } from './voiceGateClient';
 
 /** Speakers in first-appearance (play) order. Exported for tests. */
@@ -50,6 +51,7 @@ function VoiceCard({ t, v, gate, onChanged }: { t: LabTheme; v: VoiceRow; gate: 
           <p style={{ fontSize: 'var(--lab-fs-xs)', margin: 0 }}>{v.designPrompt}</p>
         </details>
       )}
+      {v.status === 'cast' && <VoiceProfile t={t} v={v} gate={gate} onChanged={onChanged} />}
       {v.status !== 'cast' && <LabButton t={t} testId="voice-cast-btn" disabled={!gate || mustListen} onClick={() => void cast()}>Cast this voice</LabButton>}
       {v.status !== 'cast' && mustListen && <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Cast unlocks once you have played the preview through.</span>}
       {error && <span role="alert" style={{ fontSize: 'var(--lab-fs-xs)', color: t.bad }}>{error}</span>}

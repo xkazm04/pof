@@ -5,7 +5,9 @@
  * because the game's `quest_voice.gd` plays `audio` only when it is a String — and its `audioTake` to
  * `{ takeId, voiceId, model }` (the model is recorded per line so the game's record says what rendered it).
  * A line is proven only by a CURRENT approved take (`staleReason` in `lineQueue.ts`: the text it spoke, a voice
- * of the line's speaker, the speaker's cast voice); a take that went stale is skipped with its reason. Unproven lines are not touched (a temp voice the audio lane set stays).
+ * of the line's speaker, the speaker's cast voice, and the voice's take profile). A model change is a re-cast
+ * event (registry `game-dialogue-voice-pipeline`): changing the profile's model un-proves the lines rendered
+ * with the old one, so what is exported always matches the voice's current recipe; a take that went stale is skipped with its reason. Unproven lines are not touched (a temp voice the audio lane set stays).
  * Nothing unproven is ever written: a line without a current approved take is skipped and listed.
  * Every written file is MASTERED to the game's voice target (`mastering.ts`: mono, loudnorm to the
  * `audio_mix.json` loudness) and measured after, so the report shows each line's level against it. The file

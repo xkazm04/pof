@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { loadLedger } from '@/lib/games/gtai-quest/loadContext';
 import type { QuestPackage } from '@/lib/games/gtai-quest/types';
+import { profileMatches } from '@/lib/voice/takeProfile';
 import { listLines, listTakes, listVoices, markAbsentExcept, upsertLine } from '@/lib/voice/voice-db';
 import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type LineState, type QueueEntry, type QueueLine, type SpeakerDemand, type StaleReason, type TakeRow, type VoiceRow, type VoiceStatusView } from '@/lib/voice/types';
 
@@ -92,7 +93,8 @@ export function voiceCtx(db: Database.Database, gameId: string): VoiceCtx {
  * counts only for the text it spoke, only in a voice that belongs to the line's speaker (`pickVoice` checks
  * that at generation; a package that reassigns the line afterwards is caught here), and only in the speaker's
  * CAST voice (re-casting is a re-cast event; a speaker with no cast voice yields auditions, never proof;
- * registry `game-dialogue-voice-pipeline`).
+ * registry `game-dialogue-voice-pipeline`), and, when that voice carries a take profile, only rendered with it
+ * (a render change invalidates the lines whose sound changed).
  */
 export function staleReason(t: TakeRow, line: QueueLine, ctx: VoiceCtx): StaleReason | null {
   if (t.textHash !== line.textHash) return 'text-edited';
@@ -100,6 +102,8 @@ export function staleReason(t: TakeRow, line: QueueLine, ctx: VoiceCtx): StaleRe
   const cast = ctx.cast.get(line.speaker) ?? null;
   if (cast === null) return 'audition';
   if (t.voiceId !== cast) return 'recast';
+  const profile = ctx.voices.get(t.voiceId)?.takeProfile;
+  if (profile && !profileMatches(t.settings, profile)) return 'profile-changed';
   return null;
 }
 

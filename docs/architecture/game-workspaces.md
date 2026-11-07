@@ -497,6 +497,15 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   `castingDemand` (`castingDemand.ts`, pure) gives casting the line demand per speaker (story/bark counts of present
   lines, cast state, first appearance in play order) plus the cast voices that speak nothing; `casting` GET carries it,
   the Casting page lists "needs a voice" and marks cast characters with 0 lines, and `voice.mjs status` prints it.
+  **Take profile** (`takeProfile.ts`, `profileEdit.ts`; nullable `voice_voices.takeProfile` JSON `{model, speed,
+  stability, style}`, added by `addMissing` so the live DB upgrades in place): a CAST voice carries its render recipe.
+  Set from the Cast tab through `POST voice/voices/profile` (behind the same human gate as cast and verdict; it answers
+  how many lines the edit un-proved; `voice.mjs` only prints profiles). Generate and `voice.mjs takes` default every
+  setting to the voice's profile; an explicit override is recorded on the take (and, differing from the profile, makes
+  that take `profile-changed`). `staleReason` compares the take's recipe to its voice's CURRENT profile (model exactly,
+  speed/stability/style within 0.001); a null profile never invalidates, so a voice without one behaves as before.
+  A profile edit therefore re-proves lines by regeneration only: a model change is a re-cast event (registry
+  `game-dialogue-voice-pipeline`), a pace change a render change (`line-id-catalog-and-revision-diff`).
 - **Provider** (`src/lib/audio-gen/providers/elevenlabs-speech.ts`, the `tts` kind): `/v1/text-to-speech/{voice_id}`
   with `eleven_v3` by default, where the direction becomes inline audio tags (`[whispers] [panicking] …`); on
   `eleven_multilingual_v2` the direction is recorded but not sent (tags would be spoken). Voice design is

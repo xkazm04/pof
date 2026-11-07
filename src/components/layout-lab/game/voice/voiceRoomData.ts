@@ -57,6 +57,12 @@ export function useCastingDemand() {
   return useKeyedRead<{ demand: CastingDemand }>(`${VOICE_API}/casting`, UI_TIMEOUTS.voiceRoomPoll);
 }
 
+/** The take models the room offers (the Generate form and a voice's take profile). */
+export const TAKE_MODELS = [
+  { id: 'eleven_v3', label: 'eleven_v3 (direction as audio tags)' },
+  { id: 'eleven_multilingual_v2', label: 'eleven_multilingual_v2 (settings only)' },
+] as const;
+
 export const castingArtUrl = (character: string, n: number) => `${VOICE_API}/casting/art?character=${encodeURIComponent(character)}&n=${n}`;
 
 export interface LineKey { questId: string; lineId: string }

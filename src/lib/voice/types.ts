@@ -27,8 +27,10 @@ export type LineClass = 'story' | 'bark';
  *  - `audition`: the speaker has NO cast voice yet. The take may be generated and heard (that is how the owner
  *    auditions a candidate on real lines) but never proves a line: no line renders against a voice with no
  *    ledger row (registry `game-dialogue-voice-pipeline`). Cast the speaker first.
+ *  - `profile-changed`: the take's recipe (model, speed, stability, style) differs from its voice's CURRENT take
+ *    profile, so it no longer sounds like what the owner decided for that voice (`takeProfile.ts`).
  */
-export type StaleReason = 'text-edited' | 'wrong-speaker' | 'recast' | 'audition';
+export type StaleReason = 'text-edited' | 'wrong-speaker' | 'recast' | 'audition' | 'profile-changed';
 
 /** The reason in words, for the room (client-safe: no node imports here). */
 export const STALE_REASON_WORDS: Record<StaleReason, string> = {
@@ -36,6 +38,7 @@ export const STALE_REASON_WORDS: Record<StaleReason, string> = {
   'wrong-speaker': "stale: this voice is not the line's speaker (the line was reassigned)",
   recast: "stale: not the speaker's cast voice",
   audition: 'audition: the speaker has no cast voice yet, so this take cannot prove the line',
+  'profile-changed': "stale: rendered with a recipe that is not the voice's take profile now",
 };
 
 export interface VoicePreview {
@@ -59,6 +62,16 @@ export interface VoiceRow {
   status: VoiceStatus;
   createdAt: number;
   updatedAt: number;
+  /** The render recipe decided for this voice (set on the Cast tab, gated); null/absent = none decided. */
+  takeProfile?: TakeProfile | null;
+}
+
+/** A cast voice's take profile: the settings every take for it defaults to, and an approval is bound to. */
+export interface TakeProfile {
+  model: string;
+  speed: number;
+  stability: number;
+  style: number;
 }
 
 export interface QueueLine {

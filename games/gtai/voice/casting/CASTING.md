@@ -177,7 +177,12 @@ owner's notes kept asking for, and what to try first next time.)_
   speed preview (1.1x / 1.2x / 1.5x), not with a new design round. Two characters spent three rounds on pace
   alone, and the words never landed reliably.
 
-### Take speed per cast voice (for `voice.mjs takes --speed`)
+### Take speed per cast voice (lives in the voice's take profile)
+
+The pace now lives on the cast voice itself: its **take profile** (model, speed, stability, style), set by the owner on
+the Voice room's Cast tab (gated, like casting). The Generate form and `voice.mjs takes` default to it (an explicit
+`--speed` still overrides and is recorded on the take), and an approved take rendered with a different recipe stops
+counting as proven (`profile-changed`). The table below is the owner's decision to enter there, not a CLI flag to remember.
 
 | Character | Take speed | Why |
 |---|---|---|

@@ -7,6 +7,7 @@ import type Database from 'better-sqlite3';
 import { createDesignedVoice, DEFAULT_SPEECH_MODEL, SPEECH_MODELS, synthesizeSpeech } from '@/lib/audio-gen/providers/elevenlabs-speech';
 import type { SpeechRequest, SpeechResult } from '@/lib/audio-gen/types';
 import { getLine, getVoice, insertTake, listVoices, setProviderVoiceId } from '@/lib/voice/voice-db';
+import { withProfile } from '@/lib/voice/takeProfile';
 import { measureAudio, writeVoiceFile, type AudioMeasure } from '@/lib/voice/storage';
 import type { TakeRow, TakeSettings, VoiceRow } from '@/lib/voice/types';
 import type { Result } from '@/types/result';
@@ -70,7 +71,8 @@ export async function generateTakes(db: Database.Database, req: TakeRequest, dep
   if (!(n >= 1 && n <= MAX_TAKES_PER_CALL)) return { ok: false, error: `n must be 1-${MAX_TAKES_PER_CALL}` };
   const voice = pickVoice(db, req.gameId, line.speaker, req.voiceId);
   if (!voice) return { ok: false, error: `no voice for ${line.speaker}: design one or add a stock candidate first` };
-  const settings = defaultSettings(req.settings);
+  // The voice's take profile is the default recipe; an explicit value overrides it and is recorded on the take.
+  const settings = defaultSettings(withProfile(voice.takeProfile, req.settings));
   const direction = req.direction.trim();
   try {
     const providerVoiceId = await ensureProviderVoice(db, voice, deps);

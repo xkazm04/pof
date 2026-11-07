@@ -3,7 +3,7 @@
  * Tables: `voice_voices`, `voice_lines` (the queue), `voice_takes`, `voice_verdicts` (history).
  */
 import type Database from 'better-sqlite3';
-import type { QueueLine, TakeRow, VerdictEvent, VerdictFeedItem, VoiceRow } from '@/lib/voice/types';
+import type { QueueLine, TakeProfile, TakeRow, VerdictEvent, VerdictFeedItem, VoiceRow } from '@/lib/voice/types';
 
 type Db = Database.Database;
 type Raw = Record<string, unknown>;
@@ -35,6 +35,7 @@ export function createVoiceDb(db: Db): void {
     );
   `);
   // A DB created before a column landed lacks it; add each once (silence screen, line class + beat).
+  addMissing(db, 'voice_voices', ['takeProfile TEXT']);
   addMissing(db, 'voice_takes', ['maxSilenceMs INTEGER', 'readbackText TEXT', 'readbackWer REAL']);
   addMissing(db, 'voice_lines', ["lineClass TEXT NOT NULL DEFAULT 'story'", "whenTags TEXT NOT NULL DEFAULT '[]'", 'beatId TEXT', 'beatTitle TEXT', 'beatSummary TEXT']);
 }
@@ -44,7 +45,7 @@ function addMissing(db: Db, table: string, defs: readonly string[]): void {
   for (const def of defs) if (!cols.has(def.split(' ')[0])) db.exec(`ALTER TABLE ${table} ADD COLUMN ${def}`);
 }
 
-const voiceOf = (r: Raw): VoiceRow => ({ ...(r as unknown as VoiceRow), previews: JSON.parse(String(r.previews)) });
+const voiceOf = (r: Raw): VoiceRow => ({ ...(r as unknown as VoiceRow), previews: JSON.parse(String(r.previews)), takeProfile: r.takeProfile ? JSON.parse(String(r.takeProfile)) : null });
 const lineOf = (r: Raw): QueueLine => {
   const { whenTags, ...rest } = r;
   return { ...(rest as unknown as QueueLine), purpose: JSON.parse(String(r.purpose)), when: JSON.parse(String(whenTags ?? '[]')), present: r.present === 1 };
@@ -53,8 +54,9 @@ const takeOf = (r: Raw): TakeRow => ({ ...(r as unknown as TakeRow), settings: J
 
 // ── voices ──
 export function insertVoice(db: Db, v: VoiceRow): void {
-  db.prepare(`INSERT INTO voice_voices VALUES (@id,@gameId,@characterId,@name,@providerVoiceId,@source,@designPrompt,@previews,@status,@createdAt,@updatedAt)`)
-    .run({ ...v, previews: JSON.stringify(v.previews) });
+  db.prepare(`INSERT INTO voice_voices (id,gameId,characterId,name,providerVoiceId,source,designPrompt,previews,status,createdAt,updatedAt,takeProfile)
+    VALUES (@id,@gameId,@characterId,@name,@providerVoiceId,@source,@designPrompt,@previews,@status,@createdAt,@updatedAt,@takeProfile)`)
+    .run({ ...v, previews: JSON.stringify(v.previews), takeProfile: v.takeProfile ? JSON.stringify(v.takeProfile) : null });
 }
 export function listVoices(db: Db, gameId: string): VoiceRow[] {
   return (db.prepare('SELECT * FROM voice_voices WHERE gameId=? ORDER BY characterId, createdAt').all(gameId) as Raw[]).map(voiceOf);
@@ -65,6 +67,10 @@ export function getVoice(db: Db, id: string): VoiceRow | null {
 }
 export function setProviderVoiceId(db: Db, id: string, providerVoiceId: string, at = Date.now()): void {
   db.prepare('UPDATE voice_voices SET providerVoiceId=?, updatedAt=? WHERE id=?').run(providerVoiceId, at, id);
+}
+/** Set (or, with null, clear) a voice's take profile. The caller has passed the human gate and validated it. */
+export function setTakeProfile(db: Db, id: string, profile: TakeProfile | null, at = Date.now()): void {
+  db.prepare('UPDATE voice_voices SET takeProfile=?, updatedAt=? WHERE id=?').run(profile ? JSON.stringify(profile) : null, at, id);
 }
 /** Cast `id` for its character; a previously cast voice of that character returns to candidate. */
 export function castVoice(db: Db, id: string, at = Date.now()): VoiceRow | null {
