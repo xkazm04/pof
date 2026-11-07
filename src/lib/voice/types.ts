@@ -24,14 +24,18 @@ export type LineClass = 'story' | 'bark';
  *  - `wrong-speaker`: the take's voice belongs to another character than the line's speaker now (the quest
  *    package reassigned the line), or has no voice row at all.
  *  - `recast`: the speaker has a cast voice and it is a different one.
+ *  - `audition`: the speaker has NO cast voice yet. The take may be generated and heard (that is how the owner
+ *    auditions a candidate on real lines) but never proves a line: no line renders against a voice with no
+ *    ledger row (registry `game-dialogue-voice-pipeline`). Cast the speaker first.
  */
-export type StaleReason = 'text-edited' | 'wrong-speaker' | 'recast';
+export type StaleReason = 'text-edited' | 'wrong-speaker' | 'recast' | 'audition';
 
 /** The reason in words, for the room (client-safe: no node imports here). */
 export const STALE_REASON_WORDS: Record<StaleReason, string> = {
   'text-edited': 'stale: the line text changed after this take',
   'wrong-speaker': "stale: this voice is not the line's speaker (the line was reassigned)",
   recast: "stale: not the speaker's cast voice",
+  audition: 'audition: the speaker has no cast voice yet, so this take cannot prove the line',
 };
 
 export interface VoicePreview {
@@ -150,6 +154,8 @@ export interface QueueEntry extends QueueLine {
   takes: number;
   pending: number;
   approvedTakeId: string | null;
+  /** Takes of this line that are auditions (the speaker has no cast voice): heard, never proven. */
+  auditions: number;
   /** Current takes a screen flags: read-back over READBACK_FLAG_WER or a pause over SILENCE_FLAG_MS. */
   flagged: number;
 }
@@ -170,4 +176,28 @@ export interface VoiceStatusView {
   chars: number;
   /** Lines with at least one flagged current take (listen for garbled words / a dropout). */
   flaggedLines: number;
+  /** Speakers with present lines and no cast voice, in order of first appearance (`castingDemand`). */
+  needsVoice: SpeakerDemand[];
+}
+
+/** One speaker's demand on casting: how many present lines they speak, and whether a voice is cast for them. */
+export interface SpeakerDemand {
+  speaker: string;
+  story: number;
+  bark: number;
+  lines: number;
+  /** Where the speaker first appears in play order. */
+  firstQuestId: string;
+  firstLineId: string;
+  cast: { voiceId: string; name: string } | null;
+}
+
+/** Casting's view of the line queue: who speaks, who is cast, and which cast voices speak nothing. */
+export interface CastingDemand {
+  /** Every speaker with a present line, first appearance first. */
+  speakers: SpeakerDemand[];
+  /** The speakers with no cast voice (a subset of `speakers`, same order). */
+  needsVoice: SpeakerDemand[];
+  /** Cast voices whose character speaks no present line. */
+  castWithoutLines: Array<{ characterId: string; voiceId: string; name: string }>;
 }

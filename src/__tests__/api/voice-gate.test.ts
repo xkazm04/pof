@@ -77,11 +77,12 @@ describe('voice room human gate', () => {
   it('accepts the room page: browser fetch + the token it was issued', async () => {
     const g = await json(await gateGET(req('/gate', undefined, BROWSER), ctx));
     const token = String(g.data?.token);
+    // Cast before render: an approval needs the speaker's cast voice.
+    expect((await castPOST(req('/voices/cast', { voiceId }, { ...BROWSER, [GATE_HEADER]: token }), ctx)).status).toBe(200);
     const r = await verdictPOST(req('/takes/verdict', { takeId, verdict: 'approved', note: 'the panic lands' }, { ...BROWSER, [GATE_HEADER]: token }), ctx);
     expect(r.status).toBe(200);
     const room = await json(await roomGET(req(''), ctx));
     expect((room.data?.status as { proven: number }).proven).toBe(1);
-    expect((await castPOST(req('/voices/cast', { voiceId }, { ...BROWSER, [GATE_HEADER]: token }), ctx)).status).toBe(200);
     // The read-only feed the CLI reads the owner's notes from: the room's verdict only (the refused CLI ones left no trace).
     const feed = await json(await roomGET(req('?view=verdicts&since=0'), ctx));
     expect((feed.data?.verdicts as Array<{ verdict: string; note: string; lineId: string }>).map((v) => [v.lineId, v.verdict, v.note]))

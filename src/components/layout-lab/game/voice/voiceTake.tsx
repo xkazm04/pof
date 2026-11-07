@@ -46,13 +46,16 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
     onChanged();
   };
 
-  const canJudge = !!gate.token && !busy && !take.stale;
+  // An audition (the speaker has no cast voice) can be heard and rejected, never approved: cast first.
+  const audition = take.reason === 'audition';
+  const canJudge = !!gate.token && !busy && (!take.stale || audition);
   return (
     <li data-testid="voice-take" data-take={take.id} data-verdict={take.verdict}
       style={{ listStyle: 'none', display: 'grid', gap: 'var(--lab-s2)', padding: 'var(--lab-s3)', border: `1px solid ${t.line}`, borderRadius: 6, opacity: take.stale ? 0.7 : 1 }}>
       <div style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap' }}>
         <StatusTag level={v.level} word={v.word} />
-        {take.reason && <StatusTag level="bad" word={STALE_REASON_WORDS[take.reason]} />}
+        {audition && <span data-testid="voice-take-audition"><StatusTag level="warn" word="audition" /></span>}
+        {take.reason && !audition && <StatusTag level="bad" word={STALE_REASON_WORDS[take.reason]} />}
         <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · <span title="The provider's level; the player below plays it at the game's voice level unless you switch to the original">delivered {fmtLufs(take.loudnessLufs)}</span> · {take.chars} chars · {take.maxSilenceMs === null ? 'silence unmeasured' : `longest pause ${fmtMs(take.maxSilenceMs)}`}</MicroLabel>
         {take.maxSilenceMs !== null && take.maxSilenceMs > SILENCE_FLAG_MS && <StatusTag level="warn" word={`long pause ${fmtMs(take.maxSilenceMs)}: listen for a dropout`} />}
         <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>
@@ -76,14 +79,15 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         </pre>
       </details>
       {take.verdictNote && <div style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Note: {take.verdictNote}</div>}
-      {take.verdict !== 'approved' && !take.stale && (
+      {take.verdict !== 'approved' && (!take.stale || audition) && (
         <div style={{ display: 'grid', gap: 'var(--lab-s2)' }}>
           <LabTextarea t={t} rows={2} value={note} onChange={setNote} label="Verdict note" placeholder="What works, what to change next round" testId="voice-verdict-note" />
           <div style={{ display: 'flex', gap: 'var(--lab-s2)', flexWrap: 'wrap' }}>
-            <LabButton t={t} testId="voice-approve" disabled={!canJudge || !heard} onClick={() => void judge('approved')}>Approve</LabButton>
+            <LabButton t={t} testId="voice-approve" disabled={!canJudge || !heard || audition} onClick={() => void judge('approved')}>Approve</LabButton>
             <LabButton t={t} testId="voice-reject" disabled={!canJudge} onClick={() => void judge('rejected')}>Reject</LabButton>
           </div>
-          {!heard && <span data-testid="voice-listen-first" style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Approve unlocks once you have played this take through.</span>}
+          {audition && <span data-testid="voice-audition-note" style={{ fontSize: 'var(--lab-fs-xs)', color: t.warn }}>{STALE_REASON_WORDS.audition}. Cast this speaker&apos;s voice on the Cast tab, then approve a take in it.</span>}
+          {!heard && !audition && <span data-testid="voice-listen-first" style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>Approve unlocks once you have played this take through.</span>}
         </div>
       )}
       {take.verdict === 'approved' && (

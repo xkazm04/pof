@@ -490,6 +490,13 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
   export (skipped / stale-in-game lines carry the reason) and `voice.mjs` all read it. Casting a different voice
   un-proves the character's lines (a re-cast event, registry `game-dialogue-voice-pipeline`); approving a take that
   is not current is refused 409 with the reason (`approval.ts`).
+  **Cast before render** (2026-11-07): a speaker with no cast voice has no proven lines. A take from an uncast
+  candidate (`pickVoice` still falls back to the newest candidate, so the owner can audition on real lines) reads
+  reason `audition`: the line view labels it "audition", its Approve is disabled with the reason, the verdict route
+  answers 409 "cast <speaker> first", export skips with that reason, and the queue row counts `auditions`.
+  `castingDemand` (`castingDemand.ts`, pure) gives casting the line demand per speaker (story/bark counts of present
+  lines, cast state, first appearance in play order) plus the cast voices that speak nothing; `casting` GET carries it,
+  the Casting page lists "needs a voice" and marks cast characters with 0 lines, and `voice.mjs status` prints it.
 - **Provider** (`src/lib/audio-gen/providers/elevenlabs-speech.ts`, the `tts` kind): `/v1/text-to-speech/{voice_id}`
   with `eleven_v3` by default, where the direction becomes inline audio tags (`[whispers] [panicking] …`); on
   `eleven_multilingual_v2` the direction is recorded but not sent (tags would be spoken). Voice design is

@@ -1,6 +1,7 @@
 /**
  * `GET /api/games/[gameId]/voice/casting?character=<id>` — the Casting page: the character, its art, every round.
- * `GET` without `character` — the castable characters (bibles + art map).
+ * `GET` without `character` — the castable characters (bibles + art map). Both carry `demand` (`castingDemand`):
+ * which speakers have lines and no cast voice, and which cast voices speak nothing.
  * `POST` `{ characterId, brief, candidates: [{ label, description, seed?, parentVoiceId? }], sampleText?, model? }` —
  * design one round (1-5 candidates). Only ADDS candidates; verdicts, closing and casting are the gated
  * `./verdict` and `./close`. Never a clone of a real person's voice (description only, no reference audio).
@@ -10,6 +11,7 @@ import { apiError, apiSuccess } from '@/lib/api-utils';
 import { getVoiceDb, questRoot, VOICE_GAMES } from '@/lib/voice/conn';
 import { syncQueue } from '@/lib/voice/lineQueue';
 import { designRound, type CandidateSpec } from '@/lib/voice/castingRound';
+import { castingDemand } from '@/lib/voice/castingDemand';
 import { castingCharacters, castingView, writeCastingLog } from '@/lib/voice/castingView';
 
 type Ctx = { params: Promise<{ gameId: string }> };
@@ -21,9 +23,11 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     if (!VOICE_GAMES.includes(gameId)) return apiError(`No voice room for ${gameId}`, 404);
     const character = req.nextUrl.searchParams.get('character');
     const db = getVoiceDb();
-    if (!character) return apiSuccess({ characters: castingCharacters(db, questRoot(), gameId) });
+    syncQueue(db, gameId, questRoot());
+    const demand = castingDemand(db, gameId);
+    if (!character) return apiSuccess({ characters: castingCharacters(db, questRoot(), gameId), demand });
     if (!ID.test(character)) return apiError('character must be a lowercase id', 400);
-    return apiSuccess(castingView(db, questRoot(), gameId, character));
+    return apiSuccess({ ...castingView(db, questRoot(), gameId, character), demand });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'voice casting GET failed', 500);
   }

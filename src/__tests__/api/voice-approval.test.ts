@@ -10,6 +10,7 @@ import { NextRequest } from 'next/server';
 import { GET as gateGET } from '@/app/api/games/[gameId]/voice/gate/route';
 import { POST as takesPOST } from '@/app/api/games/[gameId]/voice/takes/route';
 import { POST as verdictPOST } from '@/app/api/games/[gameId]/voice/takes/verdict/route';
+import { POST as castPOST } from '@/app/api/games/[gameId]/voice/voices/cast/route';
 import { POST as voicesPOST } from '@/app/api/games/[gameId]/voice/voices/route';
 import { GATE_HEADER } from '@/lib/voice/gate';
 import { makeFixtureRoot, writeQuest } from '@/__tests__/lib/voice/voiceFixture';
@@ -47,7 +48,8 @@ async function take(questId: string, lineId: string): Promise<Record<string, unk
 
 describe('verdict route 409s', () => {
   it('refuses approving a take after its line was reassigned to another speaker', async () => {
-    await voicesPOST(req('/voices', { action: 'stock', characterId: 'dock-guard', providerVoiceId: 'stock-g', name: 'Chris' }), ctx);
+    const v = await json(await voicesPOST(req('/voices', { action: 'stock', characterId: 'dock-guard', providerVoiceId: 'stock-g', name: 'Chris' }), ctx));
+    await castPOST(req('/voices/cast', { voiceId: (v.data?.voices as Array<{ id: string }>)[0].id }, await gateHeaders()), ctx);
     const t = await take('zulu', 'z1');
     expect(t.reason).toBeNull();
     writeQuest(root, 'zulu', 'act1', '2026-11-02T00:00:00Z', [
@@ -57,5 +59,17 @@ describe('verdict route 409s', () => {
     const r = await verdictPOST(req('/takes/verdict', { takeId: t.id, verdict: 'approved' }, await gateHeaders()), ctx);
     expect(r.status).toBe(409);
     expect((await json(r)).error).toMatch(/belongs to dock-guard.*speaker nurse/);
+  });
+
+  it('refuses approving an audition: a speaker with no cast voice has no proven lines ("cast <speaker> first")', async () => {
+    await voicesPOST(req('/voices', { action: 'stock', characterId: 'rivet', providerVoiceId: 'stock-r', name: 'Liam' }), ctx);
+    const t = await take('alpha', 'a1');
+    // The take is generated (that is how the owner auditions), and reports its real state, not stale:false.
+    expect(t).toMatchObject({ stale: true, reason: 'audition' });
+    const r = await verdictPOST(req('/takes/verdict', { takeId: t.id, verdict: 'approved' }, await gateHeaders()), ctx);
+    expect(r.status).toBe(409);
+    expect((await json(r)).error).toMatch(/audition.*cast rivet first/);
+    // Rejecting an audition stays possible.
+    expect((await verdictPOST(req('/takes/verdict', { takeId: t.id, verdict: 'rejected' }, await gateHeaders()), ctx)).status).toBe(200);
   });
 });

@@ -18,6 +18,8 @@ export function approvalRefusal(take: TakeRow, line: QueueLine | null, ctx: Voic
       const owner = ctx.voices.get(take.voiceId)?.characterId;
       return `This take's voice ${owner ? `belongs to ${owner}` : 'has no voice row'}, not to the line's speaker ${line.speaker} (the quest package may have reassigned the line); it cannot be approved.`;
     }
+    case 'audition':
+      return `This take is an audition: ${line.speaker} has no cast voice; cast ${line.speaker} first (Cast tab), then approve a take in the cast voice.`;
     case 'recast':
       return "This take is not in the speaker's cast voice; cast that voice first, or approve a take in the cast voice.";
   }

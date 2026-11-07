@@ -22,7 +22,7 @@ const entry = (questId: string, lineId: string, questOrder: number, lineOrder: n
   lineClass: lineId === 'a1' ? 'bark' : 'story', when: lineId === 'a1' ? ['static-whisper-burst'] : [],
   beatId: 'b1', beatTitle: 'Line Stopped', beatSummary: 'Rivet hides in a dumpster while the heat drains.',
   present: true, syncedAt: 0, state, takes: state === 'no-takes' ? 0 : 1, pending: state === 'awaiting-verdict' ? 1 : 0, approvedTakeId: null,
-  flagged: lineId === 'a1' ? 1 : 0,
+  auditions: 0, flagged: lineId === 'a1' ? 1 : 0,
 });
 
 const QUEUE = [entry('first-quest', 'a1', 0, 0, 'awaiting-verdict'), entry('first-quest', 'a2', 0, 1), entry('second-quest', 'b1', 1, 0, 'proven')];

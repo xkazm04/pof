@@ -12,6 +12,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { RoomState, LineDetail } from '@/lib/voice/room';
+import type { CastingDemand } from '@/lib/voice/types';
 import type { Result } from '@/types/result';
 import { VOICE_API, VOICE_GATE_HEADER, VOICE_GATE_TTL_MS } from './voiceGateClient';
 
@@ -49,6 +50,11 @@ export function useVoiceRoom() {
 /** The Casting page for one character (null = no character picked yet). */
 export function useCasting<T>(character: string | null) {
   return useKeyedRead<T>(character ? `${VOICE_API}/casting?character=${encodeURIComponent(character)}` : `${VOICE_API}/casting`, UI_TIMEOUTS.voiceRoomPoll);
+}
+
+/** Casting's demand (which speakers have lines and no cast voice): carried by the casting list read. */
+export function useCastingDemand() {
+  return useKeyedRead<{ demand: CastingDemand }>(`${VOICE_API}/casting`, UI_TIMEOUTS.voiceRoomPoll);
 }
 
 export const castingArtUrl = (character: string, n: number) => `${VOICE_API}/casting/art?character=${encodeURIComponent(character)}&n=${n}`;

@@ -13,7 +13,7 @@ vi.hoisted(() => {
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { createVoiceDb, insertVoice } from '@/lib/voice/voice-db';
+import { createVoiceDb, insertVoice, castVoice } from '@/lib/voice/voice-db';
 import { syncQueue } from '@/lib/voice/lineQueue';
 import { generateTakes, type TakeDeps } from '@/lib/voice/takes';
 import { addStockCandidate } from '@/lib/voice/design';
@@ -35,7 +35,7 @@ beforeEach(async () => {
   db = new Database(':memory:');
   createVoiceDb(db);
   syncQueue(db, 'gtai', makeFixtureRoot());
-  addStockCandidate(db, 'gtai', 'rivet', 'stock-r', 'Liam', null);
+  castVoice(db, addStockCandidate(db, 'gtai', 'rivet', 'stock-r', 'Liam', null).id);
   const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z2', n: 1, direction: 'whispered' }, deps);
   if (!r.ok) throw new Error(r.error);
   takeId = r.data[0].id;

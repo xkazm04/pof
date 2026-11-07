@@ -14,7 +14,7 @@ import type Database from 'better-sqlite3';
 import { loadLedger } from '@/lib/games/gtai-quest/loadContext';
 import type { QuestPackage } from '@/lib/games/gtai-quest/types';
 import { listLines, listTakes, listVoices, markAbsentExcept, upsertLine } from '@/lib/voice/voice-db';
-import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type LineState, type QueueEntry, type QueueLine, type StaleReason, type TakeRow, type VoiceRow, type VoiceStatusView } from '@/lib/voice/types';
+import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type LineState, type QueueEntry, type QueueLine, type SpeakerDemand, type StaleReason, type TakeRow, type VoiceRow, type VoiceStatusView } from '@/lib/voice/types';
 
 export const hashText = (text: string): string => createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
 
@@ -90,14 +90,16 @@ export function voiceCtx(db: Database.Database, gameId: string): VoiceCtx {
  * THE definition of "current take": null when `t` counts for `line`, else why not. The queue, the line view,
  * export and `voice.mjs` all read this, so a take is never proven in one place and stale in another. A take
  * counts only for the text it spoke, only in a voice that belongs to the line's speaker (`pickVoice` checks
- * that at generation; a package that reassigns the line afterwards is caught here), and, once the speaker
- * has a cast voice, only in that voice (re-casting is a re-cast event, registry `game-dialogue-voice-pipeline`).
+ * that at generation; a package that reassigns the line afterwards is caught here), and only in the speaker's
+ * CAST voice (re-casting is a re-cast event; a speaker with no cast voice yields auditions, never proof;
+ * registry `game-dialogue-voice-pipeline`).
  */
 export function staleReason(t: TakeRow, line: QueueLine, ctx: VoiceCtx): StaleReason | null {
   if (t.textHash !== line.textHash) return 'text-edited';
   if (ctx.voices.get(t.voiceId)?.characterId !== line.speaker) return 'wrong-speaker';
   const cast = ctx.cast.get(line.speaker) ?? null;
-  if (cast !== null && t.voiceId !== cast) return 'recast';
+  if (cast === null) return 'audition';
+  if (t.voiceId !== cast) return 'recast';
   return null;
 }
 
@@ -121,7 +123,8 @@ export function lineState(line: QueueLine, takes: readonly TakeRow[], ctx: Voice
 /** Why a line is not proven although takes exist: the stale reason of its approved take(s), in words; else null. */
 export function whyNotProven(line: QueueLine, takes: readonly TakeRow[], ctx: VoiceCtx): string | null {
   const why = takes.filter((t) => t.verdict === 'approved').flatMap((t) => { const r = staleReason(t, line, ctx); return r ? [`approved take ${t.id.slice(0, 8)} is stale: ${r}`] : []; });
-  return why.length > 0 ? why.join('; ') : null;
+  if (why.length > 0) return why.join('; ');
+  return ctx.cast.has(line.speaker) ? null : `${line.speaker} has no cast voice: cast ${line.speaker} first`;
 }
 
 /** A take one of the automatic screens flags (the owner still decides; this only says where to listen). */
@@ -138,11 +141,11 @@ export function queueEntries(db: Database.Database, gameId: string, lines: reado
   return lines.map((l) => {
     const all = byLine.get(`${l.questId}/${l.lineId}`) ?? [];
     const current = all.filter((t) => isCurrent(t, l, ctx));
-    return { ...l, ...lineState(l, all, ctx), takes: current.length, flagged: current.filter(isFlagged).length };
+    return { ...l, ...lineState(l, all, ctx), takes: current.length, auditions: all.filter((t) => staleReason(t, l, ctx) === 'audition').length, flagged: current.filter(isFlagged).length };
   });
 }
 
-export function statusView(entries: readonly QueueEntry[], titles: Readonly<Record<string, string>>, chars: number, nextN = 5): VoiceStatusView {
+export function statusView(entries: readonly QueueEntry[], titles: Readonly<Record<string, string>>, chars: number, nextN = 5, needsVoice: SpeakerDemand[] = []): VoiceStatusView {
   const quests = new Map<string, { questOrder: number; proven: number; total: number }>();
   for (const e of entries) {
     const q = quests.get(e.questId) ?? { questOrder: e.questOrder, proven: 0, total: 0 };
@@ -157,6 +160,7 @@ export function statusView(entries: readonly QueueEntry[], titles: Readonly<Reco
     next: entries.filter((e) => e.state !== 'proven').slice(0, nextN),
     chars,
     flaggedLines: entries.filter((e) => e.flagged > 0).length,
+    needsVoice,
   };
 }
 

@@ -42,7 +42,7 @@ describe('line queue', () => {
   it('keeps profanity verbatim and re-reads a text change from the package; old takes go stale', async () => {
     syncQueue(db, 'gtai', root);
     expect(syncQueue(db, 'gtai', root).find((l) => l.lineId === 'a1')?.text).toContain('Fuck');
-    addStockCandidate(db, 'gtai', 'rivet', 'stock-1', 'Liam', null);
+    castVoice(db, addStockCandidate(db, 'gtai', 'rivet', 'stock-1', 'Liam', null).id);
     const r = await generateTakes(db, { gameId: 'gtai', questId: 'alpha', lineId: 'a1', n: 1, direction: 'panicking' }, deps);
     expect(r.ok).toBe(true);
     let e = queueEntries(db, 'gtai', syncQueue(db, 'gtai', root)).find((x) => x.lineId === 'a1')!;
@@ -59,7 +59,7 @@ describe('line queue', () => {
 
   it('a line is proven only by an approved take; approving another supersedes it with history kept', async () => {
     syncQueue(db, 'gtai', root);
-    addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null);
+    castVoice(db, addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null).id);
     const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z1', n: 2, direction: 'shouting, panicking' }, deps);
     if (!r.ok) throw new Error(r.error);
     const [t1, t2] = r.data;
@@ -82,7 +82,7 @@ describe('line queue', () => {
 
   it('the verdict feed lists every verdict with its line, direction and note, oldest first, after `since`', async () => {
     syncQueue(db, 'gtai', root);
-    addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null);
+    castVoice(db, addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null).id);
     const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z1', n: 2, direction: 'shouting' }, deps);
     if (!r.ok) throw new Error(r.error);
     const [t1, t2] = r.data;
@@ -137,7 +137,7 @@ describe('voice design and casting', () => {
 describe('export', () => {
   it('writes only proven lines into the game root: audio = res:// path (a String), audioTake = { takeId, voiceId, model }', async () => {
     syncQueue(db, 'gtai', root);
-    addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null);
+    castVoice(db, addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null).id);
     const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z1', n: 1, direction: 'shouting' }, deps);
     if (!r.ok) throw new Error(r.error);
     setVerdict(db, r.data[0].id, 'approved', 'yes');
@@ -160,7 +160,7 @@ describe('export', () => {
     expect(targets).toEqual([{ lufs: -20, truePeakDb: -3, source: MIX_TABLE }]);
     expect(ex.data.mastering).toEqual(targets[0]);
     expect(ex.data.written).toEqual([{ lineId: 'z1', path: 'res://assets/audio/voice/zulu/z1.ogg', takeId: r.data[0].id, lufs: -22.1, onLevel: false }]);
-    expect(ex.data.skipped).toEqual([{ lineId: 'z2', reason: 'not proven (no-takes)' }]);
+    expect(ex.data.skipped).toEqual([{ lineId: 'z2', reason: 'not proven (no-takes): rivet has no cast voice: cast rivet first' }]);
     // Rendered once into the room's as-game cache, then COPIED into the game: what ships is what was heard.
     expect(converted).toHaveLength(1);
     expect(path.dirname(converted[0])).toBe(path.join(String(process.env.POF_VOICE_DIR), 'as-game'));
@@ -205,7 +205,7 @@ describe('export', () => {
 
   it('a speaker treatment from voice_treatments is applied before loudnorm; a chain with a non-tone filter is refused, named', async () => {
     syncQueue(db, 'gtai', root);
-    addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null);
+    castVoice(db, addStockCandidate(db, 'gtai', 'dock-guard', 'stock-g', 'Chris', null).id);
     const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z1', n: 1, direction: '' }, deps);
     if (!r.ok) throw new Error(r.error);
     setVerdict(db, r.data[0].id, 'approved', 'yes');
@@ -238,6 +238,7 @@ describe('re-cast', () => {
     syncQueue(db, 'gtai', root);
     const a = addStockCandidate(db, 'gtai', 'rivet', 'stock-a', 'A', null, 1);
     const b = addStockCandidate(db, 'gtai', 'rivet', 'stock-b', 'B', null, 2);
+    castVoice(db, a.id);
     const r = await generateTakes(db, { gameId: 'gtai', questId: 'zulu', lineId: 'z2', n: 1, direction: '', voiceId: a.id }, deps);
     if (!r.ok) throw new Error(r.error);
     setVerdict(db, r.data[0].id, 'approved', 'ok');

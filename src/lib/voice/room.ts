@@ -5,6 +5,7 @@
 import type Database from 'better-sqlite3';
 import { listTakes, listVoices, totalChars, verdictHistory, getLine } from '@/lib/voice/voice-db';
 import { queueEntries, questTitles, statusView, staleReason, syncQueue, voiceCtx } from '@/lib/voice/lineQueue';
+import { castingDemand } from '@/lib/voice/castingDemand';
 import { readBible } from '@/lib/voice/design';
 import type { QueueEntry, StaleReason, TakeRow, VerdictEvent, VoiceRow, VoiceStatusView } from '@/lib/voice/types';
 
@@ -12,7 +13,7 @@ export interface RoomState { status: VoiceStatusView; queue: QueueEntry[]; voice
 
 export function roomState(db: Database.Database, gameId: string, root: string, nextN = 5): RoomState {
   const queue = queueEntries(db, gameId, syncQueue(db, gameId, root));
-  return { status: statusView(queue, questTitles(root), totalChars(db, gameId), nextN), queue, voices: listVoices(db, gameId) };
+  return { status: statusView(queue, questTitles(root), totalChars(db, gameId), nextN, castingDemand(db, gameId).needsVoice), queue, voices: listVoices(db, gameId) };
 }
 
 /** A take as the client sees it: no absolute file path, plus `reason` (why it is not the line's current take,

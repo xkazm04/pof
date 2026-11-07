@@ -9,10 +9,12 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import { CASTING_GROUPS, type CastingCharacter } from '@/lib/voice/castingTypes';
 import type { CastingView } from '@/lib/voice/castingView';
 import { openCasting } from './voiceRoomParam';
+import { useCastingDemand } from './voiceRoomData';
+import { CastingDemandPanel } from './castingDemandPanel';
 import { parseBible, BibleItems } from './castingBibleText';
 import { ArtViewer, Avatar, CastingRounds, statusWord } from './castingParts';
 
-function Roster({ t, characters, current }: { t: LabTheme; characters: CastingCharacter[]; current: string | null }) {
+function Roster({ t, characters, current, noLines }: { t: LabTheme; characters: CastingCharacter[]; current: string | null; noLines: ReadonlySet<string> }) {
   return (
     <nav aria-label="Characters to cast" style={{ position: 'sticky', top: 0, alignSelf: 'start', display: 'grid', gap: 14, maxHeight: '80vh', overflow: 'auto', paddingRight: 4 }}>
       {CASTING_GROUPS.map((g) => {
@@ -31,7 +33,7 @@ function Roster({ t, characters, current }: { t: LabTheme; characters: CastingCh
                   <Avatar t={t} c={c} size={30} ring={on} />
                   <span style={{ minWidth: 0, display: 'grid' }}>
                     <span style={{ fontSize: 'var(--lab-fs-sm)', fontWeight: on ? 700 : 500, color: t.inkDeep, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.title.replace(/\s*\(.*\)/, '')}</span>
-                    <span style={{ fontSize: 'var(--lab-fs-xs)', color: s.tone === 'muted' ? t.muted : t[s.tone] }}>{s.word}</span>
+                    <span style={{ fontSize: 'var(--lab-fs-xs)', color: s.tone === 'muted' ? t.muted : t[s.tone] }}>{s.word}{noLines.has(c.id) && <span data-testid="casting-zero-lines" title="Cast, but speaks no present quest line"> · 0 lines</span>}</span>
                   </span>
                 </button>
               );
@@ -47,9 +49,14 @@ export function CastingRoster({ t, v, characters, current, gate, onChanged }: {
   t: LabTheme; v: CastingView | null; characters: CastingCharacter[]; current: string | null; gate: string | null; onChanged: () => void;
 }) {
   const sections = parseBible(v?.bibleExcerpt ?? null);
+  const { read } = useCastingDemand();
+  const demand = read.kind === 'ready' ? read.data.demand : null;
+  const noLines = new Set((demand?.castWithoutLines ?? []).map((c) => c.characterId));
   return (
+    <div style={{ display: 'grid', gap: 18 }}>
+    <CastingDemandPanel t={t} demand={demand} castable={new Set(characters.map((c) => c.id))} />
     <div data-testid="casting-roster" style={{ display: 'flex', flexWrap: 'wrap', gap: 28, alignItems: 'flex-start' }}>
-      <div style={{ flex: '1 1 200px', maxWidth: 240, minWidth: 0, position: 'sticky', top: 0 }}><Roster t={t} characters={characters} current={current} /></div>
+      <div style={{ flex: '1 1 200px', maxWidth: 240, minWidth: 0, position: 'sticky', top: 0 }}><Roster t={t} characters={characters} current={current} noLines={noLines} /></div>
       {!v ? <p style={{ color: t.muted, fontSize: 'var(--lab-fs-sm)' }}>Pick a character from the roster.</p> : (
         <div style={{ flex: '999 1 520px', display: 'grid', gap: 24, minWidth: 0 }}>
           <header style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 20, alignItems: 'start' }}>
@@ -72,6 +79,7 @@ export function CastingRoster({ t, v, characters, current, gate, onChanged }: {
           <CastingRounds t={t} v={v} gate={gate} onChanged={onChanged} />
         </div>
       )}
+    </div>
     </div>
   );
 }

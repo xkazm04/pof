@@ -82,6 +82,7 @@ export function VoiceQueue({ t, queue, quests, selected, onSelect, onExport, exp
                         <StatusTag level={s.level} word={s.word} />
                         {l.lineClass === 'bark' && <span data-testid="voice-line-class" title={`bark: ${l.when.join(', ')}`}><MicroLabel mono tone="muted">bark</MicroLabel></span>}
                         {l.takes > 0 && <MicroLabel mono tone="muted">{l.takes} takes{l.pending ? ` · ${l.pending} pending` : ''}</MicroLabel>}
+                        {l.auditions > 0 && <span data-testid="voice-line-audition" title="The speaker has no cast voice: these takes are auditions and cannot prove the line"><StatusTag level="warn" word={`${l.auditions} audition${l.auditions === 1 ? '' : 's'}`} /></span>}
                         {l.flagged > 0 && <span data-testid="voice-line-flagged"><StatusTag level="warn" word={`${l.flagged} flagged`} /></span>}
                       </span>
                       <span style={{ fontSize: 'var(--lab-fs-sm)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.text}</span>

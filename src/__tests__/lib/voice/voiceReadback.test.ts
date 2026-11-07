@@ -11,7 +11,7 @@ vi.hoisted(() => {
 });
 import fs from 'node:fs';
 import Database from 'better-sqlite3';
-import { createVoiceDb, getTake } from '@/lib/voice/voice-db';
+import { createVoiceDb, getTake, castVoice } from '@/lib/voice/voice-db';
 import { queueEntries, statusView, syncQueue } from '@/lib/voice/lineQueue';
 import { generateTakes, type TakeDeps } from '@/lib/voice/takes';
 import { addStockCandidate } from '@/lib/voice/design';
@@ -31,7 +31,7 @@ beforeEach(() => {
   db = new Database(':memory:');
   createVoiceDb(db);
   syncQueue(db, 'gtai', makeFixtureRoot());
-  addStockCandidate(db, 'gtai', 'rivet', 'stock-r', 'Liam', null);
+  castVoice(db, addStockCandidate(db, 'gtai', 'rivet', 'stock-r', 'Liam', null).id);
 });
 afterAll(() => fs.rmSync(String(process.env.POF_VOICE_DIR), { recursive: true, force: true }));
 
