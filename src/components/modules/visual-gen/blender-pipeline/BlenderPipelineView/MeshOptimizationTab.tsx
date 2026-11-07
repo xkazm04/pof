@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Zap } from 'lucide-react';
 import { optimizeMeshScript } from '@/lib/blender-mcp/scripts/optimize-mesh';
+import { readReceipt } from '@/lib/blender-mcp/receipt';
 import { TabHeader } from '@/components/modules/shared/TabHeader';
 import { WARNING_TEXT } from '@/lib/blender-mcp/status-tokens';
 import {
@@ -21,6 +22,22 @@ import { useScriptExecution } from './useScriptExecution';
 const CHECKBOX_CLASS =
   'focus-ring rounded border-border accent-[var(--visual-gen)]';
 
+/**
+ * The run's outcome is its `optimize-mesh` receipt `{ before, after }`, never
+ * the bare fact that the call returned (docs/architecture/runtime-patterns.md:
+ * "only `confirmed` renders as success"). No receipt, or one without numeric
+ * counts, is `unconfirmed` and carries its reason. Pure.
+ */
+export function readOptimizeOutcome(output: string): { ok: true; text: string } | { ok: false; reason: string } {
+  const read = readReceipt(output, 'optimize-mesh');
+  if (read.state !== 'confirmed') return { ok: false, reason: read.reason };
+  const { before, after } = read.data;
+  if (typeof before !== 'number' || typeof after !== 'number') {
+    return { ok: false, reason: "Blender's optimize-mesh receipt carried no vertex counts, so the outcome could not be confirmed" };
+  }
+  return { ok: true, text: `${before} → ${after} vertices (removed ${before - after})` };
+}
+
 export function MeshOptimizationTab() {
   const { isRunning, result, error, connected, execute } = useScriptExecution();
   const [objectName, setObjectName] = useState('');
@@ -38,6 +55,8 @@ export function MeshOptimizationTab() {
     const n = parseFloat(mergeDistance.trim());
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [mergeDistance]);
+
+  const outcome = useMemo(() => (result === null ? null : readOptimizeOutcome(result)), [result]);
 
   const noOperations = !removeDoubles && !recalcNormals;
   const mergeDistanceInvalid = removeDoubles && parsedMergeDistance === null;
@@ -141,7 +160,18 @@ export function MeshOptimizationTab() {
         {!connected && <DisconnectedNotice />}
       </MCPFormCard>
 
-      <ResultBlock result={result} error={error} />
+      <ResultBlock result={outcome?.ok ? outcome.text : null} error={error} />
+      {outcome && !outcome.ok && (
+        <p role="status" className={`text-xs ${WARNING_TEXT}`}>
+          {outcome.reason}
+        </p>
+      )}
+      {result !== null && (
+        <details className="text-xs text-text-muted">
+          <summary>Blender output</summary>
+          <pre className="mt-1 font-mono text-text whitespace-pre-wrap break-words">{result}</pre>
+        </details>
+      )}
     </div>
   );
 }
