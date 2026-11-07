@@ -14387,8 +14387,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/hooks/useSessionAnalytics.ts:104 The memory-like parts of this context are analytics: CLI run outcomes go to a dashboard and to suggestions a human sees before sending, playtest findings go to a regression diff, and nothing is recalled into an agent's context. A recursive grep of src/stores, src/types, src/hooks, src/lib and src/app/api/project-health found no hit for episodic, agentMemory, memories, halfLife or recallBudget.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "fleet-orchestration",
@@ -19952,8 +19956,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/stores/deepEvalStore.ts:7 The evaluator keeps earlier scans only as a baseline for NEW/PERSISTING/RESOLVED diffs and as a short UI history. No prior finding is fed back into an eval prompt (grep for lastScan/baselineFor in src/lib/evaluator found none), and a recursive grep of src/lib/evaluator, src/stores and src/types found no hit for the subject's terms.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "test-harness",
@@ -20632,8 +20640,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:8 This context derives acceptance tiers from artifact state and judge verdicts. It is quality-verdict plumbing, not an agent's carried-forward memory, and a recursive grep of src/components/layout-lab and src/lib/catalog/acceptance found no hit for the subject's terms.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "eval-harness",
@@ -27811,8 +27823,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/visual-gen/mesh-finish-job-store.ts:2 The only state these gates keep is process job status and per-loop retry state for mesh generation. None of it is an agent's working, episodic or consolidated memory, and a recursive grep of src/lib/visual-gen found no hit for the subject's terms.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "generated-asset-world-scale",

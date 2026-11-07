@@ -21167,6 +21167,80 @@
           "evidence": "src/hooks/useModuleCLI.ts:218 On the preferred path the hook passes the assembler typed context inputs (a ProjectContext shape) plus a CLITask, not rendered text. The trust-class side is not visible in this hook."
         }
       ]
+    },
+    "43c8c748-ad7d-4ec7-866f-6049ed660349/agent-memory": {
+      "context": "game-director-system",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:00:45.299Z",
+      "worker": "df09205f-84a6-478a-bb3c-156ffbb0cd23",
+      "techniques": [
+        {
+          "technique": "episodic-capture",
+          "verdict": "not-applicable",
+          "evidence": "src/types/session-analytics.ts:5 There is one record per CLI run. It is telemetry for a dashboard and is never distilled into beliefs or recalled into an agent."
+        },
+        {
+          "technique": "recall-injection",
+          "verdict": "not-applicable",
+          "evidence": "src/types/session-analytics.ts:87 Suggestions are shown to the human operator. They are never injected as recalled memory into the agent's prompt."
+        },
+        {
+          "technique": "exposure-is-not-credit",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useSessionAnalytics.ts:113 The outcome is tagged to the one prompt variant that was dispatched. Any learning happens in src/lib/prompt-evolution, which is outside this context, and no memory store learns from outcomes here."
+        }
+      ]
+    },
+    "fb32be4a-b388-4f9a-9888-4f8301b69db4/agent-memory": {
+      "context": "module-evaluator",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:00:45.299Z",
+      "worker": "df09205f-84a6-478a-bb3c-156ffbb0cd23",
+      "techniques": [
+        {
+          "technique": "decay-and-forgetting",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/evaluatorStore.ts:27 This caps a UI scan history at 10 entries. It is not a retention policy over agent beliefs."
+        }
+      ]
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/agent-memory": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:00:45.299Z",
+      "worker": "df09205f-84a6-478a-bb3c-156ffbb0cd23",
+      "techniques": [
+        {
+          "technique": "working-memory",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/best-of-n.ts:240 This is a local variable inside one best-of-N roll loop. It stops re-rolls once the same failure repeats. It is not an agent's operative task state, and no procedure is revised from it."
+        }
+      ]
+    },
+    "fbf29127-2676-426a-82b7-d0588ca6bd81/agent-memory": {
+      "context": "pipeline-acceptance-engine",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:00:45.299Z",
+      "worker": "df09205f-84a6-478a-bb3c-156ffbb0cd23",
+      "techniques": [
+        {
+          "technique": "stale-served-versus-stale-answered",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:24 Superseding by rubric version applies to judge verdicts about content, which is the domain of quality-verdict-integrity. It is not linking versions of recalled agent beliefs."
+        }
+      ]
     }
   }
 }
