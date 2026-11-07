@@ -13784,7 +13784,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useGameDesignDoc.ts:113 The freshness gate keys the cached GDD on project and checklist hash only, while synthesizeGDD also reads feature_matrix, level_design_docs, audio scenes, eval findings and builds. The hook therefore adopts a document as 'still-fresh' after inputs it never digested have changed, and only a forced refresh rechecks.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "agent-cli-transport",
@@ -14171,7 +14175,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/gdd-compliance/route.ts:33 resolve-gap stores a dismissal of a design-doc-vs-code gap keyed only by a stable gap id (gap-<module>-<kind>-<item>), without the evidence revision it dismissed, so every later audit re-applies it even after the code or the GDD moves; a disputed design claim then reads as settled, which is the dismiss-transition failure earned-verification-state names.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "encounter-balance-simulation",

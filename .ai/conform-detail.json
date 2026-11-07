@@ -21021,6 +21021,44 @@
           "evidence": "src/lib/judge/rubrics.ts:156 Assembly takes only cls and opts and reads no date or clock, so there is no clock to pin."
         }
       ]
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/docs-sync": {
+      "context": "game-design-studio-api",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:29:07.761Z",
+      "worker": "cd3af17c-0585-4cda-96c8-22b1047546ee",
+      "techniques": [
+        {
+          "technique": "earned-verification-state",
+          "verdict": "deviation",
+          "evidence": "src/app/api/gdd-compliance/route.ts:33 The resolution stores resolved_at and a note but no evidence binding. The lib's runComplianceAudit re-marks the gap resolved by id on every re-audit, so there is no reaffirm-against-moved-evidence path."
+        }
+      ],
+      "registryProposal": "earned-verification-state could say outright that a durable 'resolve/dismiss' on a design-doc-vs-code gap must record the evidence revision it dismissed, or else lapse when that evidence changes. In-product doc-compliance tools hit this pattern, not only rot scanners."
+    },
+    "18f62a30-bc54-4204-a7fb-e7ccde2aabc1/docs-sync": {
+      "context": "feature-design-state-hooks",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:29:07.761Z",
+      "worker": "cd3af17c-0585-4cda-96c8-22b1047546ee",
+      "techniques": [
+        {
+          "technique": "earned-verification-state",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useGameDesignDoc.ts:113 A freshness claim is granted without checking most of the evidence the document is derived from (gdd-synthesizer.ts:156 featureSummary, :189 evalFindings). Cache key at :135."
+        },
+        {
+          "technique": "doc-rot-detection",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useDesignDocument.ts:71 Level design docs with no code link are counted as unlinked, separate from synced. The uncheckable are not folded into clean."
+        }
+      ]
     }
   }
 }
