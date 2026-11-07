@@ -4,7 +4,7 @@ import {
   STATUS_SUBDUED, ACCENT_CYAN_LIGHT,
   MODULE_COLORS,
 } from '@/lib/chart-colors';
-import type { EmitterType } from '@/types/audio-scene';
+import type { EmitterType, ReverbPreset } from '@/types/audio-scene';
 
 export const MINIMAP_W = 120;
 export const MINIMAP_H = 90;
@@ -16,7 +16,8 @@ export const CHROME_ACCENT = MODULE_COLORS.content;
 
 // ── Constants ──
 
-export const ZONE_COLORS: Record<string, string> = {
+// Keyed by the ReverbPreset union, so a preset added to the type without a hue fails tsc.
+export const ZONE_COLORS: Record<ReverbPreset, string> = {
   'none': 'var(--text-muted)',
   'small-room': STATUS_INFO,
   'large-hall': ACCENT_VIOLET,
