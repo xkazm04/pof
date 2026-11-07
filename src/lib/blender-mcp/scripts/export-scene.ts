@@ -1,4 +1,3 @@
-import { py } from '@/lib/blender-mcp/escape';
 import { pyReceipt, pyStr } from '@/lib/blender-mcp/receipt';
 
 /**
@@ -24,11 +23,13 @@ export function exportSceneScript(params: {
   outputPath: string;
   format: 'fbx' | 'gltf';
 }): string {
-  const path = py(params.outputPath);
+  // A NORMAL literal: `pyStr` already escapes backslashes, so a raw `r"..."` around it
+  // would hand Python doubled separators (`\\nas\share` became `\\\\nas\\share`).
+  const path = pyStr(params.outputPath);
   const call =
     params.format === 'fbx'
-      ? `bpy.ops.export_scene.fbx(filepath=r"${path}", use_selection=False)`
-      : `bpy.ops.export_scene.gltf(filepath=r"${path}", export_format="GLB", use_active_scene=True)`;
+      ? `bpy.ops.export_scene.fbx(filepath=${path}, use_selection=False)`
+      : `bpy.ops.export_scene.gltf(filepath=${path}, export_format="GLB", use_active_scene=True)`;
   const readBack = params.format === 'fbx' ? FBX_READ_BACK : GLB_READ_BACK;
   // The operator's own return set is necessary but not sufficient evidence.
   // Anything but FINISHED raises; so does any read-back issue.
@@ -48,7 +49,7 @@ status = ${call}
 if 'FINISHED' not in status:
     raise RuntimeError("Blender's exporter returned " + str(status) + " instead of FINISHED")
 
-_path = r"${path}"
+_path = ${path}
 ${readBack}
 if not _intended:
     _issues.append('empty-export: the active scene has no mesh objects')
