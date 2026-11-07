@@ -22101,6 +22101,135 @@
           "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:52 The technique says to add a first-class indeterminate status when the list lacks one. The store (taskDAGStore.demoteInterrupted, outside this context) instead writes 'failed' plus failureReason 'reload-interrupted', and this context's views special-case it."
         }
       ]
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/canvas-graph": {
+      "context": "core-engine-planning-shell",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:45:55.189Z",
+      "worker": "280f461d-ab69-4e2c-b4f0-f23a71600bd3",
+      "techniques": [
+        {
+          "technique": "viewport-transform",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:31 A React onWheel prop is registered passive, so its preventDefault cannot stop the page from scrolling while the canvas zooms. The handler also repeats the zoom math from useCanvasTransform.onWheel (clamp 0.2–3 written inline), and the minimap inverse is hand-rolled again in index.tsx:52."
+        },
+        {
+          "technique": "render-budget",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasNodes.tsx:143 Every ready node gets an endless ping ring with no population gate (rung 5). Nothing is culled either: visibleNodes is every layout node. CanvasNodes reads transform.zoom (line 29) and re-renders all nodes on each pan event because setTransform runs per pointermove."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:61 Click versus pan is decided by counting pointermove events rather than measuring screen distance. There is also no pointercancel or lostpointercapture handler, so if the gesture is cancelled the pan state stays stuck."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasEdges.tsx:31 Edges are drawn focus-context: faint by default and full strength for the hovered or selected node's incoming and outgoing edges. Caveat: edges anchor at node centres, not at the card borders."
+        },
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:22 The surface takes focus but has no role and no accessible name. The nodes are click-only divs with no keyboard path to focus or select them. Zoom and fit buttons do exist."
+        }
+      ]
+    },
+    "4bf87448-56bb-4e01-b146-3a3139aeb801/canvas-graph": {
+      "context": "game-ui-hud",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:45:55.189Z",
+      "worker": "280f461d-ab69-4e2c-b4f0-f23a71600bd3",
+      "techniques": [
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:88 There is one tab stop per node, and the <svg> has no role or aria-label naming the graph."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:37 Edge endpoints repeat the ring placement inline (radius 140, centre 200) instead of reading the nodes' geometry function. Edges are also keyed by array index (`edge-${i}`), not by an edge id."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:80 The ring layout is deterministic over static FLOW_NODES, but node placement is a second copy of the geometry the edges compute separately, which breaks the shared-geometry rule."
+        },
+        {
+          "technique": "viewport-transform",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:27 Fixed viewBox with no pan or zoom, and no pointer coordinate is ever converted (nodes only take clicks)."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:86 Click-to-highlight only: no drag, marquee or connect gesture."
+        },
+        {
+          "technique": "render-budget",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:61 The per-edge looping dash animation honours reduced motion. The population is a fixed 8-node static constant, so the density gate never comes into play."
+        }
+      ]
+    },
+    "f2a555f4-1b04-4196-bb1c-71049494f81a/canvas-graph": {
+      "context": "animation-state-machine-editor",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:45:55.189Z",
+      "worker": "280f461d-ab69-4e2c-b4f0-f23a71600bd3",
+      "techniques": [
+        {
+          "technique": "canvas-accessibility",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorCanvas.tsx:179 One tab stop per node. Nodes do announce their name, priority and severity, and arrow keys nudge them."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/helpers.ts:95 The threshold is 4px in screen space, the position is computed as origin plus delta, Escape cancels back to the origin, and a window mouseup ends the drag. No pointer capture, so moves outside the canvas are not tracked."
+        },
+        {
+          "technique": "edge-management",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorCanvas.tsx:99 Endpoints are inset a fixed 8 percent from node centres and never read NODE_W/NODE_H, so arrowheads drift off the borders as the canvas width changes. Edge identity (t.id) and the 15px hit stroke are correct."
+        },
+        {
+          "technique": "graph-layout",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/useStateMachineEditor.ts:169 A new state lands at random near the centre with no probing for free space, so it can stack on existing nodes. The draft is also saved on every states change, which means on every drag move."
+        }
+      ]
+    },
+    "fd7a2f11-0208-4ec9-9abc-192a14a0171b/canvas-graph": {
+      "context": "ue5-asset-generation-hooks",
+      "subject": "canvas-graph",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:45:55.189Z",
+      "worker": "280f461d-ab69-4e2c-b4f0-f23a71600bd3",
+      "techniques": [
+        {
+          "technique": "viewport-transform",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useCanvasTransform.ts:21 There is no conversion API, and zoom-to-point is written twice inside the hook (line 76 for wheel, line 111 for zoomToCenter) instead of as one operation. Positive: zoom clamping lives in the hook."
+        },
+        {
+          "technique": "direct-manipulation",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useCanvasTransform.ts:44 The surface pan captures at press on e.target rather than when the movement threshold is crossed, endPan never releases the capture, and there is no pointercancel or lostpointercapture handling. By contrast useDragAngle.ts:58 captures on currentTarget and has window pointerup/pointercancel fallbacks."
+        }
+      ]
     }
   }
 }

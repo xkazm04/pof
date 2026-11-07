@@ -1,0 +1,209 @@
+{
+ "schema": "conform-run/1",
+ "worker": "280f461d-ab69-4e2c-b4f0-f23a71600bd3",
+ "subject": "canvas-graph",
+ "evaluatedAt": "2026-11-07T04:45:55.189454+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "core-engine-planning-shell",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:42 The plan map works out zoom-to-point again inside its own React onWheel handler instead of using the shared transform hook's onWheel, and the minimap viewport (index.tsx:52) and minimap jump (MiniMap.tsx:40) each convert world and screen coordinates by hand, so there are several separate coordinate authorities.",
+   "techniques": [
+    {
+     "technique": "viewport-transform",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:31 A React onWheel prop is registered passive, so its preventDefault cannot stop the page from scrolling while the canvas zooms. The handler also repeats the zoom math from useCanvasTransform.onWheel (clamp 0.2\u20133 written inline), and the minimap inverse is hand-rolled again in index.tsx:52."
+    },
+    {
+     "technique": "render-budget",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasNodes.tsx:143 Every ready node gets an endless ping ring with no population gate (rung 5). Nothing is culled either: visibleNodes is every layout node. CanvasNodes reads transform.zoom (line 29) and re-renders all nodes on each pan event because setTransform runs per pointermove."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:61 Click versus pan is decided by counting pointermove events rather than measuring screen distance. There is also no pointercancel or lostpointercapture handler, so if the gesture is cancelled the pan state stays stuck."
+    },
+    {
+     "technique": "edge-management",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/CanvasEdges.tsx:31 Edges are drawn focus-context: faint by default and full strength for the hovered or selected node's incoming and outgoing edges. Caveat: edges anchor at node centres, not at the card borders."
+    },
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:22 The surface takes focus but has no role and no accessible name. The nodes are click-only divs with no keyboard path to focus or select them. Zoom and fit buttons do exist."
+    }
+   ]
+  },
+  {
+   "context": "game-ui-hud",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:88 The read-only screen-flow ring diagram gives every node its own tab stop and leaves the SVG without a role or name. That is the tab-stop wall the accessibility technique names, instead of one stop with a list twin.",
+   "techniques": [
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:88 There is one tab stop per node, and the <svg> has no role or aria-label naming the graph."
+    },
+    {
+     "technique": "edge-management",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:37 Edge endpoints repeat the ring placement inline (radius 140, centre 200) instead of reading the nodes' geometry function. Edges are also keyed by array index (`edge-${i}`), not by an edge id."
+    },
+    {
+     "technique": "graph-layout",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:80 The ring layout is deterministic over static FLOW_NODES, but node placement is a second copy of the geometry the edges compute separately, which breaks the shared-geometry rule."
+    },
+    {
+     "technique": "viewport-transform",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:27 Fixed viewBox with no pan or zoom, and no pointer coordinate is ever converted (nodes only take clicks)."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:86 Click-to-highlight only: no drag, marquee or connect gesture."
+    },
+    {
+     "technique": "render-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:61 The per-edge looping dash animation honours reduced motion. The population is a fixed 8-node static constant, so the density gate never comes into play."
+    }
+   ]
+  },
+  {
+   "context": "animation-state-machine-editor",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorCanvas.tsx:179 Each state node is its own tab stop rather than a cursor roving inside one named canvas region, so keyboard users have to tab through every state to get past the editor, even though arrow-key nudging exists.",
+   "techniques": [
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorCanvas.tsx:179 One tab stop per node. Nodes do announce their name, priority and severity, and arrow keys nudge them."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/content/animations/StateMachineEditor/helpers.ts:95 The threshold is 4px in screen space, the position is computed as origin plus delta, Escape cancels back to the origin, and a window mouseup ends the drag. No pointer capture, so moves outside the canvas are not tracked."
+    },
+    {
+     "technique": "edge-management",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorCanvas.tsx:99 Endpoints are inset a fixed 8 percent from node centres and never read NODE_W/NODE_H, so arrowheads drift off the borders as the canvas width changes. Edge identity (t.id) and the 15px hit stroke are correct."
+    },
+    {
+     "technique": "graph-layout",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/content/animations/StateMachineEditor/useStateMachineEditor.ts:169 A new state lands at random near the centre with no probing for free space, so it can stack on existing nodes. The draft is also saved on every states change, which means on every drag move."
+    }
+   ]
+  },
+  {
+   "context": "ue5-asset-generation-hooks",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/hooks/useCanvasTransform.ts:21 The shared canvas-transform hook offers no toWorld/toScreen or visible-rect functions, only the raw setter, so callers end up writing their own screen/world math.",
+   "techniques": [
+    {
+     "technique": "viewport-transform",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useCanvasTransform.ts:21 There is no conversion API, and zoom-to-point is written twice inside the hook (line 76 for wheel, line 111 for zoomToCenter) instead of as one operation. Positive: zoom clamping lives in the hook."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useCanvasTransform.ts:44 The surface pan captures at press on e.target rather than when the movement threshold is crossed, endPan never releases the capture, and there is no pointercancel or lostpointercapture handling. By contrast useDragAngle.ts:58 captures on currentTarget and has window pointerup/pointercancel fallbacks."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "canvas-graph",
+   "context": "audio-scene-designer",
+   "reason": "evidence leans on lib/audio-scene-viewport.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T04:45:55.189454+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "direct-manipulation",
+    "edge-management",
+    "render-budget",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "core-engine-planning-shell",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:45:55.189454+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "direct-manipulation",
+    "edge-management",
+    "graph-layout",
+    "render-budget",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "game-ui-hud",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:45:55.189454+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "direct-manipulation",
+    "edge-management",
+    "graph-layout"
+   ],
+   "deviations": 1,
+   "context": "animation-state-machine-editor",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:45:55.189454+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "direct-manipulation",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "ue5-asset-generation-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

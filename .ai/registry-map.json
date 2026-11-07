@@ -4026,7 +4026,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorCanvas.tsx:179 Each state node is its own tab stop rather than a cursor roving inside one named canvas region, so keyboard users have to tab through every state to get past the editor, even though arrow-key nudging exists.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "supply-chain",
@@ -12424,7 +12428,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/Canvas.tsx:42 The plan map works out zoom-to-point again inside its own React onWheel handler instead of using the shared transform hook's onWheel, and the minimap viewport (index.tsx:52) and minimap jump (MiniMap.tsx:40) each convert world and screen coordinates by hand, so there are several separate coordinate authorities.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "module-design",
@@ -14667,7 +14675,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:88 The read-only screen-flow ring diagram gives every node its own tab stop and leaves the SVG without a role or name. That is the tab-stop wall the accessibility technique names, instead of one stop with a list twin.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "accessibility",
@@ -25618,7 +25630,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/hooks/useCanvasTransform.ts:21 The shared canvas-transform hook offers no toWorld/toScreen or visible-rect functions, only the raw setter, so callers end up writing their own screen/world math.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "agent-runtime-assembly",
