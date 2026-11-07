@@ -1,9 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Copy, Code } from 'lucide-react';
 import type { EliteModifier } from '../_shared/data';
 import { generateModifierGE } from '../_shared/data';
 import { Modal } from '@/components/ui/Modal';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 import { withOpacity, OPACITY_10, OPACITY_25 } from '@/lib/chart-colors';
 interface CodegenModalProps {
@@ -19,6 +22,13 @@ interface CodegenModalProps {
  */
 export function CodegenModal({ mod, onClose }: CodegenModalProps) {
   const codeText = mod ? generateModifierGE(mod) : '';
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  useEffect(() => {
+    if (copyStatus === 'idle') return;
+    const t = setTimeout(() => setCopyStatus('idle'), UI_TIMEOUTS.copyFeedback);
+    return () => clearTimeout(t);
+  }, [copyStatus]);
+  const handleCopy = async () => setCopyStatus((await copyToClipboard(codeText)) ? 'copied' : 'failed');
   return (
     <Modal
       open={mod !== null}
@@ -41,10 +51,12 @@ export function CodegenModal({ mod, onClose }: CodegenModalProps) {
               {mod.icon} {mod.tier}
             </span>
             <button
-              onClick={() => navigator.clipboard.writeText(codeText)}
+              onClick={handleCopy}
+              aria-live="polite"
               className="text-xs font-bold px-2 py-1 rounded border border-border/40 bg-surface-deep hover:bg-surface-hover transition-colors text-text-muted hover:text-text flex items-center gap-1 cursor-pointer focus-ring"
             >
-              <Copy className="w-3 h-3" /> Copy
+              <Copy className="w-3 h-3" />
+              {copyStatus === 'copied' ? 'Copied' : copyStatus === 'failed' ? 'Copy failed' : 'Copy'}
             </button>
           </div>
           <div className="pt-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
