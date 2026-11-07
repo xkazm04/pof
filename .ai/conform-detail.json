@@ -20670,13 +20670,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:14:54.464Z",
+      "evaluatedTs": "2026-11-07T03:45:58.966Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "7f1b81c3-9dff-4b1b-a374-f9cee0167823",
+        "worker": "02a47cba-7613-476a-99f9-876c63b24688",
         "state": "not-applicable",
-        "at": "2026-11-07T03:15:49.487764+00:00",
-        "reason": "reviewer (sonnet): The anchor labAcceptance.ts:44 is only the resolveAccept signature and doesn't show that nothing in the context listens or speaks, so it is an incidental anchor. The grep absence itself holds."
+        "at": "2026-11-07T03:46:50.331527+00:00",
+        "reason": "reviewer (sonnet): The claim that layout-lab/ has no voice surface is false: layout-lab/game/voice/ holds a full Voice room (take playback, read-back WER, approve/reject), and lib/catalog/acceptance/contractsCheckers.ts:79 checks line audio; the cited anchor labAcceptance.ts:8 is an incidental WeakMap comment, so the "
       }
     },
     "ac4cee9e-1527-46e9-8b16-f0f49affbe37/agent-memory": {
@@ -21713,6 +21713,46 @@
           "evidence": "src/lib/blender-mcp/mcp-gate.ts:117 mcp-gate fetches the delivered mesh and grades that file. With no resultUrl or a failed fetch it reports delivered-ungated with a reason, never a pass."
         }
       ]
+    },
+    "8037f4d0-1cc1-4567-8afd-5d50481bbc30/voice-io": {
+      "context": "combat-damage-pipeline",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:45:58.966Z",
+      "worker": "02a47cba-7613-476a-99f9-876c63b24688",
+      "techniques": []
+    },
+    "0f8602ad-d98f-4d1d-9644-0467be9e70b9/voice-io": {
+      "context": "debug-performance",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:45:58.966Z",
+      "worker": "02a47cba-7613-476a-99f9-876c63b24688",
+      "techniques": []
+    },
+    "08075992-0eca-4e46-9923-aae255fe800d/voice-io": {
+      "context": "cook-packaging-pipeline",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:45:58.966Z",
+      "worker": "02a47cba-7613-476a-99f9-876c63b24688",
+      "techniques": []
+    },
+    "93d7df50-4139-4c17-be90-ded49dd49f69/voice-io": {
+      "context": "inventory-catalog",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:45:58.966Z",
+      "worker": "02a47cba-7613-476a-99f9-876c63b24688",
+      "techniques": []
     }
   }
 }

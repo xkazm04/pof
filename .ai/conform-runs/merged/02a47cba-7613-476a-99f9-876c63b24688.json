@@ -1,0 +1,139 @@
+{
+  "schema": "conform-run/1",
+  "worker": "02a47cba-7613-476a-99f9-876c63b24688",
+  "subject": "voice-io",
+  "evaluatedAt": "2026-11-07T03:45:58.966924+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "combat-damage-pipeline",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/DamagePipelineFlow.tsx:24 This context is an SVG flow visualization of damage, heal and combo math with no capture or playback of speech; a search of sub_combat/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder, and no speech/voice/TTS/STT term in the listed files.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "SpeechRecognition",
+        "speechSynthesis",
+        "MediaRecorder",
+        "SpeechSynthesisUtterance"
+      ]
+    },
+    {
+      "context": "debug-performance",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_debug/index.tsx:13 This context is a runtime perf/crash/console dashboard with no speech surface; a search of sub_debug/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder (the only 'stt'-like hits are the identifier LatestTriage).",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "SpeechRecognition",
+        "speechSynthesis",
+        "MediaRecorder",
+        "SpeechSynthesisUtterance"
+      ]
+    },
+    {
+      "context": "cook-packaging-pipeline",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/game-systems/CookProgress/useCookProgress.ts:15 This context streams and parses UE cook logs and schedules builds; it neither listens nor speaks, and a search of game-systems/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder and no voice/speech/transcript term in the listed files.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "SpeechRecognition",
+        "speechSynthesis",
+        "MediaRecorder",
+        "SpeechSynthesisUtterance"
+      ]
+    },
+    {
+      "context": "inventory-catalog",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:11 This context is a gear catalog browser (grid, drawer, comparison, spatial stash) with no audio capture or synthesis; a search of sub_inventory/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder and no voice/speech term in the catalog files.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "SpeechRecognition",
+        "speechSynthesis",
+        "MediaRecorder",
+        "SpeechSynthesisUtterance"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "voice-io",
+      "context": "pipeline-acceptance-engine",
+      "reason": "withdrawn after review: reviewer (sonnet): The claim that layout-lab/ has no voice surface is false: layout-lab/game/voice/ holds a full Voice room (take playback, read-back WER, approve/reject), and lib/catalog/acceptance/contractsCheckers.ts:79 checks line audio; the cited anchor labAcceptance.ts:8 is an incidental WeakMap comment, so the "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T03:45:58.966924+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "pipeline-acceptance-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:45:58.966924+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "combat-damage-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:45:58.966924+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "debug-performance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:45:58.966924+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "cook-packaging-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:45:58.966924+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "inventory-catalog",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

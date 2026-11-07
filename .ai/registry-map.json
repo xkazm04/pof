@@ -11494,8 +11494,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_combat/damage-pipeline/DamagePipelineFlow.tsx:24 This context is an SVG flow visualization of damage, heal and combo math with no capture or playback of speech; a search of sub_combat/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder, and no speech/voice/TTS/STT term in the listed files.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "racing-career-economy",
@@ -12003,8 +12007,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/game-systems/CookProgress/useCookProgress.ts:15 This context streams and parses UE cook logs and schedules builds; it neither listens nor speaks, and a search of game-systems/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder and no voice/speech/transcript term in the listed files.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "settings",
@@ -13518,8 +13526,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_debug/index.tsx:13 This context is a runtime perf/crash/console dashboard with no speech surface; a search of sub_debug/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder (the only 'stt'-like hits are the identifier LatestTriage).",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "fire-tv-device-realities",
@@ -16340,8 +16352,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:11 This context is a gear catalog browser (grid, drawer, comparison, spatial stash) with no audio capture or synthesis; a search of sub_inventory/ found no getUserMedia, SpeechRecognition, speechSynthesis or MediaRecorder and no voice/speech term in the catalog files.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "spatial-audio-scene-authoring",
