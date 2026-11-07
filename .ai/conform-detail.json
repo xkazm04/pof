@@ -22449,6 +22449,46 @@
       "evaluatedTs": "2026-11-07T05:19:25.323Z",
       "worker": "a648b2b8-783c-413c-a707-71bb596a9f34",
       "techniques": []
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/agent-memory": {
+      "context": "core-engine-planning-shell",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:24:39.859Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "5dc1ac29-25a4-400b-a6cc-dab55749660f",
+        "state": "not-applicable",
+        "at": "2026-11-07T05:25:19.724090+00:00",
+        "reason": "reviewer (sonnet): The anchor PlanMatrixMap/index.tsx:25 is a props-interface line and does not show that agent memory is absent; the absence claim rests only on a grep, and ContextHealthBadge was never shown to be a plain re-export."
+      }
+    },
+    "d143dfab-b0b5-44e4-a6d5-51396280ffbf/agent-memory": {
+      "context": "build-packaging",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:24:39.859Z",
+      "worker": "5dc1ac29-25a4-400b-a6cc-dab55749660f",
+      "techniques": []
+    },
+    "074a6d1f-3e33-45a5-8144-5ef2af335d36/agent-memory": {
+      "context": "loot-affix-core",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:24:39.859Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "5dc1ac29-25a4-400b-a6cc-dab55749660f",
+        "state": "not-applicable",
+        "at": "2026-11-07T05:25:19.810915+00:00",
+        "reason": "reviewer (sonnet): The anchor sub_loot/index.tsx:35 is a useState line and is incidental; the memory hits the evidence cites (LootTableEditor.tsx:24 and lootTuningStore.ts) are in other files and are not the anchor."
+      }
     }
   }
 }

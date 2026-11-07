@@ -7508,8 +7508,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/stores/preflightStore.ts:7 The context is a CLI spend budget-guard confirm store, a packaging preflight route and the nightly-build cron in instrumentation.ts. A search of these files for memory, recall, episod, consolidat and remember found nothing, so no agent-memory store is written or read here.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "packaging",
@@ -12482,8 +12486,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "plan-review",
@@ -18649,8 +18653,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "search",
