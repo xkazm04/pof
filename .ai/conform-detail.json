@@ -20693,16 +20693,11 @@
       "context": "pipeline-acceptance-engine",
       "subject": "voice-io",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:45:58.966Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "02a47cba-7613-476a-99f9-876c63b24688",
-        "state": "not-applicable",
-        "at": "2026-11-07T03:46:50.331527+00:00",
-        "reason": "reviewer (sonnet): The claim that layout-lab/ has no voice surface is false: layout-lab/game/voice/ holds a full Voice room (take playback, read-back WER, approve/reject), and lib/catalog/acceptance/contractsCheckers.ts:79 checks line audio; the cited anchor labAcceptance.ts:8 is an incidental WeakMap comment, so the "
-      }
+      "evaluatedTs": "2026-11-07T05:36:24.013Z",
+      "worker": "69129fc5-d3ed-4694-b866-dc81cd334140",
+      "techniques": []
     },
     "ac4cee9e-1527-46e9-8b16-f0f49affbe37/agent-memory": {
       "context": "judge-craft-quality",
@@ -22469,6 +22464,61 @@
         "at": "2026-11-07T05:25:19.810915+00:00",
         "reason": "reviewer (sonnet): The anchor sub_loot/index.tsx:35 is a useState line and is incidental; the memory hits the evidence cites (LootTableEditor.tsx:24 and lootTuningStore.ts) are in other files and are not the anchor."
       }
+    },
+    "c7fb4de3-6779-431b-9860-639fef9f98ea/voice-io": {
+      "context": "progression-rewards-internals",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:36:24.013Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "69129fc5-d3ed-4694-b866-dc81cd334140",
+        "state": "not-applicable",
+        "at": "2026-11-07T05:37:09.683737+00:00",
+        "reason": "reviewer (sonnet): Each anchor is an import line (XpTableGenerator/index.tsx:14, PlanMatrixMap/index.tsx:7, sub_progression/index.tsx:9). It is incidental: it sits in the context but doesn't show that voice I/O is absent, and the absence rests only on a grep over a wider directory."
+      }
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/voice-io": {
+      "context": "core-engine-planning-shell",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:36:24.013Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "69129fc5-d3ed-4694-b866-dc81cd334140",
+        "state": "not-applicable",
+        "at": "2026-11-07T05:37:09.683737+00:00",
+        "reason": "reviewer (sonnet): Each anchor is an import line (XpTableGenerator/index.tsx:14, PlanMatrixMap/index.tsx:7, sub_progression/index.tsx:9). It is incidental: it sits in the context but doesn't show that voice I/O is absent, and the absence rests only on a grep over a wider directory."
+      }
+    },
+    "cf5703ec-61df-45c3-9e35-b590480c7e76/voice-io": {
+      "context": "progression-curves-builds",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:36:24.013Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "69129fc5-d3ed-4694-b866-dc81cd334140",
+        "state": "not-applicable",
+        "at": "2026-11-07T05:37:09.683737+00:00",
+        "reason": "reviewer (sonnet): Each anchor is an import line (XpTableGenerator/index.tsx:14, PlanMatrixMap/index.tsx:7, sub_progression/index.tsx:9). It is incidental: it sits in the context but doesn't show that voice I/O is absent, and the absence rests only on a grep over a wider directory."
+      }
+    },
+    "c120fef4-1da4-432b-9fac-7abb92a27830/voice-io": {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:36:24.013Z",
+      "worker": "69129fc5-d3ed-4694-b866-dc81cd334140",
+      "techniques": []
     }
   }
 }

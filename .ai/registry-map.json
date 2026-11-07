@@ -12557,8 +12557,8 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "terrain-synthesis-acceptance",
@@ -20793,7 +20793,11 @@
           "changedAt": "2026-10-18",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:8 This context works out acceptance tiers and merges judge verdicts, and it has no speech capture or synthesis. A case-insensitive search of src/components/layout-lab and src/lib/catalog/acceptance found no getUserMedia, speechSynthesis, SpeechRecognition, transcri or microphone. The only 'voice' and 'speech' hits (contractsCheckers.ts:79, invariants.ts:141) are game-content rules about dialogue VO lines, not the product listening or speaking.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "test-harness",
@@ -21870,8 +21874,8 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "arpg-systems-canon",
@@ -22183,8 +22187,8 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "arpg-systems-canon",
@@ -27262,8 +27266,12 @@
           "revision": 23,
           "changedAt": "2026-10-18",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "scripts/visual-gen/pof_trellis.py:1 These headless scripts turn text into images and images into meshes, then finish the meshes in Blender, with no audio engine. A case-insensitive search of scripts/visual-gen found no getUserMedia, speechSynthesis, SpeechRecognition, transcri or microphone, so the voice engine techniques do not apply.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:ad2538ae80ec48fd",
+          "evaluatedRevision": 24
         },
         {
           "subject": "image-to-3d-input-gating",
