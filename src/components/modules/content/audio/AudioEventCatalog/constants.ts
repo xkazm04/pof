@@ -3,7 +3,7 @@ import {
 } from 'lucide-react';
 import {
   STATUS_ERROR, ACCENT_EMERALD, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING,
-  MODULE_COLORS,
+  STATUS_MUTED, MODULE_COLORS,
 } from '@/lib/chart-colors';
 import type { EventCategory, PriorityLevel, AudioEvent } from './types';
 
@@ -44,7 +44,9 @@ export const CATEGORY_CONFIG: Record<EventCategory, {
 };
 
 export const PRIORITY_CONFIG: Record<PriorityLevel, { color: string; label: string; weight: number }> = {
-  low: { color: 'var(--text-muted)', label: 'Low', weight: 0 },
+  // A hex, not a CSS var: EventEditor tints these with `withOpacity` (a suffix
+  // concat), and `var(--text-muted)1a` is invalid CSS the browser drops.
+  low: { color: STATUS_MUTED, label: 'Low', weight: 0 },
   normal: { color: STATUS_INFO, label: 'Normal', weight: 1 },
   high: { color: STATUS_WARNING, label: 'High', weight: 2 },
   critical: { color: STATUS_ERROR, label: 'Critical', weight: 3 },
