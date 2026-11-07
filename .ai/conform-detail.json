@@ -21753,6 +21753,61 @@
       "evaluatedTs": "2026-11-07T03:45:58.966Z",
       "worker": "02a47cba-7613-476a-99f9-876c63b24688",
       "techniques": []
+    },
+    "9b9686aa-9b5b-4ecc-8085-043047b1e1a9/agent-cli-transport": {
+      "context": "session-analytics-reporting",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:52:19.250Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
+        "state": "not-applicable",
+        "at": "2026-11-07T03:53:40.647949+00:00",
+        "reason": "reviewer (sonnet): The anchor SpendDashboard.tsx:26 is a data-hook call in a file that is not among the context's files, and it does not show that this context lacks a CLI spawn. The context's own dashboard (SessionAnalyticsDashboard/index.tsx) only calls useSessionDashboard, and my grep of the context files found no "
+      }
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/agent-cli-transport": {
+      "context": "core-engine-planning-shell",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:52:19.250Z",
+      "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
+      "techniques": []
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/agent-cli-transport": {
+      "context": "project-ops-api",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:52:19.250Z",
+      "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
+      "techniques": []
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/agent-cli-transport": {
+      "context": "ai-behavior-testing",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:52:19.250Z",
+      "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
+      "techniques": []
+    },
+    "18f62a30-bc54-4204-a7fb-e7ccde2aabc1/agent-cli-transport": {
+      "context": "feature-design-state-hooks",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:52:19.250Z",
+      "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
+      "techniques": []
     }
   }
 }

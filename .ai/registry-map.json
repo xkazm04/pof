@@ -2884,7 +2884,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:79 The AI testing views call the shared useModuleCLI hook and leave every transport concern (probe, auth strip, stance, output envelope, resume) to the shared CLI service; searches of src/components/modules/game-systems for child_process, stream-json, ANTHROPIC_API_KEY and permission-mode found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -12471,7 +12475,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ImplementationPlan/index.tsx:40 The planning shell only sends tasks through the shared useModuleCLI door and owns no spawn, probe, auth environment, stance flags or envelope parsing; searches of src/components/modules/core-engine for child_process, stream-json, ANTHROPIC_API_KEY and permission-mode found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "voice-io",
@@ -13890,7 +13898,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useEntityTrackHelp.ts:4 The only CLI touchpoint in these hooks sends an evaluate-track task through the shared useModuleCLI hook; no hook spawns, probes or parses an agent child, and searches of src/hooks for child_process, stream-json, ANTHROPIC_API_KEY and permission-mode found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
@@ -22711,7 +22723,11 @@
           "revision": 10,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/session-analytics/route.ts:17 These are DB-backed reporting route handlers that never start an agent child process (the telemetry route only resolves skill patterns for injection); searches of the 13 route directories for child_process, stream-json, ANTHROPIC_API_KEY, permission-mode and --resume found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:75415727a875a42a",
+          "evaluatedRevision": 10
         },
         {
           "subject": "mcp-tools",
