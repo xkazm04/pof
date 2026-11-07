@@ -1,0 +1,147 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bf67025d-ad8e-42ce-af05-c9fff713ed70",
+ "subject": "audit-logging",
+ "evaluatedAt": "2026-11-07T23:18:26.393944+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "game-world-content-api",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/level-design/route.ts:76 Deleting a level-design document goes straight to the store, and no record is written in the route or in its service. The same is true of the DELETE handlers for audio-gen assets and sets, audio scenes, pattern-library entries and zone pins, so no destructive action in this context leaves a trace.",
+   "techniques": [
+    {
+     "technique": "write-chokepoint",
+     "verdict": "deviation",
+     "evidence": "src/app/api/level-design/route.ts:76 The destructive actions do not pass through any audit door. A repo-wide search for audit_log, auditLog and recordAudit found no audit sink in src/lib or src/app/api that these deletes could have used."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "src/lib/procgen-db.ts:35 The procgen_runs and scatter_runs ledgers export only an insert and two reads (getLatest and list). Neither has an update or delete path, and a failed run is stored as its own row with its reason."
+    },
+    {
+     "technique": "retention-and-partitioning",
+     "verdict": "deviation",
+     "evidence": "src/lib/procgen-db.ts:41 The insert path states no horizon and retires nothing, so the run ledger grows without bound. scatter-db.ts behaves the same way."
+    },
+    {
+     "technique": "audit-querying",
+     "verdict": "deviation",
+     "evidence": "src/lib/procgen-db.ts:61 The only filter is docId. The limit is capped at MAX_HISTORY_LIMIT=100 newest rows, there is no time-window filter, and records carry no actor, so older runs and the question of who ran what cannot be answered."
+    },
+    {
+     "technique": "write-path-sanitization",
+     "verdict": "deviation",
+     "evidence": "src/lib/level-design/run-ledger.ts:167 Any object sent from the callback body is stored as the params blob, with no allowlist and no size cap. failureReason is free text with no cap either."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/level-design/procgen-result/route.ts:53 In these callback routes the ledger write is the whole action, not an observer of some other action, so a failed write correctly fails the request."
+    },
+    {
+     "technique": "absent-not-null-in-hashed-records",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/level-design/run-ledger.ts:33 Schema changes are additive columns with defaults. The records are neither hashed nor digested, so this technique's precondition does not hold."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/procgen-db.ts:19 Runs are reported by callback as soon as they finish, so they are not facts learned late. A single record clock is adequate here."
+    }
+   ]
+  },
+  {
+   "context": "ue5-experiment-runner",
+   "subject": "audit-logging",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/visual-verification-db.ts:69 The stored verdict record leaves out its actor (the vision provider and model) and the check mode. The route says a judgement whose author is unrecorded is not evidence, yet the provenance goes only into the HTTP response and never into the ledger, so the past verdicts used by experiments cannot be attributed or filtered by who judged them.",
+   "techniques": [
+    {
+     "technique": "audit-querying",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-verification-db.ts:69 The record has no actor or action (check mode) field, and listVisualVerifications filters only by module_id, with no time window and no limit."
+    },
+    {
+     "technique": "write-chokepoint",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-verification-db.ts:63 There is one insert function, and a grep finds a single production caller (src/app/api/verify/visual/route.ts:175). experiment-runner, test-gate-runner and job-store write their verdicts through this route."
+    },
+    {
+     "technique": "append-only-design",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-verification-db.ts:88 The module exports only record and list. No update or delete exists for visual_verifications."
+    },
+    {
+     "technique": "best-effort-with-accounting",
+     "verdict": "deviation",
+     "evidence": "src/app/api/verify/visual/route.ts:175 The insert is not wrapped and the route has no try/catch around it. If the DB write fails, the error escapes as a 500, a vision judgement that has already been paid for is thrown away, and the eval.visual emit never fires. Nothing counts the failure."
+    },
+    {
+     "technique": "retention-and-partitioning",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-verification-db.ts:68 No horizon is stated and nothing is retired. HUD, texture, lighting, character and experiment verdicts all go into one table with one unbounded policy."
+    },
+    {
+     "technique": "write-path-sanitization",
+     "verdict": "deviation",
+     "evidence": "src/app/api/verify/visual/route.ts:97 Free-form notes and element lists from the model are stored as they arrive, with no size cap and no allowlist."
+    },
+    {
+     "technique": "two-clock-records",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-verification-db.ts:43 A verdict is produced and recorded in the same request, so nothing is learned late."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-07T23:18:26.393944+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "absent-not-null-in-hashed-records",
+    "append-only-design",
+    "audit-querying",
+    "best-effort-with-accounting",
+    "retention-and-partitioning",
+    "two-clock-records",
+    "write-chokepoint",
+    "write-path-sanitization"
+   ],
+   "deviations": 1,
+   "context": "game-world-content-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T23:18:26.393944+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "audit-logging"
+   ],
+   "techniques": [
+    "append-only-design",
+    "audit-querying",
+    "best-effort-with-accounting",
+    "retention-and-partitioning",
+    "two-clock-records",
+    "write-chokepoint",
+    "write-path-sanitization"
+   ],
+   "deviations": 1,
+   "context": "ue5-experiment-runner",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

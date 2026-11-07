@@ -15053,13 +15053,12 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/lib/level-design-db.ts:162 Level-document deletion removes the document without recording an audit event in either the route or its owning service, leaving destructive-action coverage incomplete.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
+          "evidence": "src/app/api/level-design/route.ts:76 Deleting a level-design document goes straight to the store, and no record is written in the route or in its service. The same is true of the DELETE handlers for audio-gen assets and sets, audio scenes, pattern-library entries and zone pins, so no destructive action in this context leaves a trace.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
           "source": "retained",
-          "revisionsBehind": 1,
-          "stale": true
+          "revisionsBehind": 1
         },
         {
           "subject": "prompt-assembly",
@@ -26540,12 +26539,11 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/lib/ue-experiment/experiment-db.ts:85 Saving an existing experiment ID replaces its historical record instead of appending a correction, allowing experimental evidence to be rewritten.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:154304c5d9578971",
-          "evaluatedRevision": 10,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/lib/visual-verification-db.ts:69 The stored verdict record leaves out its actor (the vision provider and model) and the check mode. The route says a judgement whose author is unrecorded is not evidence, yet the provenance goes only into the HTTP response and never into the ledger, so the past verdicts used by experiments cannot be attributed or filtered by who judged them.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b867761d55d912d1",
+          "evaluatedRevision": 11,
+          "revisionsBehind": 1
         },
         {
           "subject": "motion-quality-gating",
