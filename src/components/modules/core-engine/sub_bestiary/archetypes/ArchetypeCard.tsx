@@ -98,7 +98,7 @@ export function ArchetypeCard({
                   <span className="text-xs font-mono uppercase tracking-[0.15em] opacity-80" style={{ color: archetype.color }}>
                     {archetype.class} / {archetype.role}
                   </span>
-                  <span className="text-[9px] font-mono font-bold uppercase px-1 py-px rounded border"
+                  <span className="text-2xs font-mono font-bold uppercase px-1 py-px rounded border"
                     style={{ color: tierColor, borderColor: withOpacity(tierColor, OPACITY_25), backgroundColor: withOpacity(tierColor, OPACITY_10) }}>
                     {archetype.tier}
                   </span>

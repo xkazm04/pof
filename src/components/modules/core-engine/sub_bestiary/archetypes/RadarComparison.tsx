@@ -98,7 +98,7 @@ export function RadarComparison({ radarOverlays, onToggleOverlay, activeOverlays
                 <span className="text-text-muted group-hover:text-text transition-colors font-medium truncate">
                   {a.label}
                 </span>
-                <span className="text-text-subtle text-[10px] font-mono ml-auto flex-shrink-0">
+                <span className="text-text-subtle text-2xs font-mono ml-auto flex-shrink-0">
                   {a.category} / {a.role}
                 </span>
               </label>
