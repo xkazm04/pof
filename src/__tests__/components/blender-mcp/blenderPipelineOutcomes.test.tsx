@@ -96,3 +96,12 @@ describe('FBX receipt sizes come from the shared lib/format formatBytes', () => 
     expect(screen.getByRole('status').textContent).toMatch(/· 512 B/);
   });
 });
+
+describe('FBX path hint matches what the route accepts', () => {
+  it('does not demand forward slashes: the route normalises backslashes (fbx-convert/route.ts)', () => {
+    render(<FBXConversionTab />);
+    const hint = screen.getByText(/Absolute path on this machine/).textContent ?? '';
+    expect(hint).not.toMatch(/with forward slashes/);
+    expect(hint).toMatch(/backslash/i);
+  });
+});

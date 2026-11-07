@@ -75,7 +75,7 @@ export function FBXConversionTab() {
         <MCPField
           label="Input FBX Path"
           htmlFor="fbx-input"
-          hint="Absolute path on this machine, with forward slashes. Blender does not need to be open."
+          hint="Absolute path on this machine; forward slashes or backslashes both work. Blender does not need to be open."
         >
           <MCPTextInput
             id="fbx-input"
