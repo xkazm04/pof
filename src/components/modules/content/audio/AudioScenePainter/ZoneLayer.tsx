@@ -1,7 +1,14 @@
 import type { AudioZone } from '@/types/audio-scene';
 import { STATUS_ERROR } from '@/lib/chart-colors';
-import { ZONE_COLORS } from './constants';
+import { resolveZoneColor } from './helpers';
 import type { PaintMode } from './types';
+
+/** Hex-alpha byte -> opacity, so the look matches the old `${hex}NN` suffixes exactly. */
+const ALPHA_10 = 0x10 / 255;
+const ALPHA_20 = 0x20 / 255;
+const ALPHA_40 = 0x40 / 255;
+const ALPHA_60 = 0x60 / 255;
+const ALPHA_80 = 0x80 / 255;
 
 export function ZoneLayer({
   zones,
@@ -26,7 +33,9 @@ export function ZoneLayer({
     <>
       {zones.map((zone) => {
         const isSelected = selectedZoneId === zone.id;
-        const zoneColor = zone.color || ZONE_COLORS[zone.reverbPreset] || 'var(--text-muted)';
+        // Alpha goes through fill-/stroke-opacity, never a hex suffix: a zone color may be a
+        // CSS variable, and `var(--x)60` is not a color (the fill would fall back to black).
+        const zoneColor = resolveZoneColor(zone);
         const isParentOfSelectedEmitter = highlightedParentZoneId === zone.id;
 
         return (
@@ -39,7 +48,8 @@ export function ZoneLayer({
                 cx={zone.x} cy={zone.y}
                 r={zone.attenuationRadius}
                 fill={`url(#radar-glow)`}
-                stroke={`${zoneColor}20`}
+                stroke={zoneColor}
+                strokeOpacity={ALPHA_20}
                 strokeWidth={1}
                 strokeDasharray="4,8"
                 style={{ pointerEvents: 'none' }}
@@ -50,7 +60,8 @@ export function ZoneLayer({
                 width={zone.width + 60} height={zone.height + 60}
                 rx={12}
                 fill={`url(#radar-glow)`}
-                stroke={`${zoneColor}20`}
+                stroke={zoneColor}
+                strokeOpacity={ALPHA_20}
                 strokeWidth={1}
                 strokeDasharray="4,8"
                 style={{ pointerEvents: 'none' }}
@@ -63,8 +74,10 @@ export function ZoneLayer({
                 data-zone-id={zone.id}
                 cx={zone.x} cy={zone.y}
                 r={zone.width / 2}
-                fill={`${zoneColor}10`}
-                stroke={isSelected ? accentColor : `${zoneColor}60`}
+                fill={zoneColor}
+                fillOpacity={ALPHA_10}
+                stroke={isSelected ? accentColor : zoneColor}
+                strokeOpacity={isSelected ? 1 : ALPHA_60}
                 strokeWidth={isSelected ? 2 : 1.5}
                 onMouseDown={(e) => handleZoneMouseDown(e, zone.id)}
                 style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}40)` : 'none' }}
@@ -75,8 +88,10 @@ export function ZoneLayer({
                 x={zone.x} y={zone.y}
                 width={zone.width} height={zone.height}
                 rx={2}
-                fill={`${zoneColor}10`}
-                stroke={isSelected ? accentColor : `${zoneColor}60`}
+                fill={zoneColor}
+                fillOpacity={ALPHA_10}
+                stroke={isSelected ? accentColor : zoneColor}
+                strokeOpacity={isSelected ? 1 : ALPHA_60}
                 strokeWidth={isSelected ? 2 : 1.5}
                 onMouseDown={(e) => handleZoneMouseDown(e, zone.id)}
                 style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}40)` : 'none' }}
@@ -120,15 +135,15 @@ export function ZoneLayer({
             <g style={{ pointerEvents: 'none' }}>
               {zone.shape === 'circle' ? (
                 <>
-                  <rect x={zone.x - 40} y={zone.y - zone.width / 2 - 16} width={80} height={14} rx={2} fill="var(--surface-deep)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                  <rect x={zone.x - 40} y={zone.y - zone.width / 2 - 16} width={80} height={14} rx={2} fill="var(--surface-deep)" stroke={zoneColor} strokeOpacity={ALPHA_40} strokeWidth={1} />
                   <text x={zone.x} y={zone.y - zone.width / 2 - 6} textAnchor="middle" fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
                 </>
               ) : (
                 <>
-                  <rect x={zone.x + 8} y={zone.y + 8} width={Math.max(80, zone.name.length * 6 + 10)} height={14} rx={2} fill="var(--surface-deep)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                  <rect x={zone.x + 8} y={zone.y + 8} width={Math.max(80, zone.name.length * 6 + 10)} height={14} rx={2} fill="var(--surface-deep)" stroke={zoneColor} strokeOpacity={ALPHA_40} strokeWidth={1} />
                   <text x={zone.x + 12} y={zone.y + 18} fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
 
-                  <text x={zone.x + 12} y={zone.y + 32} fontSize={7} fill={`${zoneColor}80`} fontFamily="monospace" style={{ textTransform: 'uppercase' }}>[{zone.reverbPreset}]</text>
+                  <text x={zone.x + 12} y={zone.y + 32} fontSize={7} fill={zoneColor} fillOpacity={ALPHA_80} fontFamily="monospace" style={{ textTransform: 'uppercase' }}>[{zone.reverbPreset}]</text>
                 </>
               )}
             </g>

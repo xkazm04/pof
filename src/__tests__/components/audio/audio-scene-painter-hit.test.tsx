@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { AudioScenePainter } from '@/components/modules/content/audio/AudioScenePainter';
-import { ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
+import { ACCENT_CYAN_LIGHT, STATUS_INFO } from '@/lib/chart-colors';
 import type { AudioZone, SoundEmitter } from '@/types/audio-scene';
 
 /**
@@ -148,5 +148,39 @@ describe('click vs drag: a movement threshold in screen pixels', () => {
     const moved = (props.onUpdateZones.mock.calls[0][0] as AudioZone[])[0];
     expect(moved.x).toBe(120);
     expect(moved.y).toBe(120);
+  });
+});
+
+describe('zone paint is valid CSS for every zone color', () => {
+  /** `var(--x)` + a hex-alpha suffix ("var(--text-muted)60") is not a color: the
+   *  browser drops the attribute and a fill falls back to opaque black. */
+  const INVALID = /^var\([^)]*\)[0-9a-f]+$/i;
+
+  function paintAttrs(container: HTMLElement): string[] {
+    const out: string[] = [];
+    for (const el of Array.from(container.querySelectorAll('[data-zone-id], [data-zone-id] ~ *, g *'))) {
+      for (const a of ['fill', 'stroke']) {
+        const v = el.getAttribute(a);
+        if (v) out.push(v);
+      }
+    }
+    return out;
+  }
+
+  it.each([
+    ['an explicit CSS-variable color (the painter gives the 1st, 11th… drawn zone `var(--text-muted)`)', { color: 'var(--text-muted)' }],
+    ['no color and preset "none" (falls back to the muted variable)', { color: '', reverbPreset: 'none' as const }],
+  ])('%s', (_label, over) => {
+    const { container } = renderPainter({ zones: [zone(over)], emitters: [], selectedZoneId: 'z1' });
+    const attrs = paintAttrs(container);
+    expect(attrs.length).toBeGreaterThan(0);
+    expect(attrs.filter((v) => INVALID.test(v))).toEqual([]);
+  });
+
+  it('a hex color keeps its translucent body fill', () => {
+    const { container } = renderPainter({ zones: [zone({ color: STATUS_INFO })], emitters: [] });
+    const body = container.querySelector('[data-zone-id="z1"]')!;
+    expect(body.getAttribute('fill')).toBe(STATUS_INFO);
+    expect(Number(body.getAttribute('fill-opacity'))).toBeLessThan(0.1);
   });
 });
