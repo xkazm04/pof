@@ -1,0 +1,112 @@
+{
+ "schema": "conform-run/1",
+ "worker": "336dbfe8-4214-49e9-9452-3277aba3b752",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-11-07T04:37:41.398080+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "visual-gen-3d-model-runners",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/tripo-job-store.ts:86 Generation jobs outlive the turn that submits them, and the model polls them through pof_asset_generate_status, but their only record is an in-process Map, so a server restart turns every outstanding jobId into a not-found while paid provider tasks keep running.",
+   "techniques": [
+    {
+     "technique": "bounded-projection-of-external-work",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/tripo-job-store.ts:2 No durable row is written before the job id goes back. The caller or model keeps the id and polls, and the store does not survive a restart. The triposr, hunyuan and trellis stores use the same in-memory Map pattern."
+    },
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/tripo-job-store.ts:47 When polling ends while the paid task is still live, the outcome is unknown, yet the job is closed as status 'error' with a side flag (recoverable = true at line 204). The status list has no unknown value, so a reader that checks only status sees a failure. Refusing to re-roll a live task does match the technique's metered-generation rule."
+    }
+   ]
+  },
+  {
+   "context": "asset-visual-studio",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:77 Both views only pass a prebuilt TaskFactory task to useModuleCLI's execute. A search of AssetScoutView/ and PostProcessStudioView/ found no checkpoint, middleware, agent or claude identifiers, so no hook chain, extension loading, durable conversation state or remote-work polling is assembled here (the 'plugin' hits are UE plugin dependencies shown as data).",
+   "techniques": [],
+   "absenceTerms": [
+    "checkpoint",
+    "middleware",
+    "agent",
+    "claude"
+   ]
+  },
+  {
+   "context": "roadmap-workflow-management",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/ExecutionHistoryRow.tsx:11 A workflow run whose owning process vanished is stored with status 'failed', and the history row has to look at a side field to recover that the outcome was actually unknown. Any consumer that counts status 'failed' books interruptions as failures.",
+   "techniques": [
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:52 The technique says to add a first-class indeterminate status when the list lacks one. The store (taskDAGStore.demoteInterrupted, outside this context) instead writes 'failed' plus failureReason 'reload-interrupted', and this context's views special-case it."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "ue5-asset-generation-hooks",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "game-director-system",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T04:37:41.398080+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "bounded-projection-of-external-work",
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-3d-model-runners",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:37:41.398080+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "asset-visual-studio",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:37:41.398080+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "roadmap-workflow-management",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

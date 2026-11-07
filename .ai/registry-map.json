@@ -5262,7 +5262,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/PostProcessStudioView/index.tsx:77 Both views only pass a prebuilt TaskFactory task to useModuleCLI's execute. A search of AssetScoutView/ and PostProcessStudioView/ found no checkpoint, middleware, agent or claude identifiers, so no hook chain, extension loading, durable conversation state or remote-work polling is assembled here (the 'plugin' hits are UE plugin dependencies shown as data).",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         },
         {
           "subject": "serving-process-topology",
@@ -23846,7 +23850,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/ExecutionHistoryRow.tsx:11 A workflow run whose owning process vanished is stored with status 'failed', and the history row has to look at a side field to recover that the outcome was actually unknown. Any consumer that counts status 'failed' books interruptions as failures.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         }
       ],
       "governance": "governed"
@@ -27134,7 +27142,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:86 Generation jobs outlive the turn that submits them, and the model polls them through pof_asset_generate_status, but their only record is an in-process Map, so a server restart turns every outstanding jobId into a not-found while paid provider tasks keep running.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:45b3f952560a4cbc",
+          "evaluatedRevision": 28
         }
       ],
       "governance": "governed"

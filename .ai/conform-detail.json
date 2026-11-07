@@ -22054,6 +22054,53 @@
       "evaluatedTs": "2026-11-07T04:26:03.396Z",
       "worker": "7310b100-3cf6-4bda-9012-8a5530afd0a9",
       "techniques": []
+    },
+    "0dd24399-c9cd-4a8a-a4ed-617ad69597a3/agent-runtime-assembly": {
+      "context": "visual-gen-3d-model-runners",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:37:41.398Z",
+      "worker": "336dbfe8-4214-49e9-9452-3277aba3b752",
+      "techniques": [
+        {
+          "technique": "bounded-projection-of-external-work",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:2 No durable row is written before the job id goes back. The caller or model keeps the id and polls, and the store does not survive a restart. The triposr, hunyuan and trellis stores use the same in-memory Map pattern."
+        },
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:47 When polling ends while the paid task is still live, the outcome is unknown, yet the job is closed as status 'error' with a side flag (recoverable = true at line 204). The status list has no unknown value, so a reader that checks only status sees a failure. Refusing to re-roll a live task does match the technique's metered-generation rule."
+        }
+      ]
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/agent-runtime-assembly": {
+      "context": "asset-visual-studio",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:37:41.398Z",
+      "worker": "336dbfe8-4214-49e9-9452-3277aba3b752",
+      "techniques": []
+    },
+    "c055972e-8375-48b7-afd5-14f62aa91309/agent-runtime-assembly": {
+      "context": "roadmap-workflow-management",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:37:41.398Z",
+      "worker": "336dbfe8-4214-49e9-9452-3277aba3b752",
+      "techniques": [
+        {
+          "technique": "indeterminate-closure-on-interruption",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:52 The technique says to add a first-class indeterminate status when the list lacks one. The store (taskDAGStore.demoteInterrupted, outside this context) instead writes 'failed' plus failureReason 'reload-interrupted', and this context's views special-case it."
+        }
+      ]
     }
   }
 }
