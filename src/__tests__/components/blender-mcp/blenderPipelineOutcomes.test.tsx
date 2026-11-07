@@ -8,6 +8,7 @@ import { MeshOptimizationTab, FBXConversionTab } from '@/components/modules/visu
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { useBlenderStore } from '@/components/modules/visual-gen/blender-pipeline/useBlenderStore';
 import { parseReceipts } from '@/lib/blender-mcp/receipt';
+import { ScriptRunner } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
 
 function setConnected(connected: boolean) {
   useBlenderMCPStore.setState({
@@ -103,5 +104,17 @@ describe('FBX path hint matches what the route accepts', () => {
     const hint = screen.getByText(/Absolute path on this machine/).textContent ?? '';
     expect(hint).not.toMatch(/with forward slashes/);
     expect(hint).toMatch(/backslash/i);
+  });
+});
+
+describe('Script history controls are reachable and named', () => {
+  it('the icon-only remove button has an accessible name and both buttons show the focus ring', () => {
+    useBlenderStore.setState({
+      scripts: [{ id: 's1', scriptName: 'LOD Generation', args: [], status: 'completed', output: 'ok', startedAt: 1, completedAt: 2 }],
+    });
+    render(<ScriptRunner />);
+    const remove = screen.getByRole('button', { name: /remove LOD Generation from the list/i });
+    expect(remove.classList.contains('focus-ring')).toBe(true);
+    expect(screen.getByRole('button', { name: /clear finished/i }).classList.contains('focus-ring')).toBe(true);
   });
 });

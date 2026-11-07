@@ -41,8 +41,13 @@ function ScriptCard({ job }: { job: ScriptJob }) {
         />
         <span className="text-xs font-medium text-text flex-1">{job.scriptName}</span>
         <span className="text-xs text-text-muted">{elapsed}s</span>
-        <button onClick={() => removeScript(job.id)} className="text-text-muted hover:text-text">
-          <X size={12} />
+        <button
+          type="button"
+          onClick={() => removeScript(job.id)}
+          aria-label={`Remove ${job.scriptName} from the list`}
+          className="focus-ring rounded text-text-muted hover:text-text"
+        >
+          <X size={12} aria-hidden="true" />
         </button>
       </div>
       {job.output && (
@@ -126,10 +131,11 @@ export function ScriptRunner() {
         </h3>
         {hasCompleted && (
           <button
+            type="button"
             onClick={clearCompleted}
-            className="flex items-center gap-1 text-xs text-text-muted hover:text-text"
+            className="focus-ring rounded flex items-center gap-1 text-xs text-text-muted hover:text-text"
           >
-            <Trash2 size={10} />
+            <Trash2 size={10} aria-hidden="true" />
             Clear finished
           </button>
         )}
