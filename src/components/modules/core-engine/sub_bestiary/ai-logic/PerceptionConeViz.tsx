@@ -54,6 +54,17 @@ function conePath(r: number, deg: number): string {
   return `M ${CX} ${CY} L ${CX + r * Math.cos(a0)} ${CY + r * Math.sin(a0)} A ${r} ${r} 0 0 1 ${CX + r * Math.cos(a1)} ${CY + r * Math.sin(a1)} Z`;
 }
 
+/** Text equivalent of the diagram: the sense reach, then each entity's detection state. */
+function describePerception(profile: SenseProfile, entities: DetectedEntity[]): string {
+  const reach = profile.shape === 'cone'
+    ? `${profile.kind} cone ${profile.coneDeg} deg, ${profile.radiusCm}cm`
+    : `${profile.kind} range ${profile.radiusCm}cm`;
+  const hearing = profile.hearingCm != null ? `, hearing ${profile.hearingCm}cm` : '';
+  const ringVerb = profile.shape === 'radius' ? 'sensed' : 'heard';
+  const states = entities.map(e => `${e.label} ${e.inCone ? 'in sight' : e.inHearing ? ringVerb : 'undetected'}`);
+  return `Perception: ${reach}${hearing}.${states.length > 0 ? ` ${states.join(', ')}.` : ''}`;
+}
+
 export function PerceptionConeViz({ entities, accent = ACCENT_CYAN, profile = DEFAULT_SENSE }: PerceptionConeVizProps) {
   const geo = senseGeometry(profile);
   const coneR = geo.coneR != null ? geo.coneR * geo.zoom : null;
@@ -81,7 +92,7 @@ export function PerceptionConeViz({ entities, accent = ACCENT_CYAN, profile = DE
   const onScreen = useIsOnScreen(svgRef);
 
   return (
-    <svg ref={svgRef} width={200} height={200} viewBox="0 0 130 130" className="flex-shrink-0">
+    <svg ref={svgRef} role="img" aria-label={describePerception(profile, entities)} width={200} height={200} viewBox="0 0 130 130" className="flex-shrink-0">
       <defs>
         {/* Beam fades from bright at the AI eye to nothing at its reach. */}
         <linearGradient id={sweepGrad} gradientUnits="userSpaceOnUse" x1={CX} y1={CY} x2={CX} y2={CY - reachR}>
