@@ -18,7 +18,7 @@ export function AggroMetric() {
               width: `${Math.max(4, (entry.threat / maxThreat) * 16)}px`,
               backgroundColor: entry.color,
             }}
-            title={`${entry.target}: ${entry.threat}%`}
+            title={`${entry.target}: ${entry.threat} threat`}
             aria-hidden="true"
           />
         ))}
