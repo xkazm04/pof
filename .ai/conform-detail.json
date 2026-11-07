@@ -22388,6 +22388,67 @@
         "at": "2026-11-07T05:12:41.826289+00:00",
         "reason": "reviewer (sonnet): The anchor, CatalogGearTab.tsx:42, is an incidental line (the function declaration and ITEMS_PER_PAGE). It doesn't show a 2-D stash grid or that audio is absent, so the claim about the context's 'spatial' code is unconfirmed."
       }
+    },
+    "efa54d5b-69d9-4e56-a504-4ce0ebe76461/table": {
+      "context": "loot-affix-workbench",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:19:25.323Z",
+      "worker": "a648b2b8-783c-413c-a707-71bb596a9f34",
+      "techniques": [
+        {
+          "technique": "filtering",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointFilters.tsx:74 Filtering per keystroke is legitimate here because all data is on the client, but the technique then requires the count to be a status message (SC 4.1.3); this one has no role=status or aria-live. The only reset is an 'All' option per filter, which the technique says is not a substitute for one clear action."
+        },
+        {
+          "technique": "loading-and-empty-states",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:95 The empty row says the filter is the cause but names no active filter and offers no one-tap clear. Its colSpan is 9+N, but the header has only 6+N columns."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:32 Everything runs on the client over the complete static AFFIX_POOL, so no axis is split across server and client."
+        },
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:64 The cells are read-only text, so a native table is the right shape and no grid role is needed."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:31 The filtered and computed rows are derived in a memo keyed on the filter values, not stored in state."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/data.ts:68 The data is a static pool of roughly 20 affixes, too small to need a window."
+        },
+        {
+          "technique": "export-escapes-for-its-consumer",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/useExportActions.ts:36 The export writes generated C++ code, not table rows to CSV or a spreadsheet."
+        },
+        {
+          "technique": "clipboard-range-round-trip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/useExportActions.ts:22 The clipboard receives generated code; no cell range is copied or pasted."
+        }
+      ]
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/table": {
+      "context": "cli-terminal-output",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:19:25.323Z",
+      "worker": "a648b2b8-783c-413c-a707-71bb596a9f34",
+      "techniques": []
     }
   }
 }

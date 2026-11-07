@@ -10482,7 +10482,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:192 This surface is a scrolling log of streamed CLI events, not a set of records compared across shared columns. A case-insensitive search of TerminalOutput/ for <table, aria-sort, columnheader, csv, pagination, .sort( and role=grid found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "agent-runtime-assembly",
@@ -18797,7 +18801,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointFilters.tsx:74 The breakpoint table filters on every keystroke with three filters (category, rarity, text), but its result count is a plain span, not a status message, and there is no single clear-all action, so a screen-reader user hears nothing as rows change and a sighted user must reset each filter separately.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
