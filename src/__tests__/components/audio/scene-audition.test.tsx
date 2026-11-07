@@ -209,3 +209,29 @@ describe('painter LISTEN mode — case 7', () => {
     onlyGets();
   });
 });
+
+describe('painter LISTEN mode — readout copy', () => {
+  it('a heard emitter at zero gain reads as silent, never "-Infinity dB"', async () => {
+    const { container } = render(
+      <AudioScenePainter
+        zones={[]}
+        emitters={[emitter({ volumeMultiplier: 0 })]}
+        onUpdateZones={vi.fn()}
+        onUpdateEmitters={vi.fn()}
+        onSelectZone={vi.fn()}
+        onSelectEmitter={vi.fn()}
+        selectedZoneId={null}
+        selectedEmitterId={null}
+        accentColor={ACCENT_CYAN_LIGHT}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /LISTEN/ }));
+    const svg = container.querySelector('svg.touch-none-canvas') as SVGSVGElement;
+    fireEvent.mouseDown(svg, { clientX: 150, clientY: 110 });
+    fireEvent.mouseUp(svg);
+
+    const heard = await screen.findByTestId('audition-heard-e1');
+    expect(heard.textContent).not.toMatch(/Infinity/);
+    expect(heard.textContent).toMatch(/−∞ dB/);
+  });
+});

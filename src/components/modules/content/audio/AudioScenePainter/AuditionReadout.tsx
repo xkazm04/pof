@@ -18,6 +18,12 @@ const REASON_HINT: Record<NotHeardReason, string> = {
   'out-of-range': 'beyond its attenuation radius',
 };
 
+/** `gainToDb` reads silence as -Infinity; show it as the level a mixer would print. */
+function levelLabel(gain: number): string {
+  const db = gainToDb(gain);
+  return Number.isFinite(db) ? `${db} dB` : '−∞ dB';
+}
+
 /**
  * LISTEN mode's panel: owns the audition (library read, mix, Web Audio graph),
  * so leaving LISTEN unmounts it and the audio stops with it. Lists every
@@ -77,7 +83,7 @@ export function AuditionReadout({ zones, emitters, listener, onSelectEmitter, ac
                 <li key={em.id} data-testid={`audition-heard-${em.id}`} className="flex justify-between gap-2 text-text">
                   <span className="truncate">{em.name}</span>
                   <span className="font-mono tabular-nums">
-                    {gainToDb(h.gain)} dB{h.lowpassHz < MAX_LOWPASS_HZ ? ` · LPF ${(h.lowpassHz / 1000).toFixed(1)}k` : ''}
+                    {levelLabel(h.gain)}{h.lowpassHz < MAX_LOWPASS_HZ ? ` · LPF ${(h.lowpassHz / 1000).toFixed(1)}k` : ''}
                   </span>
                 </li>
               );
