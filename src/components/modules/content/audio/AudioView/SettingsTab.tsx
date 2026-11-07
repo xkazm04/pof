@@ -8,6 +8,19 @@ import { BudgetStressPanel } from '@/components/modules/content/audio/AudioView/
 
 type SettingKey = 'soundPoolSize' | 'maxConcurrentSounds' | 'globalReverbPreset';
 
+const POOL_MAX = 256;
+const CONCURRENT_MAX = 128;
+
+/**
+ * Both values are emitted verbatim as `int32` in the generated C++, so the draft
+ * is a whole number inside the field's declared range — a typed `2.5` or `9999`
+ * used to reach the codegen unchanged (only the floor was clamped).
+ */
+function clampSettingInt(raw: string, max: number): number {
+  const n = Math.floor(Number(raw));
+  return Number.isFinite(n) ? Math.min(max, Math.max(1, n)) : 1;
+}
+
 interface SettingsTabProps {
   activeDoc: AudioSceneDocument;
   commitSetting: (key: SettingKey, value: unknown) => Promise<void>;
@@ -53,8 +66,8 @@ export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
             type="number"
             value={poolSize.value}
             aria-label="Sound Pool Size"
-            onChange={(e) => poolSize.onChange(Math.max(1, Number(e.target.value)))}
-            min={1} max={256}
+            onChange={(e) => poolSize.onChange(clampSettingInt(e.target.value, POOL_MAX))}
+            min={1} max={POOL_MAX}
             className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text outline-none focus:border-border-bright transition-colors"
           />
           <p className="text-2xs text-text-muted mt-1">Pre-allocated audio components for pooling</p>
@@ -68,8 +81,8 @@ export function SettingsTab({ activeDoc, commitSetting }: SettingsTabProps) {
             type="number"
             value={maxConcurrent.value}
             aria-label="Max Concurrent Sounds"
-            onChange={(e) => maxConcurrent.onChange(Math.max(1, Number(e.target.value)))}
-            min={1} max={128}
+            onChange={(e) => maxConcurrent.onChange(clampSettingInt(e.target.value, CONCURRENT_MAX))}
+            min={1} max={CONCURRENT_MAX}
             className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text outline-none focus:border-border-bright transition-colors"
           />
           <p className="text-2xs text-text-muted mt-1">Limit on simultaneous active sounds</p>
