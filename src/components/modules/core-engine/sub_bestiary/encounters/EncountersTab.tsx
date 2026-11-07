@@ -5,15 +5,14 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Users, Map as MapIcon } from 'lucide-react';
 import {
   MODULE_COLORS, ACCENT_RED, ACCENT_PURPLE_BOLD, STATUS_ERROR,
-  STATUS_WARNING, STATUS_INFO, ACCENT_PURPLE, STATUS_NEUTRAL,
-  withOpacity, OPACITY_8, OPACITY_20, OPACITY_25,
+  withOpacity, OPACITY_8, OPACITY_25,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   DIFFICULTY_GRUNT, DIFFICULTY_CASTER, DIFFICULTY_BRUTE,
   SPAWN_POINTS,
   TACTICS_ENEMIES, TACTICS_ROLE_COLORS,
-  EXPANDED_WAVES,
+  EXPANDED_WAVES, TIER_GLOW_COLORS, ALL_TIERS,
 } from '../_shared/data';
 import { DifficultyChart } from './DifficultyChart';
 import { TacticsMap } from './TacticsMap';
@@ -48,17 +47,6 @@ export function EncountersTab({ accent }: EncountersTabProps) {
   const handleScroll = useCallback(() => {
     if (scrollRef.current) setScrollTop(scrollRef.current.scrollTop);
   }, []);
-
-  const tierColorValue = (tier: string) => {
-    switch (tier) {
-      case 'minion': return STATUS_NEUTRAL;
-      case 'standard': return STATUS_INFO;
-      case 'elite': return ACCENT_PURPLE;
-      case 'boss': return STATUS_WARNING;
-      case 'raid-boss': return ACCENT_RED;
-      default: return 'var(--text-muted)';
-    }
-  };
 
   return (
     <motion.div key="encounters"
@@ -110,7 +98,7 @@ export function EncountersTab({ accent }: EncountersTabProps) {
               <select value={waveFilter} onChange={(e) => setWaveFilter(e.target.value)}
                 className="px-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text outline-none cursor-pointer">
                 <option value="all">All tiers ({EXPANDED_WAVES.length})</option>
-                {['minion', 'standard', 'elite', 'boss', 'raid-boss'].map(t => (
+                {ALL_TIERS.map(t => (
                   <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)} ({EXPANDED_WAVES.filter(w => w.tier === t).length})</option>
                 ))}
               </select>
@@ -142,7 +130,7 @@ export function EncountersTab({ accent }: EncountersTabProps) {
                     </span>
                     <span className="text-text-muted font-mono w-10 flex-shrink-0">{wave.delay}</span>
                     <span className="text-text font-medium truncate flex-1">{wave.archetype}</span>
-                    <span className="font-mono font-bold uppercase text-[10px]" style={{ color: tierColorValue(wave.tier) }}>{wave.tier}</span>
+                    <span className="font-mono font-bold uppercase text-[10px]" style={{ color: TIER_GLOW_COLORS[wave.tier] }}>{wave.tier}</span>
                     <span className="text-text-muted font-mono text-xs flex-shrink-0">x{wave.count}</span>
                     <span className="text-text-subtle font-mono text-[10px] truncate max-w-[60px]">{wave.area}</span>
                   </div>
