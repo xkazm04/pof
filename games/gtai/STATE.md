@@ -1071,3 +1071,9 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - Owner added `ANTHROPIC_API_KEY_BACKUP_2` to `.env` "so we can charge the credits first next night".
 - The runner now spends `api` -> `api2` -> `api3` (the new key) -> the subscription; `night.mjs billing --reset api3` unblocks it. Tests 20/20. Verified read-only against the d9 root: "backup key 2 free -> next iteration uses api3".
 - The d9/d9x/assets runners still running loaded the old code and keep their two-key order until they finish; the next night's launch picks up the third key.
+
+### 2026-11-07 19:20: d9 evening report and verdict page
+- All four d9 lanes froze at 18:30 and reported by 18:47 (rivet 30 it / $77, seams 23 / $76, perf 28 / $60, handheld 26 / $57: $271, all subscription); gates green on every branch; the asset lane ended at it98 (pad + keyboard glyph sets delivered to handheld after the freeze).
+- In-memory trial of all four against origin/main 1dfb84d9: code conflicts only `project/boot/launch_args.gd` (KNOWN_FLAGS lines, keep all) and `tools/debt/baseline.json` (chain the rises); root JOURNAL/REPORT add/add as always. After merge: `just native` (bike-aware DLL is git-ignored).
+- Verdict page (decisions-d9 pattern, 30 calls): https://claude.ai/artifact/EMzKqFwrNGWFrrvZ3zAXmW. Headline calls: switch main to combo now (Rivet is in), Rivet's size (1.1 built, 1.25 recommended), BC7 (perf + handheld together), the quest 1 freeze F-19 (on main too), tonight's lanes.
+- Waiting on the owner's verdicts; then merge, push, combo switch, cleanup.
