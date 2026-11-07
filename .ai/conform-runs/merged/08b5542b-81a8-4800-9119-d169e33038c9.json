@@ -1,0 +1,188 @@
+{
+ "schema": "conform-run/1",
+ "worker": "08b5542b-81a8-4800-9119-d169e33038c9",
+ "subject": "model-composed-workspace",
+ "evaluatedAt": "2026-11-07T04:22:20.112168+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "hud-damage-and-navigation",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:30 The menu flow, damage-number and low-health tools are canvases the designer edits by hand through local React state (screens are added and dragged by user callbacks). No model opens, arranges or filters views here. A search of src/components/modules/content/ui-hud found 0 files for dzin, composeView, openView, PanelDirective and compositionRegion; the only model hook in that folder (useModuleCLI in UIHudView/ApplyToProjectBar) sends code-generation tasks to the UE project, not screen operations.",
+   "techniques": [
+    {
+     "technique": "composition-region",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:30 Views and nodes are added by the user's own action; there is no model-composed region."
+    }
+   ],
+   "absenceTerms": [
+    "dzin",
+    "composeView",
+    "openView",
+    "PanelDirective",
+    "compositionRegion"
+   ]
+  },
+  {
+   "context": "level-flow-editor",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:97 The model's only role in this context is CLI tasks (codegen, sync check, streaming, procgen) that write UE code or post verdicts server-side. The document tabs and flow canvas are composed by the user, so the model-as-screen-conductor precondition does not hold. A search of src/components/modules/content/level-design found 0 files for dzin, composeView, openView, PanelDirective and compositionRegion.",
+   "techniques": [
+    {
+     "technique": "composition-region",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:97 The model generates code in the project; it never places views on this screen."
+    }
+   ],
+   "absenceTerms": [
+    "dzin",
+    "composeView",
+    "openView",
+    "PanelDirective",
+    "compositionRegion"
+   ]
+  },
+  {
+   "context": "game-ui-hud",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:38 The only model invocation scaffolds a WBP stub in the UE project. The HUD compositor is a hand-authored widget layout of the game HUD, not a model composing the app's own screen. A search of src/components/modules/core-engine/sub_ui found 0 files for dzin, composeView, openView, PanelDirective and compositionRegion.",
+   "techniques": [
+    {
+     "technique": "composition-region",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:38 The model's output is a project file, not a screen arrangement."
+    }
+   ],
+   "absenceTerms": [
+    "dzin",
+    "composeView",
+    "openView",
+    "PanelDirective",
+    "compositionRegion"
+   ]
+  },
+  {
+   "context": "blueprint-transpiler-game-systems",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/index.tsx:31 The transpiler produces header/source C++ shown in fixed, user-selected tabs (transpile/diff), and the game-system views are static configuration screens. No model chooses or arranges views. A search of src/components/modules/game-systems found 0 files for dzin, composeView, openView, PanelDirective and compositionRegion.",
+   "techniques": [
+    {
+     "technique": "composition-region",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/index.tsx:31 The output is code artifacts, not composed views."
+    }
+   ],
+   "absenceTerms": [
+    "dzin",
+    "composeView",
+    "openView",
+    "PanelDirective",
+    "compositionRegion"
+   ]
+  },
+  {
+   "context": "cross-module-features",
+   "subject": "model-composed-workspace",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/EvaluatorModule/index.tsx:46 The evaluator shell's views are a fixed tab strip that only the user's click switches, and the cross-module heatmap is a static dashboard. No model composes or rearranges it. A search of src/components/modules/evaluator found 0 files for dzin, composeView, openView, PanelDirective and compositionRegion; its 'assistant' mentions are ErrorMemoryPanel copy about prompt memory.",
+   "techniques": [
+    {
+     "technique": "composition-region",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/EvaluatorModule/index.tsx:46 Navigation is fixed and user-driven; there is no model-composed region."
+    }
+   ],
+   "absenceTerms": [
+    "dzin",
+    "composeView",
+    "openView",
+    "PanelDirective",
+    "compositionRegion"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-07T04:22:20.112168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "composition-region"
+   ],
+   "deviations": 0,
+   "context": "hud-damage-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:22:20.112168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "composition-region"
+   ],
+   "deviations": 0,
+   "context": "level-flow-editor",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:22:20.112168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "composition-region"
+   ],
+   "deviations": 0,
+   "context": "game-ui-hud",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:22:20.112168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "composition-region"
+   ],
+   "deviations": 0,
+   "context": "blueprint-transpiler-game-systems",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:22:20.112168+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "model-composed-workspace"
+   ],
+   "techniques": [
+    "composition-region"
+   ],
+   "deviations": 0,
+   "context": "cross-module-features",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

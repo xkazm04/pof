@@ -21944,6 +21944,86 @@
           "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/FBXConversionTab.tsx:29 The counts come from the scene before export (scripts/visual-gen/pof_fbx_convert.py marker MESHES/TRIS after an isfile check), not from re-reading the GLB."
         }
       ]
+    },
+    "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/model-composed-workspace": {
+      "context": "hud-damage-and-navigation",
+      "subject": "model-composed-workspace",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:22:20.112Z",
+      "worker": "08b5542b-81a8-4800-9119-d169e33038c9",
+      "techniques": [
+        {
+          "technique": "composition-region",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:30 Views and nodes are added by the user's own action; there is no model-composed region."
+        }
+      ]
+    },
+    "7041e335-744f-454d-9814-b474b9f31c37/model-composed-workspace": {
+      "context": "level-flow-editor",
+      "subject": "model-composed-workspace",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:22:20.112Z",
+      "worker": "08b5542b-81a8-4800-9119-d169e33038c9",
+      "techniques": [
+        {
+          "technique": "composition-region",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/LevelDesignView/useLevelDesignView.ts:97 The model generates code in the project; it never places views on this screen."
+        }
+      ]
+    },
+    "4bf87448-56bb-4e01-b146-3a3139aeb801/model-composed-workspace": {
+      "context": "game-ui-hud",
+      "subject": "model-composed-workspace",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:22:20.112Z",
+      "worker": "08b5542b-81a8-4800-9119-d169e33038c9",
+      "techniques": [
+        {
+          "technique": "composition-region",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:38 The model's output is a project file, not a screen arrangement."
+        }
+      ]
+    },
+    "2a121327-c14c-4339-910d-61bfd6ec3a00/model-composed-workspace": {
+      "context": "blueprint-transpiler-game-systems",
+      "subject": "model-composed-workspace",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:22:20.112Z",
+      "worker": "08b5542b-81a8-4800-9119-d169e33038c9",
+      "techniques": [
+        {
+          "technique": "composition-region",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/index.tsx:31 The output is code artifacts, not composed views."
+        }
+      ]
+    },
+    "a2e69711-c5de-469c-8672-5863ff80ba72/model-composed-workspace": {
+      "context": "cross-module-features",
+      "subject": "model-composed-workspace",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:22:20.112Z",
+      "worker": "08b5542b-81a8-4800-9119-d169e33038c9",
+      "techniques": [
+        {
+          "technique": "composition-region",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/EvaluatorModule/index.tsx:46 Navigation is fixed and user-driven; there is no model-composed region."
+        }
+      ]
     }
   }
 }
