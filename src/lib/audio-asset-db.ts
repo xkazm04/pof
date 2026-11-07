@@ -350,24 +350,22 @@ export function getUsageSummary(
   windowStart: number,
   quota = DEFAULT_AUDIO_MONTHLY_QUOTA,
 ): AudioUsageSummary {
-  const win = db.prepare(
+  // One pass: the all-time totals need the whole table anyway, so the window
+  // counts ride along as conditional sums instead of a second scan.
+  const row = db.prepare(
     `SELECT
-       SUM(CASE WHEN cached = 0 THEN 1 ELSE 0 END) AS generated,
-       SUM(CASE WHEN cached = 1 THEN 1 ELSE 0 END) AS cached
-     FROM audio_gen_usage WHERE createdAt >= ?`,
-  ).get(windowStart) as { generated: number | null; cached: number | null };
-  const all = db.prepare(
-    `SELECT
-       SUM(CASE WHEN cached = 0 THEN 1 ELSE 0 END) AS generated,
-       SUM(CASE WHEN cached = 1 THEN 1 ELSE 0 END) AS cached
+       SUM(CASE WHEN cached = 0 AND createdAt >= ? THEN 1 ELSE 0 END) AS generated,
+       SUM(CASE WHEN cached = 1 AND createdAt >= ? THEN 1 ELSE 0 END) AS cached,
+       SUM(CASE WHEN cached = 0 THEN 1 ELSE 0 END) AS totalGenerated,
+       SUM(CASE WHEN cached = 1 THEN 1 ELSE 0 END) AS totalCached
      FROM audio_gen_usage`,
-  ).get() as { generated: number | null; cached: number | null };
+  ).get(windowStart, windowStart) as Record<'generated' | 'cached' | 'totalGenerated' | 'totalCached', number | null>;
   return {
-    generated: win.generated ?? 0,
-    cached: win.cached ?? 0,
+    generated: row.generated ?? 0,
+    cached: row.cached ?? 0,
     quota,
     windowStart,
-    totalGenerated: all.generated ?? 0,
-    totalCached: all.cached ?? 0,
+    totalGenerated: row.totalGenerated ?? 0,
+    totalCached: row.totalCached ?? 0,
   };
 }
