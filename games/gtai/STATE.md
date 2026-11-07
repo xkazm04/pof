@@ -1044,3 +1044,9 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
   1. The n8 report at 08:40.
   2. The asset lane's Rivet gallery: judge the true-70 base sheet first.
   3. Plan the Rivet integration (whole-figure frames replacing the head card).
+
+### 2026-11-07 morning: n8 report, verdict page published
+- All five n8 lanes REPORTED (view 22, street 19, vehicles 30, city 38, hud 27 iterations; $436 subscription, $0 API). Gates green on every branch; view's trial merge of all five at the freeze heads: lint 15/15, unit 1690/0, reel top + combo 19/19, 0 SCRIPT ERROR; one code conflict (`cast_view.gd`, take street's hunk).
+- Asset lane: 507 graded images (A 222 / B 259 / C 26), every lane REQUEST served, Rivet production 78 sheets (base 70 `rivet_70_v3` A, 55 `rivet_55_v2` A, all 17 weapons equipped at 70 and 55 with an A sheet, 5 redesign showcases). Recommends keeping Codex; the Leonardo A/B column is still empty.
+- Found on the merge: crowd dead behind the arena's kerb barrier draw over it at tilt70; city's half of the fix is a ready patch (`gtai-n8/scratch/city/it33/d9_city_occlusion_extra_v2.patch`).
+- Verdict page (52 calls: merge, Rivet, five lanes, today): https://claude.ai/artifact/PtPpxPzAz7ZhUwKAhCd1kQ (sources `scratchpad/decisions-n8/`). Waiting on the owner; then merge, push main, plan the day (two builder lanes).
