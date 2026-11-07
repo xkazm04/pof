@@ -21892,6 +21892,58 @@
         }
       ],
       "registryProposal": "Line-number references in prose (\"at line 222\") are a distinct high-rot coupling form; doc-rot-detection could name them as a cheap mechanical staleness signal (resolve the cited line, compare the quoted symbol)."
+    },
+    "074a6d1f-3e33-45a5-8144-5ef2af335d36/mesh-finishing-for-engine-readiness": {
+      "context": "loot-affix-core",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:14:33.233Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "d38b6cf3-c3d2-4177-b3e9-575684e23a79",
+        "state": "not-applicable",
+        "at": "2026-11-07T04:15:17.991911+00:00",
+        "reason": "reviewer (sonnet): The anchor data.ts:24 is just the 'Core' subtab definition. It doesn't show that mesh finishing is absent, so it is an incidental anchor. The absence rests on a four-term grep (unwrap, bake, mesh, decimat) that I couldn't confirm was the right search for this subject."
+      }
+    },
+    "a5282390-b3a3-4015-90c9-7ff9f7481788/mesh-finishing-for-engine-readiness": {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:14:33.233Z",
+      "worker": "d38b6cf3-c3d2-4177-b3e9-575684e23a79",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/ardy/pof_bvh_blender.py:91 The export is scoped with use_selection, but no read-back of objects or clips follows before the OK marker at line 100."
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:1 The critique only measures structure (watertight, components, bbox); no reduce or unwrap stage exists in this context."
+        }
+      ]
+    },
+    "9f70d5ae-c6d4-4414-8f3c-3aeebc66e756/mesh-finishing-for-engine-readiness": {
+      "context": "blender-pipeline",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:14:33.233Z",
+      "worker": "d38b6cf3-c3d2-4177-b3e9-575684e23a79",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/FBXConversionTab.tsx:29 The counts come from the scene before export (scripts/visual-gen/pof_fbx_convert.py marker MESHES/TRIS after an isfile check), not from re-reading the GLB."
+        }
+      ]
     }
   }
 }

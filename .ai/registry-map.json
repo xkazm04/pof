@@ -6866,7 +6866,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/FBXConversionTab.tsx:38 The FBX to GLB receipt shows mesh and triangle counts the script measured from the scene BEFORE export (pof_fbx_convert.py), and the route only checks that the file exists and is fresh. The written GLB is never read back, so 'Converted N meshes' rests on file existence, the structural rung the technique says is not proof.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "browser-credential-boundary",
@@ -28196,7 +28200,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/ardy/pof_bvh_blender.py:100 The headless Blender stage writes a skinned proxy and animation FBX for UE, then reports OK on the exporter's return alone; it never re-reads the file to confirm the armature, the mesh and the clip are present, which is the self-certified delivery the technique exists to remove.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "generated-video-motion-extraction",
