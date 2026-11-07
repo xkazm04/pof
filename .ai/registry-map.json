@@ -6129,8 +6129,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/content/audio/audioEventCatalogStore.ts:37 The only persisted store is a user-curated catalog of audio events in localStorage, keyed per scene. No agent writes it or recalls from it. A search of src/components/modules/content/audio for agentMemory, consolidat, episodic, recall and knowledgeTips found no hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "concurrent-vcs",
@@ -23688,8 +23692,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:56 The only carried-forward state here is a list of past workflow runs shown to the operator. Nothing is distilled or recalled into an agent's prompt. A search of CalendarRoadmapView and WorkflowOrchestratorView for agentMemory, consolidat, episodic, recall and knowledgeTips found no hits, so the agent-memory precondition does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "module-design",
@@ -26369,8 +26377,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/stores/baselineStore.ts:27 baselineStore holds per-entity balance snapshots, and verify/visual records one-shot vision verdicts. Neither is fed back into an agent's context as remembered belief. A search of src/stores and src/app/api/verify/visual for agentMemory, consolidat, episodic and knowledgeTips found no hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "runtime-observation-evidence",

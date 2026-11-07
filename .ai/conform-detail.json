@@ -22024,6 +22024,36 @@
           "evidence": "src/components/modules/evaluator/EvaluatorModule/index.tsx:46 Navigation is fixed and user-driven; there is no model-composed region."
         }
       ]
+    },
+    "c055972e-8375-48b7-afd5-14f62aa91309/agent-memory": {
+      "context": "roadmap-workflow-management",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:26:03.396Z",
+      "worker": "7310b100-3cf6-4bda-9012-8a5530afd0a9",
+      "techniques": []
+    },
+    "8982772c-2414-4c6a-a49b-0d33e98deaec/agent-memory": {
+      "context": "audio-view-and-catalog",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:26:03.396Z",
+      "worker": "7310b100-3cf6-4bda-9012-8a5530afd0a9",
+      "techniques": []
+    },
+    "178c9468-7f24-4c1e-b1ef-daa2d14bc88d/agent-memory": {
+      "context": "ue5-experiment-runner",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:26:03.396Z",
+      "worker": "7310b100-3cf6-4bda-9012-8a5530afd0a9",
+      "techniques": []
     }
   }
 }
