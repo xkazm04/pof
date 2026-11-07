@@ -5422,7 +5422,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioCodeGenPanel.tsx:107 These panels generate UE5 C++ audio code for a desktop Unreal project from a web editor; nothing here packages, installs, launches or hosts a server on a TV device, and rg over the audio component directory for adb, firetv, apk, KEEP_SCREEN_ON and abiFilters found no hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         },
         {
           "subject": "supply-chain",
@@ -5791,7 +5795,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:75 This context is a desktop-browser SVG authoring canvas (it shows a desktop-only notice) with no APK, ADB, device wake, socket bind or streaming-stick target; case-insensitive rg over src/components/modules/content/audio for adb, firetv/fire tv, apk, KEEP_SCREEN_ON, abiFilters/armeabi, ServerSocket and THREAD_PRIORITY found zero hits, so the subject's precondition (a game running on a streaming stick) does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         },
         {
           "subject": "concept-scene-parity",
@@ -6046,7 +6054,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioView/EmptyState.tsx:46 AudioView and the event catalog are browser authoring UI for designing audio scenes that become C++; there is no device deployment, display wake, ABI, lease-addressed device or on-device save/audio-stream path, and rg for adb, firetv, apk, KEEP_SCREEN_ON and abiFilters over the audio directory found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         },
         {
           "subject": "client-fetch-cache",
@@ -14771,7 +14783,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/audio-codegen/route.ts:7 These are Next.js server route handlers on the developer workstation (codegen, ElevenLabs generation, level-design sync with UE) and never build, install or run on a streaming stick; rg over the listed api directories for adb, firetv, apk, KEEP_SCREEN_ON, abiFilters, ServerSocket and THREAD_PRIORITY returned zero hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         },
         {
           "subject": "talking-avatar",
@@ -15676,7 +15692,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/LowHealthPulse/constants.ts:1 The HUD tools are in-browser simulators that mirror UE5 C++ widget defaults (ARPGHUDWidget.h) for a desktop Unreal game, not a TV-device build; rg over src/components/modules/content/ui-hud for adb, firetv, apk, KEEP_SCREEN_ON and abiFilters found no hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         },
         {
           "subject": "game-economy-tuning",

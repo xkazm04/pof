@@ -8056,9 +8056,10 @@
       "context": "hud-damage-and-navigation",
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T23:58:08.468Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:40:31.618Z",
+      "worker": "8d07a147-fab2-47ab-9b58-b7a003fe0449",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
@@ -8108,13 +8109,7 @@
           "evidence": "src/components/modules/content/ui-hud/LowHealthPulse/index.tsx:53 Play controls a browser animation; no device launch procedure was found.",
           "carriedFrom": "2026-10-17"
         }
-      ],
-      "withdrawn": {
-        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
-        "state": "not-applicable",
-        "at": "2026-10-24T23:59:45.493759+00:00",
-        "reason": "reviewer (sonnet): The anchor simulation.ts:12 is a particle id counter and pickElement helper. It does not show that device-runtime, startup, socket or save preconditions are absent."
-      }
+      ]
     },
     "023f8e03-d83d-49d1-b740-04ecdd77362c/fire-tv-device-realities": {
       "context": "streaming-zone-planner",
@@ -21059,6 +21054,46 @@
           "evidence": "src/hooks/useDesignDocument.ts:71 Level design docs with no code link are counted as unlinked, separate from synced. The uncheckable are not folded into clean."
         }
       ]
+    },
+    "973ff033-ee2b-4edd-bdc7-e04454f54c7b/fire-tv-device-realities": {
+      "context": "audio-scene-designer",
+      "subject": "fire-tv-device-realities",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:40:31.618Z",
+      "worker": "8d07a147-fab2-47ab-9b58-b7a003fe0449",
+      "techniques": []
+    },
+    "60f0c3d8-4b81-4acf-9d2c-cfd92cf58737/fire-tv-device-realities": {
+      "context": "audio-generation-tools",
+      "subject": "fire-tv-device-realities",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:40:31.618Z",
+      "worker": "8d07a147-fab2-47ab-9b58-b7a003fe0449",
+      "techniques": []
+    },
+    "8982772c-2414-4c6a-a49b-0d33e98deaec/fire-tv-device-realities": {
+      "context": "audio-view-and-catalog",
+      "subject": "fire-tv-device-realities",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:40:31.618Z",
+      "worker": "8d07a147-fab2-47ab-9b58-b7a003fe0449",
+      "techniques": []
+    },
+    "01327ce7-fd73-460c-841a-3cd2466211ba/fire-tv-device-realities": {
+      "context": "game-world-content-api",
+      "subject": "fire-tv-device-realities",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T00:40:31.618Z",
+      "worker": "8d07a147-fab2-47ab-9b58-b7a003fe0449",
+      "techniques": []
     }
   }
 }
