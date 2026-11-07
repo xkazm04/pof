@@ -179,8 +179,18 @@ export function generateCppFromBlueprint(
       if (p.tooltip) {
         headerLines.push(`\t/** ${p.tooltip} */`);
       }
+      // The same typed-literal rule as pin defaults: the raw export string used
+      // to be pasted after `=`, so `FString Greeting = Hello;` and
+      // `FVector Spawn = (X=1,Y=2,Z=3);` reached a header no compiler accepts.
+      const init = p.defaultValue ? renderPropertyDefault(p.name, p.variable.type, p.defaultValue) : null;
+      if (init && !init.ok) {
+        warnings.push({
+          message: `Default of "${p.name}" was not emitted — ${init.reason}; set it in the constructor or the Blueprint defaults.`,
+          severity: 'warning',
+        });
+      }
       headerLines.push(`\tUPROPERTY(${p.specifiers.join(', ')})`);
-      headerLines.push(`\t${p.cppType} ${p.name}${p.defaultValue ? ` = ${p.defaultValue}` : ''};`);
+      headerLines.push(`\t${p.cppType} ${p.name}${init?.ok ? ` = ${init.code}` : ''};`);
       headerLines.push('');
     }
   }
@@ -453,6 +463,18 @@ export function renderPinLiteral(pin: BlueprintPin): PinExpression {
     ok: false,
     reason: `pin "${pin.name}" default "${raw}" is a Blueprint ${pin.type} literal with no C++ equivalent`,
   };
+}
+
+/**
+ * A UPROPERTY default rendered as a C++ initializer of the property's type, via
+ * the pin-literal rule. FText has no conversion from `TEXT()`, so a text
+ * default is refused rather than emitted as an initializer that cannot compile.
+ */
+export function renderPropertyDefault(name: string, type: string, raw: string): PinExpression {
+  if (type.toLowerCase() === 'text') {
+    return { ok: false, reason: `"${raw}" is a text default — FText cannot be initialised from a string literal` };
+  }
+  return renderPinLiteral({ name, type, direction: 'input', defaultValue: raw });
 }
 
 /**
