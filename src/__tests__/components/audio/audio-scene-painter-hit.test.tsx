@@ -67,3 +67,16 @@ describe('delete buttons own their press', () => {
     expect(props.onSelectEmitter).not.toHaveBeenCalledWith(null);
   });
 });
+
+describe('decorative attenuation shapes take no pointer events', () => {
+  it('zone attenuation glows (rect and circle) are pointer-transparent, like the emitter attenuation circle', () => {
+    const { container } = renderPainter({
+      zones: [zone(), zone({ id: 'z2', shape: 'circle', x: 400, y: 300, width: 100, height: 100 })],
+    });
+    const glows = Array.from(container.querySelectorAll('[fill="url(#radar-glow)"]')) as SVGElement[];
+    // 2 zone glows + 1 emitter attenuation circle
+    expect(glows.length).toBe(3);
+    const catching = glows.filter((g) => g.style.pointerEvents !== 'none');
+    expect(catching.length).toBe(0);
+  });
+});

@@ -31,7 +31,9 @@ export function ZoneLayer({
 
         return (
           <g key={zone.id}>
-            {/* Attenuation radius (outer glow) */}
+            {/* Attenuation radius (outer glow) — decorative and pointer-transparent, like the
+                emitter attenuation circle: it is larger than the zone, so a hit-target glow
+                would cover earlier zones' bodies and eat their selection/drag presses. */}
             {zone.shape === 'circle' ? (
               <circle
                 cx={zone.x} cy={zone.y}
@@ -40,6 +42,7 @@ export function ZoneLayer({
                 stroke={`${zoneColor}20`}
                 strokeWidth={1}
                 strokeDasharray="4,8"
+                style={{ pointerEvents: 'none' }}
               />
             ) : (
               <rect
@@ -50,6 +53,7 @@ export function ZoneLayer({
                 stroke={`${zoneColor}20`}
                 strokeWidth={1}
                 strokeDasharray="4,8"
+                style={{ pointerEvents: 'none' }}
               />
             )}
 
