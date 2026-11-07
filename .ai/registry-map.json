@@ -8465,7 +8465,11 @@
           "changedAt": "2026-10-15",
           "confidence": "probable",
           "priorNotApplicable": 6,
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:73 The pof-mcp `pof_drain_gates` tool holds its call open on this route while it boots UE editors and runs L3/L4 gates, limited only by a gate COUNT (`limit`). There is no wall-clock budget, no partial/timed-out envelope and no durable task handle, so an agent's call can outlast its turn's patience.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:cb2b1c9f6fef5eb9",
+          "evaluatedRevision": 35
         },
         {
           "subject": "catalog-pipeline-authoring",
@@ -13400,7 +13404,11 @@
           "changedAt": "2026-10-15",
           "confidence": "probable",
           "priorNotApplicable": 6,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/console/ConsoleSection.tsx:44 The debug dashboard reaches UE only through the app's own HTTP/SSE hook, and its other panels use mock fixtures; a search of sub_debug/ found no mcp, tools/call or inputSchema, so no tool-protocol boundary exists here.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:cb2b1c9f6fef5eb9",
+          "evaluatedRevision": 35
         },
         {
           "subject": "agent-memory",

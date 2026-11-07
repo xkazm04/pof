@@ -1,0 +1,115 @@
+{
+ "schema": "conform-run/1",
+ "worker": "23407e7e-64e7-40e8-b923-19df7a7f8d9c",
+ "subject": "mcp-tools",
+ "evaluatedAt": "2026-11-07T02:27:38.551178+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:43 The context is React UI that reads a Zustand store (a search of CrashAnalyzerView/, CrashTimeMachine/ and the evaluator/ directory found no mcp, tools/call or inputSchema), so it neither publishes nor consumes a tool protocol; the pof-mcp `pof_crash_analyze` tool reads /api/crash-analyzer, which is outside this context's files.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "tools/call",
+    "inputSchema"
+   ]
+  },
+  {
+   "context": "debug-performance",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_debug/console/ConsoleSection.tsx:44 The debug dashboard reaches UE only through the app's own HTTP/SSE hook, and its other panels use mock fixtures; a search of sub_debug/ found no mcp, tools/call or inputSchema, so no tool-protocol boundary exists here.",
+   "techniques": [],
+   "absenceTerms": [
+    "mcp",
+    "tools/call",
+    "inputSchema"
+   ]
+  },
+  {
+   "context": "catalog-database",
+   "subject": "mcp-tools",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:73 The pof-mcp `pof_drain_gates` tool holds its call open on this route while it boots UE editors and runs L3/L4 gates, limited only by a gate COUNT (`limit`). There is no wall-clock budget, no partial/timed-out envelope and no durable task handle, so an agent's call can outlast its turn's patience.",
+   "techniques": [
+    {
+     "technique": "budgeted-partial-response",
+     "verdict": "deviation",
+     "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:73 An agent waits on this call (pof_drain_gates in tools/pof-mcp/src/tools/pipeline.ts posts to it). drainAll (src/lib/test-gate-runner/drain.ts:297) takes only a count limit, and the skipped entries say 'limit reached'. There is no single wall-clock budget, no outcome or elapsed block, and no recovery probe."
+    },
+    {
+     "technique": "first-party-agent-is-a-principal",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/route.ts:63 The browser POST, the MCP submit and the revision restore all commit through one door. The browser path is admitted under a named policy ('lab-post', line 98), not a private code path, so the agent gets no write route the others lack."
+    },
+    {
+     "technique": "tool-schema-design",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/route.ts:77 The schema is enforced server-side at the write (zod safeParse on line 72), and the error string names which field failed, so the party that wrote the arguments can fix them."
+    }
+   ],
+   "registryProposal": "budgeted-partial-response could say how it relates to a count-based cap: a 'limit' that bounds work before any expensive step runs is a real budget, but it is not a wall-clock one. Say whether a count cap plus named 'limit reached' skips partly satisfies the technique."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "mcp-tools",
+   "context": "ue5-bridge-client",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "mcp-tools",
+   "context": "cli-terminal-shell",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T02:27:38.551178+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T02:27:38.551178+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "debug-performance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T02:27:38.551178+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "mcp-tools"
+   ],
+   "techniques": [
+    "budgeted-partial-response",
+    "first-party-agent-is-a-principal",
+    "tool-schema-design"
+   ],
+   "deviations": 1,
+   "context": "catalog-database",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

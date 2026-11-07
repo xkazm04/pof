@@ -20890,37 +20890,34 @@
       "context": "catalog-database",
       "subject": "mcp-tools",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T22:21:15.141Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:27:38.551Z",
+      "worker": "23407e7e-64e7-40e8-b923-19df7a7f8d9c",
       "techniques": [
         {
           "technique": "budgeted-partial-response",
           "verdict": "deviation",
-          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:73 Count limit only. There is no deadline, and no complete/partial/timed-out envelope or next probe."
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:73 An agent waits on this call (pof_drain_gates in tools/pof-mcp/src/tools/pipeline.ts posts to it). drainAll (src/lib/test-gate-runner/drain.ts:297) takes only a count limit, and the skipped entries say 'limit reached'. There is no single wall-clock budget, no outcome or elapsed block, and no recovery probe."
         },
         {
           "technique": "first-party-agent-is-a-principal",
           "verdict": "conformant",
-          "evidence": "src/app/api/pipeline-artifacts/route.ts:63 The app's @@CALLBACK write path and the MCP submit path both go through one commit door with the same server-side grading, so neither gets a looser path."
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:63 The browser POST, the MCP submit and the revision restore all commit through one door. The browser path is admitted under a named policy ('lab-post', line 98), not a private code path, so the agent gets no write route the others lack."
         },
         {
           "technique": "tool-schema-design",
           "verdict": "conformant",
-          "evidence": "src/app/api/pipeline-artifacts/route.ts:77 The server enforces the schema and puts the offending field names in the error string, so the caller can fix its arguments and retry."
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:77 The schema is enforced server-side at the write (zod safeParse on line 72), and the error string names which field failed, so the party that wrote the arguments can fix them."
         },
         {
           "technique": "server-composition",
           "verdict": "conformant",
-          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:45 One authority defines the drain argument surface, and the pof_drain_gates tool shares it. A parity test checks the tool schema against these keys."
+          "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:45 One authority defines the drain argument surface, and the pof_drain_gates tool shares it. A parity test checks the tool schema against these keys.",
+          "carriedFrom": "2026-11-06"
         }
       ],
-      "withdrawn": {
-        "worker": "2f0a7055-e482-4901-ae8c-cb98ce43158b",
-        "state": "deviation",
-        "at": "2026-11-06T22:22:54.372862+00:00",
-        "reason": "reviewer (sonnet): The anchor (src/app/api/pipeline-artifacts/drain/route.ts) is an API route outside this context's files, which are src/lib/catalog-db.ts, pipeline-db.ts, pipeline-artifacts-db.ts and the catalog seed files, so the drain verdict is about a different context."
-      }
+      "registryProposal": "budgeted-partial-response could say how it relates to a count-based cap: a 'limit' that bounds work before any expensive step runs is a real budget, but it is not a wall-clock one. Say whether a count cap plus named 'limit reached' skips partly satisfies the technique."
     },
     "71f2dcdd-a894-4fda-a381-1ca0388f2b51/mcp-tools": {
       "context": "visual-gen-core",
@@ -21285,16 +21282,11 @@
       "context": "debug-performance",
       "subject": "mcp-tools",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T02:15:52.169Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "ef625162-3ac4-44ce-bd01-5c3af5850112",
-        "state": "not-applicable",
-        "at": "2026-11-07T02:16:57.240590+00:00",
-        "reason": "reviewer (sonnet): The anchor (ConsoleSection.tsx:44) shows the opposite of an absent tool surface: ConsoleSection lets the user run arbitrary UE console commands through useUE5Connection's executeConsoleCommand, which POSTs to /api/ue5-bridge/query. That is a command-execution channel, so the not-applicable verdict r"
-      }
+      "evaluatedTs": "2026-11-07T02:27:38.551Z",
+      "worker": "23407e7e-64e7-40e8-b923-19df7a7f8d9c",
+      "techniques": []
     }
   }
 }
