@@ -6,6 +6,7 @@ import {
   Library, Sparkles,
 } from 'lucide-react';
 import { FetchError } from '@/components/modules/shared/FetchError';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { RoadmapChecklist } from '@/components/modules/shared/RoadmapChecklist';
 import { FeatureMatrix } from '@/components/modules/shared/FeatureMatrix';
 import { AudioEventCatalog } from '@/components/modules/content/audio/AudioEventCatalog';
@@ -87,6 +88,9 @@ export function AudioView() {
     commitSetting,
   } = useAudioView();
   const [forgeTargetSetId, setForgeTargetSetId] = useState<string | null>(null);
+  // Deleting drops the scene row AND its persisted Event Catalog, so it asks
+  // first; a refused delete (`deleteDoc` resolves false) stays open with a reason.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // The full-screen spinner is for the FIRST load only. `useCRUD.refetch` raises
   // `isLoading` on every background refetch (each save triggers one), and blanking
@@ -176,12 +180,27 @@ export function AudioView() {
               </button>
 
               <button
-                onClick={() => deleteDoc(activeDoc.id)}
-                className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors focus-ring"
                 title="Delete scene"
+                aria-label="Delete scene"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
+              <ConfirmDialog
+                open={confirmDelete}
+                onClose={() => setConfirmDelete(false)}
+                onConfirm={async () => {
+                  if (!(await deleteDoc(activeDoc.id))) {
+                    throw new Error('The scene could not be deleted — it is still here.');
+                  }
+                }}
+                title="Delete this audio scene?"
+                description={<>&ldquo;{activeDoc.name}&rdquo; and its Event Catalog will be removed. This cannot be undone.</>}
+                confirmLabel="Delete"
+                busyLabel="Deleting…"
+              />
             </div>
 
             {/* Tab bar */}
