@@ -183,11 +183,22 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
           clearRetryTimer();
           clearHealthTimer();
           set({ retryAttempt: 0, autoRetrying: false });
-          await tryApiFetch('/api/blender-mcp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'disconnect' }),
-          });
+          const result = await tryApiFetch<{ connection?: BlenderConnection }>(
+            '/api/blender-mcp',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'disconnect' }),
+            },
+          );
+          if (!result.ok) {
+            // The server refused (operator guard, route failure): its socket is
+            // still whatever it was. Claiming "Disconnected" here would hide a
+            // bridge that still accepts `execute`, so keep the state and say why.
+            set({ lastError: result.error });
+            if (get().connection.connected) startHealthCheck();
+            return;
+          }
           set({
             connection: { ...get().connection, connected: false },
             lastError: null,

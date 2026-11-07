@@ -264,3 +264,39 @@ describe('blenderMCPStore — the mount probe and the no-stale-Connected rule', 
     useBlenderMCPStore.getState().stopHealthCheck();
   });
 });
+
+/**
+ * `disconnect` used to ignore its own result: a refused request (operator guard 403, a
+ * route 500) still flipped the pill to "Disconnected" and cleared `lastError`, while the
+ * server kept the socket open and kept accepting `execute`. The client claimed a state the
+ * server never reached, and said nothing about why.
+ */
+describe('blenderMCPStore — a refused disconnect is not a disconnect', () => {
+  it('keeps the live connection and surfaces the refusal reason', async () => {
+    useBlenderMCPStore.setState({
+      connection: { host: 'localhost', port: 9876, connected: true },
+    });
+    mockFetch(failConnection('Operator token required'));
+
+    await useBlenderMCPStore.getState().disconnect();
+
+    const s = useBlenderMCPStore.getState();
+    expect(s.connection.connected).toBe(true);
+    expect(s.lastError).toContain('Operator token required');
+    useBlenderMCPStore.getState().stopHealthCheck();
+  });
+
+  it('adopts the server-reported connection on a successful disconnect', async () => {
+    useBlenderMCPStore.setState({
+      connection: { host: 'localhost', port: 9876, connected: true },
+      lastError: 'old',
+    });
+    mockFetch(okConnection(false));
+
+    await useBlenderMCPStore.getState().disconnect();
+
+    const s = useBlenderMCPStore.getState();
+    expect(s.connection.connected).toBe(false);
+    expect(s.lastError).toBeNull();
+  });
+});
