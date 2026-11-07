@@ -3153,7 +3153,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/verify/animation/route.ts:4 The context's only file is a VLM critique and loop-closure check of a captured filmstrip, which is motion-quality gating, a subject the golden path explicitly separates from this one. Searching the directory for video, hailuo, keypoint and triangulat found no extraction, sync gate or contact-window code.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         },
         {
           "subject": "sprite-and-atlas-production",
@@ -11668,7 +11672,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:71 Dodge phases and frame data are computed from designer parameters, and hit markers are placed by hand. No motion is extracted from a generated clip, and searching the directories for video, footage, keypoint, triangulat and mocap found nothing.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"

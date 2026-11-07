@@ -21546,6 +21546,79 @@
       "evaluatedTs": "2026-11-07T03:25:28.394Z",
       "worker": "c04ff748-acc7-4a62-af2b-1eeea8d0c10d",
       "techniques": []
+    },
+    "17532a7f-57f4-4480-8329-e4964e85a0b6/generated-video-motion-extraction": {
+      "context": "animation-combo-workflow",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:33:29.184Z",
+      "techniques": [
+        {
+          "technique": "contact-window-travels-with-the-clip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/helpers.ts:88 Hit windows come from templates over non-extracted motion. The technique applies only when the motion came out of a clip."
+        },
+        {
+          "technique": "motion-source-route-by-action-class",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/MixamoImport.tsx:33 The technique's own 'when not to use' covers this: the project already has captured motion (Mixamo) for these actions."
+        }
+      ],
+      "withdrawn": {
+        "worker": "8fb56fea-ac4e-4673-a5a9-a73f9df7e962",
+        "state": "not-applicable",
+        "at": "2026-11-07T03:34:12.742383+00:00",
+        "reason": "reviewer (sonnet): The main anchor, MixamoImport.tsx:33, is a doc comment in a sibling component that is not in this context's file list, so 'captured Mixamo clips' is not shown by the context's own code; only helpers.ts supports the template claim."
+      }
+    },
+    "17c4352f-e2a0-4523-81ed-22180e6d1eb7/generated-video-motion-extraction": {
+      "context": "anim-video-gen",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:33:29.184Z",
+      "worker": "8fb56fea-ac4e-4673-a5a9-a73f9df7e962",
+      "techniques": [
+        {
+          "technique": "panel-sync-gate",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/verify/animation/route.ts:5 Input is a filmstrip of already-existing motion for craft scoring. No two-panel generated clip is triangulated."
+        }
+      ]
+    },
+    "2fd8d59d-6d5d-4aed-aeca-7926be0ca764/generated-video-motion-extraction": {
+      "context": "eqs-squad-combat-spatial",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:33:29.184Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "8fb56fea-ac4e-4673-a5a9-a73f9df7e962",
+        "state": "not-applicable",
+        "at": "2026-11-07T03:34:12.831449+00:00",
+        "reason": "reviewer (sonnet): The anchor, eqsComponents.ts:17, is an unrelated description string for ctx-target-actor and does not show that animation sourcing is absent. I did not open the SquadChoreographyEditor file or the other listed files, so the absence claim is unconfirmed."
+      }
+    },
+    "24d18aef-2104-4889-9d67-d20a91d5fdea/generated-video-motion-extraction": {
+      "context": "combat-dodge-timeline",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:33:29.184Z",
+      "worker": "8fb56fea-ac4e-4673-a5a9-a73f9df7e962",
+      "techniques": [
+        {
+          "technique": "contact-window-travels-with-the-clip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:140 Hit markers are authored over parametric dodge timing. There is no extracted clip to measure a window from."
+        }
+      ]
     }
   }
 }
