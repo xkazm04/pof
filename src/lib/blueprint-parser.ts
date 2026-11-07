@@ -51,6 +51,9 @@ const TYPE_MAP: Record<string, string> = {
   'int64': 'int64',
   'float': 'float',
   'double': 'double',
+  // UE 5.0+ spells a Blueprint "Float" as PinCategory `real` (double precision
+  // unless the export's PinSubCategory says `float` — see parsePin).
+  'real': 'double',
   'name': 'FName',
   'string': 'FString',
   'text': 'FText',
@@ -118,7 +121,7 @@ interface RawNode {
 interface RawPin {
   PinId?: string;
   PinName?: string;
-  PinType?: { PinCategory?: string; PinSubCategoryObject?: string };
+  PinType?: { PinCategory?: string; PinSubCategory?: string; PinSubCategoryObject?: string };
   Direction?: string;
   LinkedTo?: string[];
   DefaultValue?: string;
@@ -142,8 +145,13 @@ interface RawGraph {
   [key: string]: unknown;
 }
 
+const REAL_PRECISIONS = new Set(['float', 'double']);
+
 function parsePin(raw: RawPin, nodeId: string, index: number): BlueprintPin {
+  const sub = raw.PinType?.PinSubCategory;
+  const realPrecision = raw.PinType?.PinCategory === 'real' && sub && REAL_PRECISIONS.has(sub) ? sub : undefined;
   const typeStr = raw.PinType?.PinSubCategoryObject
+    ?? realPrecision
     ?? raw.PinType?.PinCategory
     ?? 'unknown';
   const name = raw.PinName ?? 'unnamed';
