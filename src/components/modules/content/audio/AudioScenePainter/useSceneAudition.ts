@@ -113,12 +113,15 @@ export function useSceneAudition(mix: AuditionMix | null) {
   /** Apply a mix to a live graph: glide params in place; only a newly heard emitter adds a voice. */
   const sync = useCallback((g: Graph, m: AuditionMix): Promise<unknown> => {
     const t = g.ctx.currentTime;
-    const reverbKey = `${m.reverb.decayTime}|${m.reverb.wetDry}`;
+    // The impulse depends on the decay alone: rebuilding it (up to MAX_IR_S of
+    // stereo noise) and swapping the convolver buffer on a wet-only change would
+    // cost a full IR per Wet/Dry slider frame and click on every swap.
+    const reverbKey = String(m.reverb.decayTime);
     if (reverbKey !== g.reverbKey) {
       g.reverbKey = reverbKey;
       g.convolver.buffer = impulse(g.ctx, m.reverb.decayTime);
-      g.wet.gain.setTargetAtTime(m.reverb.wetDry, t, GLIDE_S);
     }
+    g.wet.gain.setTargetAtTime(m.reverb.wetDry, t, GLIDE_S);
     const adds: Promise<void>[] = [];
     for (const [id, v] of g.voices) {
       const h = m.heard[id];

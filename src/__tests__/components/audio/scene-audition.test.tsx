@@ -235,3 +235,32 @@ describe('painter LISTEN mode — readout copy', () => {
     expect(heard.textContent).toMatch(/−∞ dB/);
   });
 });
+
+describe('useSceneAudition — reverb impulse is rebuilt only when the decay changes', () => {
+  it('a wet/dry-only change glides the wet gain and keeps the impulse', async () => {
+    const base = auditionMix({ zones: [], emitters: [emitter()] }, { x: 100, y: 100 }, LIB);
+    const withReverb = (decayTime: number, wetDry: number) =>
+      ({ ...base, reverb: { ...base.reverb, decayTime, wetDry } });
+    const { result, rerender, unmount } = renderHook(
+      ({ decay, wet }: { decay: number; wet: number }) => useSceneAudition(withReverb(decay, wet)),
+      { initialProps: { decay: 1.5, wet: 0.3 } },
+    );
+    await act(async () => { await result.current.play(); });
+    const ctx = FakeAudioContext.instances[0];
+    const builds = vi.spyOn(ctx, 'createBuffer');
+    const wetGain = ctx.gains[1].gain; // [0] dry bus, [1] wet bus
+
+    // A Wet/Dry slider drag: many frames, decay untouched.
+    for (const wet of [0.35, 0.4, 0.45, 0.5]) rerender({ decay: 1.5, wet });
+    await act(async () => {});
+    expect(builds).toHaveBeenCalledTimes(0);
+    expect(wetGain.value).toBe(0.5);
+
+    rerender({ decay: 2.5, wet: 0.5 });
+    await act(async () => {});
+    expect(builds).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.stop());
+    unmount();
+  });
+});
