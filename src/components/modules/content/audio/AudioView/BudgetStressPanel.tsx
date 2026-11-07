@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { useAudioEventCatalogStore } from '@/components/modules/content/audio/audioEventCatalogStore';
-import { DEFAULT_EVENTS, PRIORITY_CONFIG } from '@/components/modules/content/audio/AudioEventCatalog/constants';
+import {
+  DEFAULT_EVENTS, PRIORITY_CONFIG, MAX_EVENT_CONCURRENCY, clampEventConcurrency,
+} from '@/components/modules/content/audio/AudioEventCatalog/constants';
 import type { AudioEvent } from '@/components/modules/content/audio/AudioEventCatalog/types';
 import { useAudioSetLibrary } from '@/components/modules/content/audio/AudioPropertyPanel/useAudioSetLibrary';
 import { eventBudget } from '@/lib/audio-runtime-contract';
@@ -170,9 +172,9 @@ function BudgetRow({ row, event, rate, keepFix, onPatch }: {
         {(over || keepFix) && (
           <div className="flex gap-1.5">
             <input
-              type="number" min={1} max={16} aria-label={`${row.name} concurrency`} className={inputCls}
+              type="number" min={1} max={MAX_EVENT_CONCURRENCY} aria-label={`${row.name} concurrency`} className={inputCls}
               value={event.concurrency}
-              onChange={(e) => onPatch(row.id, { concurrency: Math.max(1, Math.min(16, Number(e.target.value) || 1)) })}
+              onChange={(e) => onPatch(row.id, { concurrency: clampEventConcurrency(e.target.value) })}
             />
             <input
               type="number" min={0} step={50} aria-label={`${row.name} cooldown ms`} className={inputCls}

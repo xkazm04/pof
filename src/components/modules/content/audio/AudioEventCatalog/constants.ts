@@ -71,3 +71,15 @@ export const DEFAULT_EVENTS: AudioEvent[] = [
   { id: 'evt-12', name: 'Exploration Layer', category: 'music', trigger: 'OnExplorationStart', priority: 'normal', spatial: '2d', concurrency: 1, cooldownMs: 0, tags: ['layer', 'explore'] },
   { id: 'evt-13', name: 'Boss Theme', category: 'music', trigger: 'OnBossEncounterStart', priority: 'critical', spatial: '2d', concurrency: 1, cooldownMs: 0, tags: ['boss', 'layer'] },
 ];
+
+/** Per-event voice cap, shared by every input that edits `AudioEvent.concurrency`. */
+export const MAX_EVENT_CONCURRENCY = 16;
+
+/**
+ * Concurrency is a COUNT of voices, so a typed fraction is floored before it is
+ * stored (`2.5` used to be kept and reach the generator prompt verbatim).
+ */
+export function clampEventConcurrency(raw: string): number {
+  const n = Math.floor(Number(raw));
+  return Number.isFinite(n) ? Math.min(MAX_EVENT_CONCURRENCY, Math.max(1, n)) : 1;
+}

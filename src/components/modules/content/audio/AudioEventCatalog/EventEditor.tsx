@@ -8,7 +8,9 @@ import {
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { AudioEvent, EventCategory, PriorityLevel, SpatialMode } from './types';
-import { CATEGORY_CONFIG, PRIORITY_CONFIG, CATEGORIES } from './constants';
+import {
+  CATEGORY_CONFIG, PRIORITY_CONFIG, CATEGORIES, MAX_EVENT_CONCURRENCY, clampEventConcurrency,
+} from './constants';
 import { EventSoundPicker, type EventSoundLibrary } from './EventSoundPicker';
 
 // -- EventEditor --
@@ -184,8 +186,8 @@ export function EventEditor({
               id={fid('concurrency')}
               type="number"
               value={event.concurrency}
-              onChange={(e) => onUpdate({ concurrency: Math.max(1, Math.min(16, Number(e.target.value) || 1)) })}
-              min={1} max={16}
+              onChange={(e) => onUpdate({ concurrency: clampEventConcurrency(e.target.value) })}
+              min={1} max={MAX_EVENT_CONCURRENCY}
               aria-describedby={fid('concurrency-hint')}
               className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text font-mono text-center focus-ring-inset transition-all shadow-inner"
             />
