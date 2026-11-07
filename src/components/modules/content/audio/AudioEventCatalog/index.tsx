@@ -94,7 +94,9 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
   // -- CRUD --
 
   const addEvent = useCallback((category: EventCategory) => {
-    const id = `evt-${Date.now()}`;
+    // Not `Date.now()`: two adds in one millisecond shared an id (duplicate key,
+    // and an edit/delete aimed at one row hit both).
+    const id = `evt-${crypto.randomUUID()}`;
     const newEvt: AudioEvent = {
       id,
       name: 'New Event',
