@@ -1,4 +1,5 @@
 import net from 'net';
+import { StringDecoder } from 'string_decoder';
 import { ok, err, type Result } from '@/types/result';
 import { logger } from '@/lib/logger';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -270,6 +271,10 @@ class BlenderMCPService {
 
       const socket = this.socket;
       let buffer = '';
+      // One decoder per response: it holds the leading bytes of a multi-byte UTF-8
+      // character split across two TCP chunks, where a per-chunk `toString` turned
+      // each half into U+FFFD (an em dash in a raise message, an accented name).
+      const decoder = new StringDecoder('utf8');
       let settled = false;
 
       // ── Incremental parse-readiness gate ──────────────────────────────────
@@ -322,7 +327,7 @@ class BlenderMCPService {
       const onError = (e: Error) => settle(err(`Socket error: ${e.message}`));
 
       const onData = (chunk: Buffer) => {
-        buffer += chunk.toString('utf-8');
+        buffer += decoder.write(chunk);
 
         // Bounded receive buffer. A wedged/garbage response (never closes its
         // top-level value, so the brace-depth gate below never trips) would
