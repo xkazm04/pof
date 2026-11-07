@@ -241,8 +241,8 @@ export const CONFLICT_LEVEL_LABELS: Record<string, JargonEntry> = {
   },
   compatible: {
     term: 'Compatible Changes',
-    plain: 'There are differences, but they merge cleanly — no manual decision needed.',
-    whyItMatters: 'Safe to apply automatically; the C++ side just needs new code generated.',
+    plain: 'The two sides differ, but neither contradicts the other: something exists on one side only (a new Blueprint member, or a C++-only member).',
+    whyItMatters: 'Regenerating adds the Blueprint-side members, but a whole-file write also deletes C++-only members — check the overwrite review before writing.',
   },
   conflict: {
     term: 'Conflicts Detected',
