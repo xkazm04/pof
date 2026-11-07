@@ -56,6 +56,9 @@ interface ActivityFeedState {
 
 let _eventCounter = 0;
 
+/** How many events survive a reload (the live feed holds FEED_CAP). */
+const PERSIST_CAP = 30;
+
 export const useActivityFeedStore = create<ActivityFeedState>()(
   persist(
     (set) => ({
@@ -91,7 +94,9 @@ export const useActivityFeedStore = create<ActivityFeedState>()(
       name: 'pof-activity-feed',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        events: state.events.slice(0, 30), // Persist fewer to keep storage small
+        // Persist fewer to keep storage small — through the SAME eviction rule as the
+        // live feed, so an unread error past the 30th event survives a reload.
+        events: retain(state.events, PERSIST_CAP),
       }),
     },
   ),
