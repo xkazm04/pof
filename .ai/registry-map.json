@@ -6715,7 +6715,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/blender-mcp/service.ts:532 A Sketchfab download (and a PolyHaven one at :510) returns the same bare {objectName} as a generated-asset import (:577), with no source or licence record, so a downloaded asset in the Blender scene cannot be told apart from a generated one.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "background-jobs",
@@ -27949,7 +27953,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:173 When the Tier-0 input gate cannot run, the paid image-to-3D generation still proceeds ungated (inputGateRefusal returns null unless the gate actually ran and returned 'fail'), which is the technique's named failure of waving an artifact through instead of stopping the spend.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "mcp-tools",
@@ -28045,7 +28053,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:67 When the degenerate-face measurement throws, the deterministic Tier-1 critic emits a clean reading of 0 instead of an ungraded or error marker, so a failed measurement reaches the scorer as 'no defect'.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "quality-gates",

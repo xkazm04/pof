@@ -21619,6 +21619,100 @@
           "evidence": "src/components/modules/core-engine/sub_combat/dodge-timeline/index.tsx:140 Hit markers are authored over parametric dodge timing. There is no extracted clip to measure a window from."
         }
       ]
+    },
+    "740ed0f9-77a8-4d0b-b6c9-8a2fa47f9631/generative-artifact-gating": {
+      "context": "asset-visual-studio",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:41:44.392Z",
+      "techniques": [
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/AssetRow.tsx:29 Acquired assets are recorded as acquired and never fill a slot a generator also fills in this context, so the technique's precondition does not hold."
+        }
+      ],
+      "withdrawn": {
+        "worker": "eda8e2fc-8d58-4fe2-801a-11cec23b0ca9",
+        "state": "not-applicable",
+        "at": "2026-11-07T03:42:20.400869+00:00",
+        "reason": "reviewer (sonnet): The claim that there is no generator is contradicted by the code. AssetRow.tsx:32-43 calls generateIntegration ('Generate Adapter'), and IntegrationView.tsx shows scaffold warnings for the generated code. The anchor at :29 is only the manual handleAcquire line, so it does not show the precondition i"
+      }
+    },
+    "a5282390-b3a3-4015-90c9-7ff9f7481788/generative-artifact-gating": {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:41:44.392Z",
+      "worker": "eda8e2fc-8d58-4fe2-801a-11cec23b0ca9",
+      "techniques": [
+        {
+          "technique": "generator-failure-deterministic-gates",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:67 The gate is otherwise deterministic and emits a measurement per key (pof_loop_closure.py fails closed with POF_LOOP_ERROR markers). This fallback, though, turns a failed measurement into a passing number rather than failing closed."
+        }
+      ]
+    },
+    "7dc24a06-f9a7-4fd2-a84d-0ded966291bd/generative-artifact-gating": {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:41:44.392Z",
+      "worker": "eda8e2fc-8d58-4fe2-801a-11cec23b0ca9",
+      "techniques": [
+        {
+          "technique": "gate-before-every-credit-spend",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:173 There is a gate on the input before the paid stage (inputGateRefusal refuses on fail), but an unavailable gate lets the spend go ahead instead of reporting a precondition failure and stopping."
+        },
+        {
+          "technique": "generator-failure-deterministic-gates",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/input-gate.ts:105 A VLM score alone can produce 'pass' (accept). Cropping, which a deterministic raw-margin measurement would catch, is left to the model, and line 83 admits it is that grader's blind spot. view-critique.ts:224 likewise returns pass from a model."
+        },
+        {
+          "technique": "cite-evidence-not-descriptions",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/view-critique.ts:196 The view gate's reason cites the rendered view file that drove the verdict rather than paraphrasing it."
+        },
+        {
+          "technique": "grade-the-selected-candidate",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/best-of-n.ts:244 Each roll's actual delivered mesh is critiqued before acceptance; a roll that produced no mesh is never accepted."
+        }
+      ]
+    },
+    "d6a661e1-369c-4819-85cf-0a6c31282ef6/generative-artifact-gating": {
+      "context": "blender-mcp-bridge",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:41:44.392Z",
+      "worker": "eda8e2fc-8d58-4fe2-801a-11cec23b0ca9",
+      "techniques": [
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/service.ts:532 Downloads and generation imports share one result shape (ImportedObject = objectName only), and no acquisition record carrying the licence exists."
+        },
+        {
+          "technique": "reserve-before-dispatch-stop-latch",
+          "verdict": "deviation",
+          "evidence": "src/lib/blender-mcp/service.ts:475 Paid Rodin/Hunyuan jobs are dispatched with no reservation, cap or stop latch. The route's ledger (src/app/api/blender-mcp/generate/route.ts:30) records only AFTER the provider accepts and bills the job."
+        },
+        {
+          "technique": "grade-the-selected-candidate",
+          "verdict": "conformant",
+          "evidence": "src/lib/blender-mcp/mcp-gate.ts:117 mcp-gate fetches the delivered mesh and grades that file. With no resultUrl or a failed fetch it reports delivered-ungated with a reason, never a pass."
+        }
+      ]
     }
   }
 }
