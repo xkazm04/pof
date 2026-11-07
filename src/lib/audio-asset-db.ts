@@ -243,6 +243,7 @@ export function removeAssetFile(relPath: string): FileRemoval {
   if (!existsSync(abs)) return { ok: true, path: abs, removed: 0 };
   try {
     unlinkSync(abs);
+    invalidateDiskFootprint();
     return { ok: true, path: abs, removed: 1 };
   } catch (e) {
     return { ok: false, path: abs, removed: 0, reason: e instanceof Error ? e.message : 'unlink failed' };
@@ -263,6 +264,7 @@ export function removeSetDirectory(setId: string): FileRemoval {
   try {
     removed = readdirSync(abs).length;
     rmSync(abs, { recursive: true, force: true });
+    invalidateDiskFootprint();
     return { ok: true, path: abs, removed };
   } catch (e) {
     return { ok: false, path: abs, removed: 0, reason: e instanceof Error ? e.message : 'directory removal failed' };
@@ -293,6 +295,32 @@ export function getDiskFootprint(root: string = AUDIO_DIR): AudioDiskFootprint {
   };
   if (existsSync(root)) walk(root);
   return { bytes, files };
+}
+
+/**
+ * How long a measured footprint is served without re-walking. The module's own
+ * writers (POST's clip write, both removals) invalidate immediately; the TTL only
+ * bounds how stale bytes changed OUTSIDE the app can read.
+ */
+export const DISK_FOOTPRINT_TTL_MS = 30_000;
+
+let footprintCache: { at: number; value: AudioDiskFootprint } | null = null;
+
+/** Drop the cached footprint — call after anything writes or removes bytes under AUDIO_DIR. */
+export function invalidateDiskFootprint(): void {
+  footprintCache = null;
+}
+
+/**
+ * {@link getDiskFootprint} over AUDIO_DIR, cached. The library GET runs on every
+ * Library / Forge mount and refresh; walking every clip with statSync each time
+ * grew linearly with the library and blocked the event loop.
+ */
+export function getCachedDiskFootprint(now: number = Date.now()): AudioDiskFootprint {
+  if (footprintCache && now - footprintCache.at < DISK_FOOTPRINT_TTL_MS) return footprintCache.value;
+  const value = getDiskFootprint();
+  footprintCache = { at: now, value };
+  return value;
 }
 
 // ── Generation usage log (powers the quota meter) ──

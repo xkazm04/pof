@@ -16,8 +16,9 @@ import {
   ensureAudioDir,
   findAssetByPromptHash,
   getAsset,
-  getDiskFootprint,
+  getCachedDiskFootprint,
   getSet,
+  invalidateDiskFootprint,
   getUsageSummary,
   listAllAssets,
   listSets,
@@ -148,6 +149,7 @@ export async function POST(request: NextRequest) {
   const assetId = randomUUID();
   const filename = `${assetId}.${result.format}`;
   writeFileSync(join(setDir, filename), result.bytes);
+  invalidateDiskFootprint();
 
   const asset = addAsset(db(), {
     setId: set.id, filename, relPath: `${set.id}/${filename}`,
@@ -167,8 +169,9 @@ export async function GET() {
   // the import CLI a `~/.pof/audio/...` path, but `~` is not expanded by PowerShell
   // env-var assignment — the dispatch carried an unusable path that only an
   // (absent) script's expanduser would have saved.
-  // `disk` is the module's REAL footprint under AUDIO_DIR (bytes never had a surface).
-  return apiSuccess({ sets, assets, usage, audioDir: AUDIO_DIR, disk: getDiskFootprint() });
+  // `disk` is the module's REAL footprint under AUDIO_DIR (bytes never had a surface),
+  // cached and invalidated by this route's own writes (DISK_FOOTPRINT_TTL_MS bounds outside edits).
+  return apiSuccess({ sets, assets, usage, audioDir: AUDIO_DIR, disk: getCachedDiskFootprint() });
 }
 
 interface PatchBody { assetId?: string; favorite?: boolean }
