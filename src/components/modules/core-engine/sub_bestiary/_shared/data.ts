@@ -58,6 +58,20 @@ export function archetypeIcon(a: { iconKey?: string }): LucideIcon {
 }
 
 export type EnemyRole = 'melee' | 'ranged' | 'tank' | 'healer' | 'caster' | 'swarm';
+
+/**
+ * The one role -> colour vocabulary for every bestiary chart (role donut, spawn formation).
+ * A role keeps the same hue on every surface; keyed by EnemyRole so a new role cannot
+ * fall through to a shared neutral.
+ */
+export const ENEMY_ROLE_COLORS: Record<EnemyRole, string> = {
+  melee: ACCENT_RED,
+  ranged: ACCENT_PURPLE_BOLD,
+  tank: MODULE_COLORS.content,
+  healer: ACCENT_EMERALD,
+  caster: ACCENT_CYAN,
+  swarm: ACCENT_PINK,
+};
 export type EnemyCategory = 'Humanoid' | 'Beast' | 'Droid' | 'Force-sensitive' | 'Undead';
 export type EnemyTier = 'minion' | 'standard' | 'elite' | 'boss' | 'raid-boss';
 
@@ -559,12 +573,12 @@ export const DIFFICULTY_BRUTE: DifficultyPoint[] = [
 export interface SpawnPoint { id: number; x: number; y: number; order: number; role?: EnemyRole; color?: string; }
 
 export const SPAWN_POINTS: SpawnPoint[] = [
-  { id: 1, x: 70, y: 15.6, order: 1, role: 'melee', color: ACCENT_RED },
-  { id: 2, x: 116.7, y: 38.9, order: 2, role: 'ranged', color: ACCENT_PURPLE_BOLD },
-  { id: 3, x: 116.7, y: 93.3, order: 3, role: 'tank', color: MODULE_COLORS.content },
-  { id: 4, x: 70, y: 120.6, order: 4, role: 'melee', color: ACCENT_RED },
-  { id: 5, x: 23.3, y: 93.3, order: 5, role: 'caster', color: ACCENT_CYAN },
-  { id: 6, x: 23.3, y: 38.9, order: 6, role: 'healer', color: ACCENT_EMERALD },
+  { id: 1, x: 70, y: 15.6, order: 1, role: 'melee', color: ENEMY_ROLE_COLORS.melee },
+  { id: 2, x: 116.7, y: 38.9, order: 2, role: 'ranged', color: ENEMY_ROLE_COLORS.ranged },
+  { id: 3, x: 116.7, y: 93.3, order: 3, role: 'tank', color: ENEMY_ROLE_COLORS.tank },
+  { id: 4, x: 70, y: 120.6, order: 4, role: 'melee', color: ENEMY_ROLE_COLORS.melee },
+  { id: 5, x: 23.3, y: 93.3, order: 5, role: 'caster', color: ENEMY_ROLE_COLORS.caster },
+  { id: 6, x: 23.3, y: 38.9, order: 6, role: 'healer', color: ENEMY_ROLE_COLORS.healer },
 ];
 
 export interface WaveConfig { id: number; delay: string; count: number; archetype: string; }

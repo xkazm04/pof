@@ -1,25 +1,21 @@
 'use client';
 
-import { ARCHETYPES } from '../_shared/data';
-import { ACCENT_RED, ACCENT_CYAN, ACCENT_EMERALD, STATUS_NEUTRAL, withOpacity, OPACITY_50 } from '@/lib/chart-colors';
+import { ARCHETYPES, ENEMY_ROLE_COLORS } from '../_shared/data';
+import { ACCENT_RED, withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 const total = ARCHETYPES.length;
-const roleCounts = ARCHETYPES.reduce<Record<string, number>>((acc, a) => {
+const roleCounts = ARCHETYPES.reduce<Partial<Record<keyof typeof ENEMY_ROLE_COLORS, number>>>((acc, a) => {
   acc[a.role] = (acc[a.role] ?? 0) + 1;
   return acc;
 }, {});
 
-const ROLE_COLORS: Record<string, string> = {
-  melee: ACCENT_RED,
-  ranged: ACCENT_CYAN,
-  tank: ACCENT_EMERALD,
-};
-
-const segments = Object.entries(roleCounts).map(([role, count]) => ({
-  role,
-  pct: (count / total) * 100,
-  color: ROLE_COLORS[role] ?? STATUS_NEUTRAL,
-}));
+const segments = (Object.keys(ENEMY_ROLE_COLORS) as (keyof typeof ENEMY_ROLE_COLORS)[])
+  .filter(role => roleCounts[role])
+  .map(role => ({
+    role,
+    pct: ((roleCounts[role] ?? 0) / total) * 100,
+    color: ENEMY_ROLE_COLORS[role],
+  }));
 
 const SIZE = 20;
 const R = 8;
