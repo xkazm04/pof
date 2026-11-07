@@ -300,3 +300,57 @@ describe('blenderMCPStore — a refused disconnect is not a disconnect', () => {
     expect(s.lastError).toBeNull();
   });
 });
+
+/**
+ * Generation fence. A liveness probe (or a connect) still in flight when the user clicks
+ * Disconnect used to land AFTER the disconnect: it wrote `connected: true` back over the
+ * fresh "Disconnected" and re-armed the probe interval, so the pill lied for a full
+ * health-check period. A response that belongs to an earlier generation is dropped now.
+ */
+describe('blenderMCPStore — a late response never overwrites a disconnect', () => {
+  function deferredThenOk() {
+    let release: (v: FetchResult) => void = () => {};
+    const pending = new Promise<FetchResult>((r) => {
+      release = r;
+    });
+    let call = 0;
+    mockFetch(() => {
+      call += 1;
+      return call === 1 ? pending : okConnection(false)();
+    });
+    return (connected: boolean) =>
+      release({
+        json: async () => ({
+          success: true,
+          data: { connection: { host: 'localhost', port: 9876, connected } },
+        }),
+      });
+  }
+
+  it('drops an in-flight status probe that resolves after disconnect', async () => {
+    useBlenderMCPStore.setState({
+      connection: { host: 'localhost', port: 9876, connected: true },
+    });
+    const resolveProbe = deferredThenOk();
+
+    const probe = useBlenderMCPStore.getState().refreshStatus();
+    await useBlenderMCPStore.getState().disconnect();
+    resolveProbe(true);
+    await probe;
+
+    expect(useBlenderMCPStore.getState().connection.connected).toBe(false);
+  });
+
+  it('drops an in-flight connect that resolves after disconnect', async () => {
+    const resolveConnect = deferredThenOk();
+
+    const connecting = useBlenderMCPStore.getState().connect();
+    await useBlenderMCPStore.getState().disconnect();
+    resolveConnect(true);
+    await connecting;
+
+    const s = useBlenderMCPStore.getState();
+    expect(s.connection.connected).toBe(false);
+    expect(s.isConnecting).toBe(false);
+  });
+});

@@ -79,6 +79,12 @@ function clearRetryTimer() {
 // self-heal.
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 
+// Generation fence. `disconnect` bumps it; `connect` and `refreshStatus` capture it
+// before their request and drop a response that comes back under a newer
+// generation, so a probe or connect still in flight when the user disconnects can
+// never write `connected: true` back over the disconnect or re-arm the probe loop.
+let generation = 0;
+
 function clearHealthTimer() {
   if (healthTimer) {
     clearInterval(healthTimer);
@@ -143,6 +149,7 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
         connect: async (host?: string, port?: number) => {
           const h = host ?? get().host;
           const p = port ?? get().port;
+          const gen = generation;
           set({ isConnecting: true, lastError: null });
 
           const result = await tryApiFetch<{
@@ -152,6 +159,12 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'connect', host: h, port: p }),
           });
+
+          if (gen !== generation) {
+            // Disconnected while this connect was in flight: the answer is stale.
+            set({ isConnecting: false });
+            return;
+          }
 
           if (result.ok) {
             clearRetryTimer();
@@ -180,6 +193,7 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
         },
 
         disconnect: async () => {
+          generation += 1;
           clearRetryTimer();
           clearHealthTimer();
           set({ retryAttempt: 0, autoRetrying: false });
@@ -207,6 +221,7 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
 
         refreshStatus: async () => {
           const wasConnected = get().connection.connected;
+          const gen = generation;
           const result = await tryApiFetch<{
             connection: BlenderConnection;
           }>('/api/blender-mcp', {
@@ -214,6 +229,9 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'status' }),
           });
+
+          // Disconnected while this probe was in flight: its answer is stale.
+          if (gen !== generation) return;
 
           // A transport failure, OR a success envelope that does not actually
           // carry a connection (a shape only a bug or a stubbed fetch produces —
