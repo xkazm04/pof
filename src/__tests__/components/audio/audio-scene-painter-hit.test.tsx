@@ -80,3 +80,39 @@ describe('decorative attenuation shapes take no pointer events', () => {
     expect(catching.length).toBe(0);
   });
 });
+
+describe('placing and drawing over an existing zone works for both shapes', () => {
+  const twoShapes = () => [zone(), zone({ id: 'z2', shape: 'circle', x: 400, y: 300, width: 100, height: 100 })];
+
+  function pickTool(container: HTMLElement, label: string) {
+    const btn = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === label)!;
+    fireEvent.click(btn);
+  }
+
+  it.each([
+    ['rect', 'z1', 150, 140],
+    ['circle', 'z2', 400, 300],
+  ])('EMITTER tool: a press on a %s zone body places an emitter inside it', (_shape, zoneId, x, y) => {
+    const { container, props } = renderPainter({ zones: twoShapes(), emitters: [] });
+    pickTool(container, 'EMITTER');
+    fireEvent.mouseDown(container.querySelector(`[data-zone-id="${zoneId}"]`)!, { clientX: x, clientY: y });
+    expect(props.onUpdateEmitters).toHaveBeenCalledTimes(1);
+    const placed = props.onUpdateEmitters.mock.calls[0][0] as SoundEmitter[];
+    expect(placed).toHaveLength(1);
+    expect(placed[0].zoneId).toBe(zoneId);
+  });
+
+  it.each([
+    ['rect', 'z1', 150, 140],
+    ['circle', 'z2', 400, 300],
+  ])('VOL_RECT tool: a drag starting on a %s zone body draws a new zone', (_shape, zoneId, x, y) => {
+    const { container, props } = renderPainter({ zones: twoShapes(), emitters: [] });
+    pickTool(container, 'VOL_RECT');
+    const svg = container.querySelector('[data-zone-id="z1"]')!.closest('svg')!;
+    fireEvent.mouseDown(container.querySelector(`[data-zone-id="${zoneId}"]`)!, { clientX: x, clientY: y });
+    fireEvent.mouseMove(svg, { clientX: x + 60, clientY: y + 60 });
+    fireEvent.mouseUp(svg);
+    expect(props.onUpdateZones).toHaveBeenCalledTimes(1);
+    expect((props.onUpdateZones.mock.calls[0][0] as AudioZone[]).length).toBe(3);
+  });
+});

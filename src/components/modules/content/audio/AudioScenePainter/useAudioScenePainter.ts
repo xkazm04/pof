@@ -124,7 +124,12 @@ export function useAudioScenePainter({
       return;
     }
     const target = e.target as SVGElement;
-    if (target !== svgRef.current && target.tagName !== 'rect') {
+    // Background, grid rects, and zone BODIES of either shape reach the tools. A
+    // zone body only gets here outside select mode (select-mode presses are owned
+    // by `handleZoneMouseDown`). Matching on tagName alone let a rect zone through
+    // but swallowed a press on a circle zone, so nothing could be placed inside it.
+    const onZoneBody = target.hasAttribute?.('data-zone-id') ?? false;
+    if (target !== svgRef.current && target.tagName !== 'rect' && !onZoneBody) {
       return;
     }
 
