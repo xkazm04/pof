@@ -3,49 +3,15 @@ import { useBlenderStore } from '@/components/modules/visual-gen/blender-pipelin
 
 describe('useBlenderStore', () => {
   beforeEach(() => {
-    useBlenderStore.setState({
-      blenderPath: null,
-      blenderVersion: null,
-      isDetecting: false,
-      scripts: [],
-    });
+    useBlenderStore.setState({ scripts: [] });
   });
 
-  it('starts with empty state', () => {
-    const state = useBlenderStore.getState();
-    expect(state.blenderPath).toBeNull();
-    expect(state.blenderVersion).toBeNull();
-    expect(state.isDetecting).toBe(false);
-    expect(state.scripts).toEqual([]);
-  });
-
-  it('sets blender path and version', () => {
-    useBlenderStore.getState().setBlenderPath('C:\\Program Files\\Blender\\blender.exe', '4.1.0');
-    const state = useBlenderStore.getState();
-    expect(state.blenderPath).toBe('C:\\Program Files\\Blender\\blender.exe');
-    expect(state.blenderVersion).toBe('4.1.0');
-  });
-
-  it('sets blender path without version', () => {
-    useBlenderStore.getState().setBlenderPath('/usr/bin/blender');
-    const state = useBlenderStore.getState();
-    expect(state.blenderPath).toBe('/usr/bin/blender');
-    expect(state.blenderVersion).toBeNull();
-  });
-
-  it('clears blender path', () => {
-    useBlenderStore.getState().setBlenderPath('/usr/bin/blender', '4.0');
-    useBlenderStore.getState().setBlenderPath(null);
-    const state = useBlenderStore.getState();
-    expect(state.blenderPath).toBeNull();
-    expect(state.blenderVersion).toBeNull();
-  });
-
-  it('sets detecting flag', () => {
-    useBlenderStore.getState().setDetecting(true);
-    expect(useBlenderStore.getState().isDetecting).toBe(true);
-    useBlenderStore.getState().setDetecting(false);
-    expect(useBlenderStore.getState().isDetecting).toBe(false);
+  it('holds only the dispatched-script history: no Blender path/version/detecting state nothing writes', () => {
+    // blenderPath, blenderVersion, isDetecting and their setters had zero production writers;
+    // the truthful Blender version is GET /api/visual-gen/blender/detect (see lib/blender-mcp/types.ts).
+    const keys = Object.keys(useBlenderStore.getState()).sort();
+    expect(keys).toEqual(['addScript', 'clearCompleted', 'removeScript', 'scripts', 'updateScript']);
+    expect(useBlenderStore.getState().scripts).toEqual([]);
   });
 
   it('adds a script job with running status', () => {
@@ -80,15 +46,6 @@ describe('useBlenderStore', () => {
     const job = useBlenderStore.getState().scripts.find((j) => j.id === id);
     expect(job?.status).toBe('completed');
     expect(job?.completedAt).toBeGreaterThan(0);
-  });
-
-  it('appends output to a script job', () => {
-    const id = useBlenderStore.getState().addScript('convert.py', []);
-    useBlenderStore.getState().appendOutput(id, 'Loading mesh...\n');
-    useBlenderStore.getState().appendOutput(id, 'Exporting FBX...\n');
-
-    const job = useBlenderStore.getState().scripts.find((j) => j.id === id);
-    expect(job?.output).toBe('Loading mesh...\nExporting FBX...\n');
   });
 
   it('removes a script job', () => {

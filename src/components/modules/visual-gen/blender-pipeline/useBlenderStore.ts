@@ -13,17 +13,15 @@ export interface ScriptJob {
   completedAt?: number;
 }
 
+/**
+ * The Script History record: every script PoF dispatched through `executeViaMCP` this
+ * session. Blender path/version live elsewhere (GET /api/visual-gen/blender/detect).
+ */
 interface BlenderState {
-  blenderPath: string | null;
-  blenderVersion: string | null;
-  isDetecting: boolean;
   scripts: ScriptJob[];
 
-  setBlenderPath: (path: string | null, version?: string | null) => void;
-  setDetecting: (detecting: boolean) => void;
   addScript: (scriptName: string, args: string[]) => string;
   updateScript: (id: string, updates: Partial<ScriptJob>) => void;
-  appendOutput: (id: string, text: string) => void;
   removeScript: (id: string) => void;
   clearCompleted: () => void;
 }
@@ -31,13 +29,7 @@ interface BlenderState {
 let scriptCounter = 0;
 
 export const useBlenderStore = create<BlenderState>((set) => ({
-  blenderPath: null,
-  blenderVersion: null,
-  isDetecting: false,
   scripts: [],
-
-  setBlenderPath: (path, version = null) => set({ blenderPath: path, blenderVersion: version }),
-  setDetecting: (detecting) => set({ isDetecting: detecting }),
 
   addScript: (scriptName, args) => {
     const id = `script-${Date.now()}-${++scriptCounter}`;
@@ -56,13 +48,6 @@ export const useBlenderStore = create<BlenderState>((set) => ({
   updateScript: (id, updates) =>
     set((s) => ({
       scripts: s.scripts.map((j) => (j.id === id ? { ...j, ...updates } : j)),
-    })),
-
-  appendOutput: (id, text) =>
-    set((s) => ({
-      scripts: s.scripts.map((j) =>
-        j.id === id ? { ...j, output: j.output + text } : j,
-      ),
     })),
 
   removeScript: (id) =>
