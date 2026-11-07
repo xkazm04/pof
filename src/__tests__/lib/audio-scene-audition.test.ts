@@ -145,6 +145,7 @@ describe('auditionMix — one zone-reverb resolver', () => {
  * Per-file sha256 of the case-8 fixture output, taken on the base BEFORE the resolver.
  * Re-pinned 2026-11-07 for AudioZoneAttenuation.{h,cpp} + AudioSceneManager.{h,cpp} only:
  * per-zone attenuation is now emitted and initialised (audio-codegen-attenuation.test.ts).
+ * SceneEmitterSpawner.cpp re-pinned the same day: a Sound Cue that fails to load is now logged.
  */
 const BASE_FILE_SHA: Record<string, string> = {
   'AudioReverbPresets.h': '1f55f4386662581dd923528799bccfa672b893a110e257ea3f35745a088e6dfd',
@@ -152,7 +153,7 @@ const BASE_FILE_SHA: Record<string, string> = {
   'AudioZoneAttenuation.h': '23c84cf493db30abf22c7f792e2d8a67f6fbe89ec21172e47a6ca889baf2e485',
   'AudioZoneAttenuation.cpp': '75c4178e82f18fbe04b597c47f6769d3f408df7cbdcebbecf5da9b4359ccce2d',
   'SceneEmitterSpawner.h': '480a2efd7148b77e2789b788b72989b223cc3118a6b46618e8bb615b58338e94',
-  'SceneEmitterSpawner.cpp': 'f6d193ddb472f32ed2fa925d487bbd50d93e171e23a12d235426af5695553848',
+  'SceneEmitterSpawner.cpp': 'ae8a0fdeb7ae084f93092bfdeb1f4650213d6338d4ebcc3fdb4a594a316a5117',
   'AudioSceneManager.h': 'e04519c3c63bd8417e877f51bfa65dc3ae65cffe5352ae1a12800dca3d0239f1',
   'AudioSceneManager.cpp': '4cfbe9a6b5c23b4d3439afda3eec6a79b7719fb55ff020fb7b7e82eb5f9f4eb5',
 };
@@ -179,6 +180,6 @@ describe('acoustics tables — one authority', () => {
     expect(Object.fromEntries(outside.map((f) => [f.filename, sha(f.content)]))).toEqual(BASE_FILE_SHA);
 
     const out = files.map((f) => `${f.filename}\n${f.content}`).join('\n----\n');
-    expect(sha(out)).toBe('9c1192817c12de8cb119ce32e759a512e3d45977033984b101573bf51e4eac7a');
+    expect(sha(out)).toBe('3ef745205335a14165607e45786e1d57976093ed2636cf07809072bcdb576224');
   });
 });

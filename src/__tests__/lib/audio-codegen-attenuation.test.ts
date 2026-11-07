@@ -57,3 +57,27 @@ describe('zone attenuation reaches the generated C++', () => {
     expect(cpp).toContain('ZoneAttenuation->InitializeZones();');
   });
 });
+
+describe('a missing asset in the generated runtime is logged, not silent', () => {
+  const doc: AudioSceneDocument = {
+    ...DOC,
+    zones: [zone({ id: 'a', name: 'Nave', soundscapeDescription: 'dripping water' })],
+    emitters: [{
+      id: 'e', name: 'Torch', type: 'loop', x: 0, y: 0, soundCueRef: '', attenuationRadius: 300,
+      volumeMultiplier: 1, pitchMin: 1, pitchMax: 1, spawnChance: 1, cooldownSeconds: 0, zoneId: null,
+    }],
+  };
+  const get = (name: string) => generateAudioCode(doc, 'PoF', 'POF_API').files.find((f) => f.filename === name)!.content;
+
+  it('ActivateLayer warns when the zone has no MetaSoundSource', () => {
+    expect(get('ProceduralAmbientLayer.cpp')).toMatch(/if \(!Source\)\s*\{\s*UE_LOG\(LogTemp, Warning,[^;]*MetaSoundSource[^;]*;\s*return;\s*\}/);
+  });
+
+  it('each generated layer config says its MetaSoundSource must be assigned', () => {
+    expect(get('ProceduralAmbientLayer.cpp')).toContain('// MetaSoundSource is not authored in PoF');
+  });
+
+  it('SpawnEmitter warns when the Sound Cue does not load', () => {
+    expect(get('SceneEmitterSpawner.cpp')).toMatch(/if \(!Cue\)\s*\{\s*UE_LOG\(LogTemp, Warning,[^;]*;\s*return;\s*\}/);
+  });
+});
