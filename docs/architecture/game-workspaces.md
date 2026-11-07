@@ -479,7 +479,19 @@ example lines with `audio: null`; the Voice room proves them, line by line, in c
     error rate against the line, digits read as number words; over 15 % the room flags "listen for garbled
     words"; an ear proxy for the words only, never the acting), and the billed characters. A take either screen
     flags (read-back or long pause) counts in its queue row (`flagged`) and in the status (`flaggedLines`), so
-    the room and `voice.mjs status` point the owner at where to listen first. `voice_verdicts` is
+    the room and `voice.mjs status` point the owner at where to listen first.
+    **Read-back status** (`readbackState.ts`; additive `readbackStatus` + `readbackReason` columns via `addMissing`,
+    so the live DB upgrades in place): every take is `pending` (queued/running), `measured` (has a WER: a number is
+    the only proof), `failed` (+ short reason: worker error, a take it could not hear, a thrown run, a restart that
+    orphaned it) or `off` (`NODE_ENV=test` / `POF_VOICE_READBACK=0`). A legacy row with a WER reads `measured`; one
+    without reads `failed` ("never read back"), not a `pending` that could never resolve. The room shows
+    "read-back failed: <reason>" / "read-back off" apart from "pending" and a WER. Current takes that are `failed`/`off`
+    count as `unscreened` (queue row) and `unscreenedLines` (status), apart from `flagged` (which is unchanged), shown
+    in the queue and in `voice.mjs status`/`line`. Runs are **single-flight** (`readbackQueue.ts`: a module-level promise
+    chain, one Whisper process at a time in the server process; later requests wait with their takes `pending`); the
+    background call from `takes` never rejects (a throw lands as `failed`), and the manual `POST voice/readback` (also
+    `voice.mjs readback`) shares the queue, first marks takes left `pending` by a restart (older than 5 min, not queued
+    here) `failed`, and is the retry path. `voice_verdicts` is
     the verdict history.
 - **States:** `no-takes`, `awaiting-verdict`, `all-rejected`, `proven`. A line is proven only by an approved take
   on its current text (a take carries the hash of the text it spoke, so a package edit makes it stale). At most

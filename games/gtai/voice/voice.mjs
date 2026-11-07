@@ -48,7 +48,7 @@ async function call(path, body) {
 }
 
 const pad = (s, n) => String(s).padEnd(n);
-const lineRow = (e) => `  ${pad(e.questId, 16)} ${pad(e.lineId, 26)} ${pad(e.speaker, 20)} ${pad(e.lineClass ?? 'story', 6)} ${pad(e.state, 17)}${e.flagged ? ` [${e.flagged} flagged]` : ''}${e.auditions ? ` [${e.auditions} audition${e.auditions === 1 ? '' : 's'}: no cast voice for ${e.speaker}]` : ''} ${e.text.length > 70 ? `${e.text.slice(0, 67)}...` : e.text}`;
+const lineRow = (e) => `  ${pad(e.questId, 16)} ${pad(e.lineId, 26)} ${pad(e.speaker, 20)} ${pad(e.lineClass ?? 'story', 6)} ${pad(e.state, 17)}${e.flagged ? ` [${e.flagged} flagged]` : ''}${e.unscreened ? ` [${e.unscreened} unscreened: read-back failed/off]` : ''}${e.auditions ? ` [${e.auditions} audition${e.auditions === 1 ? '' : 's'}: no cast voice for ${e.speaker}]` : ''} ${e.text.length > 70 ? `${e.text.slice(0, 67)}...` : e.text}`;
 /** What a direction is written for: the class (a bark fires on its when-tags and may repeat) and the beat. */
 const contextOf = (l) => [
   l.lineClass === 'bark' ? `  bark · fires on: ${(l.when ?? []).join(', ')} (if a tag recurs in play, direct it for the repeat hearing too)` : '  story line · plays in the flow of its beat',
@@ -78,7 +78,7 @@ async function main() {
   switch (cmd) {
     case 'status': {
       const s = await call(`?view=status&n=${opt('n', '5')}`);
-      out(`proven ${s.proven} / ${s.total} lines · ${s.chars} characters spent on takes${s.flaggedLines ? ` · ${s.flaggedLines} lines with a flagged take (read-back or long pause: point the owner at them)` : ''}`);
+      out(`proven ${s.proven} / ${s.total} lines · ${s.chars} characters spent on takes${s.flaggedLines ? ` · ${s.flaggedLines} lines with a flagged take (read-back or long pause: point the owner at them)` : ''}${s.unscreenedLines ? ` · ${s.unscreenedLines} lines with a take the read-back never screened (failed/off: run \`voice.mjs readback\`)` : ''}`);
       for (const q of s.quests) out(`  ${pad(q.questId, 16)} ${pad(q.title, 28)} ${q.proven}/${q.total}`);
       out('next unproven:');
       for (const e of s.next) out(lineRow(e));
@@ -102,7 +102,7 @@ async function main() {
       out(`${d.line.questId}/${d.line.lineId} · ${d.line.speaker} · ${d.line.state}\n  "${d.line.text}"`);
       out(contextOf(d.line));
       for (const t of d.takes) {
-        out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.reason === 'audition' ? ' (AUDITION: no cast voice for this speaker, cannot prove the line)' : t.stale ? ` (not current: ${t.reason ?? 'stale'})` : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch ${t.readbackWer === null ? 'read-back pending' : `heard ${Math.round(t.readbackWer * 100)}% wrong`}${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
+        out(`  take ${t.id.slice(0, 8)} ${pad(t.verdict, 10)}${t.reason === 'audition' ? ' (AUDITION: no cast voice for this speaker, cannot prove the line)' : t.stale ? ` (not current: ${t.reason ?? 'stale'})` : ''} dir="${t.direction}" ${t.settings.model} ${t.durationMs ?? '?'}ms ${t.chars}ch ${t.readbackWer !== null ? `heard ${Math.round(t.readbackWer * 100)}% wrong` : t.readbackStatus === 'failed' ? `read-back FAILED: ${t.readbackReason}` : t.readbackStatus === 'off' ? 'read-back off' : 'read-back pending'}${t.verdictNote ? ` · note: ${t.verdictNote}` : ''}`);
       }
       return;
     }

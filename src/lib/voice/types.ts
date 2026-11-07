@@ -105,6 +105,9 @@ export interface TakeSettings {
   speed: number;
 }
 
+/** `pending` queued/running, `measured` has a WER, `failed` could not be screened (with a reason), `off` disabled by env. */
+export type ReadbackStatus = 'pending' | 'measured' | 'failed' | 'off';
+
 export interface TakeRow {
   id: string;
   gameId: string;
@@ -128,6 +131,11 @@ export interface TakeRow {
   readbackText: string | null;
   /** Word error rate of `readbackText` against the line text (0..1+); null = not read back. */
   readbackWer: number | null;
+  /** Where the read-back stands (`readbackState.ts` derives it; the db layer fills it on every read, a row not yet
+   *  saved may omit it = pending). Never `measured` without a `readbackWer`. */
+  readbackStatus?: ReadbackStatus;
+  /** Why the read-back is `failed` (short); null otherwise. */
+  readbackReason?: string | null;
   /** Billed characters (`sentText.length`). */
   chars: number;
   verdict: TakeVerdict;
@@ -171,6 +179,8 @@ export interface QueueEntry extends QueueLine {
   auditions: number;
   /** Current takes a screen flags: read-back over READBACK_FLAG_WER or a pause over SILENCE_FLAG_MS. */
   flagged: number;
+  /** Current takes whose read-back failed or is off: never screened, so `flagged` says nothing about them. */
+  unscreened: number;
 }
 
 export interface QuestProgress {
@@ -189,6 +199,8 @@ export interface VoiceStatusView {
   chars: number;
   /** Lines with at least one flagged current take (listen for garbled words / a dropout). */
   flaggedLines: number;
+  /** Lines with at least one current take that was never screened (read-back failed or off). */
+  unscreenedLines: number;
   /** Speakers with present lines and no cast voice, in order of first appearance (`castingDemand`). */
   needsVoice: SpeakerDemand[];
 }

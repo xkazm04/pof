@@ -3,7 +3,8 @@
  * Tables: `voice_voices`, `voice_lines` (the queue), `voice_takes`, `voice_verdicts` (history).
  */
 import type Database from 'better-sqlite3';
-import type { QueueLine, TakeProfile, TakeRow, VerdictEvent, VerdictFeedItem, VoiceRow } from '@/lib/voice/types';
+import { readbackStateOf } from '@/lib/voice/readbackState';
+import type { QueueLine, ReadbackStatus, TakeProfile, TakeRow, VerdictEvent, VerdictFeedItem, VoiceRow } from '@/lib/voice/types';
 
 type Db = Database.Database;
 type Raw = Record<string, unknown>;
@@ -36,7 +37,7 @@ export function createVoiceDb(db: Db): void {
   `);
   // A DB created before a column landed lacks it; add each once (silence screen, line class + beat).
   addMissing(db, 'voice_voices', ['takeProfile TEXT']);
-  addMissing(db, 'voice_takes', ['maxSilenceMs INTEGER', 'readbackText TEXT', 'readbackWer REAL']);
+  addMissing(db, 'voice_takes', ['maxSilenceMs INTEGER', 'readbackText TEXT', 'readbackWer REAL', 'readbackStatus TEXT', 'readbackReason TEXT']);
   addMissing(db, 'voice_lines', ["lineClass TEXT NOT NULL DEFAULT 'story'", "whenTags TEXT NOT NULL DEFAULT '[]'", 'beatId TEXT', 'beatTitle TEXT', 'beatSummary TEXT']);
 }
 
@@ -50,7 +51,10 @@ const lineOf = (r: Raw): QueueLine => {
   const { whenTags, ...rest } = r;
   return { ...(rest as unknown as QueueLine), purpose: JSON.parse(String(r.purpose)), when: JSON.parse(String(whenTags ?? '[]')), present: r.present === 1 };
 };
-const takeOf = (r: Raw): TakeRow => ({ ...(r as unknown as TakeRow), settings: JSON.parse(String(r.settings)) });
+const takeOf = (r: Raw): TakeRow => {
+  const base = r as unknown as TakeRow;
+  return { ...base, settings: JSON.parse(String(r.settings)), ...readbackStateOf(base) };
+};
 
 // ── voices ──
 export function insertVoice(db: Db, v: VoiceRow): void {
@@ -109,12 +113,16 @@ export function getLine(db: Db, gameId: string, questId: string, lineId: string)
 
 // ── takes ──
 export function insertTake(db: Db, t: TakeRow): void {
-  db.prepare(`INSERT INTO voice_takes (id,gameId,questId,lineId,voiceId,providerVoiceId,textHash,direction,sentText,settings,file,durationMs,loudnessLufs,maxSilenceMs,readbackText,readbackWer,chars,verdict,verdictNote,verdictAt,createdAt)
-    VALUES (@id,@gameId,@questId,@lineId,@voiceId,@providerVoiceId,@textHash,@direction,@sentText,@settings,@file,@durationMs,@loudnessLufs,@maxSilenceMs,@readbackText,@readbackWer,@chars,@verdict,@verdictNote,@verdictAt,@createdAt)`)
-    .run({ ...t, settings: JSON.stringify(t.settings) });
+  db.prepare(`INSERT INTO voice_takes (id,gameId,questId,lineId,voiceId,providerVoiceId,textHash,direction,sentText,settings,file,durationMs,loudnessLufs,maxSilenceMs,readbackText,readbackWer,readbackStatus,readbackReason,chars,verdict,verdictNote,verdictAt,createdAt)
+    VALUES (@id,@gameId,@questId,@lineId,@voiceId,@providerVoiceId,@textHash,@direction,@sentText,@settings,@file,@durationMs,@loudnessLufs,@maxSilenceMs,@readbackText,@readbackWer,@readbackStatus,@readbackReason,@chars,@verdict,@verdictNote,@verdictAt,@createdAt)`)
+    .run({ ...t, readbackStatus: t.readbackStatus ?? 'pending', readbackReason: t.readbackReason ?? null, settings: JSON.stringify(t.settings) });
 }
 export function setReadback(db: Db, takeId: string, text: string, wer: number): void {
-  db.prepare('UPDATE voice_takes SET readbackText=?, readbackWer=? WHERE id=?').run(text, wer, takeId);
+  db.prepare("UPDATE voice_takes SET readbackText=?, readbackWer=?, readbackStatus='measured', readbackReason=NULL WHERE id=?").run(text, wer, takeId);
+}
+/** Record a read-back that is not measured: queued/running (`pending`), `failed` with its reason, or `off`. */
+export function setReadbackStatus(db: Db, takeId: string, status: Exclude<ReadbackStatus, 'measured'>, reason: string | null = null): void {
+  db.prepare('UPDATE voice_takes SET readbackStatus=?, readbackReason=? WHERE id=? AND readbackWer IS NULL').run(status, status === 'failed' ? reason : null, takeId);
 }
 export function getTake(db: Db, id: string): TakeRow | null {
   const r = db.prepare('SELECT * FROM voice_takes WHERE id=?').get(id) as Raw | undefined;

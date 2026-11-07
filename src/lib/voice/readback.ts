@@ -5,14 +5,16 @@
  * the owner does (registry `hitl-approval`, oracle-before-gate: the reviewer gets something to check against).
  *
  * One Python process per batch (the model load is ~17 s, then ~4 s a take), run in the background after a
- * generate; the room's poll shows the result. A take that could not be read back stays `null` (shown as
- * "read-back pending"), and the reason is logged, never a made-up score.
+ * generate; the room's poll shows the result. A take that could not be read back is recorded `failed`
+ * with its reason (shown as "read-back failed: ..."), never a made-up score and never a forever-"pending".
+ * Runs are single-flight (`readbackQueue.ts`): one Whisper process at a time.
  */
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { logger } from '@/lib/logger';
-import { getLine, getTake, listTakes, setReadback } from '@/lib/voice/voice-db';
+import { shortReason } from '@/lib/voice/readbackState';
+import { getLine, getTake, listTakes, setReadback, setReadbackStatus } from '@/lib/voice/voice-db';
 import type { Result } from '@/types/result';
 
 const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
@@ -76,21 +78,35 @@ export const transcribeLocal: Transcribe = (items) => new Promise((resolve) => {
   child.stdin.end(JSON.stringify(items));
 });
 
-/** Read back `takeIds` and store text + WER per take. Returns how many were measured. */
+/** Read back `takeIds` and store text + WER per take. Every take ends `measured` or `failed` with its reason
+ *  (a worker error, a take it could not hear, a worker that threw): never left looking pending. */
 export async function readbackTakes(db: Database.Database, takeIds: readonly string[], transcribe: Transcribe = transcribeLocal): Promise<Result<{ measured: number; failed: string[] }, string>> {
   const takes = takeIds.map((id) => getTake(db, id)).filter((t): t is NonNullable<typeof t> => t !== null);
   if (takes.length === 0) return { ok: true, data: { measured: 0, failed: [] } };
-  const r = await transcribe(takes.map((t) => ({ id: t.id, file: t.file })));
-  if (!r.ok) { logger.warn(`[voice] read-back failed: ${r.error}`); return r; }
+  const failAll = (reason: string) => { for (const t of takes) setReadbackStatus(db, t.id, 'failed', shortReason(reason)); };
+  let r: Result<ReadbackHeard[], string>;
+  try {
+    r = await transcribe(takes.map((t) => ({ id: t.id, file: t.file })));
+  } catch (e) {
+    r = { ok: false, error: `read-back worker threw: ${e instanceof Error ? e.message : String(e)}` };
+  }
+  if (!r.ok) { logger.warn(`[voice] read-back failed: ${r.error}`); failAll(r.error); return r; }
   const failed: string[] = [];
+  const seen = new Set<string>();
   let measured = 0;
   for (const heard of r.data) {
     const take = takes.find((t) => t.id === heard.id);
     const line = take ? getLine(db, take.gameId, take.questId, take.lineId) : null;
-    if (!take || !line || heard.text === null) { failed.push(`${heard.id}: ${heard.error ?? 'no line'}`); continue; }
+    if (take) seen.add(take.id);
+    if (!take || !line || heard.text === null) {
+      failed.push(`${heard.id}: ${heard.error ?? 'no line'}`);
+      if (take) setReadbackStatus(db, take.id, 'failed', shortReason(heard.error ?? (line ? 'nothing heard' : 'the line is gone')));
+      continue;
+    }
     setReadback(db, take.id, heard.text, wordErrorRate(line.text, heard.text));
     measured++;
   }
+  for (const t of takes) if (!seen.has(t.id)) { failed.push(`${t.id}: no result from the worker`); setReadbackStatus(db, t.id, 'failed', 'the worker returned no result for this take'); }
   if (failed.length > 0) logger.warn(`[voice] read-back: ${failed.length} take(s) unmeasured`, { failed });
   return { ok: true, data: { measured, failed } };
 }

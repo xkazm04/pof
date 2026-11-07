@@ -13,6 +13,7 @@ import type { LabTheme } from '@/components/layout-lab/theme';
 import type { TakeView } from '@/lib/voice/room';
 import { READBACK_FLAG_WER, SILENCE_FLAG_MS, STALE_REASON_WORDS, type TakeVerdict } from '@/lib/voice/types';
 import type { StatusLevel } from '@/lib/status-token';
+import { readbackStateOf } from '@/lib/voice/readbackState';
 import { fmtLufs, fmtMs, fmtWer, postVoice, takeAudioUrl } from './voiceRoomData';
 import { VoiceAudio } from './voiceAudio';
 
@@ -35,6 +36,7 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
   const [heard, setHeard] = useState(false);
   const [raw, setRaw] = useState(false);
   const v = VERDICT[take.verdict];
+  const rb = { ...readbackStateOf(take), readbackWer: take.readbackWer };
 
   const judge = async (verdict: 'approved' | 'rejected') => {
     setBusy(true);
@@ -58,7 +60,11 @@ export function VoiceTake({ t, take, voiceName, gate, onChanged }: {
         {take.reason && !audition && <StatusTag level="bad" word={STALE_REASON_WORDS[take.reason]} />}
         <MicroLabel mono tone="muted">{voiceName} · {take.settings.model} · {fmtMs(take.durationMs)} · <span title="The provider's level; the player below plays it at the game's voice level unless you switch to the original">delivered {fmtLufs(take.loudnessLufs)}</span> · {take.chars} chars · {take.maxSilenceMs === null ? 'silence unmeasured' : `longest pause ${fmtMs(take.maxSilenceMs)}`}</MicroLabel>
         {take.maxSilenceMs !== null && take.maxSilenceMs > SILENCE_FLAG_MS && <StatusTag level="warn" word={`long pause ${fmtMs(take.maxSilenceMs)}: listen for a dropout`} />}
-        <span data-testid="voice-readback"><MicroLabel mono tone="muted">{take.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(take.readbackWer)} word errors`}</MicroLabel></span>
+        <span data-testid="voice-readback" data-readback={rb.readbackStatus}>
+          {rb.readbackStatus === 'failed'
+            ? <StatusTag level="bad" word={`read-back failed: ${rb.readbackReason}`} />
+            : <MicroLabel mono tone="muted">{rb.readbackStatus === 'off' ? 'read-back off' : rb.readbackWer === null ? 'read-back pending' : `read-back ${fmtWer(rb.readbackWer)} word errors`}</MicroLabel>}
+        </span>
         {take.readbackWer !== null && take.readbackWer > READBACK_FLAG_WER && <StatusTag level="warn" word={`read-back differs (${fmtWer(take.readbackWer)}): listen for garbled words`} />}
       </div>
       <VoiceAudio key={raw ? 'raw' : 'game'} t={t} src={takeAudioUrl(take.id, !raw)} fallbackSrc={raw ? undefined : takeAudioUrl(take.id)}

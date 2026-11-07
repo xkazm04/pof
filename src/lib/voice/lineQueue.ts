@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { loadLedger } from '@/lib/games/gtai-quest/loadContext';
 import type { QuestPackage } from '@/lib/games/gtai-quest/types';
+import { isUnscreened } from '@/lib/voice/readbackState';
 import { profileMatches } from '@/lib/voice/takeProfile';
 import { listLines, listTakes, listVoices, markAbsentExcept, upsertLine } from '@/lib/voice/voice-db';
 import { READBACK_FLAG_WER, SILENCE_FLAG_MS, type LineState, type QueueEntry, type QueueLine, type SpeakerDemand, type StaleReason, type TakeRow, type VoiceRow, type VoiceStatusView } from '@/lib/voice/types';
@@ -145,7 +146,7 @@ export function queueEntries(db: Database.Database, gameId: string, lines: reado
   return lines.map((l) => {
     const all = byLine.get(`${l.questId}/${l.lineId}`) ?? [];
     const current = all.filter((t) => isCurrent(t, l, ctx));
-    return { ...l, ...lineState(l, all, ctx), takes: current.length, auditions: all.filter((t) => staleReason(t, l, ctx) === 'audition').length, flagged: current.filter(isFlagged).length };
+    return { ...l, ...lineState(l, all, ctx), takes: current.length, auditions: all.filter((t) => staleReason(t, l, ctx) === 'audition').length, flagged: current.filter(isFlagged).length, unscreened: current.filter(isUnscreened).length };
   });
 }
 
@@ -164,6 +165,7 @@ export function statusView(entries: readonly QueueEntry[], titles: Readonly<Reco
     next: entries.filter((e) => e.state !== 'proven').slice(0, nextN),
     chars,
     flaggedLines: entries.filter((e) => e.flagged > 0).length,
+    unscreenedLines: entries.filter((e) => e.unscreened > 0).length,
     needsVoice,
   };
 }

@@ -3,12 +3,15 @@
  * read back yet, for one line, one quest or the whole game, and wait for it. Not gated: it only measures.
  * New takes are read back in the background by the takes route; this is the backfill / retry path. It first
  * re-scores every stored transcript (cheap: the WER follows the current normalization and line text).
+ * Single-flight with the background runs; each take ends `measured` or `failed` with its reason. Also the retry
+ * path for takes that failed, were `off`, or were left `pending` by a restart.
  */
 import type { NextRequest } from 'next/server';
 import { apiError, apiSuccess } from '@/lib/api-utils';
 import { getVoiceDb, VOICE_GAMES } from '@/lib/voice/conn';
 import { listTakes } from '@/lib/voice/voice-db';
-import { readbackTakes, rescoreReadbacks } from '@/lib/voice/readback';
+import { rescoreReadbacks } from '@/lib/voice/readback';
+import { readbackQueued, reapOrphanedPending } from '@/lib/voice/readbackQueue';
 
 type Ctx = { params: Promise<{ gameId: string }> };
 
@@ -21,8 +24,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const lineId = typeof b.lineId === 'string' ? b.lineId : undefined;
     const db = getVoiceDb();
     const rescored = rescoreReadbacks(db, gameId);
+    reapOrphanedPending(db, gameId);
     const ids = listTakes(db, gameId, questId, lineId).filter((t) => t.readbackWer === null).map((t) => t.id);
-    const r = await readbackTakes(db, ids);
+    const r = await readbackQueued(db, ids);
     if (!r.ok) return apiError(r.error, 502);
     return apiSuccess({ requested: ids.length, rescored, ...r.data });
   } catch (e) {
