@@ -3,6 +3,7 @@ import { apiSuccess, apiError, respondFromResult, withRoute } from '@/lib/api-ut
 import { requireOperator } from '@/lib/api-auth';
 import { getService } from '@/lib/blender-mcp/service';
 import { mapResult } from '@/types/result';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
@@ -23,8 +24,9 @@ function connectTargetError(host: unknown, port: unknown): string | null {
 
 // POST /api/blender-mcp — { action: 'connect' | 'disconnect' | 'status' }
 export const POST = withRoute(async (req: NextRequest) => {
-  const body = await req.json();
-  const action = body.action as string;
+  const body = await readJsonObject(req);
+  if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+  const action = body.action;
   const svc = getService();
 
   // connect and disconnect change the bridge; status only probes and stays open.
@@ -36,7 +38,8 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (action === 'connect') {
     const targetError = connectTargetError(body.host, body.port);
     if (targetError) return apiError(targetError, 400);
-    const result = await svc.connect(body.host, body.port);
+    // connectTargetError has narrowed both to `string | undefined` / `number | undefined`.
+    const result = await svc.connect(body.host as string | undefined, body.port as number | undefined);
     return respondFromResult(mapResult(result, (connection) => ({ connection })));
   }
 
