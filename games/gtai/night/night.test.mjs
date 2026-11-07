@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { apiKeyFromText, backupKeyFromText, buildPrompt, checkPaths, classifyFailure, createBilling, nextAt, parseConfig, phaseAt, planTimes, resetAt, ts } from './lib.mjs';
+import { apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, nextAt, parseConfig, phaseAt, planTimes, resetAt, ts } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve('C:/night-root');
@@ -192,7 +192,8 @@ test('the 5-hour subscription limit is a LIMIT that waits for its reset (2026-11
 
 test('billing: the backup key (ANTHROPIC_API_KEY_BACKUP) is a second paid path between the primary key and the subscription', () => {
   const { b, tick } = mkBilling({ opts: { key2: 'sk-backup' } });
-  assert.deepEqual(b.order(), ['api', 'api2', 'subscription']);
+  assert.deepEqual(b.order(), ['api', 'api2', 'api3', 'subscription']);
+  assert.equal(b.usable('api3'), false, 'no third key: its path is skipped');
   assert.equal(b.pick(), 'api');
   b.block('api', at(22, 45).getTime(), 'credit balance is too low');
   assert.equal(b.pick(), 'api2', 'the backup key takes over when the primary drains');
@@ -213,4 +214,21 @@ test('billing: backup key spellings and that the primary never matches the backu
   assert.equal(backupKeyFromText('ANTRHOPIC_API_KEY_BACKUP="sk-d"'), 'sk-d');
   assert.equal(apiKeyFromText('ANTHROPIC_API_KEY_BACKUP=sk-c\n'), null);
   assert.equal(backupKeyFromText('ANTHROPIC_API_KEY=sk-a'), null);
+});
+
+test('billing: the third key (ANTHROPIC_API_KEY_BACKUP_2) is spent after the backup key and before the subscription', () => {
+  const { b } = mkBilling({ opts: { key2: 'sk-backup', key3: 'sk-backup2' } });
+  b.block('api', at(22, 45).getTime(), 'credit balance is too low');
+  b.block('api2', at(22, 45).getTime(), 'credit balance is too low');
+  assert.equal(b.pick(), 'api3');
+  assert.equal(b.env({ ANTHROPIC_API_KEY: 'sk-shell' }, 'api3').ANTHROPIC_API_KEY, 'sk-backup2');
+  assert.equal(classifyFailure({ mode: 'api3', timedOut: false, errSurface: 'credit balance is too low' }).drained, true);
+  b.block('api3', at(22, 50).getTime(), 'credit balance is too low');
+  assert.equal(b.pick(), 'subscription');
+  assert.match(b.line(), /backup key 2 blocked until/);
+  const env = ['ANTHROPIC_API_KEY=sk-a', 'ANTHROPIC_API_KEY_BACKUP=sk-b', 'ANTHROPIC_API_KEY_BACKUP_2=sk-c', ''].join(String.fromCharCode(10));
+  assert.equal(apiKeyFromText(env), 'sk-a');
+  assert.equal(backupKeyFromText(env), 'sk-b', 'the backup line never takes the _2 line');
+  assert.equal(backupKey2FromText(env), 'sk-c');
+  assert.equal(backupKey2FromText('ANTHROPIC_API_KEY_BACKUP=sk-b'), null);
 });

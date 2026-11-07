@@ -10,7 +10,7 @@
  *                                           [--model-<lane> <id>] [--billing api-first|api|subscription] [--dotenv F]
  *   node games/gtai/night/night.mjs status  [--root R]
  *   node games/gtai/night/night.mjs report  [--root R]                       (writes <root>/SCOREBOARD.md)
- *   node games/gtai/night/night.mjs billing [--root R] [--reset api|subscription|all]
+ *   node games/gtai/night/night.mjs billing [--root R] [--reset api|api2|api3|subscription|all]
  *
  * Exit codes: 0 finished, 2 config error (the supervisor does not retry it), 130 interrupted.
  * Process rule (repo law): only PIDs this script spawned are ever killed (taskkill /T /PID <own child>).
@@ -19,7 +19,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, ts } from './lib.mjs';
+import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, ts } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const [cmd, ...rest] = process.argv.slice(2);
@@ -59,7 +59,8 @@ function loadBilling(quiet = false) {
   const dotenv = readIf(String(opts.dotenv ?? REPO_ENV));
   billing.key = apiKeyFromText(dotenv);
   billing.key2 = backupKeyFromText(dotenv);
-  if (!quiet && billing.want !== 'subscription' && !billing.key && !billing.key2) log('billing: no ANTHROPIC_API_KEY / ANTRHOPIC_API_KEY / ANTHROPIC_API_KEY_BACKUP in .env - using the subscription');
+  billing.key3 = backupKey2FromText(dotenv);
+  if (!quiet && billing.want !== 'subscription' && !billing.key && !billing.key2 && !billing.key3) log('billing: no ANTHROPIC_API_KEY / ANTRHOPIC_API_KEY / ANTHROPIC_API_KEY_BACKUP / ANTHROPIC_API_KEY_BACKUP_2 in .env - using the subscription');
   billing.pick();
 }
 
@@ -250,12 +251,12 @@ function report() {
   process.stdout.write(`wrote ${path.join(ROOT, 'SCOREBOARD.md')}\n`);
 }
 
-// `billing [--reset api|subscription|all]`: show the paths; --reset unblocks one in a running night (re-read per pick).
+// `billing [--reset api|api2|api3|subscription|all]`: show the paths; --reset unblocks one in a running night (re-read per pick).
 function billingCmd() {
   loadBilling(true);
   const r = opts.reset === true ? 'all' : opts.reset;
   if (r) {
-    for (const m of r === 'all' ? ['api', 'api2', 'subscription'] : [String(r)]) { billing.blocked[m] = 0; delete billing.reasons[m]; }
+    for (const m of r === 'all' ? ['api', 'api2', 'api3', 'subscription'] : [String(r)]) { billing.blocked[m] = 0; delete billing.reasons[m]; }
     billing.save();
   }
   process.stdout.write(`billing: ${billing.line()}\n`);

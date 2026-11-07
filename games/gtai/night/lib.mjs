@@ -128,8 +128,15 @@ export function backupKeyFromText(text) {
   return m ? m[1].trim() : null;
 }
 
-/** 'api' is the primary key and 'api2' the backup key: both are paid paths that can drain. */
-export const isApi = (m) => m === 'api' || m === 'api2';
+/** The third paid key (owner, 2026-11-07): ANTHROPIC_API_KEY_BACKUP_2, used once the first two are drained. Never printed. */
+export function backupKey2FromText(text) {
+  const m = String(text ?? '').match(/^\s*(?:ANTHROPIC_API_KEY_BACKUP_2|ANTRHOPIC_API_KEY_BACKUP_2)\s*=\s*["']?([^"'\r\n]+)["']?\s*$/m);
+  return m ? m[1].trim() : null;
+}
+
+/** 'api', 'api2' and 'api3' are the primary key and the two backup keys: paid paths that can drain, spent in that order. */
+export const API_PATHS = ['api', 'api2', 'api3'];
+export const isApi = (m) => API_PATHS.includes(m);
 
 /** When a limit names its reset, wait exactly that long (+1 min); otherwise 15 min. */
 export function resetAt(text, nowMs = Date.now()) {
@@ -153,21 +160,22 @@ export function classifyFailure({ mode, timedOut, errSurface, nowMs = Date.now()
   };
 }
 
-export function createBilling({ file, key = null, key2 = null, want = 'api-first', now = () => Date.now(), log = () => {} }) {
+export function createBilling({ file, key = null, key2 = null, key3 = null, want = 'api-first', now = () => Date.now(), log = () => {} }) {
   const read = () => { try { return JSON.parse(fs.readFileSync(file, 'utf8') || '{}'); } catch { return {}; } };
   return {
-    mode: 'subscription', key, key2, want, blocked: { api: 0, api2: 0, subscription: 0 }, reasons: {},
+    mode: 'subscription', key, key2, key3, want, blocked: { api: 0, api2: 0, api3: 0, subscription: 0 }, reasons: {},
     sync() {
       const saved = read();
-      if (saved.blocked) { this.blocked = { api: 0, api2: 0, subscription: 0, ...saved.blocked }; this.reasons = saved.reasons ?? {}; }
+      if (saved.blocked) { this.blocked = { api: 0, api2: 0, api3: 0, subscription: 0, ...saved.blocked }; this.reasons = saved.reasons ?? {}; }
       else if (saved.exhausted) this.blocked.api = Date.parse(saved.at) + API_REPROBE_MIN * 60_000; // the pre-2026-11-01 shape
     },
     save() {
       const iso = (ms) => (ms ? new Date(ms).toISOString() : null);
-      fs.writeFileSync(file, JSON.stringify({ blocked: this.blocked, until: { api: iso(this.blocked.api), api2: iso(this.blocked.api2), subscription: iso(this.blocked.subscription) }, reasons: this.reasons, updated: new Date(now()).toISOString() }, null, 2));
+      fs.writeFileSync(file, JSON.stringify({ blocked: this.blocked, until: { api: iso(this.blocked.api), api2: iso(this.blocked.api2), api3: iso(this.blocked.api3), subscription: iso(this.blocked.subscription) }, reasons: this.reasons, updated: new Date(now()).toISOString() }, null, 2));
     },
-    order() { return this.want === 'subscription' ? ['subscription'] : this.want === 'api' ? ['api', 'api2'] : ['api', 'api2', 'subscription']; },
-    usable(m) { return m === 'subscription' || (m === 'api' ? !!this.key : m === 'api2' ? !!this.key2 : false); },
+    order() { return this.want === 'subscription' ? ['subscription'] : this.want === 'api' ? [...API_PATHS] : [...API_PATHS, 'subscription']; },
+    keyFor(m) { return m === 'api' ? this.key : m === 'api2' ? this.key2 : m === 'api3' ? this.key3 : null; },
+    usable(m) { return m === 'subscription' || !!this.keyFor(m); },
     pick() {
       this.sync();
       const m = this.order().find((x) => this.usable(x) && this.blocked[x] <= now()) ?? null;
@@ -183,19 +191,18 @@ export function createBilling({ file, key = null, key2 = null, want = 'api-first
       const next = this.order().find((x) => x !== m && this.usable(x) && this.blocked[x] <= now());
       log(`billing: ${m} blocked until ${ts(new Date(this.blocked[m]))} (${reason.slice(0, 100).replace(/\s+/g, ' ')}) - ${next ? `lanes continue on ${next}` : 'no path free: lanes wait'}`);
     },
-    /** A child env for path m: never inherit a stray key from the shell; set the .env key only for 'api'. */
+    /** A child env for path m: never inherit a stray key from the shell; set the .env key only for an api path. */
     env(base, m = this.mode) {
       const e = { ...base };
       delete e.ANTHROPIC_API_KEY; delete e.ANTHROPIC_AUTH_TOKEN;
-      if (m === 'api') e.ANTHROPIC_API_KEY = this.key;
-      if (m === 'api2') e.ANTHROPIC_API_KEY = this.key2;
+      if (isApi(m)) e.ANTHROPIC_API_KEY = this.keyFor(m);
       return e;
     },
     line() {
       this.sync();
       const bl = (m) => (this.blocked[m] > now() ? `blocked until ${ts(new Date(this.blocked[m]))}` : 'free');
       const next = this.order().find((x) => this.usable(x) && this.blocked[x] <= now()) ?? 'nothing (waiting)';
-      return `API key ${this.key ? bl('api') : 'absent'}, backup key ${this.key2 ? bl('api2') : 'absent'}, subscription ${bl('subscription')} -> next iteration uses ${next}`;
+      return `API key ${this.key ? bl('api') : 'absent'}, backup key ${this.key2 ? bl('api2') : 'absent'}, backup key 2 ${this.key3 ? bl('api3') : 'absent'}, subscription ${bl('subscription')} -> next iteration uses ${next}`;
     },
   };
 }

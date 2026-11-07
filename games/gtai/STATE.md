@@ -1066,3 +1066,8 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - Owner: "develop in parallel proper readme.md, consult with ai-registry best practice structure, include images from the art concepts ... 4 art posters ... then commit and push".
 - rtai main `1dfb84d9` (pushed, fast-forward from `3982af1a`): README on the registry's `repository-landing-document` (standalone first paragraph, captioned figure on the first screen, prose runs under 15 lines, a routing table whose cells list each destination's contents); the game, the four ghosts, the bosses, the gate numbers measured on `3982af1a`, play and check commands. Posters in `docs/readme/` (LFS, not shipped, captioned as AI concept art): the riso look target, Rivet's transformation stages, Dent, Servo. The King concept was not used: its car grille reads too close to a real maker's.
 - GitHub host metadata set on the same change (registry wall 8): description and six topics. The d9/d9x lanes are unaffected (none edits README).
+
+### 2026-11-07 17:10: third API key in the runner billing (owner)
+- Owner added `ANTHROPIC_API_KEY_BACKUP_2` to `.env` "so we can charge the credits first next night".
+- The runner now spends `api` -> `api2` -> `api3` (the new key) -> the subscription; `night.mjs billing --reset api3` unblocks it. Tests 20/20. Verified read-only against the d9 root: "backup key 2 free -> next iteration uses api3".
+- The d9/d9x/assets runners still running loaded the old code and keep their two-key order until they finish; the next night's launch picks up the third key.
