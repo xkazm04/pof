@@ -4772,42 +4772,37 @@
       "context": "pipeline-step-components",
       "subject": "hitl-approval",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T05:36:32.650Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:59:43.676Z",
+      "worker": "fa7863c8-4c77-48d7-9136-ebe6e399ba5a",
       "techniques": [
-        {
-          "technique": "decision-records",
-          "verdict": "deviation",
-          "evidence": "src/lib/one-shot/orchestrator.ts:193 The approval exists only as a state flip. A grep of src/lib/one-shot for approv/decision/audit found no verdict record."
-        },
         {
           "technique": "gate-state-machines",
           "verdict": "deviation",
-          "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:203 appendBatch auto-selects the first candidate, which satisfies the L1 human-selection gate rendered by GenerativeStepFrame/ArchetypeStep galleries, so the machine opens its own gate. The one-shot approve path is guarded correctly by a phase check at orchestrator.ts:145."
+          "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:566 genHistory.ts says outright that auto-selection satisfies the `selected` L1 human gate and that acceptance was left unchanged; provenance is disclosed but not enforced"
         },
         {
-          "technique": "consent-gates",
-          "verdict": "conformant",
-          "evidence": "src/components/layout-lab/one-shot/ProposalView.tsx:177 The spend consent shows the model-dispatch count, with the cost copy in RunPlanView and the off-target marker, before the operator approves."
-        },
-        {
-          "technique": "resume-after-decision",
-          "verdict": "conformant",
-          "evidence": "src/stores/oneShotJobStore.ts:112 An unanswered proposal survives a reload as durable pending state rather than being lost or auto-run."
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/one-shot/OneShotPanel.tsx:80 approving a spend-bearing one-shot run records no decider, decision time or proposal fingerprint; approveAndRun takes no version argument and the orchestrator writes no approval record"
         },
         {
           "technique": "oracle-before-gate",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/one-shot/ProposalLanding.tsx:94 The reviewer at the gate is shown what to compare the proposal against: the target and the analyzed distribution."
+          "evidence": "src/components/layout-lab/one-shot/ProposalView.tsx:37 the reviewer is shown the proposal placed on the analyzed distribution and judged against the target, which gives the Run decision something to compare against"
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/ProposalView.tsx:177 the spend consent is disclosed on the button itself: model-dispatch count, an off-target warning and validator issues, plus cost copy (line 46)"
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/OneShotPanel.tsx:85 an interrupted approved run resumes only the unrecorded steps on the same draft, keeping prior results instead of re-running from the top"
         }
-      ],
-      "withdrawn": {
-        "worker": "ec60dfae-727e-47b5-a6d0-699403ffa9d2",
-        "state": "deviation",
-        "at": "2026-10-24T05:36:56.019034+00:00",
-        "reason": "reviewer (sonnet): The deviation anchors on src/lib/one-shot/orchestrator.ts:193, which is outside this context (the layout-lab/steps components) and is not code those components call; the claim is about the one-shot job flow, a different context."
-      }
+      ]
     },
     "0baa32d9-9127-4452-aaee-d679f899ee1d/hitl-approval": {
       "context": "step-shared-primitives",
@@ -21808,6 +21803,47 @@
       "evaluatedTs": "2026-11-07T03:52:19.250Z",
       "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
       "techniques": []
+    },
+    "9aaa14f4-5109-4e11-a7c5-2684cc02ad11/hitl-approval": {
+      "context": "animation-state-machine-viewer",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:59:43.676Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "fa7863c8-4c77-48d7-9136-ebe6e399ba5a",
+        "state": "not-applicable",
+        "at": "2026-11-07T04:00:24.754844+00:00",
+        "reason": "reviewer (sonnet): The viewer is not read-only: StateMachineHeader.tsx has an 'Export to Blender NLA' button (handleExportToBlenderNLA, line 126 onward), and useAnimationStateMachine.ts:219 calls exportStatesToBlenderNLA, which writes NLA tracks into Blender. That action has no confirmation step, and the anchor at lin"
+      }
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/hitl-approval": {
+      "context": "catalog-pipelines",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:59:43.676Z",
+      "worker": "fa7863c8-4c77-48d7-9136-ebe6e399ba5a",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:83 the gated process emits the approval itself; no human-authenticated transition drives pending to open"
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:91 the gate record requires verdict, method, criteria and evidence but no decider, no decision time and no fingerprint of the reviewed image; acceptance never reads the verdict's value"
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:90 the gate names concrete criteria the reviewer compares the face against before 3D spend"
+        }
+      ]
     }
   }
 }

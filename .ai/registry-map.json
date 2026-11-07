@@ -9372,7 +9372,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:83 The 'Face Gate 2D' review step's produce() writes its own verdict 'pass', and acceptance only checks that the fields are populated, so the machine authors the gate's opening verdict and even a 'fail' verdict would satisfy the step.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "catalog-pipeline-authoring",
@@ -20902,7 +20906,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:566 The gallery steps' L1 human-selection gate is satisfied by the machine's own auto-pick of the first candidate, so the gated party opens its own gate and the code only labels it (SELECTION: AUTO, per genHistory.ts) instead of holding it closed.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:52d7f3cfb87a79d9",
+          "evaluatedRevision": 22
         },
         {
           "subject": "quality-gates",

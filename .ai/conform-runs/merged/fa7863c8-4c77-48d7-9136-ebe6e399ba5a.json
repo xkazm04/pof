@@ -1,0 +1,133 @@
+{
+  "schema": "conform-run/1",
+  "worker": "fa7863c8-4c77-48d7-9136-ebe6e399ba5a",
+  "subject": "hitl-approval",
+  "evaluatedAt": "2026-11-07T03:59:43.676474+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "pipeline-step-components",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:566 The gallery steps' L1 human-selection gate is satisfied by the machine's own auto-pick of the first candidate, so the gated party opens its own gate and the code only labels it (SELECTION: AUTO, per genHistory.ts) instead of holding it closed.",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/steps/ArchetypeStep.tsx:566 genHistory.ts says outright that auto-selection satisfies the `selected` L1 human gate and that acceptance was left unchanged; provenance is disclosed but not enforced"
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/one-shot/OneShotPanel.tsx:80 approving a spend-bearing one-shot run records no decider, decision time or proposal fingerprint; approveAndRun takes no version argument and the orchestrator writes no approval record"
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/ProposalView.tsx:37 the reviewer is shown the proposal placed on the analyzed distribution and judged against the target, which gives the Run decision something to compare against"
+        },
+        {
+          "technique": "consent-gates",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/ProposalView.tsx:177 the spend consent is disclosed on the button itself: model-dispatch count, an off-target warning and validator issues, plus cost copy (line 46)"
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/one-shot/OneShotPanel.tsx:85 an interrupted approved run resumes only the unrecorded steps on the same draft, keeping prior results instead of re-running from the top"
+        }
+      ]
+    },
+    {
+      "context": "catalog-pipelines",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:83 The 'Face Gate 2D' review step's produce() writes its own verdict 'pass', and acceptance only checks that the fields are populated, so the machine authors the gate's opening verdict and even a 'fail' verdict would satisfy the step.",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:83 the gated process emits the approval itself; no human-authenticated transition drives pending to open"
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:91 the gate record requires verdict, method, criteria and evidence but no decider, no decision time and no fingerprint of the reviewed image; acceptance never reads the verdict's value"
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/character-pipeline.ts:90 the gate names concrete criteria the reviewer compares the face against before 3D spend"
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "hitl-approval",
+      "context": "crash-analysis",
+      "reason": "absence contradicted: src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:106 contains 'pending' (25 hit(s) in the context's directories)"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "code-quality-evaluation",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "hitl-approval",
+      "context": "animation-state-machine-viewer",
+      "reason": "withdrawn after review: reviewer (sonnet): The viewer is not read-only: StateMachineHeader.tsx has an 'Export to Blender NLA' button (handleExportToBlenderNLA, line 126 onward), and useAnimationStateMachine.ts:219 calls exportStatesToBlenderNLA, which writes NLA tracks into Blender. That action has no confirmation step, and the anchor at lin"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T03:59:43.676474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "consent-gates",
+        "decision-records",
+        "gate-state-machines",
+        "oracle-before-gate",
+        "resume-after-decision"
+      ],
+      "deviations": 1,
+      "context": "pipeline-step-components",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:59:43.676474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "animation-state-machine-viewer",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:59:43.676474+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "hitl-approval"
+      ],
+      "techniques": [
+        "decision-records",
+        "gate-state-machines",
+        "oracle-before-gate"
+      ],
+      "deviations": 1,
+      "context": "catalog-pipelines",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
