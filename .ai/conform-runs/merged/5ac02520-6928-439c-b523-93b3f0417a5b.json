@@ -1,0 +1,118 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5ac02520-6928-439c-b523-93b3f0417a5b",
+ "subject": "standards-layered-runtime",
+ "evaluatedAt": "2026-11-07T22:23:23.403982+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "platform-services-api",
+   "subject": "standards-layered-runtime",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/checklist/complete/route.ts:33 This context is a set of Next.js route handlers for checklist callbacks, packaging and previews, not an embeddable guest-language runtime. A search of src/ for embedder, guestContext, register_global, wintercg and quickjs returned no hits, so the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "crate-per-standards-body",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/checklist/complete/route.ts:33 The routes are app HTTP endpoints. There is no runtime package graph split by standards body."
+    }
+   ],
+   "absenceTerms": [
+    "embedder",
+    "guestContext",
+    "register_global",
+    "wintercg",
+    "quickjs"
+   ]
+  },
+  {
+   "context": "cli-terminal-system",
+   "subject": "standards-layered-runtime",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/cli-task.ts:2 This context builds task prompts for an external Claude CLI and intercepts callbacks; it does not install standard APIs into a guest-language context. A search of src/ for embedder, guestContext, register_global, wintercg and quickjs returned no hits, so the subject does not apply.",
+   "techniques": [
+    {
+     "technique": "cli-as-thin-assembler",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/cli-task.ts:2 The 'CLI' here is an external Claude Code subprocess that the app drives. It is not the executable front end of an embeddable runtime library."
+    }
+   ],
+   "absenceTerms": [
+    "embedder",
+    "guestContext",
+    "register_global",
+    "wintercg",
+    "quickjs"
+   ]
+  },
+  {
+   "context": "game-design-studio-api",
+   "subject": "standards-layered-runtime",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/combat-simulator/route.ts:3 The \"engine\" here is a TypeScript combat or economy simulation called from Next.js routes, not a language engine that hosts guest programs with standard platform APIs. A search of src/ for embedder, guestContext, register_global, wintercg and quickjs returned no hits, so the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "backend-parameterised-web-api",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/combat-simulator/route.ts:3 These are domain simulators. They do not implement standard web APIs behind a host backend trait."
+    }
+   ],
+   "absenceTerms": [
+    "embedder",
+    "guestContext",
+    "register_global",
+    "wintercg",
+    "quickjs"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-07T22:23:23.403982+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "standards-layered-runtime"
+   ],
+   "techniques": [
+    "crate-per-standards-body"
+   ],
+   "deviations": 0,
+   "context": "platform-services-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T22:23:23.403982+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "standards-layered-runtime"
+   ],
+   "techniques": [
+    "cli-as-thin-assembler"
+   ],
+   "deviations": 0,
+   "context": "cli-terminal-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T22:23:23.403982+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "standards-layered-runtime"
+   ],
+   "techniques": [
+    "backend-parameterised-web-api"
+   ],
+   "deviations": 0,
+   "context": "game-design-studio-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

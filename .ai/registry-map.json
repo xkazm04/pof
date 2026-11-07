@@ -10901,12 +10901,11 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/lib/claude-terminal/cli-service.ts:356 This integration invokes an external Claude CLI and manages application callbacks and spend; context and repository searches found no embeddable, guestContext, or register_global matches indicating a guest-language runtime implementation.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "src/lib/cli-task.ts:2 This context builds task prompts for an external Claude CLI and intercepts callbacks; it does not install standard APIs into a guest-language context. A search of src/ for embedder, guestContext, register_global, wintercg and quickjs returned no hits, so the subject does not apply.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:72be2b66c8d50db7",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 2
         }
       ],
       "governance": "governed"
@@ -14435,8 +14434,12 @@
           "revision": 3,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "src/app/api/combat-simulator/route.ts:3 The \"engine\" here is a TypeScript combat or economy simulation called from Next.js routes, not a language engine that hosts guest programs with standard platform APIs. A search of src/ for embedder, guestContext, register_global, wintercg and quickjs returned no hits, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:72be2b66c8d50db7",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-cli-transport",
@@ -21379,12 +21382,11 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/app/api/checklist/complete/route.ts:55 These routes manage application progress, builds, notifications, and previews; searches of the context and repository found no embeddable, guestContext, or register_global matches establishing an embeddable language-runtime implementation.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:9cfe5aba03ea1a19",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "src/app/api/checklist/complete/route.ts:33 This context is a set of Next.js route handlers for checklist callbacks, packaging and previews, not an embeddable guest-language runtime. A search of src/ for embedder, guestContext, register_global, wintercg and quickjs returned no hits, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:72be2b66c8d50db7",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 2
         }
       ],
       "governance": "governed"
