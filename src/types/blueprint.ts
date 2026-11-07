@@ -58,6 +58,12 @@ export interface BlueprintVariable {
   category?: string;
   defaultValue?: string;
   isExposedToEditor: boolean;
+  /**
+   * Where an exposed variable is editable. UE exports an unticked "Instance
+   * Editable" as CPF_Edit + CPF_DisableEditOnInstance (`defaults`), and the
+   * reverse as CPF_DisableEditOnTemplate (`instance`). Absent = everywhere.
+   */
+  editScope?: 'defaults' | 'instance';
   isReplicated: boolean;
   /** RepNotify — replicated *and* fires an OnRep_ handler (CPF_RepNotify). Implies isReplicated. */
   isRepNotify: boolean;

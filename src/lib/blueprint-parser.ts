@@ -217,12 +217,17 @@ function parseVariable(raw: RawVariable): BlueprintVariable {
     ? raw.VarType
     : raw.VarType?.PinCategory ?? 'unknown';
   const isRepNotify = flags.includes('CPF_RepNotify') || flags.includes('RepNotify');
+  const editScope = flags.includes('CPF_DisableEditOnInstance') || flags.includes('EditDefaultsOnly') ? 'defaults' as const
+    : flags.includes('CPF_DisableEditOnTemplate') || flags.includes('EditInstanceOnly') ? 'instance' as const
+    : undefined;
   return {
     name: raw.VarName ?? 'unnamed',
     type: varType,
     category: raw.Category || undefined,
     defaultValue: raw.DefaultValue || undefined,
-    isExposedToEditor: flags.includes('CPF_Edit') || flags.includes('EditAnywhere'),
+    isExposedToEditor: flags.includes('CPF_Edit') || flags.includes('EditAnywhere')
+      || flags.includes('EditDefaultsOnly') || flags.includes('EditInstanceOnly'),
+    ...(editScope ? { editScope } : {}),
     // RepNotify properties are inherently replicated even if CPF_Net isn't listed separately.
     isReplicated: isRepNotify || flags.includes('CPF_Net') || flags.includes('Replicated'),
     isRepNotify,
@@ -274,6 +279,11 @@ export function parseBlueprintJson(input: string | object): BlueprintAsset {
   };
 }
 
+/** The Edit* UPROPERTY specifier an exposed variable's scope demands. */
+export function editSpecifier(v: Pick<BlueprintVariable, 'editScope'>): 'EditAnywhere' | 'EditDefaultsOnly' | 'EditInstanceOnly' {
+  return v.editScope === 'defaults' ? 'EditDefaultsOnly' : v.editScope === 'instance' ? 'EditInstanceOnly' : 'EditAnywhere';
+}
+
 /**
  * Build a human-readable summary of a Blueprint asset for Claude.
  * This is what gets sent to Claude for transpilation.
@@ -289,7 +299,7 @@ export function summarizeBlueprintForPrompt(asset: BlueprintAsset): string {
     lines.push('## Variables');
     for (const v of asset.variables) {
       const flags: string[] = [];
-      if (v.isExposedToEditor) flags.push('EditAnywhere');
+      if (v.isExposedToEditor) flags.push(editSpecifier(v));
       if (v.isRepNotify) flags.push('RepNotify');
       else if (v.isReplicated) flags.push('Replicated');
       const flagStr = flags.length ? ` [${flags.join(', ')}]` : '';
