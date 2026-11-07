@@ -22,11 +22,14 @@ function formatBytes(bytes: number | undefined): string {
   return bytes >= 1_048_576 ? `${(bytes / 1_048_576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-/** The receipt line for a converted GLB. Pure. */
+/** A count the route measured. A missing marker parses to NaN, which JSON carries as `null`. */
+const measured = (n: number | null | undefined): n is number => typeof n === 'number' && Number.isFinite(n);
+
+/** The receipt line for a converted GLB; an unmeasured count reads "unknown", never 0. Pure. */
 function receiptText(r: Extract<FbxConvertResponse, { converted: true }>): string {
-  const meshes = r.meshes ?? 0;
-  const tris = (r.tris ?? 0).toLocaleString('en-US');
-  return `Converted ${meshes} mesh${meshes === 1 ? '' : 'es'} · ${tris} triangles · ${formatBytes(r.bytes)}\n`
+  const meshes = measured(r.meshes) ? `${r.meshes} mesh${r.meshes === 1 ? '' : 'es'}` : 'mesh count unknown';
+  const tris = measured(r.tris) ? `${r.tris.toLocaleString('en-US')} triangles` : 'triangle count unknown';
+  return `Converted ${meshes} · ${tris} · ${formatBytes(r.bytes)}\n`
     + `-> generated/converted/${r.name}`;
 }
 
