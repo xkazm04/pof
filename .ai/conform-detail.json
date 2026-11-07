@@ -21454,6 +21454,98 @@
       "evaluatedTs": "2026-11-07T03:14:54.464Z",
       "worker": "7f1b81c3-9dff-4b1b-a374-f9cee0167823",
       "techniques": []
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/game-economy-tuning": {
+      "context": "game-design-studio-api",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:25:28.394Z",
+      "techniques": [
+        {
+          "technique": "tornado-sensitivity-sweeps",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/sensitivity-sweep.ts:69 One ±range for every input and only baseAmount is swept (frequencyPerHour and levelScaling are not). No range basis is recorded and SweepResult never says it is magnitude-only. The outcomes are right, though: gini, netFlow and criticalAlerts."
+        },
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "conformant",
+          "evidence": "src/lib/economy/node-audit.ts:169 Imbalance is divided by the larger of inflow and outflow, as the technique asks. The verdict carries its tolerance and basis, and it reports not-measured, unclassified or unspecified instead of a pass. Entries carry base, scaling, frequency and level window. Gap: where each frequency came from (telemetry, playtest or unestimated) is not recorded."
+        },
+        {
+          "technique": "economy-philosophy-multipliers",
+          "verdict": "conformant",
+          "evidence": "src/lib/economy/simulation-engine.ts:36 Each stance is an explicit three-axis vector (acquisition, consumption, generosity) applied to every faucet, every sink and every drop weight."
+        },
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "conformant",
+          "evidence": "src/lib/economy/node-audit.ts:60 Every node is named by its kind. Anything that can't be named reports as unclassified and makes the band verdict unaudited instead of being absorbed. The vendor sale is modelled as a converter with an input leg."
+        },
+        {
+          "technique": "feedback-loop-topology-and-polarity",
+          "verdict": "conformant",
+          "evidence": "src/lib/economy/definitions.ts:237 Loops are declared with polarity, latency and path, and their gain is honestly marked 'uncharacterised'. The missing reinforcing loop is recorded as a finding."
+        },
+        {
+          "technique": "wealth-concentration-and-price-imbalance-alerts",
+          "verdict": "conformant",
+          "evidence": "src/lib/economy/simulation-engine.ts:621 Gini warns above 0.6 and goes critical above 0.8, matching the technique. Price-imbalance checks cover the potion triviality floor (1% of income) and legendary affordability."
+        },
+        {
+          "technique": "progression-curve-shape-tests",
+          "verdict": "conformant",
+          "evidence": "src/lib/economy/simulation-engine.ts:719 The XP curve is tested for family on every simulation (geometric check, ratio CoV with tolerance 0.15) and the check keeps firing on the shipped polynomial."
+        }
+      ],
+      "withdrawn": {
+        "worker": "c04ff748-acc7-4a62-af2b-1eeea8d0c10d",
+        "state": "deviation",
+        "at": "2026-11-07T03:26:31.409615+00:00",
+        "reason": "reviewer (sonnet): The sweep route and the economy library are real and the claims hold, but this context's files are only the ability-spec and feature-matrix routes, so the verdict is about the economy-simulator context. An earlier reviewer note in .ai/conform-detail.json made the same call for goal-seek."
+      }
+    },
+    "cf5703ec-61df-45c3-9e35-b590480c7e76/game-economy-tuning": {
+      "context": "progression-curves-builds",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:25:28.394Z",
+      "worker": "c04ff748-acc7-4a62-af2b-1eeea8d0c10d",
+      "techniques": [
+        {
+          "technique": "progression-curve-shape-tests",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/curves/CurveParametersPanel.tsx:77 The label names an exponential family over a power-law formula, and there is no step-ratio diagnostic. curveFit's 'shape' verdict (PaceTargetsPanel.tsx:49) partly realizes 'do not tune, decide', but it is a goodness-of-fit search against pace targets, which the technique says is not a family test."
+        },
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx:11 XP is not a conserved resource; the technique excludes experience explicitly."
+        }
+      ]
+    },
+    "d0b455c1-6b16-44d0-99c7-4e3e444b5ea8/game-economy-tuning": {
+      "context": "combat-simulator",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:25:28.394Z",
+      "worker": "c04ff748-acc7-4a62-af2b-1eeea8d0c10d",
+      "techniques": []
+    },
+    "2991dc7e-92df-4e72-a7fe-ea3d15646718/game-economy-tuning": {
+      "context": "world-module",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T03:25:28.394Z",
+      "worker": "c04ff748-acc7-4a62-af2b-1eeea8d0c10d",
+      "techniques": []
     }
   }
 }

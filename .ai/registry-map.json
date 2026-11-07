@@ -11875,7 +11875,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/CombatSimulatorView/constants.ts:33 The view tunes combat multipliers (HP, damage, armor, crit) for encounter balance. A case-insensitive grep of the directory found no faucet, sink, currency, gold or economy term, so there is no resource economy here for this subject to govern.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "encounter-balance-simulation",
@@ -21688,7 +21692,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_shared/data.ts:26 The XP curve here is polynomial (base·level^exp) but the UI calls it exponential. Nothing in this context compares the claimed family with the implemented one, so the shape mismatch is invisible to the designer who tunes it.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "procedural-level-planning",
@@ -28632,7 +28640,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/playtime/playtime-target.ts:2 The world module budgets playtime and travel topology, not a resource economy. A case-insensitive grep of sub_world found no faucet, sink, currency, gold or economy term.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "spatial-audio-scene-authoring",
