@@ -22429,16 +22429,11 @@
       "context": "core-engine-planning-shell",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T05:24:39.859Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "5dc1ac29-25a4-400b-a6cc-dab55749660f",
-        "state": "not-applicable",
-        "at": "2026-11-07T05:25:19.724090+00:00",
-        "reason": "reviewer (sonnet): The anchor PlanMatrixMap/index.tsx:25 is a props-interface line and does not show that agent memory is absent; the absence claim rests only on a grep, and ContextHealthBadge was never shown to be a plain re-export."
-      }
+      "evaluatedTs": "2026-11-07T05:41:24.845Z",
+      "worker": "1d3186b6-1854-4e2b-ab99-022f645f0936",
+      "techniques": []
     },
     "d143dfab-b0b5-44e4-a6d5-51396280ffbf/agent-memory": {
       "context": "build-packaging",
@@ -22454,16 +22449,11 @@
       "context": "loot-affix-core",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T05:24:39.859Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "5dc1ac29-25a4-400b-a6cc-dab55749660f",
-        "state": "not-applicable",
-        "at": "2026-11-07T05:25:19.810915+00:00",
-        "reason": "reviewer (sonnet): The anchor sub_loot/index.tsx:35 is a useState line and is incidental; the memory hits the evidence cites (LootTableEditor.tsx:24 and lootTuningStore.ts) are in other files and are not the anchor."
-      }
+      "evaluatedTs": "2026-11-07T05:41:24.845Z",
+      "worker": "1d3186b6-1854-4e2b-ab99-022f645f0936",
+      "techniques": []
     },
     "c7fb4de3-6779-431b-9860-639fef9f98ea/voice-io": {
       "context": "progression-rewards-internals",
@@ -22519,6 +22509,31 @@
       "evaluatedTs": "2026-11-07T05:36:24.013Z",
       "worker": "69129fc5-d3ed-4694-b866-dc81cd334140",
       "techniques": []
+    },
+    "6d876014-986d-4dbd-8fad-3609af2e0609/agent-memory": {
+      "context": "ue5-build-bridge",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:41:24.845Z",
+      "worker": "1d3186b6-1854-4e2b-ab99-022f645f0936",
+      "techniques": []
+    },
+    "2a121327-c14c-4339-910d-61bfd6ec3a00/agent-memory": {
+      "context": "blueprint-transpiler-game-systems",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T05:41:24.845Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "1d3186b6-1854-4e2b-ab99-022f645f0936",
+        "state": "not-applicable",
+        "at": "2026-11-07T05:42:09.461180+00:00",
+        "reason": "reviewer (sonnet): The anchor (index.tsx:5) is only an import line, and the context also holds DialogueView, whose QuestGeneratorPanel calls apiFetch to a backend route the evidence never examines, so a no-agent-memory verdict for the whole context is unconfirmed."
+      }
     }
   }
 }

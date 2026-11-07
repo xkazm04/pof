@@ -7114,8 +7114,8 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "priorNotApplicable": 4,
+          "state": "unknown"
         },
         {
           "subject": "quality-gates",
@@ -12499,7 +12499,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ImplementationPlan/index.tsx:48 The planning shell's only agent touchpoint is a one-shot CLI dispatch of plan items through usePlanDispatch/useModuleCLI. Prompt assembly and any error-memory injection happen in shared libs outside this context. Its own files hold no store that carries agent state forward, and searching for episodic, consolidat, agentMemory and memories found no hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "plan-review",
@@ -18666,7 +18670,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/_shared/math.ts:6 The loot module is deterministic design math, UI and codegen with no LLM agent at all. The only 'memory' hits are RAM bounds: the undo-history cap in LootTableEditor.tsx:24 and the in-memory lootTuningStore. Searching for episodic, consolidat, agentMemory and memories found no hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "search",
@@ -26308,8 +26316,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/ue5-bridge/build-health/route.ts:29 These routes compile, query, inject and transpile without capturing, consolidating or recalling agent memory. build-health returns a human-facing report derived from headless_builds. Its header comment (line 6) still says it reads the error_memory table, but src/lib/ue5-bridge/build-error-recurrence.ts:14 records that this read was replaced. Searching for episodic, consolidat, agentMemory and memories found no hits.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:6c06fb6d8d6c900f",
+          "evaluatedRevision": 52
         },
         {
           "subject": "vendored-patch-stack",
