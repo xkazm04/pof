@@ -141,16 +141,20 @@ describe('auditionMix — one zone-reverb resolver', () => {
   });
 });
 
-/** Per-file sha256 of the case-8 fixture output, taken on the base BEFORE the resolver. */
+/**
+ * Per-file sha256 of the case-8 fixture output, taken on the base BEFORE the resolver.
+ * Re-pinned 2026-11-07 for AudioZoneAttenuation.{h,cpp} + AudioSceneManager.{h,cpp} only:
+ * per-zone attenuation is now emitted and initialised (audio-codegen-attenuation.test.ts).
+ */
 const BASE_FILE_SHA: Record<string, string> = {
   'AudioReverbPresets.h': '1f55f4386662581dd923528799bccfa672b893a110e257ea3f35745a088e6dfd',
   'AudioReverbPresets.cpp': '8226e98178cb01ce3f5bba231b3d190303b3866fe5844f118f183ce25f849051',
-  'AudioZoneAttenuation.h': 'c137953add3560ea80404db404a69b9d6d44441f9c2c7b0fb6249fd7c4407705',
-  'AudioZoneAttenuation.cpp': '1a47e8d5eeca0a2ef587edccc23dde6de322c28713639967cd811fb2a01f30e1',
+  'AudioZoneAttenuation.h': '23c84cf493db30abf22c7f792e2d8a67f6fbe89ec21172e47a6ca889baf2e485',
+  'AudioZoneAttenuation.cpp': '75c4178e82f18fbe04b597c47f6769d3f408df7cbdcebbecf5da9b4359ccce2d',
   'SceneEmitterSpawner.h': '480a2efd7148b77e2789b788b72989b223cc3118a6b46618e8bb615b58338e94',
   'SceneEmitterSpawner.cpp': 'f6d193ddb472f32ed2fa925d487bbd50d93e171e23a12d235426af5695553848',
-  'AudioSceneManager.h': '331664005c704c2c5e134602bed423ee5765d95bf8e8d092d5249ed5d6ec0a4d',
-  'AudioSceneManager.cpp': '5d5742292112854a65312d356a497834ff7bfb0fd0266294ca65ba31904862cd',
+  'AudioSceneManager.h': 'e04519c3c63bd8417e877f51bfa65dc3ae65cffe5352ae1a12800dca3d0239f1',
+  'AudioSceneManager.cpp': '4cfbe9a6b5c23b4d3439afda3eec6a79b7719fb55ff020fb7b7e82eb5f9f4eb5',
 };
 /** The only generated files the zone-reverb resolver may change. */
 const RESOLVER_FILES = ['SceneAudioVolume.h', 'SceneAudioVolume.cpp', 'ProceduralAmbientLayer.cpp'];
@@ -175,6 +179,6 @@ describe('acoustics tables — one authority', () => {
     expect(Object.fromEntries(outside.map((f) => [f.filename, sha(f.content)]))).toEqual(BASE_FILE_SHA);
 
     const out = files.map((f) => `${f.filename}\n${f.content}`).join('\n----\n');
-    expect(sha(out)).toBe('2e60116d6ec3410a4ac945a58552e0f9fc9b7abb8bc435031e12269a66100ad0');
+    expect(sha(out)).toBe('9c1192817c12de8cb119ce32e759a512e3d45977033984b101573bf51e4eac7a');
   });
 });

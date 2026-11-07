@@ -326,6 +326,7 @@ function generateAttenuationHeader(zones: AudioZone[], apiMacro: string): Genera
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/DataAsset.h"
 #include "Sound/SoundAttenuation.h"
 #include "AudioZoneAttenuation.generated.h"
 
@@ -340,6 +341,10 @@ public:
 
 \tUFUNCTION(BlueprintCallable, Category = "Attenuation")
 \tUSoundAttenuation* GetAttenuationForZone(FName ZoneName) const;
+
+\t/** Build one attenuation asset per authored zone (radius from the Audio Scene Editor). */
+\tUFUNCTION(BlueprintCallable, Category = "Attenuation")
+\tvoid InitializeZones();
 
 \tstatic USoundAttenuation* CreateAttenuationAsset(UObject* Outer, FName ZoneName, float InnerRadius, float FalloffDistance);
 };
@@ -368,6 +373,13 @@ USoundAttenuation* UAudioZoneAttenuation::GetAttenuationForZone(FName ZoneName) 
 \t\treturn *Found;
 \t}
 \treturn nullptr;
+}
+
+void UAudioZoneAttenuation::InitializeZones()
+{
+\tZoneAttenuations.Empty();
+
+${zoneInits}
 }
 
 USoundAttenuation* UAudioZoneAttenuation::CreateAttenuationAsset(UObject* Outer, FName ZoneName, float InnerRadius, float FalloffDistance)
@@ -865,6 +877,7 @@ function generateSceneManagerHeader(doc: AudioSceneDocument, apiMacro: string): 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "AudioReverbPresets.h"
+#include "AudioZoneAttenuation.h"
 #include "AudioSceneManager.generated.h"
 
 UCLASS()
@@ -877,6 +890,9 @@ public:
 
 \tUPROPERTY()
 \tTObjectPtr<UAudioReverbPresets> ReverbPresets;
+
+\tUPROPERTY()
+\tTObjectPtr<UAudioZoneAttenuation> ZoneAttenuation;
 
 \tUFUNCTION(BlueprintCallable, Category = "Audio Scene")
 \tvoid EnterZone(FName ZoneName);
@@ -910,6 +926,10 @@ void UAudioSceneManager::Initialize(FSubsystemCollectionBase& Collection)
 \t// Load reverb presets data asset
 \tReverbPresets = NewObject<UAudioReverbPresets>(this);
 \tUAudioReverbPresets::InitializeDefaults(ReverbPresets);
+
+\t// Per-zone attenuation (one asset per authored zone)
+\tZoneAttenuation = NewObject<UAudioZoneAttenuation>(this);
+\tZoneAttenuation->InitializeZones();
 
 \tUE_LOG(LogTemp, Log, TEXT("AudioSceneManager initialized: pool=%d, maxConcurrent=%d"),
 \t\tSoundPoolSize, MaxConcurrentSounds);
