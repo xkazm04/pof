@@ -1,0 +1,126 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ef625162-3ac4-44ce-bd01-5c3af5850112",
+  "subject": "mcp-tools",
+  "evaluatedAt": "2026-11-07T02:15:52.169076+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "crash-analysis",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:14 The crash views read and import crash data through a Zustand store and app UI. A case-insensitive search of CrashAnalyzerView/, CrashTimeMachine/ and the whole src/components/modules/evaluator/ tree for mcp, inputSchema, tools/call and jsonrpc found nothing, so this context has no tool surface for the subject to govern.",
+      "techniques": [],
+      "absenceTerms": [
+        "mcp",
+        "inputSchema",
+        "tools/call",
+        "jsonrpc"
+      ]
+    },
+    {
+      "context": "procedural-scene-tools",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:19 The export call sent to the Blender scripting bridge carries only a path and a format. The script then resolves `bpy.context.scene`, the scene active in the open Blender session, and its receipt does not name which scene or document it exported, so two identical calls can export different scenes and the operator cannot tell which one shipped.",
+      "techniques": [
+        {
+          "technique": "ambient-selection-is-not-an-argument",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:19 The export targets the ambient active scene (export-scene.ts:39 `_scene = bpy.context.scene`) and never resolves it to an identity, which breaks obligations 1 and 2. Obligation 3 is partly met: an empty active scene raises instead of exporting nothing."
+        },
+        {
+          "technique": "untrusted-result-handling",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:22 The armature outcome is taken from a validated, typed receipt that Blender printed, not from the transport saying OK. The bridge result is checked before anyone acts on it."
+        }
+      ],
+      "registryProposal": "ambient-selection-is-not-an-argument frames its caller as a model, but the same failure shows up when the app's own deterministic UI drives a single-seat application (Blender) through its scripting bridge. The technique could say outright that it applies whatever kind of caller is driving."
+    },
+    {
+      "context": "cli-terminal-output",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:93 Text the user selects in the terminal, which can include tool results, is pasted bare after an imperative and dispatched as a new prompt to the CLI model. It carries no fence or source attribution, so any injected instruction inside a tool result is promoted to user-turn authority.",
+      "techniques": [
+        {
+          "technique": "untrusted-result-handling",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:93 This breaks two rules: fence and attribute, and never re-promote. Tool output re-enters the model's context as unfenced user instruction text."
+        }
+      ],
+      "registryProposal": "untrusted-result-handling could add a named case for a human-initiated 'act on this selection' gesture: whether a person choosing the text counts as consent, or whether the text must still be fenced when it is re-submitted."
+    }
+  ],
+  "declined": [
+    {
+      "subject": "mcp-tools",
+      "context": "catalog-database",
+      "reason": "evidence leans on pipeline-artifacts/route.ts, which is not a tracked file"
+    },
+    {
+      "subject": "mcp-tools",
+      "context": "debug-performance",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (ConsoleSection.tsx:44) shows the opposite of an absent tool surface: ConsoleSection lets the user run arbitrary UE console commands through useUE5Connection's executeConsoleCommand, which POSTs to /api/ue5-bridge/query. That is a command-execution channel, so the not-applicable verdict r"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T02:15:52.169076+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "crash-analysis",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T02:15:52.169076+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [
+        "ambient-selection-is-not-an-argument",
+        "untrusted-result-handling"
+      ],
+      "deviations": 1,
+      "context": "procedural-scene-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T02:15:52.169076+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [
+        "untrusted-result-handling"
+      ],
+      "deviations": 1,
+      "context": "cli-terminal-output",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T02:15:52.169076+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "mcp-tools"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "debug-performance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

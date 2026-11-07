@@ -10313,8 +10313,12 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "state": "deviation",
+          "priorNotApplicable": 6,
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:93 Text the user selects in the terminal, which can include tool results, is pasted bare after an imperative and dispatched as a new prompt to the CLI model. It carries no fence or source attribution, so any injected instruction inside a tool result is promoted to user-turn authority.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:cb2b1c9f6fef5eb9",
+          "evaluatedRevision": 35
         },
         {
           "subject": "test-harness",
@@ -13395,8 +13399,8 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "priorNotApplicable": 6,
+          "state": "unknown"
         },
         {
           "subject": "agent-memory",
@@ -21457,8 +21461,12 @@
           "revision": 34,
           "changedAt": "2026-10-15",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 6
+          "state": "deviation",
+          "priorNotApplicable": 6,
+          "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:19 The export call sent to the Blender scripting bridge carries only a path and a format. The script then resolves `bpy.context.scene`, the scene active in the open Blender session, and its receipt does not name which scene or document it exported, so two identical calls can export different scenes and the operator cannot tell which one shipped.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:cb2b1c9f6fef5eb9",
+          "evaluatedRevision": 35
         },
         {
           "subject": "procedural-level-planning",

@@ -21241,6 +21241,60 @@
           "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:24 Superseding by rubric version applies to judge verdicts about content, which is the domain of quality-verdict-integrity. It is not linking versions of recalled agent beliefs."
         }
       ]
+    },
+    "56626d3f-5a0e-4d43-93f2-5b01370ebe20/mcp-tools": {
+      "context": "procedural-scene-tools",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:15:52.169Z",
+      "worker": "ef625162-3ac4-44ce-bd01-5c3af5850112",
+      "techniques": [
+        {
+          "technique": "ambient-selection-is-not-an-argument",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:19 The export targets the ambient active scene (export-scene.ts:39 `_scene = bpy.context.scene`) and never resolves it to an identity, which breaks obligations 1 and 2. Obligation 3 is partly met: an empty active scene raises instead of exporting nothing."
+        },
+        {
+          "technique": "untrusted-result-handling",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/auto-rig/AutoRigView/helpers.ts:22 The armature outcome is taken from a validated, typed receipt that Blender printed, not from the transport saying OK. The bridge result is checked before anyone acts on it."
+        }
+      ],
+      "registryProposal": "ambient-selection-is-not-an-argument frames its caller as a model, but the same failure shows up when the app's own deterministic UI drives a single-seat application (Blender) through its scripting bridge. The technique could say outright that it applies whatever kind of caller is driving."
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/mcp-tools": {
+      "context": "cli-terminal-output",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:15:52.169Z",
+      "worker": "ef625162-3ac4-44ce-bd01-5c3af5850112",
+      "techniques": [
+        {
+          "technique": "untrusted-result-handling",
+          "verdict": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:93 This breaks two rules: fence and attribute, and never re-promote. Tool output re-enters the model's context as unfenced user instruction text."
+        }
+      ],
+      "registryProposal": "untrusted-result-handling could add a named case for a human-initiated 'act on this selection' gesture: whether a person choosing the text counts as consent, or whether the text must still be fenced when it is re-submitted."
+    },
+    "0f8602ad-d98f-4d1d-9644-0467be9e70b9/mcp-tools": {
+      "context": "debug-performance",
+      "subject": "mcp-tools",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T02:15:52.169Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "ef625162-3ac4-44ce-bd01-5c3af5850112",
+        "state": "not-applicable",
+        "at": "2026-11-07T02:16:57.240590+00:00",
+        "reason": "reviewer (sonnet): The anchor (ConsoleSection.tsx:44) shows the opposite of an absent tool surface: ConsoleSection lets the user run arbitrary UE console commands through useUE5Connection's executeConsoleCommand, which POSTs to /api/ue5-bridge/query. That is a command-execution channel, so the not-applicable verdict r"
+      }
     }
   }
 }
