@@ -3,7 +3,9 @@
  *
  * Pure linter: given one archetype + the full bestiary roster, flag balance
  * issues — missing core data, and stats that fall far outside the same-tier
- * peer band. Powers the BestiaryBalanceFacet. No React, no store.
+ * peer band. No production caller: the BestiaryBalanceFacet it was written for
+ * was deleted in fb7efa5b, so its suite covers this module and no running path.
+ * No React, no store.
  */
 
 export type BalanceSeverity = 'ok' | 'warn' | 'error';
