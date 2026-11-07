@@ -9694,19 +9694,33 @@
       "subject": "judgeable-spec-authoring",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T04:33:43.594Z",
-      "worker": "55951757-c03a-4438-889e-67cdc1e79cce",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:58:41.668Z",
+      "worker": "28531dd6-acae-43ba-af6c-7ca4016390fc",
       "techniques": [
-        {
-          "technique": "interpolated-counts-over-typed-counts",
-          "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:61 Template counts are rendered from their source arrays; the neighboring effect, rule, and slot counts use the same approach."
-        },
         {
           "technique": "simulate-the-mechanism-not-the-constant",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:166 An in-memory replay of this actual template effect changes Mana from 50 to 42 at 0.25 seconds and leaves it at 42 through five seconds; cooldownSec does not produce periodic applications."
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:166 In runSimulation (simulation.ts), modifiers are applied once when the effect triggers, and the per-cooldownSec reapplication was removed, so 'PerSec' is a name rather than a simulated rate."
+        },
+        {
+          "technique": "one-field-one-question",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:125 Template data uses cooldownSec as a DoT tick period (Ignite, DrainBeam 0.5, Poison/Bleed 1), while codegen.ts:125 and simulation.ts:98 treat it as the ability cooldown. The fix kept one reading and did not name a second axis (period), so the DoT templates still contradict that reading."
+        },
+        {
+          "technique": "interpolated-counts-over-typed-counts",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:61 Template card counts (attrs/effects/rules/slots) are interpolated from array lengths, not typed."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:147 The channel template promises recurring mana drain, but replaying its five-second mana effect subtracts eight mana only once, leaving its cadence claim unsupported.",
+          "evaluatedAt": "2026-10-17T04:33:43.594Z",
+          "worker": "55951757-c03a-4438-889e-67cdc1e79cce",
+          "reason": "replaced by 28531dd6-acae-43ba-af6c-7ca4016390fc"
         }
       ]
     },
@@ -9715,24 +9729,38 @@
       "subject": "judgeable-spec-authoring",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T04:33:43.594Z",
-      "worker": "55951757-c03a-4438-889e-67cdc1e79cce",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T04:58:41.668Z",
+      "worker": "28531dd6-acae-43ba-af6c-7ca4016390fc",
       "techniques": [
         {
           "technique": "execute-the-rules-against-the-worked-example",
           "verdict": "deviation",
-          "evidence": "src/lib/catalog/pipelines/items.ts:569 The same producer declares damageMin=12 and damageMax=18; applying +17 flat yields an average of 32, so the example's range and subsequent DPS do not reproduce."
+          "evidence": "src/lib/catalog/pipelines/items.ts:569 Literal execution: 12+17=29 and 18+17=35, not 22–35. Separately, the pfx-2 label at line 375 renders 'Adds 14–17' for a single rolled value of 17."
         },
         {
           "technique": "interpolated-counts-over-typed-counts",
           "verdict": "deviation",
-          "evidence": "src/lib/catalog/pipelines/items.ts:418 The illustrative roll hardcodes its derived affix total instead of computing prefixes.length + suffixes.length, allowing edits to leave a stale count."
+          "evidence": "src/lib/catalog/pipelines/items.ts:422 The typed 'base 5%' contradicts the computed critChance = 0.055 at line 547. totalExplicits: 6 (line 418) is also typed beside the arrays it counts."
+        },
+        {
+          "technique": "enumeration-closure-as-arithmetic",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:436 The target-attribute list leaves out Accuracy, even though the same dependency list names GE_Implicit_SwordAccuracy and the grant law gives the implicit its own handle. The L3 assertion on 'AttackPower delta' (line 447) also names an attribute that no listed GE targets."
         },
         {
           "technique": "quantity-ownership-and-the-bindable-row",
-          "verdict": "deviation",
-          "evidence": "src/lib/catalog/pipelines/items.ts:790 Tooltip independently restates weapon quantities and disagrees with Damage / Implicit, which writes 12–18 damage, default 0.8333 APS, and 5.5% critical chance."
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/items.ts:590 The shared power-budget quantity is assigned to the Economy step on a stated principle, so this step checks internal DPS consistency only."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/items.ts:569 Adding the example's stated flat seventeen damage to its declared 12–18 base produces 29–35 rather than 22–35, invalidating the worked damage chain.",
+          "evaluatedAt": "2026-10-17T04:33:43.594Z",
+          "worker": "55951757-c03a-4438-889e-67cdc1e79cce",
+          "reason": "replaced by 28531dd6-acae-43ba-af6c-7ca4016390fc"
         }
       ]
     },

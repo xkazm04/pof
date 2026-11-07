@@ -1873,12 +1873,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:147 The channel template promises recurring mana drain, but replaying its five-second mana effect subtracts eight mana only once, leaving its cadence claim unsupported.",
-          "evaluatedAt": "2026-10-17",
-          "evaluatedAgainst": "sha256-b2:51d2d7f30dfc2a96",
-          "evaluatedRevision": 3,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:147 The channel template claims per-tick damage and per-second mana drain, but EditorEffect has no period field and the sandbox applies each duration effect's modifiers once, so a 5 s GE_ManaDrain_PerSec costs 8 mana in total and the stated cadence never comes out of running the mechanism.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:85e0c3851c4a6027",
+          "evaluatedRevision": 4,
+          "revisionsBehind": 1
         },
         {
           "subject": "engine-host-contract",
@@ -17000,12 +16999,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/lib/catalog/pipelines/items.ts:569 Adding the example's stated flat seventeen damage to its declared 12–18 base produces 29–35 rather than 22–35, invalidating the worked damage chain.",
-          "evaluatedAt": "2026-10-17",
-          "evaluatedAgainst": "sha256-b2:51d2d7f30dfc2a96",
-          "evaluatedRevision": 3,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/lib/catalog/pipelines/items.ts:569 The DPS note's first sentence is interpolated, but this typed continuation adds a flat +17 to the declared 12–18 base and states 22–35. Applied literally, the rule gives 29–35 (avg 32, about 26.7 DPS), so every downstream figure in the worked chain fails to reproduce.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:85e0c3851c4a6027",
+          "evaluatedRevision": 4,
+          "revisionsBehind": 1
         },
         {
           "subject": "multi-provider-gateway-plane",
