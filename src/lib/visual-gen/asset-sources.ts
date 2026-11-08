@@ -55,6 +55,13 @@ export interface AssetSearchParams {
 
 const POLYHAVEN_API = 'https://api.polyhaven.com';
 
+/**
+ * Deadline on every call to a free source. Without one a stalled upstream held the browse route
+ * open indefinitely, and a caller's fallback (`pickBiomeTexture`) only runs on a rejection.
+ */
+const SOURCE_FETCH_TIMEOUT_MS = 30_000;
+const sourceDeadline = () => ({ signal: AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS) });
+
 interface PolyHavenAsset {
   name: string;
   tags: string[];
@@ -79,7 +86,7 @@ export async function searchPolyHaven(
     return cached.results;
   }
 
-  const res = await fetch(`${POLYHAVEN_API}/assets?t=${category}`);
+  const res = await fetch(`${POLYHAVEN_API}/assets?t=${category}`, sourceDeadline());
   if (!res.ok) throw new Error(`Poly Haven API error: ${res.status}`);
 
   const data = await res.json() as Record<string, PolyHavenAsset>;
@@ -109,7 +116,7 @@ export async function fetchPolyHavenFiles(id: string): Promise<PolyHavenFiles> {
   const cached = polyHavenFilesCache.get(id);
   if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) return cached.files;
 
-  const res = await fetch(`${POLYHAVEN_API}/files/${id}`);
+  const res = await fetch(`${POLYHAVEN_API}/files/${id}`, sourceDeadline());
   if (!res.ok) throw new Error(`Poly Haven files API error: ${res.status}`);
   const files = await res.json() as PolyHavenFiles;
   polyHavenFilesCache.set(id, { fetchedAt: Date.now(), files });
@@ -150,7 +157,7 @@ export async function searchAmbientCG(
   });
   if (query) params.set('q', query);
 
-  const res = await fetch(`${AMBIENTCG_API}?${params}`);
+  const res = await fetch(`${AMBIENTCG_API}?${params}`, sourceDeadline());
   if (!res.ok) throw new Error(`ambientCG API error: ${res.status}`);
 
   const data = await res.json() as AmbientCGResponse;
