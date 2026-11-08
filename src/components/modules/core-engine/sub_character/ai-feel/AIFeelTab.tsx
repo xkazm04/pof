@@ -165,7 +165,7 @@ export function CharacterFeelOptimizer({ moduleId }: CharacterFeelOptimizerProps
             <button
               onClick={handleApplyResolved}
               disabled={isRunning}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-40 focus-ring"
               style={{
                 backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_12)}`,
                 color: STATUS_SUCCESS,
