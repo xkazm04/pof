@@ -95,7 +95,12 @@ struct POF_API FProgressionCurveRow : public FTableRowBase
 };`;
 }
 
-export function progressionToUE5Loader(): string {
+/** A C++ float literal; `2f` is not one, `2.f` is. */
+const cppFloat = (n: number) => (Number.isInteger(n) ? `${n}.f` : `${n}f`);
+
+/** The fallback is the same floored curve the CSV rows were generated from. */
+export function progressionToUE5Loader(baseXp: number, exponent: number): string {
+  const formula = `FMath::FloorToFloat(${cppFloat(baseXp)} * FMath::Pow(static_cast<float>(Level), ${cppFloat(exponent)}))`;
   return `// Replace CalculateXPForLevel() in ARPGPlayerCharacter with data table lookup.
 // Add to ARPGPlayerCharacter.h:
 //
@@ -106,13 +111,13 @@ export function progressionToUE5Loader(): string {
 
 float AARPGPlayerCharacter::GetXPForLevel(int32 Level) const
 {
-\tif (!ProgressionTable) return 100.f * FMath::Pow(Level, 1.5f); // fallback
+\tif (!ProgressionTable) return ${formula}; // fallback
 
 \tconst FString RowName = FString::Printf(TEXT("%d"), Level);
 \tconst FProgressionCurveRow* Row = ProgressionTable->FindRow<FProgressionCurveRow>(
 \t\tFName(*RowName), TEXT("GetXPForLevel"));
 
-\treturn Row ? static_cast<float>(Row->XPRequired) : 100.f * FMath::Pow(Level, 1.5f);
+\treturn Row ? static_cast<float>(Row->XPRequired) : ${formula};
 }
 
 void AARPGPlayerCharacter::LevelUp()

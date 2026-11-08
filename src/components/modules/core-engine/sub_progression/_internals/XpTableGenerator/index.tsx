@@ -50,9 +50,9 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
       case 'table': return '';
       case 'csv': return progressionToCSV(progressionRows);
       case 'struct': return progressionToUE5Struct();
-      case 'loader': return progressionToUE5Loader();
+      case 'loader': return progressionToUE5Loader(baseXp, curveExp);
     }
-  }, [xpTableTab, progressionRows]);
+  }, [xpTableTab, progressionRows, baseXp, curveExp]);
 
   const getCopyText = useCallback(() => {
     return xpTableTab === 'table' ? progressionToCSV(progressionRows) : xpTableOutput;
