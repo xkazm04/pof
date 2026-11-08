@@ -89,7 +89,7 @@ export const ZONE_EDGES: ZoneEdge[] = [
   { fromId: 'z2', toId: 'z4', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '1.8s', navMeshContinuity: false },
   { fromId: 'z3', toId: 'z5', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '0.6s', navMeshContinuity: false },
   { fromId: 'z4', toId: 'z6', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '2.4s', navMeshContinuity: false },
-  { fromId: 'z5', toId: 'z6', edgeType: 'portal', locked: true, criticalPath: true, transitionType: 'Portal', estTime: '0.8s', navMeshContinuity: false },
+  { fromId: 'z5', toId: 'z6', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '0.8s', navMeshContinuity: false },
   { fromId: 'z-tatooine', toId: 'z-nar-shaddaa', edgeType: 'portal', locked: false, criticalPath: true, transitionType: 'Loading', estTime: '2.0s', navMeshContinuity: false },
   { fromId: 'z-tatooine', toId: 'z-kashyyyk', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Loading', estTime: '2.2s', navMeshContinuity: false },
   { fromId: 'z-nar-shaddaa', toId: 'z-kashyyyk', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '1.8s', navMeshContinuity: false },
