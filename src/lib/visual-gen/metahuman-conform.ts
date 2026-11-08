@@ -75,6 +75,11 @@ export function buildConformPython(glbPath: string, opts: ConformOptions = {}): 
   ].join('\n');
 }
 
+/** Same rule as `chaos-cloth.ts`: refused before launch, or nothing observed at all. */
+function neverRan(res: ExperimentResult): boolean {
+  return res.refused === true || (!res.ok && res.logs.length === 0 && Object.keys(res.markers).length === 0);
+}
+
 export interface ConformResult {
   ok: boolean;
   /** /Game path of the conformed MetaHumanCharacter asset. */
@@ -85,6 +90,12 @@ export interface ConformResult {
   vertexCount: number;
   error?: string;
   logs: string[];
+  /**
+   * The run NEVER STARTED: a precondition refused it (a live editor holds the machine, or the
+   * gate drain holds the editor lease), or it died before logging a single line or marker. It
+   * is the machine's state, not the mesh's — same meaning as `ClothResult.notRun`.
+   */
+  notRun: boolean;
 }
 
 /**
@@ -105,6 +116,7 @@ export async function conformMeshToMetaHuman(glbPath: string, opts: ConformOptio
   const hasChar = !!charPath && charPath !== 'NONE';
   const hasImport = !!imported && imported !== 'NONE';
   return {
+    notRun: neverRan(res),
     ok: res.ok && conformed && hasChar,
     characterPath: hasChar ? charPath : undefined,
     targetMeshPath: hasImport ? imported : undefined,
@@ -172,6 +184,12 @@ export interface AssembleResult {
   assembled: boolean;
   error?: string;
   logs: string[];
+  /**
+   * The run NEVER STARTED: a precondition refused it (a live editor holds the machine, or the
+   * gate drain holds the editor lease), or it died before logging a single line or marker. It
+   * is the machine's state, not the mesh's — same meaning as `ClothResult.notRun`.
+   */
+  notRun: boolean;
 }
 
 /**
@@ -190,6 +208,7 @@ export async function assembleMetaHuman(characterPath: string, opts: AssembleOpt
   const canBuild = res.markers['POF_MH_CAN_BUILD'] === 'True';
   const assembled = res.markers['POF_MH_ASSEMBLED'] === 'True';
   return {
+    notRun: neverRan(res),
     ok: res.ok && assembled,
     canBuild,
     assembled,
