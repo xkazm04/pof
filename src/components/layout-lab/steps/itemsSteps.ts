@@ -343,7 +343,7 @@ function materialCopy(data: Record<string, unknown>): AcceptanceCopy {
       suggestion: 'Run Produce to author the Albedo / Normal / ORM set.' };
   }
   if (missing.length > 0) {
-    return { why: `${missing.length === 1 ? 'The' : ''} ${missing.join(', ')} map${missing.length === 1 ? ' is' : 's are'} missing.`,
+    return { why: `The ${missing.join(', ')} map${missing.length === 1 ? ' is' : 's are'} missing.`,
       suggestion: 'Re-run Produce to fill the missing PBR channels.' };
   }
   return generatedAssetCopy(data, 'a texture set', 'texture generator (gap-loop / the material provider script)');

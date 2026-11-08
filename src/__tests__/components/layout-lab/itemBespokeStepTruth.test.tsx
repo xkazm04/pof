@@ -60,3 +60,14 @@ describe('VFX GPU cost is never rounded onto its own budget', () => {
     expect(widths).not.toContain('150%');
   });
 });
+
+describe('Material / Texture missing-map copy', () => {
+  it('a multi-map gap reads as a sentence, not with a stray leading space', () => {
+    const why = ITEM_STEP_COPY['Material / Texture']({ maps: ['Albedo'] }).why;
+    expect(why).toBe('The Normal, ORM maps are missing.');
+  });
+
+  it('a single-map gap is unchanged', () => {
+    expect(ITEM_STEP_COPY['Material / Texture']({ maps: ['Albedo', 'Normal'] }).why).toBe('The ORM map is missing.');
+  });
+});
