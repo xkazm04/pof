@@ -52,6 +52,7 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
   // scrolls up so they can read in peace (classic `tail -f` console behavior).
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   // The server job this console follows; `attached` = found on the server, not
   // started by this console's own request.
   const [job, setJob] = useState<{ jobId: string; kind: CookJobKind } | null>(null);
@@ -256,12 +257,18 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
     listRef.current?.scrollToRow({ index: errorRows[pos], align: 'center', behavior: 'smooth' });
   }, [errorRows]);
 
-  const handleCopyAll = useCallback(() => {
+  const handleCopyAll = useCallback(async () => {
     const text = logs.map((l) => `[${formatCookTimestamp(l.t)}] ${l.line}`).join('\n');
-    void navigator.clipboard?.writeText(text);
-    setCopied(true);
+    // 'Copied' only once the clipboard ACCEPTED the text: a missing API (insecure
+    // context) or a refused write is reported as a failure, never as success.
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); ok = true; }
+    } catch { ok = false; }
+    setCopied(ok);
+    setCopyFailed(!ok);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-    copyTimerRef.current = setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+    copyTimerRef.current = setTimeout(() => { setCopied(false); setCopyFailed(false); }, UI_TIMEOUTS.copyFeedback);
   }, [logs]);
 
   return {
@@ -276,6 +283,7 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
     autoScroll,
     setAutoScroll,
     copied,
+    copyFailed,
     listRef,
     displayedLines,
     handleListScroll,

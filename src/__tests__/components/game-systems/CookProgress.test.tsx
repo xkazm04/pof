@@ -296,6 +296,33 @@ describe('CookProgress — structured console', () => {
     const copied = writeText.mock.calls[0][0] as string;
     expect(copied).toContain('[00:05]');
     expect(copied).toContain('cooking package A');
+    await waitFor(() => expect(screen.getByTestId('pof-cook-log-copy').textContent).toContain('Copied'));
+  });
+
+  it('says the copy failed when the clipboard refuses, never "Copied"', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('NotAllowedError'));
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    globalThis.fetch = streamingFetch([
+      { type: 'phase', phase: 'cook' },
+      { type: 'log', line: 'LogCook: Display: cooking package A', t: 5000 },
+    ]) as unknown as typeof fetch;
+    render(<CookProgress request={REQUEST} />);
+
+    fireEvent.click(await screen.findByTestId('pof-cook-log-copy'));
+    await waitFor(() => expect(screen.getByTestId('pof-cook-log-copy').textContent).toContain('Copy failed'));
+    expect(screen.getByTestId('pof-cook-log-copy').textContent).not.toContain('Copied');
+  });
+
+  it('says the copy failed when there is no clipboard API at all', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    globalThis.fetch = streamingFetch([
+      { type: 'phase', phase: 'cook' },
+      { type: 'log', line: 'LogCook: Display: cooking package A', t: 5000 },
+    ]) as unknown as typeof fetch;
+    render(<CookProgress request={REQUEST} />);
+
+    fireEvent.click(await screen.findByTestId('pof-cook-log-copy'));
+    await waitFor(() => expect(screen.getByTestId('pof-cook-log-copy').textContent).toContain('Copy failed'));
   });
 
   it('toggles the auto-scroll (tail) lock', async () => {
