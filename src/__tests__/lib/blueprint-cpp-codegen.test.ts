@@ -267,6 +267,33 @@ describe('generateCppFromBlueprint — UHT header validity', () => {
     expect(result.includes[result.includes.length - 1]).toBe('APlayerCharacter.generated.h');
   });
 
+  it('includes the parent class header for every common UE base, not only four', () => {
+    const cases: [string, string][] = [
+      ['APawn', 'GameFramework/Pawn.h'],
+      ['AGameModeBase', 'GameFramework/GameModeBase.h'],
+      ['APlayerController', 'GameFramework/PlayerController.h'],
+      ['AGameStateBase', 'GameFramework/GameStateBase.h'],
+      ['APlayerState', 'GameFramework/PlayerState.h'],
+      ['AHUD', 'GameFramework/HUD.h'],
+      ['AAIController', 'AIController.h'],
+      ['USceneComponent', 'Components/SceneComponent.h'],
+      ['UGameInstance', 'Engine/GameInstance.h'],
+      ['UUserWidget', 'Blueprint/UserWidget.h'],
+    ];
+    for (const [parentClass, header] of cases) {
+      const lines = includeLines(generateCppFromBlueprint(asset({ className: 'BP_X', parentClass }), 'P').headerCode);
+      expect(lines, parentClass).toContain(header);
+    }
+  });
+
+  it('warns when the parent header is unknown instead of silently omitting it', () => {
+    const result = generateCppFromBlueprint(asset({ className: 'BP_X', parentClass: 'AMyCustomBase' }), 'P');
+    expect(result.warnings.some((w) => w.message.includes('AMyCustomBase') && w.message.includes('#include'))).toBe(true);
+    // A known parent raises no such warning.
+    const known = generateCppFromBlueprint(asset({ className: 'BP_X', parentClass: 'AActor' }), 'P');
+    expect(known.warnings.some((w) => w.message.includes('#include'))).toBe(false);
+  });
+
   it('derives a legal API macro from a project name that is not a C++ identifier', () => {
     const result = generateCppFromBlueprint(asset({ className: 'BP_Hero' }), 'My Game');
     const macro = result.headerCode.match(/class\s+(\S+)\s+AHero/)?.[1];

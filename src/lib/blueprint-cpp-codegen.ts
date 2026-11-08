@@ -64,6 +64,53 @@ export function apiMacroFor(moduleName: string): string {
 export { resolveEventOverride, deriveFunctionSignature } from '@/lib/blueprint-cpp-surface';
 export type { EventOverride } from '@/lib/blueprint-cpp-surface';
 
+/**
+ * Engine header for each common Blueprint parent class, keyed by the prefixed
+ * UE name. Unprefixed Blueprint spellings (`Character`, `Pawn`) resolve by
+ * trying both prefixes.
+ */
+const PARENT_INCLUDES: Readonly<Record<string, string>> = {
+  AActor: 'GameFramework/Actor.h',
+  APawn: 'GameFramework/Pawn.h',
+  ADefaultPawn: 'GameFramework/DefaultPawn.h',
+  ACharacter: 'GameFramework/Character.h',
+  AController: 'GameFramework/Controller.h',
+  APlayerController: 'GameFramework/PlayerController.h',
+  AAIController: 'AIController.h',
+  AGameModeBase: 'GameFramework/GameModeBase.h',
+  AGameMode: 'GameFramework/GameMode.h',
+  AGameStateBase: 'GameFramework/GameStateBase.h',
+  AGameState: 'GameFramework/GameState.h',
+  APlayerState: 'GameFramework/PlayerState.h',
+  AHUD: 'GameFramework/HUD.h',
+  AInfo: 'GameFramework/Info.h',
+  UObject: 'UObject/Object.h',
+  UActorComponent: 'Components/ActorComponent.h',
+  USceneComponent: 'Components/SceneComponent.h',
+  UPrimitiveComponent: 'Components/PrimitiveComponent.h',
+  UStaticMeshComponent: 'Components/StaticMeshComponent.h',
+  USkeletalMeshComponent: 'Components/SkeletalMeshComponent.h',
+  UGameInstance: 'Engine/GameInstance.h',
+  UGameInstanceSubsystem: 'Subsystems/GameInstanceSubsystem.h',
+  UWorldSubsystem: 'Subsystems/WorldSubsystem.h',
+  UDataAsset: 'Engine/DataAsset.h',
+  UPrimaryDataAsset: 'Engine/DataAsset.h',
+  USaveGame: 'GameFramework/SaveGame.h',
+  UUserWidget: 'Blueprint/UserWidget.h',
+  UAnimInstance: 'Animation/AnimInstance.h',
+};
+
+/**
+ * The header a class deriving from `parentClass` must include, or null when the
+ * parent is not a known engine class. Any other `*Component` parent falls back
+ * to the ActorComponent header (the surface treats it as a component).
+ */
+export function parentIncludeFor(parentClass: string, isComponent = false): string | null {
+  const hit = PARENT_INCLUDES[parentClass] ?? PARENT_INCLUDES[`A${parentClass}`] ?? PARENT_INCLUDES[`U${parentClass}`];
+  if (hit) return hit;
+  return isComponent ? 'Components/ActorComponent.h' : null;
+}
+
 export function overrideDeclaration(o: EventOverride): string {
   return `virtual void ${o.name}(${o.params}) override;`;
 }
@@ -135,15 +182,17 @@ export function generateCppFromBlueprint(
 
   const includes = new Set<string>(['CoreMinimal.h']);
 
-  // Determine parent include
-  if (parentClass === 'ACharacter' || parentClass === 'Character') {
-    includes.add('GameFramework/Character.h');
-  } else if (parentClass === 'APawn' || parentClass === 'Pawn') {
-    includes.add('GameFramework/Pawn.h');
-  } else if (parentClass === 'AActor' || parentClass === 'Actor') {
-    includes.add('GameFramework/Actor.h');
-  } else if (isComponent) {
-    includes.add('Components/ActorComponent.h');
+  // Determine parent include — a class cannot derive from an incomplete type,
+  // so an unknown parent is reported rather than silently left out.
+  const parentInclude = parentIncludeFor(parentClass, isComponent);
+  if (parentInclude) {
+    includes.add(parentInclude);
+  } else {
+    warnings.push({
+      message: `No known header for parent class "${parentClass}" — add its #include to the generated header `
+        + 'before compiling, or the class derives from an undeclared type.',
+      severity: 'warning',
+    });
   }
 
   // `<Class>.generated.h` MUST be the final include — UHT errors on anything
