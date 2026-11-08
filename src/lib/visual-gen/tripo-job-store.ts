@@ -86,6 +86,17 @@ const g = globalThis as unknown as { pofTripoJobs?: Map<string, TripoJob> };
 const jobs = g.pofTripoJobs ?? new Map<string, TripoJob>();
 if (!g.pofTripoJobs) g.pofTripoJobs = jobs;
 
+/** Finished jobs kept for status polls; the oldest settled job is dropped past this. */
+const MAX_RETAINED_JOBS = 200;
+
+/** Drop the oldest SETTLED jobs until the store is back inside the cap. Running jobs are never evicted. */
+function evictSettledJobs(): void {
+  for (const [id, j] of jobs) {
+    if (jobs.size <= MAX_RETAINED_JOBS) break;
+    if (j.status !== 'running') jobs.delete(id);
+  }
+}
+
 type Runner = (spec: TripoSpec, hooks?: Pick<TripoDeps, 'onTaskCreated'>) => Promise<TripoResult>;
 type Recoverer = (taskId: string, spec: TripoRecoverySpec) => Promise<TripoResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
@@ -149,6 +160,7 @@ export function startTripoJob(
   const id = `tripo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const job: TripoJob = { id, status: 'running', spec, startedAt: Date.now() };
   jobs.set(id, job);
+  evictSettledJobs();
 
   const maxAttempts = Math.min(Math.max(1, spec.maxAttempts ?? 1), MAX_GENERATION_ATTEMPTS);
   let spent = 0;
@@ -177,6 +189,7 @@ export function startTripoRecoveryJob(
   const id = `tripo-recover-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const job: TripoJob = { id, status: 'running', spec, providerTaskId: taskId, startedAt: Date.now() };
   jobs.set(id, job);
+  evictSettledJobs();
   settleJob(job, spec, critic, 1, () => 0, () => recoverer(taskId, spec));
   return id;
 }

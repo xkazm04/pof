@@ -27,6 +27,7 @@
  * orchestration is unit-tested without the network, credits, or disk.
  */
 import { isQuotaError } from '@/lib/anim-critique/qwen';
+import { sniffImageExt } from '@/lib/visual-gen/image-providers';
 
 export const QWEN_IMAGE_BASE = 'https://dashscope-intl.aliyuncs.com/api/v1';
 export const QWEN_IMAGE_ENDPOINT = `${QWEN_IMAGE_BASE}/services/aigc/multimodal-generation/generation`;
@@ -53,7 +54,7 @@ export const DEFAULT_QWEN_IMAGE_FALLBACKS = [
 
 export interface QwenImageSpec {
   prompt: string;
-  /** Full output path; DashScope returns a PNG. */
+  /** Output path; its extension is corrected to the downloaded bytes' real format (sniffed). */
   outputPath: string;
   model?: string;
   /** Quota-exceeded chain; unset → DEFAULT_QWEN_IMAGE_FALLBACKS. */
@@ -177,8 +178,12 @@ export async function runQwenImage(spec: QwenImageSpec, deps?: Partial<QwenImage
       if (!img.ok) {
         return done({ ok: false, error: `image download failed: HTTP ${img.status}`, imageUrl: url, model });
       }
-      await d.writeFile(spec.outputPath, new Uint8Array(await img.arrayBuffer()));
-      return done({ ok: true, imagePath: spec.outputPath, imageUrl: url, model });
+      const bytes = new Uint8Array(await img.arrayBuffer());
+      // Name the file after what was downloaded, never after what DashScope is assumed to send.
+      const ext = sniffImageExt(bytes);
+      const outPath = ext ? spec.outputPath.replace(/\.[A-Za-z0-9]+$/, '') + `.${ext}` : spec.outputPath;
+      await d.writeFile(outPath, bytes);
+      return done({ ok: true, imagePath: outPath, imageUrl: url, model });
     }
   } catch (e) {
     const reason = e instanceof Error ? e.message : String(e);

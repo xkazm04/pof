@@ -6,7 +6,8 @@
  * Mirrors the TripoSR job store; auto-runs the Tier-1 geometry gate on the produced mesh.
  */
 import { runHunyuan, type HunyuanSpec, type HunyuanResult } from './hunyuan-runner';
-import { critiqueMesh, summarizeGate, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
+import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
+import { settleLocalJob } from './local-job-settle';
 import { localCritiqueDeps } from './polycount-presets';
 
 /**
@@ -47,6 +48,17 @@ const g = globalThis as unknown as { pofHunyuanJobs?: Map<string, HunyuanJob> };
 const jobs = g.pofHunyuanJobs ?? new Map<string, HunyuanJob>();
 if (!g.pofHunyuanJobs) g.pofHunyuanJobs = jobs;
 
+/** Finished jobs kept for status polls; the oldest settled job is dropped past this. */
+const MAX_RETAINED_JOBS = 200;
+
+/** Drop the oldest SETTLED jobs until the store is back inside the cap. Running jobs are never evicted. */
+function evictSettledJobs(): void {
+  for (const [id, j] of jobs) {
+    if (jobs.size <= MAX_RETAINED_JOBS) break;
+    if (j.status !== 'running') jobs.delete(id);
+  }
+}
+
 type Runner = (spec: HunyuanSpec) => Promise<HunyuanResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
 
@@ -65,31 +77,8 @@ export function startHunyuanJob(
   const gate = localCritiqueDeps(spec.assetClass, spec.targetExtentM);
   const job: HunyuanJob = { id, status: 'running', spec, gradedAs: gate.gradedAs, startedAt: Date.now() };
   jobs.set(id, job);
-  runner(spec)
-    .then(async (result) => {
-      job.result = result;
-      if (result.ok && result.meshPath) {
-        // Best-effort, but a throw is still reported: with no card the gate summary would
-        // claim "no mesh was produced" about a mesh that was.
-        try { job.critique = await critic(result.meshPath, gate.deps); } catch (e) {
-          job.critique = { ok: false, error: e instanceof Error ? e.message : String(e) };
-        }
-      }
-      // A produced mesh always reports HOW it was gated — including "nothing gated it".
-      if (result.ok) {
-        const summary = summarizeGate(job.critique, 'raw');
-        job.accepted = summary.accepted;
-        job.ungated = summary.ungated;
-        job.gateReason = summary.note ? `${summary.reason} — note: ${summary.note}` : summary.reason;
-      }
-      job.status = result.ok ? 'done' : 'error';
-      if (!result.ok) job.error = result.error;
-    })
-    .catch((e: unknown) => {
-      job.error = e instanceof Error ? e.message : String(e);
-      job.status = 'error';
-    })
-    .finally(() => onSettled?.());
+  evictSettledJobs();
+  settleLocalJob(job, () => runner(spec), critic, gate.deps, onSettled);
   return id;
 }
 
