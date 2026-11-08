@@ -129,3 +129,31 @@ describe('search pending state', () => {
     expect(screen.queryByText('Late hit')).toBeNull();
   });
 });
+
+describe('Reindex', () => {
+  const hit = { id: 'cl-arpg-combat-x', type: 'checklist', moduleId: 'arpg-combat', moduleLabel: 'Combat', title: 'Fresh hit', snippet: '', rank: 0 };
+
+  it('re-runs the shown query against the new index', async () => {
+    let indexed = false;
+    apiFetch.mockImplementation(async (url: string) => {
+      if (url.includes('rebuild')) { indexed = true; return { indexed: 1 }; }
+      return { results: indexed ? [hit] : [], count: indexed ? 1 : 0, lastRebuilt: null };
+    });
+    const input = await openPalette();
+    fireEvent.change(input, { target: { value: 'fresh' } });
+    await screen.findByText(/No results for/);
+    fireEvent.click(screen.getByRole('button', { name: /reindex/i }));
+    await screen.findByText('Fresh hit');
+  });
+
+  it('says so when the rebuild fails', async () => {
+    const input = await openPalette();
+    apiFetch.mockImplementation(async (url: string) => {
+      if (url.includes('rebuild')) throw new Error('locked');
+      return { results: [], count: 0, lastRebuilt: null };
+    });
+    expect(input).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /reindex/i }));
+    await vi.waitFor(() => expect(screen.getByRole('status').textContent).toBe('Reindex failed'));
+  });
+});

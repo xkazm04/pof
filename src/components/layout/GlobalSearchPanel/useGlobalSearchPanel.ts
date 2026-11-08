@@ -43,6 +43,7 @@ export function useGlobalSearchPanel() {
   const [lastRebuilt, setLastRebuilt] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [searchFailed, setSearchFailed] = useState(false);
+  const [reindexFailed, setReindexFailed] = useState(false);
   // Bumped to re-run the current query without changing it (Retry).
   const [searchNonce, setSearchNonce] = useState(0);
   // Which search the shown outcome answers. `loading` is derived from it, so the
@@ -138,7 +139,7 @@ export function useGlobalSearchPanel() {
   const retrySearch = useCallback(() => setSearchNonce((n) => n + 1), []);
 
   const handleRebuild = useCallback(async (silent = false) => {
-    if (!silent) setRebuilding(true);
+    if (!silent) { setRebuilding(true); setReindexFailed(false); }
     try {
       await apiFetch('/api/search?rebuild=1');
       setLastRebuilt(new Date().toISOString());
@@ -146,7 +147,12 @@ export function useGlobalSearchPanel() {
       // failed first rebuild is retried on the next open rather than left
       // permanently stale, and a later project switch forces a fresh rebuild.
       indexEnsuredForPath = projectPath;
-    } catch { /* ignore */ }
+      // What is on screen was answered by the old index.
+      setSearchNonce((n) => n + 1);
+    } catch {
+      // The silent open-time rebuild is retried on the next open; a click is owed an answer.
+      if (!silent) setReindexFailed(true);
+    }
     if (!silent) setRebuilding(false);
   }, [projectPath]);
 
@@ -235,6 +241,7 @@ export function useGlobalSearchPanel() {
     homeKinds,
     loading,
     searchFailed,
+    reindexFailed,
     retrySearch,
     rebuilding,
     activeIndex, setActiveIndex,

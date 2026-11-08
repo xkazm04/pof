@@ -21,6 +21,7 @@ export function GlobalSearchPanel() {
     homeKinds,
     loading,
     searchFailed,
+    reindexFailed,
     retrySearch,
     rebuilding,
     activeIndex, setActiveIndex,
@@ -183,7 +184,9 @@ export function GlobalSearchPanel() {
                   results list itself is silent, so without this a screen-reader
                   user gets no feedback that a query returned (or found nothing). */}
               <span role="status" aria-live="polite" aria-atomic="true">
-                {loading
+                {reindexFailed
+                  ? 'Reindex failed'
+                  : loading
                   ? 'Searching…'
                   : searchFailed
                     ? 'Search failed'
