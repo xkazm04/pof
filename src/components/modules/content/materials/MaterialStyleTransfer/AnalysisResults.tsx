@@ -73,14 +73,19 @@ export function AnalysisResults({
           <Palette className="w-3 h-3 text-text-muted" />
           <span className="text-2xs font-medium text-text-muted">Color Palette</span>
         </div>
-        <div className="flex gap-1.5">
+        {/* The hex value was a hover-only tooltip: unreachable by keyboard and silent to a
+            screen reader. Each swatch is a named, focusable list item; the tooltip opens on focus too. */}
+        <div role="list" aria-label="Color palette" className="flex gap-1.5">
           {effectiveAnalysis!.colorPalette.map((color, i) => (
             <div
               key={i}
-              className="flex-1 h-8 rounded-lg border border-border relative group"
+              role="listitem"
+              tabIndex={0}
+              aria-label={`Colour ${i + 1}: ${color}`}
+              className="focus-ring flex-1 h-8 rounded-lg border border-border relative group"
               style={{ backgroundColor: color }}
             >
-              <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
+              <div aria-hidden="true" className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block group-focus-visible:block z-10">
                 <div className="bg-surface-deep border border-border rounded px-1.5 py-0.5 text-2xs text-text-muted whitespace-nowrap font-mono">
                   {color}
                 </div>

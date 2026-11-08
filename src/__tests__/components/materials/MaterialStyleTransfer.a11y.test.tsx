@@ -71,3 +71,22 @@ describe('MaterialStyleTransfer — the look description field', () => {
     expect(label?.textContent).toMatch(/Describe the look you want/);
   });
 });
+
+describe('MaterialStyleTransfer — the colour palette', () => {
+  it('names each swatch by its hex value, not only on mouse hover', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ success: true, data: { analysis: { ...ANALYSIS, colorPalette: ['rgb(1, 2, 3)', 'rgb(4, 5, 6)'] } } }) })));
+    const { container } = render(<MaterialStyleTransfer onGenerate={() => {}} isGenerating={false} />);
+    fireEvent.change(container.querySelector('textarea')!, { target: { value: 'brushed metal' } });
+    const analyze = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Analyze Reference'))!;
+    await act(async () => { fireEvent.click(analyze); });
+    const list = container.querySelector('[aria-label="Color palette"]');
+    expect(list?.getAttribute('role')).toBe('list');
+    const swatches = Array.from(list!.querySelectorAll('[role="listitem"]'));
+    expect(swatches.map((s) => s.getAttribute('aria-label'))).toEqual(['Colour 1: rgb(1, 2, 3)', 'Colour 2: rgb(4, 5, 6)']);
+    // Reachable without a mouse: focusable, and the hex tooltip opens on focus too.
+    for (const s of swatches) {
+      expect(s.getAttribute('tabindex')).toBe('0');
+      expect(s.querySelector('[class~="group-focus-visible:block"]')).toBeTruthy();
+    }
+  });
+});
