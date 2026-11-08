@@ -166,7 +166,7 @@ function Legend() {
       </span>
       <span aria-hidden="true" style={{ width: 1, height: 14, background: 'var(--lab-line)' }} />
       <span title="The PARALLEL craft axis on each cell's second line: how the output measures against real AAA practice (A0 UNGAUGED, A1 HOBBY, A2 INDIE, A3 AA, A4 AAA-PARITY). ^ = at the medium's recorded roof (an achievement — e.g. 3D meshes cap at A2 by market assumption). ~ = content changed since it was gauged. Orthogonal to the R-ladder and provably display-only.">
-        <span style={{ color: 'var(--lab-text)' }}>A0–A4</span> craft · ^ at roof · ~ stale
+        <span style={{ color: 'var(--lab-text)' }}>A0–A4</span> craft · ^ at roof · ~ stale · n/m partly gauged
       </span>
     </div>
   );
@@ -404,7 +404,7 @@ export function PipelinesView({
         const e = perLens.get(cc.lens) ?? { toRoof: 0, gauged: 0, cells: 0 };
         e.toRoof += d;
         e.cells += 1;
-        if (cc.craft.level !== 'A0' && cc.craft.state !== 'stale') e.gauged += 1;
+        if (cc.craft.level !== 'A0' && cc.craft.state !== 'stale' && !cc.coverage) e.gauged += 1;
         perLens.set(cc.lens, e);
       }
     }

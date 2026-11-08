@@ -121,6 +121,35 @@ describe('assembleLanes craft join and synthetic fixtures', () => {
   });
 });
 
+describe('assembleLanes craft coverage', () => {
+  const CAT = 'achievements';
+  const STEP = 'Concept Brief';
+  const step = craftStepOf(CAT, STEP)!;
+  const row = (entityId: string) => ({ catalogId: CAT, entityId, step: STEP, status: 'pass', tier: 'L0', data: { a: 1 }, updatedAt: '2026-01-01 00:00:00' });
+  const view = (entityId: string): CraftVerdictView => ({
+    catalogId: CAT, entityId, step: STEP, lens: step.lens, aLevel: 'A2', lensVersion: LENS_VERSIONS[step.lens], artifactUpdatedAt: '2026-01-01 00:00:00',
+  });
+  const read = (entities: string[], gauged: string[]) =>
+    assembleLanes({
+      catalogs: [{ catalogId: CAT, rows: entities.map(row) as never, loaded: true, error: null }],
+      byCatalog: new Map(),
+      craftByCatalog: new Map([[CAT, gauged.map(view)]]),
+    }).craft!.get(`${CAT} ${STEP}`)!;
+
+  it('a level from partial gauging carries gauged/total', () => {
+    expect(read(['e1', 'e2', 'e3'], ['e1']).coverage).toEqual({ gauged: 1, total: 3 });
+  });
+
+  it('a fully gauged cell carries no coverage mark, and neither does an A0 one', () => {
+    expect(read(['e1', 'e2'], ['e1', 'e2']).coverage).toBeUndefined();
+    expect(read(['e1'], []).coverage).toBeUndefined();
+  });
+
+  it('fixture rows are not entities of the step, so they do not make a cell partial', () => {
+    expect(read(['e1', 'test-headless-mcp'], ['e1']).coverage).toBeUndefined();
+  });
+});
+
 describe('ReadNotices', () => {
   it('renders the same PARTIAL wording for the same notice descriptors', () => {
     const notices = readNotices({ catalogs: [bad(B, 'E1')], verdicts: { ok: false, error: 'V' } });
