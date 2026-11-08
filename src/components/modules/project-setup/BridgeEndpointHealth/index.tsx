@@ -29,7 +29,6 @@ export function BridgeEndpointHealth() {
         setShowSettings={setShowSettings}
         pingAll={pingAll}
         pinging={pinging}
-        isDisconnected={isDisconnected}
       />
 
       {/* Connection Settings */}
@@ -46,7 +45,7 @@ export function BridgeEndpointHealth() {
 
       {/* Disconnected banner */}
       {isDisconnected && (
-        <ErrorBanner message="Bridge not connected — connect to ping endpoints" className="mx-4 my-2" />
+        <ErrorBanner message="Bridge reads disconnected — Ping All still works and names why each route fails" className="mx-4 my-2" />
       )}
 
       {/* Subsystem groups */}

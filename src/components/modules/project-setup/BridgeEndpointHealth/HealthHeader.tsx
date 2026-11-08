@@ -21,12 +21,11 @@ interface HealthHeaderProps {
   setShowSettings: React.Dispatch<React.SetStateAction<boolean>>;
   pingAll: () => void;
   pinging: boolean;
-  isDisconnected: boolean;
 }
 
 export function HealthHeader({
   connectionStatus, pofPort, rcPort, checkedCount, healthyCount,
-  showSettings, setShowSettings, pingAll, pinging, isDisconnected,
+  showSettings, setShowSettings, pingAll, pinging,
 }: HealthHeaderProps) {
   return (
     <div className="px-4 py-3 border-b border-border/40 flex items-center gap-3">
@@ -66,7 +65,7 @@ export function HealthHeader({
       </button>
       <button
         onClick={pingAll}
-        disabled={pinging || isDisconnected}
+        disabled={pinging}
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
                    border border-border/40 transition-colors
                    enabled:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
