@@ -66,23 +66,31 @@ export function StatusChecklist({
   onManifestExported,
 }: StatusChecklistProps) {
   const [manifestCopied, setManifestCopied] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [importText, setImportText] = useState('');
   const [showImport, setShowImport] = useState(false);
 
   const handleExportManifest = useCallback(async () => {
+    setExportError(null);
+    let json: string;
     try {
       const data = await apiFetch<{ manifest: EnvironmentManifest }>('/api/filesystem/browse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'export-manifest' }),
       });
-      const json = JSON.stringify(data.manifest, null, 2);
-      onManifestExported(json);
+      json = JSON.stringify(data.manifest, null, 2);
+    } catch (e) {
+      setExportError(`Could not export: ${e instanceof Error ? e.message : 'the manifest was not generated'}`);
+      return;
+    }
+    onManifestExported(json);
+    try {
       await navigator.clipboard.writeText(json);
       setManifestCopied(true);
       setTimeout(() => setManifestCopied(false), UI_TIMEOUTS.copyFeedback);
     } catch {
-      // Non-critical
+      setExportError('Clipboard unavailable: copy it from the preview.');
     }
   }, [onManifestExported]);
 
@@ -210,6 +218,9 @@ export function StatusChecklist({
             )}
             {manifestCopied ? 'Copied!' : 'Export Manifest'}
           </button>
+          {exportError && (
+            <p role="alert" className="text-2xs text-red-400 leading-snug">{exportError}</p>
+          )}
           <button
             onClick={() => setShowImport(!showImport)}
             className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text hover:bg-surface transition-colors"
