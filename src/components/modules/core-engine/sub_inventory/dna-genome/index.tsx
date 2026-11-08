@@ -149,6 +149,8 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
         onToggleExport={() => { setShowExport((v) => !v); setShowImport(false); }}
         onToggleImport={() => { setShowImport((v) => !v); setShowExport(false); }}
         onAdd={addGenome}
+        exportOpen={showExport}
+        importOpen={showImport}
       />
 
       {/* Build code export / import */}
