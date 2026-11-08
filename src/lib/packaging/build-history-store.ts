@@ -116,6 +116,10 @@ export interface PlatformStats {
   total: number;
   success: number;
   failed: number;
+  /** `success + failed`: the builds that reached a verdict. 0 = nothing decided, so `successRate` is not a rate. */
+  decided: number;
+  /** Aborted cooks: in `total`, in neither half of the success/failed split. */
+  cancelled: number;
   successRate: number;
   avgDurationMs: number | null;
   avgSizeBytes: number | null;
@@ -436,6 +440,7 @@ export function getBuildStats(projectId?: string | null): BuildStats {
       COUNT(*) as total,
       SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success,
       SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+      SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled,
       AVG(CASE WHEN status = 'success' AND duration_ms IS NOT NULL THEN duration_ms END) as avg_dur,
       AVG(CASE WHEN status = 'success' AND size_bytes IS NOT NULL THEN size_bytes END) as avg_size
     FROM build_history
@@ -443,7 +448,7 @@ export function getBuildStats(projectId?: string | null): BuildStats {
     GROUP BY platform
     ORDER BY total DESC
   `).all(...p) as Array<{
-    platform: string; total: number; success: number; failed: number;
+    platform: string; total: number; success: number; failed: number; cancelled: number;
     avg_dur: number | null; avg_size: number | null;
   }>;
 
@@ -466,6 +471,8 @@ export function getBuildStats(projectId?: string | null): BuildStats {
     total: r.total,
     success: r.success,
     failed: r.failed,
+    decided: r.success + r.failed,
+    cancelled: r.cancelled,
     // Same rule as the top-level rate: a cancelled build was judged by nothing
     // and must not dilute the platform's success percentage.
     successRate: r.success + r.failed > 0 ? (r.success / (r.success + r.failed)) * 100 : 0,

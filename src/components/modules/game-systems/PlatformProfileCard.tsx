@@ -3,22 +3,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Monitor, Terminal, Laptop, Smartphone, Tablet,
+  Monitor,
   ChevronDown, ChevronRight, Star, Trash2, Play, Copy,
   AlertCircle, AlertTriangle,
 } from 'lucide-react';
 import type { BuildProfile, PlatformId } from '@/lib/packaging/build-profiles';
 import { PLATFORM_NOTES, unappliedCookSettings } from '@/lib/packaging/uat-command-generator';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PLATFORM_ICONS } from './BuildConfigSelector/constants';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, STATUS_MUTED, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
-
-const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
-  Win64: Monitor,
-  Linux: Terminal,
-  Mac: Laptop,
-  Android: Smartphone,
-  IOS: Tablet,
-};
 
 // Hex tokens only: the card appends a hex alpha suffix (`${color}30`), which turns a
 // CSS variable into invalid CSS (`var(--x)cc`) that the browser drops.
@@ -33,17 +27,20 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 interface PlatformProfileCardProps {
   profile: BuildProfile;
   uatCommand?: string;
+  /** Why `uatCommand` is missing when the generator threw. */
+  uatError?: string;
   onEdit: (profile: BuildProfile) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<unknown>;
   onSetDefault: (id: string) => void;
   onPackage: (profile: BuildProfile) => void;
 }
 
 export function PlatformProfileCard({
-  profile, uatCommand, onEdit, onDelete, onSetDefault, onPackage,
+  profile, uatCommand, uatError, onEdit, onDelete, onSetDefault, onPackage,
 }: PlatformProfileCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [cmdCopied, setCmdCopied] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const Icon = PLATFORM_ICONS[profile.platform] ?? Monitor;
   const color = PLATFORM_COLORS[profile.platform] ?? STATUS_MUTED;
@@ -103,6 +100,8 @@ export function PlatformProfileCard({
           </button>
           <button
             onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+            aria-label={`${expanded ? 'Collapse' : 'Expand'} ${profile.name} details`}
             className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
           >
             {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -186,6 +185,13 @@ export function PlatformProfileCard({
                 </div>
               )}
 
+              {!uatCommand && uatError && (
+                <div role="note" className="text-2xs flex items-start gap-1" style={{ color: STATUS_WARNING }}>
+                  <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0 mt-px" />
+                  <span>UAT command unavailable: {uatError}</span>
+                </div>
+              )}
+
               {/* Platform notes */}
               {notes.length > 0 && (
                 <div>
@@ -220,7 +226,7 @@ export function PlatformProfileCard({
                   </button>
                 )}
                 <button
-                  onClick={() => onDelete(profile.id)}
+                  onClick={() => setConfirmingDelete(true)}
                   className="flex items-center gap-0.5 text-2xs opacity-60 hover:opacity-100 transition-opacity ml-auto"
                   style={{ color: STATUS_ERROR }}
                 >
@@ -232,6 +238,15 @@ export function PlatformProfileCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => onDelete(profile.id)}
+        title={`Delete profile "${profile.name}"?`}
+        description={`The ${profile.platform} ${profile.config} build profile "${profile.name}" and its cook settings are removed. This cannot be undone.`}
+        confirmLabel="Delete"
+      />
     </motion.div>
   );
 }

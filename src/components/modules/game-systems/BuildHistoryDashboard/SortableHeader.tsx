@@ -10,6 +10,7 @@ export function SortableHeader({
 }) {
   const active = sortKey === activeKey;
   return (
+    <div role="columnheader" aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
     <button
       onClick={() => onSort(sortKey)}
       className="flex items-center gap-0.5 text-2xs uppercase tracking-wider font-medium transition-colors group cursor-pointer select-none"
@@ -23,5 +24,6 @@ export function SortableHeader({
         <ChevronDown className="w-2.5 h-2.5 text-text-muted/0 group-hover:text-text-muted/50" />
       )}
     </button>
+    </div>
   );
 }
