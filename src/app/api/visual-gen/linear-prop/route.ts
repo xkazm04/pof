@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { generateLinearProp, toObj, type Vec3 } from '@/lib/visual-gen/generators/linear-prop';
 import { resolveLinearPropConfig } from '@/lib/visual-gen/linear-prop-routing';
 
@@ -24,6 +25,10 @@ import { resolveLinearPropConfig } from '@/lib/visual-gen/linear-prop-routing';
 /** Stated on every response: the point of this route is what it does NOT cost. */
 export const LINEAR_PROP_COST = 'no provider credit spent — computed locally in closed form';
 
+/** The tube is built in memory before anything can refuse it, so its size is capped first. */
+const MAX_SEGMENTS = 1024;
+const MAX_SIDES = 64;
+
 const isVec3 = (v: unknown): v is Vec3 =>
   typeof v === 'object' &&
   v !== null &&
@@ -31,7 +36,9 @@ const isVec3 = (v: unknown): v is Vec3 =>
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
+    const raw = await readJsonObject(request);
+    if (!raw) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = raw as {
       from?: unknown;
       to?: unknown;
       slack?: number;
@@ -47,6 +54,19 @@ export async function POST(request: NextRequest) {
     for (const [key, value] of [['from', body.from], ['to', body.to]] as const) {
       if (value === undefined) return apiError(`${key} anchor is required — the anchors ARE the asset and cannot be defaulted`, 400);
       if (!isVec3(value)) return apiError(`${key} anchor must be { x, y, z } with three finite numbers`, 400);
+    }
+
+    for (const key of ['slack', 'radius'] as const) {
+      if (body[key] !== undefined && !Number.isFinite(body[key])) return apiError(`${key} must be a finite number`, 400);
+    }
+    if (body.segments !== undefined && (!Number.isInteger(body.segments) || body.segments > MAX_SEGMENTS)) {
+      return apiError(`segments must be an integer of at most ${MAX_SEGMENTS}`, 400);
+    }
+    if (body.sides !== undefined && (!Number.isInteger(body.sides) || body.sides > MAX_SIDES)) {
+      return apiError(`sides must be an integer of at most ${MAX_SIDES}`, 400);
+    }
+    for (const key of ['name', 'outDir'] as const) {
+      if (body[key] !== undefined && typeof body[key] !== 'string') return apiError(`${key} must be a string`, 400);
     }
 
     const config = resolveLinearPropConfig({
