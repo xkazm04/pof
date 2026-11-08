@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visual-gen/mesh-critique';
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
+import { planKitAtlas } from '@/lib/visual-gen/texel-density';
 
 describe('parseCritiqueMetrics refuses counts it cannot read', () => {
   const block = (over: Record<string, string>) => {
@@ -104,5 +105,17 @@ describe('a stage caveat always names the codes it talks about', () => {
     const c = assessStage(failing('face-count', 'empty-mesh'), 'raw').caveat ?? '';
     expect(c).toContain('empty-mesh');
     expect(c).not.toMatch(/;\s+is not/);
+  });
+});
+
+describe('planKitAtlas says why a plan is starved', () => {
+  it('names the ceiling when one oversized member starves without any cell being cut', () => {
+    const plan = planKitAtlas([{ name: 'cave', extentM: 12 }]);
+    expect(plan.verdict).toBe('starved');
+    expect(plan.reason).toMatch(/cave/);
+  });
+
+  it('gives no reason when every member reaches the target', () => {
+    expect(planKitAtlas([{ name: 'crate', extentM: 1 }]).reason).toBeUndefined();
   });
 });
