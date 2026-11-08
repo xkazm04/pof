@@ -20,20 +20,38 @@ function writeStore(moduleId: string, state: Record<string, boolean>) {
   } catch { /* quota exceeded — ignore */ }
 }
 
+type VisState = {
+  vis: Record<string, boolean>;
+  /** True once an edit (not a read) produced `vis` — only then is it persisted.
+   *  A mount or module switch merely READ the store; writing that snapshot back
+   *  cost one write per mounted section and could rewrite a stale read over a
+   *  newer one. */
+  edited: boolean;
+};
+
 export function useFeatureVisibility(moduleId: string) {
   const [prevId, setPrevId] = useState(moduleId);
-  const [vis, setVis] = useState<Record<string, boolean>>(() => readStore(moduleId));
+  const [state, setState] = useState<VisState>(() => ({ vis: readStore(moduleId), edited: false }));
+  const vis = state.vis;
 
   // Reset during render when moduleId changes (official React pattern)
   if (prevId !== moduleId) {
     setPrevId(moduleId);
-    setVis(readStore(moduleId));
+    setState({ vis: readStore(moduleId), edited: false });
   }
 
-  // Persist on every state change
+  // Persist edits only
   useEffect(() => {
-    writeStore(moduleId, vis);
-  }, [moduleId, vis]);
+    if (state.edited) writeStore(moduleId, state.vis);
+  }, [moduleId, state]);
+
+  /** Apply an edit; returning the same map is a no-op (no re-render, no write). */
+  const setVis = useCallback((fn: (prev: Record<string, boolean>) => Record<string, boolean>) => {
+    setState((prev) => {
+      const next = fn(prev.vis);
+      return next === prev.vis ? prev : { vis: next, edited: true };
+    });
+  }, []);
 
   const isVisible = useCallback(
     (sectionId: string) => vis[sectionId] !== false,
@@ -42,7 +60,7 @@ export function useFeatureVisibility(moduleId: string) {
 
   const toggle = useCallback((sectionId: string) => {
     setVis((prev) => ({ ...prev, [sectionId]: prev[sectionId] === false }));
-  }, []);
+  }, [setVis]);
 
   const setAll = useCallback((visible: boolean, allIds?: string[]) => {
     setVis((prev) => {
@@ -57,7 +75,7 @@ export function useFeatureVisibility(moduleId: string) {
       for (const key of keys) next[key] = visible;
       return next;
     });
-  }, []);
+  }, [setVis]);
 
   const setMany = useCallback((ids: string[], visible: boolean) => {
     setVis((prev) => {
@@ -71,7 +89,7 @@ export function useFeatureVisibility(moduleId: string) {
       for (const id of ids) next[id] = visible;
       return next;
     });
-  }, []);
+  }, [setVis]);
 
   return { isVisible, toggle, setAll, setMany, _raw: vis } as const;
 }
