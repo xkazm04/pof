@@ -10,7 +10,7 @@ import { useElementSize } from '@/hooks/useElementSize';
 import { resolveMembership } from '@/lib/audio-scene-ops';
 import type { ListenerPoint } from '@/lib/audio-scene-audition';
 import { useSceneBuffer } from '@/components/modules/content/audio/AudioView/useSceneBuffer';
-import { MINIMAP_W, MINIMAP_H, ZONE_COLORS, DRAG_THRESHOLD_PX } from './constants';
+import { MINIMAP_W, MINIMAP_H, NEW_ZONE_PALETTE, DRAG_THRESHOLD_PX } from './constants';
 import type { AudioScenePainterProps, PaintMode, DrawState, SceneDraft } from './types';
 
 export function useAudioScenePainter({
@@ -260,7 +260,7 @@ export function useAudioScenePainter({
           attenuationRadius: 200,
           occlusionMode: 'medium',
           priority: 5,
-          color: Object.values(ZONE_COLORS)[base.zones.length % Object.values(ZONE_COLORS).length],
+          color: NEW_ZONE_PALETTE[base.zones.length % NEW_ZONE_PALETTE.length],
         };
         runCommit([{ kind: 'addZone', zone: newZone }]);
         onSelectZone(id);
