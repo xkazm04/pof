@@ -62,6 +62,9 @@ interface ProjectState {
 /** Cache duration: 5 minutes. Avoids re-scanning on every prompt. */
 const SCAN_CACHE_MS = 5 * 60 * 1000;
 
+/** Ticket of the newest scan; an older one's response never lands. */
+let latestScanTicket = 0;
+
 export const useProjectStore = create<ProjectState>()(
   persist(
     (set, get) => ({
@@ -127,6 +130,15 @@ export const useProjectStore = create<ProjectState>()(
 
         set({ isScanning: true, scanError: null });
 
+        const ticket = ++latestScanTicket;
+        // The response belongs to the project it was asked for. After a flip it must
+        // not land on the next project; only the newest scan may end `isScanning`.
+        const superseded = () => {
+          if (ticket === latestScanTicket && get().projectPath === projectPath) return false;
+          if (ticket === latestScanTicket) set({ isScanning: false });
+          return true;
+        };
+
         try {
           const data = await apiFetch<{
             scannedAt: string;
@@ -146,6 +158,7 @@ export const useProjectStore = create<ProjectState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ projectPath, moduleName: projectName }),
           });
+          if (superseded()) return;
           set({
             isScanning: false,
             scanError: null,
@@ -165,6 +178,7 @@ export const useProjectStore = create<ProjectState>()(
             },
           });
         } catch (err) {
+          if (superseded()) return;
           set({
             isScanning: false,
             scanError: err instanceof Error ? err.message : 'Failed to scan project',
