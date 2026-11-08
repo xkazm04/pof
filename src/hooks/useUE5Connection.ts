@@ -39,6 +39,7 @@ import type {
 import type { Result } from '@/types/result';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 /** Server-executed console command result (mirrors `RemoteControlClient`). */
 export interface UE5ConsoleCommandResult {
@@ -101,6 +102,12 @@ let streamHolders = 0;
 let sawFirstFrame = false;
 /** One auto-connect attempt per stream, not per mount. */
 let autoConnectFired = false;
+/** Pending reopen after the browser gave up on the stream. */
+let reopenTimer: ReturnType<typeof setTimeout> | null = null;
+/** Consecutive permanent closes; a delivered frame resets it. */
+let reopenAttempts = 0;
+/** `EventSource.CLOSED`: the browser will not retry this one. */
+const EVENT_SOURCE_CLOSED = 2;
 /** `useSyncExternalStore` notifiers — one per mount. */
 const livenessListeners = new Set<() => void>();
 
@@ -108,6 +115,24 @@ function markStateLive() {
   if (sawFirstFrame) return;
   sawFirstFrame = true;
   for (const notify of livenessListeners) notify();
+}
+
+function detachStream(es: EventSource) {
+  es.onmessage = null;
+  es.onerror = null;
+  es.close();
+}
+
+function scheduleReopen(closed: EventSource) {
+  if (reopenTimer) return;
+  const delay = Math.min(UI_TIMEOUTS.ue5ReconnectBase * 2 ** reopenAttempts, UI_TIMEOUTS.ue5ReconnectMax);
+  reopenAttempts += 1;
+  reopenTimer = setTimeout(() => {
+    reopenTimer = null;
+    if (statusStream !== closed) return;
+    detachStream(closed);
+    statusStream = openStatusStream();
+  }, delay);
 }
 
 function openStatusStream(): EventSource {
@@ -119,6 +144,7 @@ function openStatusStream(): EventSource {
       // Read the store through getState() rather than a captured action so
       // the stream never needs re-subscribing on a store identity change.
       useUE5BridgeStore.getState().setConnectionState(state);
+      reopenAttempts = 0;
       markStateLive();
     } catch {
       /* a malformed frame tells us nothing — leave the last known state */
@@ -126,9 +152,11 @@ function openStatusStream(): EventSource {
   };
 
   es.onerror = () => {
-    // The browser's EventSource retries on its own. What we lost is the
-    // app server's stream, so we no longer KNOW that UE5 is connected —
-    // saying so would be the exact lie this hook exists to remove.
+    // The browser's EventSource retries a dropped connection on its own, but
+    // a non-200 answer closes it for good, so that one is ours to reopen.
+    if (es.readyState === EVENT_SOURCE_CLOSED) scheduleReopen(es);
+    // What we lost is the app server's stream, so we no longer KNOW that UE5
+    // is connected — saying so would be the exact lie this hook exists to remove.
     const prev = useUE5BridgeStore.getState().connectionState;
     if (prev.status === 'connected') {
       useUE5BridgeStore.getState().setConnectionState({ ...prev, status: 'reconnecting' });
@@ -154,10 +182,11 @@ function subscribeStatusStream(onLivenessChange: () => void): () => void {
     streamHolders -= 1;
     if (streamHolders > 0) return;
 
+    if (reopenTimer) clearTimeout(reopenTimer);
+    reopenTimer = null;
+    reopenAttempts = 0;
     if (statusStream) {
-      statusStream.onmessage = null;
-      statusStream.onerror = null;
-      statusStream.close();
+      detachStream(statusStream);
       statusStream = null;
     }
     sawFirstFrame = false;
