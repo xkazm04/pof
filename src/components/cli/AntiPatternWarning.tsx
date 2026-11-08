@@ -5,7 +5,7 @@ import { X, ArrowRight, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { apiFetch } from '@/lib/api-utils';
 import { STATUS_SUCCESS, MODULE_COLORS, STATUS_BLOCKER, STATUS_WARNING, withOpacity, OPACITY_8 } from '@/lib/chart-colors';
-import { CLI_ANIM } from '@/lib/constants';
+import { CLI_ANIM, UI_TIMEOUTS } from '@/lib/constants';
 import type { AntiPatternWarning as APWarning } from '@/types/pattern-library';
 
 interface AntiPatternWarningProps {
@@ -41,7 +41,7 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
     setDismissed(new Set());
   }
 
-  // Debounced check — only fires after 600ms of no typing + minimum 20 chars
+  // Debounced check — only fires after UI_TIMEOUTS.antiPatternCheckDebounce of no typing + minimum 20 chars
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -64,7 +64,7 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
       } catch {
         // Silent fail — don't block user workflow
       }
-    }, 600);
+    }, UI_TIMEOUTS.antiPatternCheckDebounce);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
