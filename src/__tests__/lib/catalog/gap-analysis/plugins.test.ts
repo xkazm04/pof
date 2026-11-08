@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import '@/lib/catalog/gap-analysis/plugins'; // ensure registration side effects
 import { pluginFor } from '@/lib/catalog/gap-analysis/plugins';
 
@@ -39,4 +41,35 @@ describe('gap-analysis plugins', () => {
       expect(pluginFor(catalogId)).toBeUndefined();
     },
   );
+});
+
+// The plugin contract (plugins/types.ts) checked against the plugin FILES on disk, not a
+// hand-kept id list: a plugin file left out of plugins/index.ts registers nothing, silently.
+const PLUGIN_DIR = join(process.cwd(), 'src/lib/catalog/gap-analysis/plugins');
+const PLUGIN_IDS = readdirSync(PLUGIN_DIR)
+  .filter((f) => f.endsWith('.ts') && !['index.ts', 'registry.ts', 'types.ts'].includes(f))
+  .map((f) => f.slice(0, -3));
+
+describe('gap-analysis plugin contract (derived from plugins/*.ts)', () => {
+  it('finds the plugin files', () => {
+    expect(PLUGIN_IDS.length).toBeGreaterThan(30);
+  });
+
+  it.each(PLUGIN_IDS)('%s: its file is imported and registers under its own id', (id) => {
+    expect(pluginFor(id)).toBeDefined();
+  });
+
+  it.each(PLUGIN_IDS)('%s: declares no @ facet dimension', (id) => {
+    expect(pluginFor(id)!.dimensions.filter((d) => d.startsWith('@'))).toEqual([]);
+  });
+
+  it.each(PLUGIN_IDS)('%s: every expected share keys a declared dimension and sums to ~1', (id) => {
+    const p = pluginFor(id)!;
+    for (const [attr, shares] of Object.entries(p.expectedShare ?? {})) {
+      expect(p.dimensions).toContain(attr);
+      const sum = Object.values(shares).reduce((a, b) => a + b, 0);
+      expect(Math.abs(sum - 1)).toBeLessThanOrEqual(0.02);
+      expect(Object.values(shares).every((v) => v > 0)).toBe(true);
+    }
+  });
 });
