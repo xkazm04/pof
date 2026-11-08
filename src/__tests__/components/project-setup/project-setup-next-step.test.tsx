@@ -172,6 +172,32 @@ describe('ProjectSetupModule next-step banner', () => {
     expect(screen.getByText('Project Files').closest('.opacity-50')).not.toBeNull();
   });
 
+  it('says why when the install plan could not be fetched', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ success: false, error: 'winget probe failed' }),
+      text: () => Promise.resolve(''),
+    }) as unknown as typeof fetch;
+    setScan({ missingToolCount: 2, hasProject: false });
+    render(<ProjectSetupModule />);
+
+    fireEvent.click(screen.getByTestId('pof-setup-next-step-cta'));
+    await waitFor(() => expect(screen.getByTestId('pof-setup-install-error').textContent).toContain('winget probe failed'));
+    expect(sendPromptMock).not.toHaveBeenCalled();
+  });
+
+  it('re-scans when the server finds nothing left to install', async () => {
+    mockFetch({ body: { success: true, data: { allInstalled: true, prompt: '' } } });
+    const scan = vi.fn();
+    setScan({ missingToolCount: 2, hasProject: false, scan });
+    render(<ProjectSetupModule />);
+
+    fireEvent.click(screen.getByTestId('pof-setup-next-step-cta'));
+    await waitFor(() => expect(scan).toHaveBeenCalledTimes(1));
+    expect(sendPromptMock).not.toHaveBeenCalled();
+  });
+
   it('triggers a tooling fetch when the Install Tools CTA is clicked', async () => {
     const fetchMock = mockFetch({ body: { success: true, data: { allInstalled: false, prompt: 'install winget pkgs' } } });
     setScan({ missingToolCount: 2, hasProject: false });

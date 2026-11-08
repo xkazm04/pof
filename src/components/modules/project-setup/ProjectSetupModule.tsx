@@ -74,20 +74,26 @@ export function ProjectSetupModule() {
   useEffect(() => { scanRef.current = scan; }, [scan]);
 
   const [manifestJson, setManifestJson] = useState<string | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
 
   const handleFixAllMissing = useCallback(async () => {
+    setInstallError(null);
     try {
       const data = await apiFetch<{ allInstalled: boolean; prompt: string }>('/api/filesystem/browse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'generate-bootstrap' }),
       });
-      if (data.allInstalled) return;
+      // The server sees nothing missing while the checklist does: the checklist is stale.
+      if (data.allInstalled) {
+        scan();
+        return;
+      }
       bootstrapCLI.sendPrompt(data.prompt);
-    } catch {
-      // Non-critical
+    } catch (e) {
+      setInstallError(e instanceof Error ? e.message : 'The install plan could not be built');
     }
-  }, [bootstrapCLI]);
+  }, [bootstrapCLI, scan]);
 
   const openInExplorer = useCallback(() => {
     setupCLI.sendPrompt(`Open the folder "${projectPath}" in Windows Explorer.`);
@@ -171,6 +177,14 @@ export function ProjectSetupModule() {
             message={`Could not read the project folder: ${projectReadError}. Re-scan once it is reachable.`}
             className="mb-6"
             data-testid="pof-setup-project-read-error"
+          />
+        )}
+
+        {installError && (
+          <ErrorBanner
+            message={`Could not prepare the tool install: ${installError}`}
+            className="mb-6"
+            data-testid="pof-setup-install-error"
           />
         )}
 
