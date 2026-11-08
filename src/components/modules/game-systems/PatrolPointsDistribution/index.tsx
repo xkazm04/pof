@@ -74,6 +74,8 @@ export function PatrolPointsDistribution() {
             height={SVG_SIZE}
             viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
             className="shrink-0"
+            role="img"
+            aria-label={`Patrol points: ${points.length} random points in an annulus ${DEFAULT_MIN_RADIUS}–${DEFAULT_MAX_RADIUS} UU around the querier`}
           >
             {/* Grid rings for reference */}
             {[0.25, 0.5, 0.75, 1].map((frac) => (

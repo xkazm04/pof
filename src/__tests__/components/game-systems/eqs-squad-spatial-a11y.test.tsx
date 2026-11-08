@@ -82,3 +82,21 @@ describe('AttackRingVisualizer controls — named like the squad editor sliders'
     expect(toggle.getAttribute('aria-pressed')).toBe(before === 'true' ? 'false' : 'true');
   });
 });
+
+describe('EQS spatial diagrams — each SVG is a named image like FormationView', () => {
+  it('attack-ring and patrol-points SVGs carry role="img" and a label stating their figures', async () => {
+    const { AttackRingVisualizer } = await import('@/components/modules/game-systems/AttackRingVisualizer');
+    const { PatrolPointsDistribution } = await import('@/components/modules/game-systems/PatrolPointsDistribution');
+    const { EQS_ATTACK_POSITIONS, EQS_PATROL_POINTS } = await import('@/lib/ai-director/eqs-defaults');
+    const { container } = render(<><AttackRingVisualizer /><PatrolPointsDistribution /></>);
+    const ring = container.querySelector('[data-testid="attack-ring-svg"]')!;
+    expect(ring.getAttribute('role')).toBe('img');
+    expect(ring.getAttribute('aria-label')).toContain(`${EQS_ATTACK_POSITIONS.numberOfPoints} points`);
+    expect(ring.getAttribute('aria-label')).toContain(`${EQS_ATTACK_POSITIONS.attackDistance} UU`);
+    const patrol = container.querySelector('[data-testid="patrol-points-svg"] svg')!;
+    expect(patrol.getAttribute('role')).toBe('img');
+    expect(patrol.getAttribute('aria-label')).toContain(`${EQS_PATROL_POINTS.numberOfPoints} random points`);
+    expect(patrol.getAttribute('aria-label')).toContain(`${EQS_PATROL_POINTS.minRadius}`);
+    expect(patrol.getAttribute('aria-label')).toContain(`${EQS_PATROL_POINTS.maxRadius}`);
+  });
+});

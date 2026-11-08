@@ -26,6 +26,8 @@ export function AttackRingSvg({ outerPoints, innerPoints, innerRing, outerR, inn
         height={SVG_SIZE}
         viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
         className="rounded-lg border border-border/30 bg-surface-deep/50"
+        role="img"
+        aria-label={`Attack ring: ${outerPoints.length} points at ${attackDist} UU around the target${innerRing ? `, plus ${innerPoints.length} inner-ring points at ${Math.round(attackDist * 0.5)} UU` : ''} (${totalPoints} total)`}
         data-testid="attack-ring-svg"
       >
         {/* Grid lines */}
