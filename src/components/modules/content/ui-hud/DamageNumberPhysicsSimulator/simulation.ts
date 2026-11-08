@@ -143,10 +143,14 @@ export function updateParticle(p: DmgParticle, dt: number, physics: PhysicsConfi
     opacity = 1 - ((alpha - physics.fadeStart) / (1 - physics.fadeStart));
   }
 
+  // Merge-mode growth: +0.1 per merged hit, capped at 2x. Derived from stackCount
+  // every frame so it survives the per-frame recompute below.
+  const stackScale = physics.stackMode === 'merge' ? Math.min(1 + 0.1 * (p.stackCount - 1), 2) : 1;
+
   // Crit scale burst (decays over first 20% of lifetime)
-  let scale = 1;
+  let scale = stackScale;
   if (p.isCrit && alpha < 0.2) {
-    scale = 1 + (physics.critScaleBurst - 1) * (1 - alpha / 0.2);
+    scale = stackScale * (1 + (physics.critScaleBurst - 1) * (1 - alpha / 0.2));
   }
 
   // Trail

@@ -87,7 +87,7 @@ export function useDamageNumberPhysicsSimulator() {
             existing.amount += newP.amount;
             existing.stackCount++;
             existing.displayText = existing.isHeal ? `+${existing.amount}` : `${existing.amount}`;
-            existing.scale = Math.min(existing.scale + 0.1, 2.0);
+            // Growth is derived from stackCount in updateParticle (stackScale)
             continue;
           }
         }

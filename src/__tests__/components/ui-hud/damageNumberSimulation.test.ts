@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createElement } from 'react';
 import { render, cleanup } from '@testing-library/react';
 import { DamageNumberPalette } from '@/components/modules/content/ui-hud/DamageNumberPalette';
-import { spawnParticle } from '@/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/simulation';
+import { spawnParticle, updateParticle } from '@/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/simulation';
 import { DEFAULT_PHYSICS, DEFAULT_COMBAT } from '@/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/constants';
 
 /**
@@ -33,5 +33,19 @@ describe('DamageNumberPalette format strings', () => {
     const { container } = render(createElement(DamageNumberPalette));
     const formats = Array.from(container.querySelectorAll('code')).map((c) => c.textContent);
     expect(formats).toEqual(['"%.0f"', '"CRIT! %.0f"', '"+%.0f"']);
+  });
+});
+
+describe('merge-mode stack growth', () => {
+  it('a merged number keeps its stack scale through the next frame', () => {
+    const physics = { ...DEFAULT_PHYSICS, stackMode: 'merge' as const };
+    const p = { ...spawnParticle(physics, { ...DEFAULT_COMBAT, critRate: 0, healPercent: 0 }, 520, 300, 0), stackCount: 3, scale: 1.2 };
+    const next = updateParticle(p, 1 / 60, physics, [p]);
+    expect(next.scale).toBeCloseTo(1.2, 5);
+  });
+
+  it('outside merge mode a non-crit stays at scale 1', () => {
+    const p = { ...spawnParticle(DEFAULT_PHYSICS, { ...DEFAULT_COMBAT, critRate: 0, healPercent: 0 }, 520, 300, 0), stackCount: 3 };
+    expect(updateParticle(p, 1 / 60, DEFAULT_PHYSICS, [p]).scale).toBe(1);
   });
 });
