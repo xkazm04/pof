@@ -42,14 +42,14 @@ export function IntegrityValidator() {
               className="flex items-center gap-3 px-3 py-2 border border-border/10 rounded-lg font-mono text-xs hover:border-border/30 transition-colors group"
               style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_5)}` }}
             >
-              <StatusIcon className="w-4 h-4 flex-shrink-0" style={{ color: statusColor, filter: `drop-shadow(0 0 4px ${withOpacity(statusColor, OPACITY_37)})` }} />
+              <StatusIcon aria-label={check.status} className="w-4 h-4 flex-shrink-0" style={{ color: statusColor, filter: `drop-shadow(0 0 4px ${withOpacity(statusColor, OPACITY_37)})` }} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-bold" style={{ color: OVERLAY_WHITE }}>{check.label}</span>
                   <span className="text-text-muted text-xs hidden sm:block">{check.description}</span>
                 </div>
               </div>
-              <span className="text-xs font-mono opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: statusColor }}>
+              <span className="text-xs font-mono flex-shrink-0" style={{ color: statusColor }}>
                 {check.detail}
               </span>
             </motion.div>
