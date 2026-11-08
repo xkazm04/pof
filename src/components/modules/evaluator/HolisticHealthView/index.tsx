@@ -201,9 +201,14 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
                 <div>
                   <p className="text-2xs text-text-muted">Module Health</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    {healthyModules > 0 && <Badge variant="success">{healthyModules}</Badge>}
-                    {warningModules > 0 && <Badge variant="warning">{warningModules}</Badge>}
-                    {criticalModules > 0 && <Badge variant="error">{criticalModules}</Badge>}
+                    {healthyModules > 0 && <Badge variant="success">{healthyModules} healthy</Badge>}
+                    {warningModules > 0 && <Badge variant="warning">{warningModules} warning</Badge>}
+                    {criticalModules > 0 && <Badge variant="error">{criticalModules} critical</Badge>}
+                    {healthyModules + warningModules + criticalModules === 0 && (
+                      <span className="text-2xs text-text-muted" data-testid="module-health-none">
+                        none scored ({moduleHealth.filter((m) => m.status === 'not-started').length} not started)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
