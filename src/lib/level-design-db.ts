@@ -64,6 +64,21 @@ function parseBlob<T>(raw: unknown, field: string, broken: string[]): T[] {
 }
 
 /**
+ * A stored room may come from a CLI run or an older schema and omit the array
+ * fields every consumer indexes unguarded. Default them on read so one thin room
+ * cannot crash the flow editor, the detail panel or the pacing linter.
+ */
+function normalizeRoom(room: RoomNode): RoomNode {
+  if (room === null || typeof room !== 'object') return room;
+  return {
+    ...room,
+    spawnEntries: Array.isArray(room.spawnEntries) ? room.spawnEntries : [],
+    linkedFiles: Array.isArray(room.linkedFiles) ? room.linkedFiles : [],
+    tags: Array.isArray(room.tags) ? room.tags : [],
+  };
+}
+
+/**
  * Marker appended to a document whose stored data could not be read, so a
  * damaged row is loudly identifiable in the sidebar rather than silently
  * appearing as an empty (and therefore over-writable) level.
@@ -83,7 +98,7 @@ export function rowToDoc(row: Record<string, unknown>): LevelDesignDocument {
     name,
     description: (row.description as string) ?? '',
     designNarrative: (row.design_narrative as string) ?? '',
-    rooms: parseBlob<RoomNode>(row.rooms, 'rooms', broken),
+    rooms: parseBlob<RoomNode>(row.rooms, 'rooms', broken).map(normalizeRoom),
     connections: parseBlob<LevelDesignDocument['connections'][number]>(row.connections, 'connections', broken),
     difficultyArc: parseBlob<string>(row.difficulty_arc, 'difficultyArc', broken),
     pacingNotes: (row.pacing_notes as string) ?? '',
