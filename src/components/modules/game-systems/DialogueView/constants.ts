@@ -2,7 +2,9 @@ import {
   Swords, Package, MousePointerClick, MapPin, MessageSquare, Users, Target,
 } from 'lucide-react';
 import type { GeneratedQuest, QuestCategory } from '@/types/quest-generation';
-import { MODULE_COLORS, STATUS_SUCCESS } from '@/lib/chart-colors';
+import {
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_ERROR,
+} from '@/lib/chart-colors';
 
 // ── Stable empty refs ──
 
@@ -33,12 +35,15 @@ export const OBJ_ICONS: Record<string, typeof Swords> = {
 
 // ── Difficulty pips ──
 
+// The quality ramp reversed (easy = green, hardest = red). The old
+// `var(--accent-*, #hex)` entries named CSS variables that are defined nowhere,
+// so the raw hex fallbacks always rendered and bypassed the token set.
 export const DIFFICULTY_COLORS = [
-  'var(--accent-green, #22c55e)',   // Lv1
-  'var(--accent-green, #84cc16)',   // Lv2
-  'var(--accent-yellow, #eab308)', // Lv3
-  'var(--accent-orange, #f97316)', // Lv4
-  'var(--accent-red, #ef4444)',    // Lv5
+  STATUS_SUCCESS, // Lv1
+  STATUS_LIME,    // Lv2
+  STATUS_WARNING, // Lv3
+  STATUS_BLOCKER, // Lv4
+  STATUS_ERROR,   // Lv5
 ] as const;
 
 export const MAX_PIPS = 5;

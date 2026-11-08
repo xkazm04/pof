@@ -104,3 +104,16 @@ describe('the Blueprint / C++ input boxes have accessible names (not placeholder
     expect(named).toHaveLength(4);
   });
 });
+
+describe('quest difficulty pips use chart-colors tokens, not hex', () => {
+  it('DialogueView/constants.ts carries no hex literal and five distinct pip colours', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const src = readFileSync(join(process.cwd(), 'src/components/modules/game-systems/DialogueView/constants.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    expect(src.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []).toEqual([]);
+    const { DIFFICULTY_COLORS } = await import('@/components/modules/game-systems/DialogueView/constants');
+    expect(new Set(DIFFICULTY_COLORS).size).toBe(5);
+  });
+});
