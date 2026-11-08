@@ -21,6 +21,8 @@ export function ScreenEditor({
   const addWidget = useCallback(() => {
     const name = newWidget.trim();
     if (!name) return;
+    // A repeated name is a duplicate BindWidget member in the generated class
+    if (screen.widgets.some((w) => w.trim().toLowerCase() === name.toLowerCase())) return;
     onUpdate({ widgets: [...screen.widgets, name] });
     setNewWidget('');
   }, [newWidget, screen.widgets, onUpdate]);
