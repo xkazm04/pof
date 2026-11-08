@@ -164,3 +164,18 @@ describe('XpCurveChart geometry', () => {
     expect(dot?.closest('svg')?.getAttribute('viewBox')).toBeNull();
   });
 });
+
+describe('XpCurveChart accessible name', () => {
+  it('names the chart svg with its level range and cap cost', () => {
+    motionState.reduced = false;
+    const { data, maxXp } = sampleData();
+    const { container } = render(<XpCurveChart data={data} maxXp={maxXp} />);
+    const named = container.querySelectorAll('svg[role="img"]');
+    expect(named.length).toBe(1);
+    const label = named[0].getAttribute('aria-label') ?? '';
+    const last = data[data.length - 1];
+    expect(label).toContain(`Lv ${data[0].level}`);
+    expect(label).toContain(`Lv ${last.level}`);
+    expect(label).toContain(last.xp.toLocaleString());
+  });
+});
