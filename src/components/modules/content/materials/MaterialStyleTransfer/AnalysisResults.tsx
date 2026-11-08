@@ -166,8 +166,10 @@ export function AnalysisResults({
                       return (
                         <button
                           key={st}
+                          type="button"
                           onClick={() => setOverrideSurface(st === analysis.surfaceType ? null : st)}
-                          className={`px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
+                          aria-pressed={isActive}
+                          className={`focus-ring px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
                             isActive
                               ? 'border-amber-500/30 text-amber-400'
                               : 'border-border text-text-muted hover:text-text'

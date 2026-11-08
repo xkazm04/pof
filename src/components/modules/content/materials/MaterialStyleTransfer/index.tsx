@@ -66,8 +66,10 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
         </div>
         {analysis && (
           <button
+            type="button"
             onClick={() => setCompareMode(!compareMode)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium border transition-colors ${
+            aria-pressed={compareMode}
+            className={`focus-ring flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium border transition-colors ${
               compareMode
                 ? 'bg-cyan-500/10 border-cyan-500/25 text-cyan-400'
                 : 'bg-surface border-border text-text-muted hover:text-text'
