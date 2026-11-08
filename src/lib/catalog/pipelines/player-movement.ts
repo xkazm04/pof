@@ -145,6 +145,3 @@ registerCatalogPipeline({
     },
   ],
 });
-
-/** Test-only export of the step list for unit tests. The pipeline registers itself on import. */
-export const PLAYER_MOVEMENT_STEPS_TEST_HELPER = ['01-mesh-and-skeleton'] as const;
