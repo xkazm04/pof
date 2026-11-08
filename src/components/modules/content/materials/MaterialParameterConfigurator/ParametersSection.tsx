@@ -76,8 +76,8 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
                 }}
               />
               <div className="flex justify-between mt-0.5">
-                <span className="text-2xs text-[#3a3e5a]">{explainMode ? p.plain.lowLabel : p.min}</span>
-                <span className="text-2xs text-[#3a3e5a]">{explainMode ? p.plain.highLabel : p.max}</span>
+                <span className="text-2xs text-text-subtle">{explainMode ? p.plain.lowLabel : p.min}</span>
+                <span className="text-2xs text-text-subtle">{explainMode ? p.plain.highLabel : p.max}</span>
               </div>
             </div>
           );
