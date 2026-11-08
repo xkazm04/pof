@@ -10,6 +10,8 @@ interface IterationView {
   iteration: number;
   capturedAt: string;
   modules: VisualModuleResult[];
+  /** result.json exists but did not parse: a damaged gate record, not an empty one. */
+  corrupt?: boolean;
 }
 
 interface ScreenshotsResponse {
@@ -95,14 +97,20 @@ export function HarnessVisualGallery() {
         >
           {data.iterations.map((it) => (
             <option key={it.iteration} value={it.iteration}>
-              #{it.iteration}{it.capturedAt ? ` · ${it.capturedAt.slice(0, 16).replace('T', ' ')}` : ''}
+              #{it.iteration}{it.corrupt ? ' · corrupt' : ''}{it.capturedAt ? ` · ${it.capturedAt.slice(0, 16).replace('T', ' ')}` : ''}
             </option>
           ))}
         </select>
         <span className="text-2xs text-text-muted ml-2">{data.baselineSlugs.length} baselines</span>
       </header>
 
-      {currentIter && currentIter.modules.length === 0 && (
+      {currentIter && currentIter.corrupt && (
+        <p role="alert" className="text-xs text-amber-400 py-2">
+          Iteration #{currentIter.iteration} has a corrupt result.json — the gate record is damaged, so its modules cannot be shown.
+        </p>
+      )}
+
+      {currentIter && !currentIter.corrupt && currentIter.modules.length === 0 && (
         <p className="text-xs text-text-muted py-2">
           Iteration #{currentIter.iteration} captured no modules — the visual gate had nothing to shoot.
         </p>

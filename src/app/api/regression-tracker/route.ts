@@ -78,14 +78,14 @@ export async function POST(req: NextRequest) {
     if (action === 'dismiss') {
       const { alertId } = body;
       if (typeof alertId !== 'string' || !alertId) return apiError('alertId required', 400);
-      dismissAlert(alertId);
+      if (!dismissAlert(alertId)) return apiError(`Alert not found: ${alertId}`, 404);
       return apiSuccess({ dismissed: true });
     }
 
     if (action === 'resolve') {
       const { fingerprintId } = body;
       if (typeof fingerprintId !== 'string' || !fingerprintId) return apiError('fingerprintId required', 400);
-      markResolved(fingerprintId);
+      if (!markResolved(fingerprintId)) return apiError(`Fingerprint not found: ${fingerprintId}`, 404);
       return apiSuccess({ resolved: true });
     }
 

@@ -13,6 +13,30 @@ const SAMPLE_SCENARIOS = new Set(['combat-heavy', 'exploration', 'menu', 'loadin
 const sessions = new Map<string, ProfilingSession>();
 const triageResults = new Map<string, TriageResult>();
 
+/**
+ * Retention cap for the in-memory store: a long-lived dev server must not grow with every
+ * capture. The oldest session (and its triage) is evicted first, and every eviction is
+ * reported to the caller (`evicted`) so a capture is never lost silently.
+ */
+const MAX_SESSIONS = 50;
+
+interface EvictedSession { id: string; name: string }
+
+/** Stores a session, evicting the oldest ones beyond the cap; returns what was evicted. */
+function storeSession(session: ProfilingSession): EvictedSession[] {
+  sessions.delete(session.id);
+  sessions.set(session.id, session);
+  const evicted: EvictedSession[] = [];
+  while (sessions.size > MAX_SESSIONS) {
+    const oldestId = sessions.keys().next().value as string;
+    const oldest = sessions.get(oldestId);
+    sessions.delete(oldestId);
+    triageResults.delete(oldestId);
+    evicted.push({ id: oldestId, name: oldest?.name ?? '' });
+  }
+  return evicted;
+}
+
 /** The stored triage for a session, running (and storing) it first when missing. */
 function ensureTriage(session: ProfilingSession): TriageResult {
   const existing = triageResults.get(session.id);
@@ -48,8 +72,7 @@ export async function POST(req: NextRequest) {
         return apiError('csvContent and sessionName are required strings', 400);
       }
       const session = buildSessionFromCSV(csvContent, sessionName, projectPath ?? '');
-      sessions.set(session.id, session);
-      return apiSuccess({ session });
+      return apiSuccess({ session, evicted: storeSession(session) });
     }
 
     if (action === 'generate-sample') {
@@ -69,8 +92,7 @@ export async function POST(req: NextRequest) {
         targetFPS: targetFPS ?? 60,
         projectPath: projectPath ?? '',
       });
-      sessions.set(session.id, session);
-      return apiSuccess({ session });
+      return apiSuccess({ session, evicted: storeSession(session) });
     }
 
     if (action === 'triage') {
@@ -110,7 +132,7 @@ export async function POST(req: NextRequest) {
           bottleneck: triage?.bottleneck ?? null,
         };
       });
-      return apiSuccess({ sessions: list });
+      return apiSuccess({ sessions: list, cap: MAX_SESSIONS });
     }
 
     if (action === 'compare') {
