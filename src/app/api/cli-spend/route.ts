@@ -105,6 +105,15 @@ export async function POST(req: NextRequest) {
       return apiError('costUsd or token counts required', 400);
     }
 
+    // Identity fields are text columns: absent/null falls back to the store default,
+    // anything else must be a string.
+    for (const name of ['moduleId', 'taskType', 'taskLabel', 'sessionKey'] as const) {
+      const value = body[name];
+      if (value !== undefined && value !== null && typeof value !== 'string') {
+        return apiError(`${name} must be a string`, 400);
+      }
+    }
+
     const record = recordSpend({
       moduleId: body.moduleId,
       taskType: body.taskType,
