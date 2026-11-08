@@ -15,19 +15,21 @@ afterEach(cleanup);
 const [blade, staff] = PRESET_GENOMES;
 
 describe('Monte Carlo results are scoped to their inputs', () => {
-  it('hides stats once the genome changes, and says why', () => {
+  it('hides stats once the genome changes, and says why', async () => {
     const { rerender } = render(<MonteCarloSimulator genome={blade} rarity="Rare" level={10} />);
     fireEvent.click(screen.getByRole('button', { name: /Run 1k Rolls/ }));
-    expect(screen.queryByText('Avg Coherence')).not.toBeNull();
+    // The run yields one macrotask before computing, so results arrive asynchronously.
+    expect(await screen.findByText('Avg Coherence')).not.toBeNull();
 
     rerender(<MonteCarloSimulator genome={staff} rarity="Rare" level={10} />);
     expect(screen.queryByText('Avg Coherence')).toBeNull();
     expect(screen.queryByText(/inputs changed/i)).not.toBeNull();
   });
 
-  it('hides stats once the rarity or level changes', () => {
+  it('hides stats once the rarity or level changes', async () => {
     const { rerender } = render(<MonteCarloSimulator genome={blade} rarity="Rare" level={10} />);
     fireEvent.click(screen.getByRole('button', { name: /Run 1k Rolls/ }));
+    await screen.findByText('Avg Coherence');
     rerender(<MonteCarloSimulator genome={blade} rarity="Epic" level={10} />);
     expect(screen.queryByText('Avg Coherence')).toBeNull();
 
