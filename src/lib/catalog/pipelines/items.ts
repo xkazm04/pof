@@ -688,7 +688,7 @@ registerCatalogPipeline({
                 'set of Rare items (one per slot) → receive one Chaos Orb shard (1 sink per full set). ' +
                 'Every currency declares ≥1 sink (canon proj-economy); the set recipe is the item row\'s contribution.',
               balanceNote:
-                'pricePowerRatio(1.0) is within the 0.8–1.2× canon band (proj-balance). ' +
+                `pricePowerRatio(${pricePowerRatio}) is within the 0.8–1.2× canon band (proj-balance). ` +
                 'Rare multiplier (×8) reflects 4–6 affixes with mid-tier rolls at ilvl 45; ' +
                 'the exact vendor value caps to avoid soft-currency inflation (canon proj-economy).',
             },

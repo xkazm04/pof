@@ -55,3 +55,12 @@ describe('items Tooltip / Compare agrees with Damage / Implicit', () => {
     expect(tooltip.implicitLine).toBe(label);
   });
 });
+
+describe('items Economy states the ratio it computed', () => {
+  it('the balance note names the derived pricePowerRatio, not a rounded 1.0', () => {
+    const e = entities[0];
+    const data = step('Economy').produce(e).data as { pricePowerRatio: number; economy: { balanceNote: string } };
+    expect(data.pricePowerRatio).not.toBe(1);
+    expect(data.economy.balanceNote).toContain(`pricePowerRatio(${data.pricePowerRatio})`);
+  });
+});
