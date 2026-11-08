@@ -49,3 +49,16 @@ export function formatGold(amount: number): string {
   if (Math.abs(amount) >= 1000) return `${(amount / 1000).toFixed(1)}K`;
   return `${Math.round(amount)}`;
 }
+
+/**
+ * Stride-sample a time series down to ~`target` points for a bar chart, ALWAYS
+ * keeping the final point. A bare `i % step === 0` filter drops the tail whenever
+ * `(length - 1) % step !== 0` (122 of the 181 Play Hours values 20-200 lose up
+ * to 8 final hours), so the chart would end before the endgame the stat cards report.
+ */
+export function sampleSeries<T>(series: readonly T[], target: number): T[] {
+  const step = Math.max(1, Math.floor(series.length / Math.max(1, target)));
+  const sampled = series.filter((_, i) => i % step === 0);
+  if (series.length > 0 && (series.length - 1) % step !== 0) sampled.push(series[series.length - 1]);
+  return sampled;
+}

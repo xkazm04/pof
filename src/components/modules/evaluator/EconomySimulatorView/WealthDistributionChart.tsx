@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import type { EconomyMetrics, PlayerSnapshot } from '@/types/economy-simulator';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { WEALTH_STACK_BREAKPOINT } from './constants';
-import { wealthGridClassFromWide, formatGold } from './helpers';
+import { wealthGridClassFromWide, formatGold, sampleSeries } from './helpers';
 
 // ── Wealth Distribution ─────────────────────────────────────────────────────
 
@@ -21,9 +21,8 @@ export function WealthDistributionChart({ metrics, snapshots }: {
 
   if (snapshots.length === 0) return null;
 
-  // Gini over time
-  const step = Math.max(1, Math.floor(metrics.length / 20));
-  const giniSampled = metrics.filter((_, i) => i % step === 0);
+  // Gini over time, always ending on the final hour
+  const giniSampled = sampleSeries(metrics, 20);
 
   // Wealth buckets for histogram
   const golds = snapshots.map((s) => s.gold).sort((a, b) => a - b);
