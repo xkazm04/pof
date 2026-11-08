@@ -54,7 +54,8 @@ function mintScanId(db: Database.Database, moduleId: string): string {
  * lost report.
  */
 export const POST = withRoute(async (req: NextRequest) => {
-  const body = await req.json();
+  // Malformed JSON is the caller's error: `undefined` fails the schema → 400, not a 500.
+  const body = await req.json().catch(() => undefined);
   const parsed = importSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -214,7 +215,7 @@ export const GET = withRoute(async (req: NextRequest) => {
  * reported back in `missing` rather than silently dropped.
  */
 export const PATCH = withRoute(async (req: NextRequest) => {
-  const parsed = resolveSchema.safeParse(await req.json());
+  const parsed = resolveSchema.safeParse(await req.json().catch(() => undefined));
   if (!parsed.success) {
     return apiError(`Invalid resolve request: ${parsed.error.issues.map((i) => i.message).join(', ')}`, 400);
   }

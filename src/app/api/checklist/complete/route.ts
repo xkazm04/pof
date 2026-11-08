@@ -31,7 +31,12 @@ import type { SubModuleId } from '@/types/modules';
  * experiment layer did.
  */
 export const POST = withRoute(async (req: NextRequest) => {
-  const { moduleId, itemId, projectPath, promptVariantId, completed, durationMs } = await req.json();
+  const body = await req.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
+  const { moduleId, itemId, projectPath, promptVariantId, completed, durationMs } = body;
 
   if (!moduleId || !itemId || !projectPath) {
     return apiError('moduleId, itemId, and projectPath are required', 400);
