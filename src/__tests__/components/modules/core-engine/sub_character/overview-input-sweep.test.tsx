@@ -8,7 +8,7 @@ import { OptimizerMetric, DodgeMetric } from '@/components/modules/core-engine/s
 import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
 import { resolveBindings, normalizeKeyEvent } from '@/lib/character/input-bindings';
-import { INPUT_BINDINGS } from '@/components/modules/core-engine/sub_character/_shared/data';
+import { INPUT_BINDINGS, KEY_FREQUENCY_MAP } from '@/components/modules/core-engine/sub_character/_shared/data';
 vi.mock('@/hooks/useModuleCLI', () => ({
   useModuleCLI: () => ({ execute: vi.fn(), sendPrompt: vi.fn(), isRunning: false }),
 }));
@@ -85,6 +85,18 @@ describe('Class tree header-file tooltip is reachable by keyboard', () => {
     expect(queryByText(header)).not.toBeNull();
     act(() => { chip.blur(); });
     await waitFor(() => expect(container.textContent).not.toContain(header));
+  });
+});
+
+describe('Input table never renders an unmeasured frequency as 0%', () => {
+  it('rows without a KEY_FREQUENCY_MAP entry show an em dash, none show a fabricated 0%', () => {
+    const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
+    const cells = [...container.querySelectorAll('tbody tr td:nth-child(4)')].map((td) => td.textContent ?? '');
+    expect(cells).toHaveLength(INPUT_BINDINGS.length);
+    expect(cells.filter((t) => t.trim() === '0%')).toHaveLength(0);
+    const unmeasured = INPUT_BINDINGS.filter((b) => !KEY_FREQUENCY_MAP.has(b.defaultKey)).length;
+    expect(unmeasured).toBeGreaterThan(0);
+    expect(cells.filter((t) => t.trim() === '—')).toHaveLength(unmeasured);
   });
 });
 
