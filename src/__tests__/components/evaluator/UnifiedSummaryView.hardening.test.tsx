@@ -90,4 +90,26 @@ describe('UnifiedSummaryView — own data source hardening', () => {
     await settle();
     expect(container.textContent).toContain('Combined Project Health');
   });
+
+  it('a slow, older failed analytics reply cannot overwrite the newer successful one', async () => {
+    const slow = deferred<{ ok: false; error: string }>();
+    h.fetch
+      .mockResolvedValueOnce(OK)            // mount
+      .mockReturnValueOnce(slow.promise)    // refresh #1 — slow, fails
+      .mockResolvedValueOnce(OK);           // refresh #2 — fast, succeeds
+    const { container } = render(<UnifiedSummaryView onNavigateTab={vi.fn()} />);
+    await settle();
+
+    fireEvent.click(refreshButton(container));
+    await settle();
+    fireEvent.click(refreshButton(container));
+    await settle();
+    expect(container.textContent).not.toContain("couldn't be loaded");
+
+    slow.resolve({ ok: false, error: 'HTTP 500' });
+    await settle();
+    // The superseded reply is inert: no error banner over a source that loaded.
+    expect(container.textContent).not.toContain("couldn't be loaded");
+    expect(container.textContent).not.toContain('HTTP 500');
+  });
 });

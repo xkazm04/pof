@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { correlateModuleData } from '@/lib/evaluator/correlation-engine';
 import { generateInsights } from '@/lib/evaluator/insight-generator';
 import { computeProjectHealth } from '@/lib/evaluator/combined-health';
@@ -50,18 +50,27 @@ export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
 
   // ── Fetch this view's own data source ──────────────────────────────────────
 
+  // Latest-wins: a Refresh supersedes the fetch before it. The token is minted
+  // synchronously at dispatch; a completion whose token is stale is inert on
+  // success and failure alike, so a slow older reply cannot overwrite a newer one.
+  const ownRequest = useRef(0);
+
   const fetchOwn = useCallback(async () => {
+    const token = ++ownRequest.current;
     setIsOwnLoading(true);
     try {
       // The route returns the standard apiSuccess(...) envelope, so the real payload
       // lives at data.data.*. tryApiFetch unwraps it — reading off the raw fetch
       // silently left analytics empty or mis-shaped.
       const analyticsRes = await tryApiFetch<AnalyticsDashboard>('/api/session-analytics?action=dashboard');
+      if (token !== ownRequest.current) return;
       setAnalyticsError(analyticsRes.ok ? null : analyticsRes.error);
       if (analyticsRes.ok) setAnalytics(analyticsRes.data);
     } finally {
-      setIsOwnLoading(false);
-      setOwnLoaded(true);
+      if (token === ownRequest.current) {
+        setIsOwnLoading(false);
+        setOwnLoaded(true);
+      }
     }
   }, []);
 
