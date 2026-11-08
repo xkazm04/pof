@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor, act } from '@testing-library/react';
 vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
 
 import { StepLibraryPicker } from '@/components/layout-lab/steps/shared/StepLibraryPicker';
@@ -111,5 +111,25 @@ describe('<StepLibraryPicker />', () => {
 
     expect(await screen.findByText(/library table missing/)).toBeTruthy();
     expect(screen.queryByTestId('step-library-empty')).toBeNull();
+  });
+});
+
+describe('<StepLibraryPicker /> out-of-order responses', () => {
+  it('keeps the newest query when an older response lands last', async () => {
+    const resolvers = new Map<string, (rows: unknown[]) => void>();
+    vi.stubGlobal('fetch', vi.fn((url: string) => new Promise((resolve) => {
+      const q = new URL(url, 'http://x').searchParams.get('q') ?? '';
+      resolvers.set(q, (rows) => resolve({ ok: true, json: async () => ({ success: true, data: rows }) }));
+    })) as unknown as typeof fetch);
+    const row = (id: string) => ({ id, name: id, source: 's', category: 'models', license: 'CC0', downloadUrl: 'u' });
+    render(<StepLibraryPicker t={LAB_THEMES[0]} referencedIds={[]} onPick={vi.fn()} onUnpick={vi.fn()} />);
+    fireEvent.click(screen.getByTestId('step-library-toggle'));
+    const box = screen.getByLabelText('Search the library');
+    fireEvent.change(box, { target: { value: 'a' } });
+    fireEvent.change(box, { target: { value: 'ab' } });
+    await act(async () => { resolvers.get('ab')!([row('newest')]); });
+    await act(async () => { resolvers.get('a')!([row('stale')]); });
+    const ids = screen.getAllByTestId('step-library-row').map((r) => r.getAttribute('data-asset'));
+    expect(ids).toEqual(['newest']);
   });
 });
