@@ -5,13 +5,14 @@ import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { SUCCESS_TEXT, ERROR_TEXT } from '@/lib/blender-mcp/status-tokens';
 import { useBlenderStore, SCRIPT_HISTORY_CAP, type ScriptJob, type ScriptStatus } from './useBlenderStore';
 
 const STATUS_CONFIG: Record<ScriptStatus, { icon: typeof Loader2; color: string; label: string }> = {
   idle: { icon: Loader2, color: 'text-text-muted', label: 'Idle' },
   running: { icon: Loader2, color: 'text-[var(--visual-gen)]', label: 'Running' },
-  completed: { icon: CheckCircle, color: 'text-emerald-400', label: 'Done' },
-  failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
+  completed: { icon: CheckCircle, color: SUCCESS_TEXT, label: 'Done' },
+  failed: { icon: AlertCircle, color: ERROR_TEXT, label: 'Failed' },
 };
 
 function ScriptCard({ job }: { job: ScriptJob }) {
@@ -58,7 +59,7 @@ function ScriptCard({ job }: { job: ScriptJob }) {
         </pre>
       )}
       {job.error && (
-        <div className="px-3 py-2 text-xs text-red-400">{job.error}</div>
+        <div className={`px-3 py-2 text-xs ${ERROR_TEXT}`}>{job.error}</div>
       )}
     </div>
   );

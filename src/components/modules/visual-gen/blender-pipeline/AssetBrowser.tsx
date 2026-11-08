@@ -144,7 +144,7 @@ export function AssetBrowser() {
 
       {/* Soft warning — one source failed */}
       {b.searchWarning && !b.searchError && (
-        <p className="flex items-center gap-1.5 text-xs text-amber-400">
+        <p className={`flex items-center gap-1.5 text-xs ${WARNING_TEXT}`}>
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           Showing partial results — {b.searchWarning}
         </p>
