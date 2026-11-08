@@ -27,7 +27,13 @@ export function BatchReviewPanel() {
   // can reach 100% instead of stalling short while the status reads "Complete".
   const skipped = batch?.modules.filter(m => m.status === 'skipped').length ?? 0;
   const total = batch?.modules.length ?? 0;
-  const pct = total > 0 ? Math.round(((completed + errored + skipped) / total) * 100) : 0;
+  const resolved = completed + errored + skipped;
+  const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
+  const breakdown = [
+    `${completed} ok`,
+    ...(errored > 0 ? [`${errored} err`] : []),
+    ...(skipped > 0 ? [`${skipped} skipped`] : []),
+  ].join(', ');
 
   return (
     <div className="space-y-3">
@@ -38,7 +44,7 @@ export function BatchReviewPanel() {
           <h3 className="text-sm font-semibold text-text">Batch Review</h3>
           {batch && (
             <span className="text-xs text-text-muted">
-              {completed}/{total} modules
+              {resolved}/{total} resolved ({breakdown})
             </span>
           )}
         </div>
