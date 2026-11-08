@@ -147,7 +147,11 @@ export const POST = withRoute(async (request: NextRequest) => {
     }
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
   const { moduleId: rawModuleId } = body;
 
   if (!rawModuleId || typeof rawModuleId !== 'string') {

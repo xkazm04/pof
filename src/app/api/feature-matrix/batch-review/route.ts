@@ -118,7 +118,11 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const raw = (await request.json()) as BatchReviewStartRequest | BatchReviewAbortRequest;
+    const raw = (await request.json().catch(() => undefined)) as BatchReviewStartRequest | BatchReviewAbortRequest | null | undefined;
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
 
     // Abort active batch
     if ('action' in raw && raw.action === 'abort') {

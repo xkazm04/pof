@@ -231,7 +231,11 @@ export async function GET(req: Request) {
 // ─── POST: create session, start session, add finding, add event, run analysis
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const action = body.action as string;
 
     switch (action) {

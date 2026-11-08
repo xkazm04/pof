@@ -70,7 +70,11 @@ export async function GET(req: NextRequest) {
 /** POST — generate the GDD (checklist in the body), or format an existing one. */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { action } = body;
 
     if (action === 'generate') {
