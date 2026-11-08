@@ -120,9 +120,11 @@ export function OptimizerPanel({
                       {lastOptimization.diffs.length} optimization{lastOptimization.diffs.length !== 1 ? 's' : ''} applied
                     </p>
                     <p className="text-xs text-text-muted">
-                      Based on {lastOptimization.sampleSize} historical sessions
+                      {lastOptimization.sampleSize > 0
+                        ? `Based on ${lastOptimization.sampleSize} historical sessions`
+                        : 'No session history yet'}
                       {lastOptimization.predictedImprovement > 0 && (
-                        <> — predicted +{Math.round(lastOptimization.predictedImprovement * 100)}% success rate</>
+                        <> — rule-of-thumb estimate +{Math.round(lastOptimization.predictedImprovement * 100)}% success rate</>
                       )}
                     </p>
                   </div>

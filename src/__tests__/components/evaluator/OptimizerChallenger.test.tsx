@@ -78,3 +78,18 @@ describe('OptimizerPanel — save as challenger', () => {
     expect(screen.queryByTestId('save-challenger')).toBeNull();
   });
 });
+
+describe('OptimizerPanel — the estimate says what it is', () => {
+  it('calls the figure a rule of thumb and names the session count', () => {
+    renderPanel();
+    expect(screen.getByText(/Based on 8 historical sessions/)).toBeTruthy();
+    expect(screen.getByText(/rule-of-thumb estimate \+12%/)).toBeTruthy();
+    expect(screen.queryByText(/predicted/)).toBeNull();
+  });
+
+  it('claims no session basis when there is none', () => {
+    renderPanel({ lastOptimization: { ...OPTIMIZED, sampleSize: 0 } });
+    expect(screen.queryByText(/Based on 0/)).toBeNull();
+    expect(screen.getByText(/No session history yet/)).toBeTruthy();
+  });
+});
