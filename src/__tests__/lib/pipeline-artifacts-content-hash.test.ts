@@ -104,7 +104,8 @@ describe('listArtifactVerdicts — the blob-free read', () => {
     getDb().prepare("UPDATE pipeline_artifacts SET data = '{not json' WHERE catalog_id = ? AND entity_id = 'e4' AND step = 'A'").run(CAT);
     getDb().prepare("UPDATE pipeline_artifacts SET content_hash = ? WHERE catalog_id = ? AND entity_id = 'e4' AND step = 'A'")
       .run(stepContentHash(D), CAT);
-    expect(() => listArtifacts(CAT, 'e4')).toThrow(SyntaxError);
+    // The full-row reader degrades (marked, not thrown): see pipeline-artifacts-corrupt-row.test.ts.
+    expect(listArtifacts(CAT, 'e4').find((r) => r.step === 'A')).toMatchObject({ status: 'fail' });
     const corrupt = listArtifactVerdicts(CAT, 'e4').find((r) => r.step === 'A')!;
     expect(corrupt).toMatchObject({ status: 'pass', contentHash: stepContentHash(D) });
   });
