@@ -37,8 +37,18 @@ function buildDetail(
     }
     return parts.join(' · ');
   }
-  return 'UE bridge · disconnected';
+  // Every other state names itself: a bridge that is connecting, reconnecting, in error, or
+  // connected before its plugin info arrived must never read "disconnected".
+  return `UE bridge · ${STATUS_WORD[status]}`;
 }
+
+const STATUS_WORD: Record<ConnectionStatus, string> = {
+  connected: 'connected',
+  connecting: 'connecting…',
+  reconnecting: 'reconnecting…',
+  disconnected: 'disconnected',
+  error: 'error',
+};
 
 export function LabBridgeStrip({ t }: LabBridgeStripProps) {
   const connectionStatus = usePofBridgeStore((s) => s.connectionStatus);
