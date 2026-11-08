@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess } from '@/lib/api-utils';
+import { apiSuccess, withRoute } from '@/lib/api-utils';
 import { searchIndex, rebuildSearchIndex, getLastRebuildTime } from '@/lib/search-index';
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute(async (request: NextRequest) => {
   const q = request.nextUrl.searchParams.get('q')?.trim();
   const types = request.nextUrl.searchParams.get('types');
   const rebuild = request.nextUrl.searchParams.get('rebuild');
@@ -25,4 +25,4 @@ export async function GET(request: NextRequest) {
     count: results.length,
     lastRebuilt: getLastRebuildTime(),
   });
-}
+}, 'Search failed');

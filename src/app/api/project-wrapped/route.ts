@@ -1,7 +1,7 @@
-import { apiSuccess } from '@/lib/api-utils';
+import { apiSuccess, withRoute } from '@/lib/api-utils';
 import { generateProjectWrapped } from '@/lib/project-wrapped';
 
-export async function GET() {
+export const GET = withRoute(async () => {
   const wrapped = generateProjectWrapped();
   return apiSuccess({ wrapped });
-}
+}, 'Failed to build Project Wrapped');
