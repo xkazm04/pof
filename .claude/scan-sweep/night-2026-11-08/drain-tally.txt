@@ -54,3 +54,12 @@ visual-gen-quality-and-animation {"better":7}
 hud-damage-and-navigation {"better":5,"demoted":1}
 bestiary-encounters-metrics {"better":5,"partially_superseded":1}
 audio-view-and-catalog {"better":6}
+ue5-asset-generation-hooks {"demoted":1,"better":5}
+blender-3d-integration {"better":2,"superseded":1}
+combat-dodge-timeline {"superseded":9}
+pipeline-acceptance-engine {"superseded":1,"demoted":1,"better":2}
+holistic-quality-overview {"better":8}
+catalog-database {"better":4}
+catalog-pipeline-state {"better":6,"superseded":1}
+character-overview-input {"better":7}
+build-history-config {"better":8}
