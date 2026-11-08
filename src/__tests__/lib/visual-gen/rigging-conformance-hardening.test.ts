@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { planConform } from '@/lib/visual-gen/bone-conform';
+import { bindRigToPreset } from '@/lib/visual-gen/rig-binding';
+import { getRigPreset } from '@/lib/visual-gen/rig-presets';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -49,5 +52,22 @@ describe('reference conformance: the image the vision call is told about', () =>
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('bone conform: the numbered Mixamo namespace', () => {
+  const names = ['Hips', 'Spine', 'Neck', 'Head', 'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand',
+    'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand', 'LeftUpLeg', 'LeftLeg', 'LeftFoot',
+    'RightUpLeg', 'RightLeg', 'RightFoot'];
+
+  it('reads mixamorig1: as the same vendor prefix as mixamorig:', () => {
+    const plan = planConform(['mixamorig1:Hips', 'mixamorig1:LeftHand'], ['pelvis', 'hand_l']);
+    expect(plan.coverage).toBe(1);
+  });
+
+  it('binds a mixamorig1 rig to the mannequin chains', () => {
+    const binding = bindRigToPreset(names.map((n) => `mixamorig1:${n}`), getRigPreset('ue5-mannequin')!);
+    expect(binding.unboundRequired).toEqual([]);
+    expect(binding.status).toBe('bound');
   });
 });

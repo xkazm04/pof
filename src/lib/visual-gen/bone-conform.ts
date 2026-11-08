@@ -71,7 +71,7 @@ const LEFT_TOKENS = new Set(['left', 'l']);
 const RIGHT_TOKENS = new Set(['right', 'r']);
 
 /** Vendor prefixes that carry no anatomical meaning. */
-const VENDOR_PREFIX = /^(?:mixamorig|tripo|armature|root)[:_.-]+/i;
+const VENDOR_PREFIX = /^(?:mixamorig\d*|tripo|armature|root)[:_.-]+/i;
 
 /**
  * Synonyms that mean the same joint in different vocabularies. Left side is the canonical
