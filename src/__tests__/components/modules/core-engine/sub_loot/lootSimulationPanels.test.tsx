@@ -20,6 +20,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
   ),
 }));
 
+import { PityCohortChart } from '@/components/modules/core-engine/sub_loot/pity/PityCohortChart';
 import { PityTimerSection } from '@/components/modules/core-engine/sub_loot/pity/PityTimerSection';
 import { DroughtCalculator } from '@/components/modules/core-engine/sub_loot/pity/DroughtCalculator';
 import { DropSimulator } from '@/components/modules/core-engine/sub_loot/simulation/DropSimulator';
@@ -90,6 +91,29 @@ describe('PityTimerSection', () => {
       expect(container.textContent).toContain('0 since last Rare+');
     } finally {
       spy.mockRestore();
+    }
+  });
+});
+
+describe('PityCohortChart', () => {
+  it('while a re-simulation is pending, overlay and pity text describe the cohort on screen', () => {
+    vi.useFakeTimers();
+    try {
+      const { container, rerender } = render(<PityCohortChart rate={0.02} threshold={20} color="red" />);
+      act(() => { vi.advanceTimersByTime(200); });
+      const analytic = () => container.querySelector('polyline')!.getAttribute('points');
+      const before = analytic();
+      expect(container.textContent).toContain('Pity @ 20');
+      // New inputs, debounce not elapsed: the histogram is still the 2% / pity-20 cohort.
+      rerender(<PityCohortChart rate={0.05} threshold={30} color="red" />);
+      expect(analytic()).toBe(before);
+      expect(container.textContent).toContain('Pity @ 20');
+      expect(container.textContent).not.toContain('Pity @ 30');
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(container.textContent).toContain('Pity @ 30');
+      expect(analytic()).not.toBe(before);
+    } finally {
+      vi.useRealTimers();
     }
   });
 });
