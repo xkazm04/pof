@@ -94,6 +94,7 @@ export function BlueprintInspector() {
           onChange={(e) => setPath(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="/Game/Blueprints/BP_MyCharacter"
+          aria-label="Blueprint asset path — press Enter to inspect"
           className="flex-1 bg-transparent text-xs font-mono text-text placeholder:text-text-muted/50
                      outline-none border-none"
           data-testid="blueprint-inspector-path-input"
@@ -135,6 +136,7 @@ export function BlueprintInspector() {
               <div key={section.id}>
                 <button
                   onClick={() => toggleSection(section.id)}
+                  aria-expanded={isOpen}
                   className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/3 transition-colors"
                   data-testid={`blueprint-section-${section.id}-toggle`}
                 >

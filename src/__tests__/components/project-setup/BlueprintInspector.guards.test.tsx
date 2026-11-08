@@ -63,3 +63,24 @@ describe('BlueprintInspector — Enter honours the button guard', () => {
     await act(async () => { calls[0].resolve(bp('/Game/BP_A')); });
   });
 });
+
+describe('BlueprintInspector — accessible names and disclosure state', () => {
+  it('the path input has an accessible name beyond its placeholder', () => {
+    const { input } = setup();
+    expect(input.getAttribute('aria-label') ?? '').not.toBe('');
+  });
+
+  it('every section toggle reports aria-expanded and flips it', async () => {
+    const { view, type, enter } = setup();
+    type('/Game/BP_A');
+    enter();
+    await act(async () => { calls[0].resolve(bp('/Game/BP_A')); });
+    const toggles = view.container.querySelectorAll('[data-testid$="-toggle"]');
+    expect(toggles.length).toBe(8);
+    for (const t of toggles) expect(['true', 'false']).toContain(t.getAttribute('aria-expanded'));
+    const hash = view.getByTestId('blueprint-section-contentHash-toggle');
+    expect(hash.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(hash);
+    expect(hash.getAttribute('aria-expanded')).toBe('true');
+  });
+});
