@@ -1,8 +1,10 @@
 import { summarizeEntity } from '@/lib/catalog/rollup';
-import type { LifecycleState, TestResult } from '@/lib/catalog/types';
+import { LIFECYCLE_STATES, type LifecycleState, type TestResult } from '@/lib/catalog/types';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
-const ORDER: LifecycleState[] = ['planned', 'scaffolded', 'generated', 'wired', 'verified'];
+/** The forward ladder: every declared state but the `failed` sink, in declaration order. */
+export const LIFECYCLE_LADDER: readonly LifecycleState[] = LIFECYCLE_STATES.filter((s) => s !== 'failed');
+const ORDER = LIFECYCLE_LADDER;
 
 /**
  * Structurally legal transition?  any → 'failed'; 'failed' → 'planned' (retry);

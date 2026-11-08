@@ -8,9 +8,12 @@ import type { GraphNode } from '@/types/unique-tab-improvements';
 import type { ZoneRecord } from '@/components/modules/core-engine/sub_world/_shared/data';
 import type { MontageEntry } from '@/components/modules/core-engine/sub_animation/_shared/data';
 
-/** Where a catalog entity is in the generate-into-UE pipeline. */
-export type LifecycleState =
-  | 'planned' | 'scaffolded' | 'generated' | 'wired' | 'verified' | 'failed';
+/**
+ * Where a catalog entity is in the generate-into-UE pipeline — the ONE declaration. The forward
+ * ladder (`lifecycle.ts` LIFECYCLE_LADDER) and the route's zod enum (`validation.ts`) derive from it.
+ */
+export const LIFECYCLE_STATES = ['planned', 'scaffolded', 'generated', 'wired', 'verified', 'failed'] as const;
+export type LifecycleState = (typeof LIFECYCLE_STATES)[number];
 
 /** Functional-test verdict from the verify step. */
 export type TestResult = 'pass' | 'fail';

@@ -1,8 +1,7 @@
 import { z } from 'zod';
+import { LIFECYCLE_STATES } from '@/lib/catalog/types';
 
-export const lifecycleStateSchema = z.enum([
-  'planned', 'scaffolded', 'generated', 'wired', 'verified', 'failed',
-]);
+export const lifecycleStateSchema = z.enum(LIFECYCLE_STATES);
 
 export const testResultSchema = z.enum(['pass', 'fail']);
 
