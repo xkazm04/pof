@@ -89,7 +89,8 @@ export function LabBridgeStrip({ t }: LabBridgeStripProps) {
         onClick={toggle}
         aria-haspopup="dialog"
         aria-expanded={open}
-        ariaLabel="Open Bridge Doctor diagnostics"
+        // An aria-label replaces the status text inside the button, so the state rides in it.
+        ariaLabel={`Open Bridge Doctor diagnostics — ${detail}`}
         title="Open Bridge Doctor"
         style={{
           background: 'transparent',
