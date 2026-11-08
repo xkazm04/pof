@@ -39,6 +39,9 @@ interface SceneComposerState {
   clearActionFeedback: () => void;
 }
 
+/** Id of the newest refresh; replies to anything older are dropped. */
+let latestRefresh = 0;
+
 export const useSceneComposerStore = create<SceneComposerState>()(
   (set, get) => ({
     sceneInfo: null,
@@ -52,8 +55,10 @@ export const useSceneComposerStore = create<SceneComposerState>()(
     transformMode: 'translate',
 
     refreshScene: async () => {
+      const refresh = ++latestRefresh;
       set({ isRefreshing: true });
       const result = await tryApiFetch<SceneInfo>('/api/blender-mcp/scene');
+      if (refresh !== latestRefresh) return;
       if (result.ok) {
         set({ sceneInfo: result.data, isRefreshing: false, lastError: null, hasRefreshed: true });
       } else {
