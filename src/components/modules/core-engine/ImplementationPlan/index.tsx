@@ -6,6 +6,7 @@ import {
   Target, Map, List,
 } from 'lucide-react';
 import { PlanMatrixMap } from '../PlanMatrixMap';
+import { PlanningGlossary } from '@/components/modules/core-engine/PlanningGlossary';
 import { useImplementationPlan } from '@/hooks/useImplementationPlan';
 import { usePlanDispatch } from '@/hooks/usePlanDispatch';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
@@ -95,6 +96,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <PlanningGlossary />
           {/* View mode toggle */}
           <div className="flex items-center border border-border rounded-md overflow-hidden mr-1">
             <button
