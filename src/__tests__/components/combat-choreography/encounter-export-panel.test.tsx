@@ -14,7 +14,7 @@ describe('Encounter ExportPanel .h download', () => {
   });
 
   it('does not revoke the blob URL in the same tick as the click (0-byte download race)', () => {
-    const { getByText } = render(<ExportPanel exportConfig="// cfg" onCopy={() => {}} copied={false} />);
+    const { getByText } = render(<ExportPanel exportConfig="// cfg" onCopy={() => {}} copyState="idle" />);
     fireEvent.click(getByText('.h').closest('button')!);
     expect(revoke).not.toHaveBeenCalled();
     vi.runAllTimers();

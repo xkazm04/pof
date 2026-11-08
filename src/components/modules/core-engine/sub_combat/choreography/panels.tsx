@@ -159,18 +159,21 @@ export function StatsPanel({ simResult }: { simResult: SimResult }) {
 
 /* ── Export Panel ───────────────────────────────────────────────────────── */
 
-export function ExportPanel({ exportConfig, onCopy, copied }: {
-  exportConfig: string; onCopy: () => void; copied: boolean;
+export type CopyState = 'idle' | 'copied' | 'failed';
+
+export function ExportPanel({ exportConfig, onCopy, copyState }: {
+  exportConfig: string; onCopy: () => void; copyState: CopyState;
 }) {
+  const copied = copyState === 'copied';
   return (
     <BlueprintPanel className="p-3 space-y-3">
       <div className="flex items-center justify-between">
         <SectionHeader label="UE5 Export" />
         <div className="flex items-center gap-1">
-          <button onClick={onCopy}
+          <button onClick={onCopy} aria-live="polite"
             className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
             {copied ? <Check className="w-2.5 h-2.5" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-2.5 h-2.5 text-text-muted" />}
-            <span className="text-text-muted">{copied ? 'Copied' : 'Copy'}</span>
+            <span className="text-text-muted">{copied ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}</span>
           </button>
           <button onClick={() => downloadBlob(new Blob([exportConfig], { type: 'text/plain' }), 'EncounterConfig.h')}
             className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Users } from 'lucide-react';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { simulateEncounter } from '@/lib/combat/choreography-sim';
 import type { TuningOverrides } from '@/types/combat-simulator';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
@@ -16,7 +18,7 @@ import { SpatialGrid } from './SpatialGrid';
 import { BalanceAlertsPanel } from './BalanceAlertsPanel';
 import {
   WaveManager, TimelineSection, TuningPanel, StatsPanel, ExportPanel,
-  ArchetypePalette, GhostLegend,
+  ArchetypePalette, GhostLegend, type CopyState,
 } from './panels';
 import { TensionPanel } from './TensionPanel';
 
@@ -34,7 +36,7 @@ export function CombatChoreographyEditor() {
   const dispatch = useEncounterDraftStore((s) => s.dispatch);
   const [scrubTime, setScrubTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
 
   const playRef = useRef<number | null>(null);
   const lastFrameRef = useRef(0);
@@ -97,11 +99,17 @@ export function CombatChoreographyEditor() {
 
   const exportConfig = useMemo(() => generateUE5Export(enemies, waves, tuning), [enemies, waves, tuning]);
 
+  // The receipt follows the verified write: a rejected clipboard reports
+  // 'failed' instead of throwing an unhandled rejection out of the click.
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(exportConfig);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopyState((await copyToClipboard(exportConfig)) ? 'copied' : 'failed');
   }, [exportConfig]);
+
+  useEffect(() => {
+    if (copyState === 'idle') return;
+    const t = setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
+    return () => clearTimeout(t);
+  }, [copyState]);
 
   const handleReset = useCallback(() => { setScrubTime(0); setIsPlaying(false); }, []);
 
@@ -162,7 +170,7 @@ export function CombatChoreographyEditor() {
         <TuningPanel tuning={tuning} onUpdate={updateTuning} onReset={() => dispatch({ type: 'resetTuning' })} />
         <BalanceAlertsPanel alerts={simResult.alerts} />
         <StatsPanel simResult={simResult} />
-        <ExportPanel exportConfig={exportConfig} onCopy={handleCopy} copied={copied} />
+        <ExportPanel exportConfig={exportConfig} onCopy={() => { void handleCopy(); }} copyState={copyState} />
       </div>
     </motion.div>
   );
