@@ -15,6 +15,16 @@ import {
 
 const ACCENT = ACCENT_PINK;
 
+/** The track spans 0-150% expansion, so over-budget languages stay distinguishable and the 100% marker is visible. */
+const EXPANSION_TRACK_MAX = 150;
+
+/** Fill width (percent of the track) for a text expansion percentage. */
+export function expansionBar(expansion: number): { fillPct: number } {
+  return { fillPct: (Math.max(0, Math.min(expansion, EXPANSION_TRACK_MAX)) / EXPANSION_TRACK_MAX) * 100 };
+}
+
+const LIMIT_PCT = expansionBar(100).fillPct;
+
 export function AccessibilityTab() {
   const [selectedLang, setSelectedLang] = useState(0);
   const lang = LANGUAGES[selectedLang];
@@ -40,10 +50,10 @@ export function AccessibilityTab() {
                 className="absolute top-0 bottom-0 left-0 z-10"
                 style={{ backgroundColor: lang.expansion > 110 ? STATUS_WARNING : STATUS_SUCCESS }}
                 initial={{ width: 0 }}
-                animate={{ width: `${Math.min(lang.expansion, 150)}%` }}
+                animate={{ width: `${expansionBar(lang.expansion).fillPct}%` }}
                 transition={{ type: 'spring' }}
               />
-              <div className="absolute top-0 bottom-0 left-[100%] w-0.5 z-20" style={{ backgroundColor: STATUS_ERROR, boxShadow: `0 0 4px ${STATUS_ERROR}` }} />
+              <div data-testid="expansion-limit" className="absolute top-0 bottom-0 w-0.5 z-20" style={{ left: `${LIMIT_PCT}%`, backgroundColor: STATUS_ERROR, boxShadow: `0 0 4px ${STATUS_ERROR}` }} />
             </div>
             {lang.overflowWidgets.length > 0 && (
               <div className="mt-2.5 pt-3 border-t border-border/20">
