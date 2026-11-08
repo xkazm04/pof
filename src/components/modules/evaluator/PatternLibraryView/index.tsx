@@ -30,6 +30,9 @@ import { StatCard } from './StatCard';
 import { PatternCard } from './PatternCard';
 import { AuthorPatternModal } from './AuthorPatternModal';
 
+/** The sort the dashboard list already arrives in (pattern-library-db CURATION_ORDER). */
+const DEFAULT_SORT = 'success-rate';
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function PatternLibraryView() {
@@ -66,10 +69,12 @@ export function PatternLibraryView() {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  // Debounced search — also restores the full list when every filter is cleared
+  // Debounced search — also restores the full list when every filter is cleared.
+  // A non-default sort counts as a filter: the dashboard list is always in the default
+  // (success-rate) curation order and ignores sortBy, so only the search action sorts.
   const filtersWereActiveRef = useRef(false);
   useEffect(() => {
-    const hasFilters = Boolean(searchQuery || moduleFilter || categoryFilter);
+    const hasFilters = Boolean(searchQuery || moduleFilter || categoryFilter || sortBy !== DEFAULT_SORT);
     if (hasFilters) {
       filtersWereActiveRef.current = true;
       const timer = setTimeout(() => searchPatterns(), 300);
