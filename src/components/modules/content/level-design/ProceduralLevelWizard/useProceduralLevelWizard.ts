@@ -10,6 +10,7 @@ import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { generatePreview } from '@/lib/level-design/procgen-preview';
 import { previewConfigFromSpec, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
+import type { RemedyPatch } from '@/lib/level-design/layout-remedies';
 import { ALGORITHMS, LEVEL_TYPES } from './constants';
 import {
   MAX_EXPORT_SIZE, EXPORT_CELL_SIZE, EXPORT_WALL_HEIGHT,
@@ -114,6 +115,7 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
   const selectLevelType = useCallback((lt: LevelType) => dispatch({ type: 'selectLevelType', levelType: lt }), [dispatch]);
   const toggleConstraint = useCallback((key: keyof GameplayConstraints) => dispatch({ type: 'toggleConstraint', key }), [dispatch]);
   const updateSize = useCallback((key: keyof SizeParams, value: number) => dispatch({ type: 'updateSize', key, value }), [dispatch]);
+  const applyPatch = useCallback((patch: RemedyPatch) => dispatch({ type: 'applyPatch', patch }), [dispatch]);
   const pin = useCallback(() => dispatch({ type: 'pin' }), [dispatch]);
   const unpin = useCallback(() => dispatch({ type: 'unpin' }), [dispatch]);
   const swapPinned = useCallback(() => dispatch({ type: 'restorePinned' }), [dispatch]);
@@ -233,6 +235,7 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
     selectLevelType,
     toggleConstraint,
     updateSize,
+    applyPatch,
     handleGenerate,
     prepareBlenderExport,
     cancelBlenderExport,

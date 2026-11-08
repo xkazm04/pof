@@ -16,6 +16,7 @@
 import type { Dispatch } from 'react';
 import { buildProcgenSpec, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import { hashSeed } from '@/lib/level-design/frandom-stream';
+import { applyRemedy, type RemedyPatch } from '@/lib/level-design/layout-remedies';
 import { DEFAULT_SIZE } from './constants';
 import {
   exportFlowReducer, exportKey, IDLE_EXPORT_FLOW, type ExportFlow, type ExportFlowAction,
@@ -50,6 +51,8 @@ export type ProcgenSpecAction =
   | { type: 'updateSize'; key: keyof SizeParams; value: number }
   | { type: 'toggleConstraint'; key: keyof GameplayConstraints }
   | { type: 'setSeed'; seed: string }
+  /** A multi-field remedy (room band, grid size) as ONE edit — one undo step, never a half-applied lever. */
+  | { type: 'applyPatch'; patch: RemedyPatch }
   | { type: 'shown' }
   | { type: 'pin' }
   | { type: 'unpin' }
@@ -123,6 +126,8 @@ export function procgenSpecReducer(state: ProcgenSpecState, action: ProcgenSpecA
       });
     case 'setSeed':
       return withSpec(state, { seedLabel: action.seed, seedValue: hashSeed(action.seed) });
+    case 'applyPatch':
+      return withSpec(state, applyRemedy(state.spec, { patch: action.patch }));
     case 'exportFlow': {
       const flow = exportFlowReducer(state.flow, action.action);
       return flow === state.flow ? state : { ...state, flow };

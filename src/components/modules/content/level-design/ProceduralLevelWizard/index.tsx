@@ -49,6 +49,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
     selectLevelType,
     toggleConstraint,
     updateSize,
+    applyPatch,
     handleGenerate,
     prepareBlenderExport,
     cancelBlenderExport,
@@ -99,8 +100,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating, specStore }: P
         algDef={algDef}
         spec={spec}
         setSeed={setSeed}
-        updateSize={updateSize}
-        toggleConstraint={toggleConstraint}
+        applyPatch={applyPatch}
         explore={{ pinned, canUndo, canRedo, pin, unpin, swapPinned, undo, redo }}
       />
 

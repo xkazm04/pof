@@ -34,14 +34,13 @@ interface LivePreviewProps {
    */
   spec?: ProcgenSpec;
   setSeed?: LayoutRemedyActions['setSeed'];
-  updateSize?: LayoutRemedyActions['updateSize'];
-  toggleConstraint?: LayoutRemedyActions['toggleConstraint'];
+  applyPatch?: LayoutRemedyActions['applyPatch'];
   /** Given (with `spec` and `setSeed`), the preview offers seed scan, pin/compare and undo/redo. */
   explore?: LayoutExploreProps;
 }
 
-export function LivePreview({ preview, seed, algDef, spec, setSeed, updateSize, toggleConstraint, explore }: LivePreviewProps) {
-  const canRemedy = !!spec && !!setSeed && !!updateSize && !!toggleConstraint && preview.stats.regions > 1;
+export function LivePreview({ preview, seed, algDef, spec, setSeed, applyPatch, explore }: LivePreviewProps) {
+  const canRemedy = !!spec && !!setSeed && !!applyPatch && preview.stats.regions > 1;
   return (
     <div className="space-y-3 relative z-10">
       <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
@@ -77,7 +76,7 @@ export function LivePreview({ preview, seed, algDef, spec, setSeed, updateSize, 
       )}
       {explore && spec && setSeed && <SeedContactSheet spec={spec} setSeed={setSeed} />}
       {canRemedy && (
-        <LayoutRemedies spec={spec} setSeed={setSeed} updateSize={updateSize} toggleConstraint={toggleConstraint} />
+        <LayoutRemedies spec={spec} setSeed={setSeed} applyPatch={applyPatch} />
       )}
     </div>
   );

@@ -3,33 +3,24 @@
 import { useState } from 'react';
 import { Wand2, Dices, SlidersHorizontal } from 'lucide-react';
 import {
-  findLayoutRemedies, type LayoutDiagnosis, type LeverRemedy,
+  findLayoutRemedies, type LayoutDiagnosis, type RemedyPatch,
 } from '@/lib/level-design/layout-remedies';
 import type { PreviewStats } from '@/lib/level-design/procgen-preview';
 import type { ProcgenSpec } from '@/lib/level-design/procgen-spec';
-import type { SizeParams, GameplayConstraints } from './types';
 
 export interface LayoutRemedyActions {
   setSeed: (seed: string) => void;
-  updateSize: (key: keyof SizeParams, value: number) => void;
-  toggleConstraint: (key: keyof GameplayConstraints) => void;
+  /**
+   * Apply a lever's whole patch as ONE reducer edit. A lever moves up to two
+   * fields (room band, grid size); dispatched field by field it became two undo
+   * steps, and one Undo left a half-applied lever — an inverted band or a
+   * one-axis grid nobody measured.
+   */
+  applyPatch: (patch: RemedyPatch) => void;
 }
 
 interface LayoutRemediesProps extends LayoutRemedyActions {
   spec: ProcgenSpec;
-}
-
-const SIZE_KEYS = ['gridWidth', 'gridHeight', 'roomCountMin', 'roomCountMax', 'corridorWidth'] as const;
-
-/** Apply a lever through the wizard's own dispatchers — no second writer of the spec. */
-function applyLever(spec: ProcgenSpec, remedy: LeverRemedy, act: LayoutRemedyActions) {
-  for (const key of SIZE_KEYS) {
-    const v = remedy.patch[key];
-    if (v !== undefined && v !== spec[key]) act.updateSize(key, v);
-  }
-  for (const [key, on] of Object.entries(remedy.patch.constraints ?? {}) as [keyof GameplayConstraints, boolean][]) {
-    if (spec.constraints[key] !== on) act.toggleConstraint(key);
-  }
 }
 
 const describeStats = (s: PreviewStats) =>
@@ -70,7 +61,7 @@ export function LayoutRemedies({ spec, ...act }: LayoutRemediesProps) {
         <ul className="space-y-1" aria-label="One-lever fixes at this seed">
           {remedies.map((r) => (
             <li key={r.field}>
-              <button type="button" className={ROW} onClick={() => applyLever(spec, r, act)} data-testid={`layout-remedy-${r.field}`}>
+              <button type="button" className={ROW} onClick={() => act.applyPatch(r.patch)} data-testid={`layout-remedy-${r.field}`}>
                 <span className="flex items-center gap-2">
                   <SlidersHorizontal className="w-3 h-3 text-emerald-400" aria-hidden="true" />
                   {r.label}

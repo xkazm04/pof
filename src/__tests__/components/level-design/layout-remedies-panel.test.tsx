@@ -97,7 +97,7 @@ describe('[guard] a connected layout renders as it did', () => {
     cleanup();
     const withRemedies = render(
       <LivePreview preview={preview} seed="" algDef={algDef} spec={spec}
-        setSeed={vi.fn()} updateSize={vi.fn()} toggleConstraint={vi.fn()} />,
+        setSeed={vi.fn()} applyPatch={vi.fn()} />,
     ).container.innerHTML;
     expect(withRemedies).toBe(plain);
   });
