@@ -29,6 +29,11 @@ export function ProfileEditor({ profile, onSave, onClose }: {
     platformSettings: { ...DEFAULT_PLATFORM_SETTINGS, ...profile.platformSettings },
   });
 
+  // The raw text the person is typing. Deriving the value from the parsed array
+  // dropped the space after each flag on the same render, so a second flag could
+  // never be typed; the array is still updated on every keystroke for Save.
+  const [flagsText, setFlagsText] = useState(() => form.platformSettings?.customFlags?.join(' ') ?? '');
+
   const update = <K extends keyof BuildProfile>(key: K, value: BuildProfile[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -151,11 +156,14 @@ export function ProfileEditor({ profile, onSave, onClose }: {
           <div>
             <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">Custom UAT Flags</label>
             <input
-              value={form.platformSettings?.customFlags?.join(' ') ?? ''}
-              onChange={(e) => update('platformSettings', {
-                ...(form.platformSettings ?? DEFAULT_PLATFORM_SETTINGS),
-                customFlags: e.target.value.split(' ').filter((f) => f.trim()),
-              })}
+              value={flagsText}
+              onChange={(e) => {
+                setFlagsText(e.target.value);
+                update('platformSettings', {
+                  ...(form.platformSettings ?? DEFAULT_PLATFORM_SETTINGS),
+                  customFlags: e.target.value.split(/\s+/).filter(Boolean),
+                });
+              }}
               placeholder="-nocompile -nop4"
               className={`${inputClass} mt-1`}
             />
