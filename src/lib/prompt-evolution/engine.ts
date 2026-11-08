@@ -491,6 +491,9 @@ export function getBestVariant(
 
 // ── Suggestions ─────────────────────────────────────────────────────────────
 
+/** Stored confidence at or above this is a z-test band (weak and up); below it is not a confidence. */
+const ADOPT_CONFIDENCE_FLOOR = 0.8;
+
 export function generateSuggestions(
   moduleId: SubModuleId,
   sessions: SessionRecord[],
@@ -549,7 +552,10 @@ export function generateSuggestions(
         type: 'adopt-winner',
         moduleId,
         checklistItemId: test.checklistItemId,
-        message: `A/B test concluded: "${winner.label}" won with ${Math.round(test.confidence * 100)}% confidence`,
+        // Below 0.8 the stored number is a decide-now volume score, not a confidence.
+        message: test.confidence >= ADOPT_CONFIDENCE_FLOOR
+          ? `A/B test concluded: "${winner.label}" won with ${Math.round(test.confidence * 100)}% confidence`
+          : `A/B test concluded: "${winner.label}" was picked below the weakest confidence band - treat it as an early lead, not a proven win`,
         variantId: winner.id,
         confidence: test.confidence,
       });
