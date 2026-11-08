@@ -177,3 +177,28 @@ describe('<StepHistoryPanel /> compare retry', () => {
     expect(posts).toBe(2);
   });
 });
+
+describe('<StepHistoryPanel /> restore failure', () => {
+  it('names a failed restore as a restore, and its Retry re-runs the restore', async () => {
+    let posts = 0;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: async () => {
+        if (init?.method !== 'POST') return { success: true, data: [rev(1)] };
+        posts += 1;
+        return posts === 1
+          ? { success: false, error: 'disk full' }
+          : { success: true, data: { artifact: { status: 'pass' }, regraded: false, archivedStatus: 'pass' } };
+      },
+    })) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-restore'));
+    const banner = await screen.findByText(/disk full/);
+    expect(banner.textContent).toMatch(/restore the version/i);
+    expect(banner.textContent).not.toMatch(/load previous versions/i);
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    await screen.findByTestId('step-history-notice');
+    expect(posts).toBe(2);
+  });
+});

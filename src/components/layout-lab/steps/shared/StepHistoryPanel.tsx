@@ -52,6 +52,7 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [restoreFailure, setRestoreFailure] = useState<{ rev: ArtifactRevision; message: string } | null>(null);
   const [comparing, setComparing] = useState<number | null>(null);
   const [dryRuns, setDryRuns] = useState<Record<number, RevisionDryRun>>({});
   const [compareError, setCompareError] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   async function restore(rev: ArtifactRevision) {
     setBusy(true);
     setNotice(null);
-    setError(null);
+    setRestoreFailure(null);
     try {
       const res = await apiFetch<{ artifact: { status: string }; regraded: boolean; archivedStatus: string }>(
         REVISIONS_URL, postJson({ revisionId: rev.id }),
@@ -107,7 +108,7 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
       await load();
       onRestored?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Restore failed');
+      setRestoreFailure({ rev, message: e instanceof Error ? e.message : 'Restore failed' });
     } finally {
       setBusy(false);
     }
@@ -129,6 +130,13 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
       {open && (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {error && <InlineErrorRetry dense message={`Couldn’t load previous versions: ${error}`} onRetry={() => void load()} />}
+          {restoreFailure && (
+            <InlineErrorRetry
+              dense
+              message={`Couldn’t restore the version from ${stamp(restoreFailure.rev.updatedAt)}: ${restoreFailure.message}`}
+              onRetry={() => void restore(restoreFailure.rev)}
+            />
+          )}
           {notice && (
             <span data-testid="step-history-notice" className={t.fontMono} style={{ fontSize: 13, color: t.warn }}>
               {notice}
