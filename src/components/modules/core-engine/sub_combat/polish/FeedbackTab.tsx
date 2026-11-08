@@ -9,6 +9,7 @@ import {
   withOpacity, OPACITY_25, OPACITY_8, OPACITY_50, GLOW_MD,
 } from '@/lib/chart-colors';
 import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { TimelineStrip } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import {
@@ -54,16 +55,26 @@ interface FeedbackTabProps {
 export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: FeedbackTabProps) {
   const juiceColor = juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE;
 
-  const [copied, setCopied] = useState(false);
+  /* 'copied' only once writeText resolved; 'failed' when there is no clipboard
+     or the write was refused, so the button never claims a copy that did not happen. */
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   /* The range inputs are transparent overlays on the NeonBar, so their own
      focus ring is invisible — track focus and draw it on the bar wrapper. */
   const [focusedParam, setFocusedParam] = useState<string | null>(null);
   const activePreset = useMemo(() => matchingPreset(feedbackValues), [feedbackValues]);
   const feelScript = useMemo(() => buildCombatFeelPython(feedbackValues), [feedbackValues]);
-  const copyFeel = useCallback(() => {
-    void navigator.clipboard?.writeText(feelScript);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const copyFeel = useCallback(async () => {
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(feelScript);
+        ok = true;
+      }
+    } catch {
+      ok = false;
+    }
+    setCopyState(ok ? 'copied' : 'failed');
+    setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
   }, [feelScript]);
 
   return (
@@ -193,7 +204,7 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
         <div className="flex items-center justify-between mb-2">
           <SectionHeader label="Export to UE (apply to GA_MeleeAttack)" color={ACCENT} icon={Download} />
           <button data-testid="combat-feel-export" onClick={copyFeel} className="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer">
-            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}{copied ? 'Copied' : 'Copy Python'}
+            {copyState === 'copied' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}{copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy Python'}
           </button>
         </div>
         <pre className="text-[10px] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto text-text-muted">{feelScript}</pre>

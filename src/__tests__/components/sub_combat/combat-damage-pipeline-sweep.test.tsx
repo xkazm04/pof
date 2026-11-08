@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import type React from 'react';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { CalcInput } from '@/components/modules/core-engine/sub_combat/damage-pipeline/ExecComponents';
 import { ExecutionBreakdownPanel } from '@/components/modules/core-engine/sub_combat/damage-pipeline/ExecutionBreakdownPanel';
 import { DirectHealthFlow } from '@/components/modules/core-engine/sub_combat/damage-pipeline/DirectHealthFlow';
+import { FeedbackTab } from '@/components/modules/core-engine/sub_combat/polish/FeedbackTab';
+import { FEEDBACK_PARAMS } from '@/components/modules/core-engine/sub_combat/_shared/data';
 import { DIRECT_PIPELINE } from '@/components/modules/core-engine/sub_combat/damage-pipeline/pipeline-data';
 
 // scan-sweep night 2026-11-08, combat-damage-pipeline: one block per landed finding.
@@ -74,5 +76,38 @@ describe('DirectHealthFlow honours the disclosure affordance FlowNode draws', ()
     expect(screen.queryByTestId('pipeline-cpp-ref')).not.toBeNull();
     fireEvent.keyDown(first, { key: 'Escape' });
     expect(screen.queryByTestId('pipeline-cpp-ref')).toBeNull();
+  });
+});
+
+describe('FeedbackTab "Copy Python" reports what the clipboard actually did', () => {
+  const values = Object.fromEntries(FEEDBACK_PARAMS.map(p => [p.id, p.defaultValue]));
+  const renderTab = () => render(<FeedbackTab feedbackValues={values} juiceLevel={0.5} onPreset={() => {}} onParam={() => {}} />);
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const setClipboard = (v: unknown) => Object.defineProperty(navigator, 'clipboard', { value: v, configurable: true });
+  afterEach(() => { if (original) Object.defineProperty(navigator, 'clipboard', original); else setClipboard(undefined); });
+
+  it('says Copied only after writeText resolves', async () => {
+    setClipboard({ writeText: vi.fn().mockResolvedValue(undefined) });
+    renderTab();
+    await act(async () => { fireEvent.click(screen.getByTestId('combat-feel-export')); });
+    expect(screen.getByTestId('combat-feel-export').textContent).toMatch(/Copied/);
+  });
+
+  it('does not claim Copied when the write is rejected', async () => {
+    setClipboard({ writeText: vi.fn().mockRejectedValue(new Error('denied')) });
+    renderTab();
+    await act(async () => { fireEvent.click(screen.getByTestId('combat-feel-export')); });
+    const label = screen.getByTestId('combat-feel-export').textContent ?? '';
+    expect(label).not.toMatch(/^Copied$/);
+    expect(label).toMatch(/fail/i);
+  });
+
+  it('does not claim Copied when there is no clipboard at all', async () => {
+    setClipboard(undefined);
+    renderTab();
+    await act(async () => { fireEvent.click(screen.getByTestId('combat-feel-export')); });
+    const label = screen.getByTestId('combat-feel-export').textContent ?? '';
+    expect(label).not.toMatch(/^Copied$/);
+    expect(label).toMatch(/fail/i);
   });
 });
