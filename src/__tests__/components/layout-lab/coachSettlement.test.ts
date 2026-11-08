@@ -127,7 +127,7 @@ describe('glossary + rollup — held rows are not "not started"', () => {
 describe('[guard] no verdict known → today\'s picks', () => {
   it('without verdictOf the lab ladder still picks the first pending row', () => {
     expect(pickNextActionableStep(DIALOG, statusOf)?.step).toBe('VO Script');
-    expect(pickNextActionableStep(DIALOG, statusOf)?.plainHint).toBe('This step is produced — its acceptance is still resolving.');
+    expect(pickNextActionableStep(DIALOG, statusOf)?.plainHint).toBe('Produced but held — its acceptance names what is still missing.');
   });
 
   it('a lab-local thrown checker is still coached (it is a defect to fix, not an MCP-unsettleable row)', () => {
