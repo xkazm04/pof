@@ -12,6 +12,7 @@ import { HardDrive, Loader2, RefreshCw, Check, Wrench, Undo2 } from 'lucide-reac
 import type { ChecklistItem } from '@/types/modules';
 import type { VerificationInfo } from '@/stores/moduleStore';
 import { buildFinishPrompt, type DiskPlan, type DiskRow, type DiskRowKind } from '@/lib/checklist-disk-check';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import type { DiskCheckState } from './useDiskCheck';
 
 const KIND_LABEL: Record<DiskRowKind, string> = {
@@ -24,12 +25,20 @@ const KIND_LABEL: Record<DiskRowKind, string> = {
 };
 
 const KIND_CLASS: Record<DiskRowKind, string> = {
-  built: 'bg-status-green-subtle text-green-400',
+  built: 'bg-status-green-subtle',
   confirmed: 'bg-surface-hover text-text-muted',
-  partial: 'bg-status-amber-subtle text-yellow-400',
-  stub: 'bg-status-amber-subtle text-yellow-400',
+  partial: 'bg-status-amber-subtle',
+  stub: 'bg-status-amber-subtle',
   absent: 'bg-surface-hover text-text-muted',
-  regressed: 'bg-status-red-subtle text-red-400',
+  regressed: 'bg-status-red-subtle',
+};
+
+/** Verdict text colours from the status tokens; kinds without an entry keep the muted class colour. */
+const KIND_COLOR: Partial<Record<DiskRowKind, string>> = {
+  built: STATUS_SUCCESS,
+  partial: STATUS_WARNING,
+  stub: STATUS_WARNING,
+  regressed: STATUS_ERROR,
 };
 
 const BTN = 'flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors disabled:opacity-50';
@@ -69,16 +78,16 @@ function DiskRowView({ row, item, isRunning, onUntick, onRunPrompt }: {
     <li data-testid={`pof-disk-row-${row.itemId}`} className="flex items-center gap-2 py-1 text-2xs">
       <span className="font-mono text-text-muted w-10 flex-shrink-0">{row.itemId}</span>
       <span className="flex-1 min-w-0 truncate text-text" title={item?.label}>{item?.label ?? row.itemId}</span>
-      <span className={`px-1.5 py-0.5 rounded ${KIND_CLASS[row.kind]}`}>
+      <span className={`px-1.5 py-0.5 rounded ${KIND_CLASS[row.kind]}`} style={{ color: KIND_COLOR[row.kind] }}>
         {KIND_LABEL[row.kind]}{row.kind === 'partial' ? ` ${Math.round(row.completeness * 100)}%` : ''}
       </span>
       {row.missingMembers.length > 0 && row.kind !== 'absent' && row.kind !== 'regressed' && (
-        <span className="text-yellow-400 truncate max-w-[40%]" title={row.missingMembers.join(', ')}>
+        <span className="truncate max-w-[40%]" style={{ color: STATUS_WARNING }} title={row.missingMembers.join(', ')}>
           missing: {row.missingMembers.join(', ')}
         </span>
       )}
       {row.action === 'untick' && (
-        <button type="button" onClick={() => onUntick(row.itemId)} className={`${BTN} border-border text-red-400 hover:bg-status-red-subtle`}>
+        <button type="button" onClick={() => onUntick(row.itemId)} className={`${BTN} border-border hover:bg-status-red-subtle`} style={{ color: STATUS_ERROR }}>
           <Undo2 className="w-3 h-3" />
           Untick
         </button>
@@ -89,7 +98,8 @@ function DiskRowView({ row, item, isRunning, onUntick, onRunPrompt }: {
           disabled={isRunning}
           onClick={() => onRunPrompt(row.itemId, buildFinishPrompt(item, row.finish!))}
           title={`Claude adds only: ${row.finish.missingMembers.join(', ') || 'the stub body'} to ${row.finish.className}`}
-          className={`${BTN} border-border text-yellow-400 hover:bg-status-amber-subtle`}
+          className={`${BTN} border-border hover:bg-status-amber-subtle`}
+          style={{ color: STATUS_WARNING }}
         >
           <Wrench className="w-3 h-3" />
           Finish
@@ -126,7 +136,8 @@ export function DiskCheckPanel({
           <button
             type="button"
             onClick={() => onApply(plan.built)}
-            className={`${BTN} border-border text-green-400 hover:bg-status-green-subtle`}
+            className={`${BTN} border-border hover:bg-status-green-subtle`}
+            style={{ color: STATUS_SUCCESS }}
           >
             <Check className="w-3 h-3" />
             Mark built ({plan.built.length})
@@ -144,7 +155,7 @@ export function DiskCheckPanel({
       </div>
 
       {state.phase === 'error' && (
-        <p role="alert" className="text-2xs text-red-400">Check failed: {state.reason}. Nothing was ticked or recorded.</p>
+        <p role="alert" className="text-2xs" style={{ color: STATUS_ERROR }}>Check failed: {state.reason}. Nothing was ticked or recorded.</p>
       )}
       {state.phase === 'unavailable' && (
         <p className="text-2xs text-text-muted">Set the UE project path first — the check reads its Source/ headers.</p>
@@ -164,7 +175,7 @@ export function DiskCheckPanel({
         </ul>
       )}
       {state.phase === 'done' && state.unreadable.length > 0 && (
-        <p className="text-2xs text-yellow-400" title={state.unreadable.join('\n')}>
+        <p className="text-2xs" style={{ color: STATUS_WARNING }} title={state.unreadable.join('\n')}>
           {state.unreadable.length} header{state.unreadable.length === 1 ? '' : 's'} could not be read and were not checked.
         </p>
       )}
