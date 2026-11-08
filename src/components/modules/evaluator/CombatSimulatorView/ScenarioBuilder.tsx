@@ -35,6 +35,10 @@ export function ScenarioBuilder({
   simulating?: boolean;
 }) {
   const gearSelectId = useId();
+  const levelFieldId = useId();
+  const iterationsFieldId = useId();
+  const abilitiesLabelId = useId();
+  const enemiesLabelId = useId();
   const toggleAbility = (id: string) =>
     setSelectedAbilities(
       selectedAbilities.includes(id)
@@ -54,13 +58,14 @@ export function ScenarioBuilder({
         {/* Player config */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
-            <label className="text-2xs text-text-muted font-medium block mb-1">Player Level</label>
+            <label htmlFor={levelFieldId} className="text-2xs text-text-muted font-medium block mb-1">Player Level</label>
             <NumberField
               value={playerLevel}
               min={1}
               max={50}
               fallback={1}
               onChange={setPlayerLevel}
+              id={levelFieldId}
               ariaLabel="Player level"
               className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-status-red-strong"
             />
@@ -79,7 +84,7 @@ export function ScenarioBuilder({
             </select>
           </div>
           <div>
-            <label className="text-2xs text-text-muted font-medium block mb-1">Iterations</label>
+            <label htmlFor={iterationsFieldId} className="text-2xs text-text-muted font-medium block mb-1">Iterations</label>
             <NumberField
               value={iterations}
               min={100}
@@ -88,6 +93,7 @@ export function ScenarioBuilder({
               step={100}
               onChange={setIterations}
               disabled={simulating}
+              id={iterationsFieldId}
               ariaLabel="Simulation iterations"
               className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-status-red-strong disabled:opacity-50 disabled:cursor-not-allowed"
             />
@@ -95,11 +101,11 @@ export function ScenarioBuilder({
         </div>
 
         {/* Abilities */}
-        <div>
+        <div role="group" aria-labelledby={abilitiesLabelId}>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-2xs text-text-muted font-medium">
+            <span id={abilitiesLabelId} className="text-2xs text-text-muted font-medium">
               Abilities <span className="text-cyan-400">({selectedCount}/{abilities.length})</span>
-            </label>
+            </span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -169,8 +175,8 @@ export function ScenarioBuilder({
         </div>
 
         {/* Enemy setup */}
-        <div>
-          <label className="text-2xs text-text-muted font-medium block mb-1">Enemies</label>
+        <div role="group" aria-labelledby={enemiesLabelId}>
+          <span id={enemiesLabelId} className="text-2xs text-text-muted font-medium block mb-1">Enemies</span>
           <div className="space-y-1.5">
             {enemySetup.map((entry, i) => (
               <div key={i} className="flex items-center gap-2">
