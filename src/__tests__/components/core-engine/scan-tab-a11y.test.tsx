@@ -6,6 +6,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { FindingRow } from '@/components/modules/core-engine/ScanTab/FindingRow';
 import type { ScanFinding } from '@/types/scan';
+import { ScanDelta } from '@/components/modules/core-engine/ScanTab/ScanDelta';
 import { ResolvedSection } from '@/components/modules/core-engine/ScanTab/ResolvedSection';
 import { SuggestionsList } from '@/components/modules/core-engine/TelemetryEvolution/SuggestionsList';
 import type { GenreEvolutionSuggestion } from '@/types/telemetry';
@@ -86,5 +87,16 @@ describe('disclosure buttons state their expanded state', () => {
     cleanup();
     const open = render(<SuggestionsList suggestions={[sug]} expandedId="s1" onToggle={() => {}} onResolve={() => {}} />);
     expect(open.container.querySelector('button')?.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
+describe('ScanDelta — every transient state is a live region', () => {
+  const noop = () => Promise.resolve();
+  it('the pending "waiting for its report" line is announced like the unrecorded one', () => {
+    const pending = render(<ScanDelta state={{ status: 'pending' }} onResolve={noop} lastResolved={null} onUndo={noop} resolveError={null} />);
+    expect(pending.container.querySelector('[role="status"]')?.textContent ?? '').toContain('waiting for its report');
+    cleanup();
+    const unrecorded = render(<ScanDelta state={{ status: 'unrecorded', reason: 'r' }} onResolve={noop} lastResolved={null} onUndo={noop} resolveError={null} />);
+    expect(unrecorded.container.querySelector('[role="status"]')).not.toBeNull();
   });
 });

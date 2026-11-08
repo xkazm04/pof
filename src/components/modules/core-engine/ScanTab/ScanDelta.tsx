@@ -55,7 +55,7 @@ export function ScanDelta({ state, onResolve, lastResolved, onUndo, resolveError
 
   if (state.status === 'pending') {
     return (
-      <div className="flex items-center gap-2 text-xs text-text-muted">
+      <div className="flex items-center gap-2 text-xs text-text-muted" role="status">
         <Loader2 className="w-3 h-3 animate-spin" style={{ color: ACCENT }} />
         Scan running — waiting for its report
       </div>
