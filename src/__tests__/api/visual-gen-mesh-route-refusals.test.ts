@@ -305,4 +305,3 @@ describe('scene-decompose fields', () => {
   }
 });
 
-// FINDINGS-APPEND

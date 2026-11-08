@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
     const body = parsed as { name?: string; dir?: string; assetClass?: string };
 
+    if (body.name !== undefined && typeof body.name !== 'string') return apiError('name must be a string', 400);
+    if (body.assetClass !== undefined && typeof body.assetClass !== 'string') return apiError('assetClass must be a string', 400);
+
     const name = safeAssetName((body.name ?? '').trim());
     if (!name) return apiError('name must be a safe generated-asset basename (e.g. "jinx_hd.glb")', 400);
     const dir = safeAssetDir(body.dir);
