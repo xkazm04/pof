@@ -27,6 +27,13 @@ import { resolveSkillsFromPatterns } from '@/components/cli/skills';
 // Omitting it is a legitimate UNSCOPED read (unattributed rows only) — never "the
 // newest scan of whichever project happened to run last".
 
+/** A list limit is an integer in 1-1000: NaN must not reach SQLite, and a negative LIMIT means every row. */
+function parseLimit(raw: string | null, fallback: number): number | null {
+  if (raw === null || raw === '') return fallback;
+  const n = /^\d{1,4}$/.test(raw) ? Number(raw) : NaN;
+  return n >= 1 && n <= 1000 ? n : null;
+}
+
 // ─── GET: stats, history, suggestions ────────────────────────────────────────
 
 export async function GET(req: Request) {
@@ -39,8 +46,11 @@ export async function GET(req: Request) {
       case 'stats':
         return apiSuccess(getTelemetryStats(projectPath));
 
-      case 'history':
-        return apiSuccess(getSnapshotHistory(Number(searchParams.get('limit') || 20), projectPath));
+      case 'history': {
+        const limit = parseLimit(searchParams.get('limit'), 20);
+        if (limit === null) return apiError('limit must be an integer in 1-1000', 400);
+        return apiSuccess(getSnapshotHistory(limit, projectPath));
+      }
 
       case 'latest':
         return apiSuccess(getLatestSnapshot(projectPath));

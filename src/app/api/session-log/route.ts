@@ -9,6 +9,13 @@ import {
 import type { SubModuleId } from '@/types/modules';
 import type { SessionLogEvent } from '@/types/session-log';
 
+/** A list limit is an integer in 1-1000: NaN must not reach SQLite, and a negative LIMIT means every row. */
+function parseLimit(raw: string | null, fallback: number): number | null {
+  if (raw === null || raw === '') return fallback;
+  const n = /^\d{1,4}$/.test(raw) ? Number(raw) : NaN;
+  return n >= 1 && n <= 1000 ? n : null;
+}
+
 // GET /api/session-log?projectPath=X&limit=50
 // GET /api/session-log?moduleId=X&limit=30
 export async function GET(req: NextRequest) {
@@ -16,7 +23,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const projectPath = searchParams.get('projectPath');
     const moduleId = searchParams.get('moduleId');
-    const limit = parseInt(searchParams.get('limit') ?? '50', 10);
+    const limit = parseLimit(searchParams.get('limit'), 50);
+    if (limit === null) return apiError('limit must be an integer in 1-1000', 400);
 
     if (moduleId) {
       return apiSuccess(getModuleSessionLog(moduleId as SubModuleId, limit));
