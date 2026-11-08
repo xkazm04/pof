@@ -189,7 +189,7 @@ export function CrashAnalyzerView() {
             <Bug className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-40" />
             <p className="text-sm text-text-muted mb-1">No crash data loaded</p>
             <p className="text-2xs text-text-muted">
-              Click &quot;Analyze Crashes&quot; to load sample crash data, or import a crash log.
+              Click &quot;Analyze Crashes&quot; to load the built-in sample crashes and this project&rsquo;s crash history. Importing a log opens once crash data has loaded.
             </p>
           </div>
         </SurfaceCard>

@@ -56,3 +56,18 @@ describe('CrashAnalyzerView — search', () => {
     expect(view.container.textContent).not.toMatch(/No crashes match/i);
   });
 });
+
+describe('CrashAnalyzerView — empty state copy', () => {
+  it('does not offer an import affordance the empty state cannot reach', () => {
+    useCrashAnalyzerStore.setState({
+      reports: [], diagnoses: [], patterns: [], selectedCrashId: null,
+      isLoading: false, error: 'Crash analysis failed: boom', fetchAnalysis: async () => {},
+    });
+    const view = render(<CrashAnalyzerView />);
+    const text = view.container.textContent ?? '';
+    // The Import tab only renders when crash data exists.
+    expect(view.container.querySelector('textarea')).toBeNull();
+    expect(text).not.toMatch(/import a crash log/i);
+    expect(text).toMatch(/Analyze Crashes/);
+  });
+});
