@@ -6,6 +6,8 @@ import { DEFAULT_PHYSICS, DEFAULT_COMBAT, PRESETS } from './constants';
 import { spawnParticle, updateParticle, computeReadability } from './simulation';
 import type { PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics } from './types';
 
+const DEFAULT_CANVAS_W = 520;
+
 export function useDamageNumberPhysicsSimulator() {
   const [physics, setPhysics] = useState<PhysicsConfig>({ ...DEFAULT_PHYSICS });
   const [combat, setCombat] = useState<CombatConfig>({ ...DEFAULT_COMBAT });
@@ -25,7 +27,8 @@ export function useDamageNumberPhysicsSimulator() {
   // Keep ref in sync
   particlesRef.current = particles;
 
-  const canvasW = 520;
+  // Width of the rendered canvas (the div is 100% wide); 520 is the pre-measure fallback.
+  const [canvasW, setCanvasW] = useState(DEFAULT_CANVAS_W);
   const canvasH = 300;
 
   const updatePhysics = useCallback((updates: Partial<PhysicsConfig>) => {
@@ -152,6 +155,18 @@ export function useDamageNumberPhysicsSimulator() {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, [isRunning, stepLatest]);
+
+  // Track the rendered width so mob layout and spawn x follow the real canvas.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setCanvasW(w);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
