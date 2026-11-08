@@ -21,6 +21,7 @@ describe('AdvancedTexturePanel — Scenario PBR tile', () => {
   it('shows a configure hint when SCENARIO_API_KEY is not configured', async () => {
     mockFetch({ status: 500, body: { success: false, error: 'SCENARIO_API_KEY not configured' } });
     render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
     fireEvent.click(screen.getByTestId('scenario-generate'));
     await waitFor(() => expect(screen.getByTestId('scenario-error').textContent).toMatch(/configure/i));
   });
@@ -52,6 +53,7 @@ describe('AdvancedTexturePanel — seam check', () => {
   it('a clean tile says the check RAN — not nothing, which reads as never checked', async () => {
     mockFetch({ body: { success: true, data: { albedoUrl: 'a.png', seam: { ...seamData.seam, hasSeam: false, worstEdge: undefined } } } });
     render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
     fireEvent.click(screen.getByTestId('scenario-generate'));
 
     await waitFor(() => expect(screen.getByTestId('pbr-albedo')).toBeTruthy());
@@ -63,6 +65,7 @@ describe('AdvancedTexturePanel — seam check', () => {
   it('a texture the seam pass could not read says so, rather than looking clean', async () => {
     mockFetch({ body: { success: true, data: { albedoUrl: 'a.png', seam: null } } });
     render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
     fireEvent.click(screen.getByTestId('scenario-generate'));
 
     await waitFor(() => expect(screen.getByTestId('pbr-albedo')).toBeTruthy());

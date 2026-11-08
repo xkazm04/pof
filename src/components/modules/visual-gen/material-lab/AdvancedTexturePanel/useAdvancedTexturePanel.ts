@@ -93,6 +93,9 @@ export function useAdvancedTexturePanel() {
   const anyMap = !!(pbr && (pbr.albedoUrl || pbr.normalUrl || pbr.roughnessUrl));
 
   const generatePbr = async (effectivePrompt: string) => {
+    // Scenario is a paid call: a blank prompt is refused here, as every other
+    // tile already refuses its own empty required field, not after the spend.
+    if (!effectivePrompt.trim()) return;
     setPbrLoading(true); setPbr(null); setPbrErr(null);
     const r = await tryApiFetch<ScenarioResult>('/api/scenario', {
       method: 'POST',
@@ -110,6 +113,7 @@ export function useAdvancedTexturePanel() {
   // (a fresh stochastic roll, biased toward a cleanly-wrapping tile).
   const rerollSeamless = () => {
     const base = prompt.trim();
+    if (!base) return Promise.resolve();
     const boosted = base.toLowerCase().includes('seamless') ? base : `${base}, ${SEAMLESS_HINT}`;
     return generatePbr(boosted);
   };

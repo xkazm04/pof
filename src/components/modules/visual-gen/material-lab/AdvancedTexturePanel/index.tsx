@@ -43,7 +43,7 @@ export function AdvancedTexturePanel() {
         <button
           data-testid="scenario-generate"
           onClick={runScenario}
-          disabled={pbrLoading}
+          disabled={pbrLoading || !prompt.trim()}
           className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium bg-[var(--visual-gen)]/10 text-[var(--visual-gen)] hover:bg-[var(--visual-gen)]/20 disabled:opacity-40"
         >
           {pbrLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
