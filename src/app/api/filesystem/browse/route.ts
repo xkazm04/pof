@@ -443,11 +443,14 @@ async function scanForProjects(): Promise<DetectedProject[]> {
 
 /** `normalized` has already passed `checkLocalPath` (local, absolute, normalized). */
 async function handleList(normalized: string) {
+  const dir = path.dirname(normalized);
+  // A filesystem root is its own dirname and has no parent, whether or not it exists.
+  const parent = dir !== normalized ? dir : null;
 
   if (!(await directoryExists(normalized))) {
     return apiSuccess({
       path: normalized,
-      parent: path.dirname(normalized),
+      parent,
       directories: [] as { name: string; path: string; hasUProject: boolean }[],
       uprojectFiles: [] as string[],
       isUEProject: false,
@@ -466,11 +469,9 @@ async function handleList(normalized: string) {
     return apiError(`Cannot read directory ${normalized} (${code})`, 500);
   }
 
-  const parent = path.dirname(normalized);
-
   return apiSuccess({
     path: normalized,
-    parent: parent !== normalized ? parent : null,
+    parent,
     directories,
     uprojectFiles,
     isUEProject: uprojectFiles.length > 0,
