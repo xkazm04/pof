@@ -5,7 +5,6 @@ import { NODE_W, NODE_H } from './constants';
 import type { ModuleNode, Edge } from './types';
 
 interface GraphCanvasProps {
-  svgRef: React.RefObject<SVGSVGElement | null>;
   svgWidth: number;
   svgHeight: number;
   zoom: number;
@@ -22,7 +21,6 @@ interface GraphCanvasProps {
 }
 
 export function GraphCanvas({
-  svgRef,
   svgWidth,
   svgHeight,
   zoom,
@@ -50,7 +48,6 @@ export function GraphCanvas({
   return (
     <div className="bg-background border border-border rounded-lg overflow-hidden">
       <svg
-        ref={svgRef}
         width="100%"
         viewBox={zoomViewBox(svgWidth, svgHeight, zoom)}
       >

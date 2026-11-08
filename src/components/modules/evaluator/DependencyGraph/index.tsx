@@ -23,7 +23,6 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
     setHoveredModule,
     zoom,
     setZoom,
-    svgRef,
     bridgeConnected,
     manifestCrossRefs,
     nodes,
@@ -88,7 +87,6 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
 
       {/* Graph */}
       <GraphCanvas
-        svgRef={svgRef}
         svgWidth={svgWidth}
         svgHeight={svgHeight}
         zoom={zoom}

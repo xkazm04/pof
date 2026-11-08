@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { buildModuleTopology, isOpenBlocked, TOPOLOGY_COMPACT } from '@/lib/topology/moduleGraph';
 import {
@@ -10,7 +10,6 @@ import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useManifest } from '@/hooks/useManifest';
 import { usePlanDispatch } from '@/hooks/usePlanDispatch';
 import type { SubModuleId } from '@/types/modules';
-import { MODULE_COLORS } from './constants';
 import type { BuildTarget, ModuleNode } from './types';
 
 const NO_EDGES: ReadonlySet<string> = new Set();
@@ -44,7 +43,6 @@ export function useDependencyGraph() {
   const [zoom, setZoom] = useState(1);
   // Feature whose Build is being previewed (hover / focus on a Build affordance).
   const [previewKey, setPreviewKey] = useState<string | null>(null);
-  const svgRef = useRef<SVGSVGElement>(null);
   const { manifest, isConnected: bridgeConnected } = useManifest();
 
   const manifestCrossRefs = useMemo(() => {
@@ -69,10 +67,7 @@ export function useDependencyGraph() {
   // projection shared with NexusView and the Overview roll-up.
   const topology = useMemo(() => buildModuleTopology(statusMap, TOPOLOGY_COMPACT), [statusMap]);
   const { depMap, edges } = topology;
-  const nodes: ModuleNode[] = useMemo(
-    () => topology.nodes.map((n) => ({ ...n, color: MODULE_COLORS[n.moduleId] ?? 'var(--text-muted)' })),
-    [topology],
-  );
+  const nodes: ModuleNode[] = topology.nodes;
 
   // The single best next build across every module (impact-scorer ranked).
   const criticalBuild = useMemo(() => {
@@ -168,7 +163,6 @@ export function useDependencyGraph() {
     setHoveredModule,
     zoom,
     setZoom,
-    svgRef,
     bridgeConnected,
     manifestCrossRefs,
     nodes,

@@ -27,8 +27,8 @@ const noop = () => {};
 const FOREIGN = ['arrow', 'arrow-blocked', 'nexus-arrow', 'glow-red', 'glow-purple', 'cst-arrow', 'cst-glow'];
 
 const depNodes: ModuleNode[] = [
-  { moduleId: 'arpg-character' as SubModuleId, label: 'Character', color: '', featureCount: 2, blockedCount: 1, implementedCount: 1, cx: 100, cy: 100 },
-  { moduleId: 'arpg-combat' as SubModuleId, label: 'Combat', color: '', featureCount: 2, blockedCount: 0, implementedCount: 0, cx: 300, cy: 100 },
+  { moduleId: 'arpg-character' as SubModuleId, label: 'Character', featureCount: 2, blockedCount: 1, implementedCount: 1, cx: 100, cy: 100 },
+  { moduleId: 'arpg-combat' as SubModuleId, label: 'Combat', featureCount: 2, blockedCount: 0, implementedCount: 0, cx: 300, cy: 100 },
 ];
 const nexusNodes = depNodes.map((n) => ({
   ...n, genreItemCount: 1, checklistTotal: 0, checklistDone: 0,
@@ -64,7 +64,7 @@ afterEach(cleanup);
 describe('topology graphs — per-instance SVG marker / filter ids', () => {
   it('DependencyGraph GraphCanvas: two mounts beside a foreign #arrow never share an id', () => {
     const props = {
-      svgRef: { current: null }, svgWidth: 400, svgHeight: 200, zoom: 1, edges, nodes: depNodes,
+      svgWidth: 400, svgHeight: 200, zoom: 1, edges, nodes: depNodes,
       highlightModule: null, selectedModule: null, setSelectedModule: noop, setHoveredModule: noop,
       bridgeConnected: false, moduleCrossRefCounts: new Map(), previewEdges: new Set(['arpg-character->arpg-combat']),
     };

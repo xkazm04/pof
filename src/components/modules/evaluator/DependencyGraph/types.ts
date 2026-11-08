@@ -27,7 +27,6 @@ export interface BuildTarget {
 export interface ModuleNode {
   moduleId: SubModuleId;
   label: string;
-  color: string;
   featureCount: number;
   blockedCount: number;
   implementedCount: number;
