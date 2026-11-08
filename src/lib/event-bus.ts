@@ -11,7 +11,7 @@ import type {
 // A singleton pub/sub event bus with:
 // - Fully typed namespaced channels
 // - Namespace prefix subscriptions (e.g., 'cli.*')
-// - Replay buffer for late subscribers
+// - Replay buffer readable by devtools (getReplayBuffer / getReplayByNamespace)
 // - Wildcard listener for devtools / analytics
 
 type Unsubscribe = () => void;
@@ -140,26 +140,6 @@ class EventBus {
   /** Get replay events matching a namespace prefix */
   getReplayByNamespace(prefix: string): BusEvent[] {
     return this.replayBuffer.filter((e) => e.channel.startsWith(prefix + '.'));
-  }
-
-  /** Replay buffered events for a channel to a new subscriber */
-  replayTo<C extends EventChannel>(
-    channel: C,
-    handler: EventHandler<C>,
-  ): void {
-    const matching = this.replayBuffer.filter((e) => e.channel === channel);
-    for (const event of matching) {
-      try {
-        (handler as EventHandler<C>)(event as BusEvent<C>);
-      } catch (err) {
-        console.error(`[EventBus] Replay handler error on ${channel}:`, err);
-      }
-    }
-  }
-
-  /** Clear the replay buffer */
-  clearReplayBuffer(): void {
-    this.replayBuffer = [];
   }
 
   // ── Utilities ──

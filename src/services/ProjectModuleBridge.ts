@@ -78,11 +78,6 @@ export function clearModuleProgress(): void {
   moduleStore?.getState().clearProgress();
 }
 
-/** Which project the in-memory module progress currently belongs to (null = unowned). */
-export function getProgressOwner(): string | null {
-  return moduleStore?.getState().progressProjectPath ?? null;
-}
-
 // ─── Auto-save lifecycle (used by moduleStore) ──────────────────────────────
 
 /** Lifecycle-managed debounced auto-save to SQLite. */
