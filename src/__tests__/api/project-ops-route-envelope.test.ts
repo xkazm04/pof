@@ -12,7 +12,7 @@ vi.mock('@/lib/search-index', () => ({
 }));
 vi.mock('@/lib/project-wrapped', () => ({ generateProjectWrapped: () => { throw new Error('db down'); } }));
 
-import { GET as searchGET } from '@/app/api/search/route';
+import { GET as searchGET, POST as searchPOST } from '@/app/api/search/route';
 import { GET as wrappedGET } from '@/app/api/project-wrapped/route';
 
 async function expectEnvelope(res: Response) {
@@ -24,6 +24,6 @@ async function expectEnvelope(res: Response) {
 
 describe('project-ops read routes answer failures in the envelope', () => {
   it('search query', async () => { await expectEnvelope(await searchGET(new NextRequest('http://localhost/api/search?q=x'))); });
-  it('search rebuild', async () => { await expectEnvelope(await searchGET(new NextRequest('http://localhost/api/search?rebuild=1'))); });
+  it('search rebuild', async () => { await expectEnvelope(await searchPOST(new NextRequest('http://localhost/api/search?action=rebuild', { method: 'POST' }))); });
   it('project-wrapped', async () => { await expectEnvelope(await wrappedGET()); });
 });

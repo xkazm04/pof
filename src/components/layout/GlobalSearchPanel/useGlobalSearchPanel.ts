@@ -145,7 +145,7 @@ export function useGlobalSearchPanel() {
   const handleRebuild = useCallback(async (silent = false) => {
     if (!silent) { setRebuilding(true); setReindexFailed(false); }
     try {
-      await apiFetch('/api/search?rebuild=1');
+      await apiFetch('/api/search?action=rebuild', { method: 'POST' });
       // Mark the index as built for the current project only on success, so a
       // failed first rebuild is retried on the next open rather than left
       // permanently stale, and a later project switch forces a fresh rebuild.
