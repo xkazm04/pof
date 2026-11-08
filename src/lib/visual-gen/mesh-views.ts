@@ -231,5 +231,17 @@ export async function runMeshViews(spec: MeshViewsSpec, deps: MeshViewsDeps = {}
       durationMs,
     };
   }
+  // The script's DONE count only proves it delivered what it says. The gate reads a full
+  // orbit, so fewer yaws than planned would pass with sides nobody looked at.
+  if (parsed.views.length < plan.views) {
+    return {
+      ok: false,
+      error: `render delivered ${parsed.views.length} views but ${plan.views} were planned — a partial orbit is not graded as a full one`,
+      views: parsed.views,
+      viewsPlanReason: plan.reason,
+      diagnostics,
+      durationMs,
+    };
+  }
   return { ok: true, views: parsed.views, viewsPlanReason: plan.reason, diagnostics, durationMs };
 }

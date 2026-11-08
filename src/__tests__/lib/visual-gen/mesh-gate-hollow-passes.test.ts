@@ -7,6 +7,7 @@ import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visu
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
 import { planKitAtlas } from '@/lib/visual-gen/texel-density';
+import { runMeshViews } from '@/lib/visual-gen/mesh-views';
 
 describe('parseCritiqueMetrics refuses counts it cannot read', () => {
   const block = (over: Record<string, string>) => {
@@ -117,5 +118,26 @@ describe('planKitAtlas says why a plan is starved', () => {
 
   it('gives no reason when every member reaches the target', () => {
     expect(planKitAtlas([{ name: 'crate', extentM: 1 }]).reason).toBeUndefined();
+  });
+});
+
+describe('runMeshViews holds the render to the views it planned', () => {
+  const deps = (stdout: string) => ({
+    run: async () => ({ stdout, stderr: '', code: 0 }),
+    fileExists: () => true,
+    env: { POF_BLENDER: 'C:/b/blender.exe' },
+  });
+  const out = (n: number) =>
+    [...Array(n).keys()].map((i) => `POF_VIEWS_${i}=${i * 60}.0|C:/v/${i}.png`).concat(`POF_VIEWS_DONE=${n}`).join('\n');
+
+  it('refuses a render that delivered fewer views than planned', async () => {
+    const r = await runMeshViews({ meshPath: 'a.glb', outDir: 'C:/v', views: 6 }, deps(out(2)));
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/2.*6/);
+  });
+
+  it('accepts a render that delivered the plan', async () => {
+    const r = await runMeshViews({ meshPath: 'a.glb', outDir: 'C:/v', views: 2 }, deps(out(2)));
+    expect(r.ok).toBe(true);
   });
 });
