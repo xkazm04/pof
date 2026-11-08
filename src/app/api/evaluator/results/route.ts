@@ -3,6 +3,8 @@ import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { recordScanResult, getScanHistory, getLatestScan } from '@/lib/evaluator/evaluator-results-db';
 import type { EvalFinding } from '@/lib/evaluator/finding-collector';
 
+const VALID_SEVERITIES = new Set(['critical', 'high', 'medium', 'low']);
+
 /**
  * Persist a completed deep-eval scan (durable regression baseline + history).
  * Body: `{ scanId, findings, modulesEvaluated, failedModules?, durationMs?, projectId?, scannedAt? }`.
@@ -28,6 +30,20 @@ export const POST = withRoute(async (req: NextRequest) => {
   }
   if (!Array.isArray(body.findings)) {
     return apiError('findings must be an array', 400);
+  }
+
+  // The stored array feeds every later read: a null entry threw in the severity count, and an
+  // unknown severity left the counts holding NaN.
+  const badFinding = body.findings.findIndex((f: unknown) => {
+    const e = f as { moduleId?: unknown; severity?: unknown } | null;
+    return typeof f !== 'object' || f === null || typeof e?.moduleId !== 'string' || !VALID_SEVERITIES.has(e.severity as string);
+  });
+  if (badFinding !== -1) {
+    return apiError(`findings[${badFinding}] needs a string moduleId and a severity of ${[...VALID_SEVERITIES].join(', ')}`, 400);
+  }
+  // History is ordered by this text, so an unparseable value would rank as the newest scan.
+  if (body.scannedAt != null && (typeof body.scannedAt !== 'string' || Number.isNaN(Date.parse(body.scannedAt)))) {
+    return apiError('scannedAt must be an ISO date string', 400);
   }
 
   const modulesEvaluated = Array.isArray(body.modulesEvaluated)

@@ -7,6 +7,8 @@ import { compareSessions, type ComparedSessionHead, type SessionComparisonRespon
 import { gateCaptureCsvs } from '@/lib/profiling/perf-capture';
 import type { ProfilingSession, TriageResult } from '@/types/performance-profiling';
 
+const SAMPLE_SCENARIOS = new Set(['combat-heavy', 'exploration', 'menu', 'loading', 'custom']);
+
 // In-memory store for sessions (persists per server process)
 const sessions = new Map<string, ProfilingSession>();
 const triageResults = new Map<string, TriageResult>();
@@ -42,8 +44,8 @@ export async function POST(req: NextRequest) {
 
     if (action === 'import-csv') {
       const { csvContent, sessionName, projectPath } = body;
-      if (!csvContent || !sessionName) {
-        return apiError('csvContent and sessionName are required', 400);
+      if (typeof csvContent !== 'string' || !csvContent || typeof sessionName !== 'string' || !sessionName) {
+        return apiError('csvContent and sessionName are required strings', 400);
       }
       const session = buildSessionFromCSV(csvContent, sessionName, projectPath ?? '');
       sessions.set(session.id, session);
@@ -52,6 +54,15 @@ export async function POST(req: NextRequest) {
 
     if (action === 'generate-sample') {
       const { scenarioType, enemyCount, targetFPS, projectPath } = body;
+      if (scenarioType != null && !SAMPLE_SCENARIOS.has(scenarioType)) {
+        return apiError(`scenarioType must be one of ${[...SAMPLE_SCENARIOS].join(', ')}`, 400);
+      }
+      if (enemyCount != null && (typeof enemyCount !== 'number' || !Number.isFinite(enemyCount) || enemyCount < 0)) {
+        return apiError('enemyCount must be a non-negative number', 400);
+      }
+      if (targetFPS != null && (typeof targetFPS !== 'number' || !Number.isFinite(targetFPS) || targetFPS <= 0)) {
+        return apiError('targetFPS must be a positive number', 400);
+      }
       const session = generateSampleSession({
         scenarioType: scenarioType ?? 'combat-heavy',
         enemyCount: Math.min(enemyCount ?? 50, 200),

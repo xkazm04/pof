@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'process-session') {
       const { sessionId } = body;
-      if (!sessionId) return apiError('sessionId required', 400);
+      if (typeof sessionId !== 'string' || !sessionId) return apiError('sessionId required', 400);
       const session = getSession(sessionId);
       if (!session) return apiError('Session not found', 404);
       if (session.status !== 'complete') return apiError('Session must be complete to process', 400);
@@ -77,14 +77,14 @@ export async function POST(req: NextRequest) {
 
     if (action === 'dismiss') {
       const { alertId } = body;
-      if (!alertId) return apiError('alertId required', 400);
+      if (typeof alertId !== 'string' || !alertId) return apiError('alertId required', 400);
       dismissAlert(alertId);
       return apiSuccess({ dismissed: true });
     }
 
     if (action === 'resolve') {
       const { fingerprintId } = body;
-      if (!fingerprintId) return apiError('fingerprintId required', 400);
+      if (typeof fingerprintId !== 'string' || !fingerprintId) return apiError('fingerprintId required', 400);
       markResolved(fingerprintId);
       return apiSuccess({ resolved: true });
     }

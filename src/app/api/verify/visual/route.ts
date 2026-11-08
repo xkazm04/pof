@@ -116,14 +116,11 @@ export async function POST(request: NextRequest) {
   if (!moduleId || !itemId || !screenshotPath) {
     return apiError('Missing "moduleId", "itemId", or "screenshotPath"', 400);
   }
-  const mode: CheckMode =
-    body.mode === 'texture'
-      ? 'texture'
-      : body.mode === 'lighting'
-        ? 'lighting'
-        : body.mode === 'character'
-          ? 'character'
-          : 'hud';
+  // Refused like `effort` below: an unknown mode used to run, and be billed as, the HUD check.
+  if (body.mode !== undefined && !(typeof body.mode === 'string' && Object.hasOwn(CHECK_PROMPTS, body.mode))) {
+    return apiError(`Invalid "mode": expected one of ${Object.keys(CHECK_PROMPTS).join(' | ')}`, 400);
+  }
+  const mode = (body.mode ?? 'hud') as CheckMode;
   const prompt = CHECK_PROMPTS[mode];
 
   // Effort is validated against the shared vocabulary rather than defaulted, because a

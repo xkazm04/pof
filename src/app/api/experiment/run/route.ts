@@ -28,6 +28,20 @@ export async function POST(req: NextRequest) {
     if (!body.scenario && (typeof body.python !== 'string' || body.python.trim() === '')) {
       return apiError('python (a non-empty string) or a scenario is required', 400);
     }
+    if (body.python !== undefined && typeof body.python !== 'string') {
+      return apiError('python must be a string', 400);
+    }
+    for (const field of ['resX', 'resY', 'settleMs'] as const) {
+      const v = body[field];
+      if (v !== undefined && (typeof v !== 'number' || !Number.isFinite(v) || v <= 0)) {
+        return apiError(`${field} must be a positive number`, 400);
+      }
+    }
+    for (const field of ['capture', 'allowRunningEditor'] as const) {
+      if (body[field] !== undefined && typeof body[field] !== 'boolean') {
+        return apiError(`${field} must be a boolean`, 400);
+      }
+    }
     const jobId = startExperimentJob({
       python: body.python ?? '',
       capture: body.capture,

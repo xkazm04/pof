@@ -22,6 +22,14 @@ export const POST = withRoute(async (req: NextRequest) => {
     return apiError('projectPath is required', 400);
   }
 
+  if (files != null && !Array.isArray(files)) {
+    return apiError('files must be an array of paths', 400);
+  }
+  // Refused rather than ignored: a dropped since widens the attribution to the whole history.
+  if (since != null && typeof since !== 'string') {
+    return apiError('since must be a string or null', 400);
+  }
+
   const fileList = Array.isArray(files) ? files.filter((f): f is string => typeof f === 'string') : [];
   if (fileList.length === 0) {
     return apiSuccess({ attribution: {} });
