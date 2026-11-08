@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { existsSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startUeImportJob } from '@/lib/visual-gen/ue-import-job-store';
 import type { CollisionUse } from '@/lib/visual-gen/ue-import';
 
@@ -34,7 +35,9 @@ const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as {
+    const parsed = await readJsonObject(req);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as {
       glbPath?: string;
       use?: string;
       destPath?: string;

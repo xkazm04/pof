@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { critiqueMesh, type CritiqueResult } from '@/lib/visual-gen/mesh-critique';
 import { gateRequestFor } from '@/lib/visual-gen/gate-request';
 import { importStageFor } from '@/lib/visual-gen/ue-import-job-store';
@@ -43,7 +44,9 @@ const NAMED_FILES = 3;
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as {
+    const parsed = await readJsonObject(req);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as {
       glbPath?: string;
       use?: string;
       assetName?: string;

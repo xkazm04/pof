@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { existsSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startViewGateJob, type ViewGateMemberSpec } from '@/lib/visual-gen/view-gate-job-store';
 
 /**
@@ -35,7 +36,9 @@ export const MAX_KIT_MEMBERS = 12;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as {
       meshPath?: string;
       subject?: string;
       referencePath?: string;

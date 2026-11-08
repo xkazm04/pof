@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startMeshFinishJob } from '@/lib/visual-gen/mesh-finish-job-store';
 import { polycountFor } from '@/lib/visual-gen/polycount-presets';
 import type { BakeMap, MirrorAxis } from '@/lib/visual-gen/mesh-finish';
@@ -37,7 +38,9 @@ export const CULL_INTERIOR_REFUSAL =
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as {
       highPolyPath?: string;
       outputPath?: string;
       assetClass?: string;

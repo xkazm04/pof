@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { parseVisionImage, gateInputImage, summarizeInputGate } from '@/lib/visual-gen/input-gate';
 import {
   decomposeScene,
@@ -83,7 +84,9 @@ async function gateCropsOf(
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as Body;
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as Body;
     if (!body.imageDataUrl) return apiError('Missing required field: imageDataUrl', 400);
     const image = parseVisionImage(body.imageDataUrl);
     if (!image) return apiError('imageDataUrl must be a base64 image data URL', 400);

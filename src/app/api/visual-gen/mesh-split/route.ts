@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { runMeshSplit } from '@/lib/visual-gen/mesh-split';
 import { safeAssetDir, safeAssetName, assetUrl } from '@/lib/visual-gen/generated-assets';
 
@@ -31,7 +32,9 @@ const SPLIT_OUTPUT_DIR = 'mesh-split';
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as {
       name?: string; dir?: string;
       minFaceShare?: number; maxParts?: number; minCoverage?: number; center?: boolean;
     };

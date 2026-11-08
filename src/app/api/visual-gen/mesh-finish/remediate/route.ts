@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startMeshFinishJob } from '@/lib/visual-gen/mesh-finish-job-store';
 import { planFinishFromCritique } from '@/lib/visual-gen/finish-routing';
 import { critiqueMesh } from '@/lib/visual-gen/mesh-critique';
@@ -29,7 +30,9 @@ import { assessStage } from '@/lib/visual-gen/critique-stage';
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { name?: string; dir?: string; assetClass?: string };
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as { name?: string; dir?: string; assetClass?: string };
 
     const name = safeAssetName((body.name ?? '').trim());
     if (!name) return apiError('name must be a safe generated-asset basename (e.g. "jinx_hd.glb")', 400);
