@@ -21,7 +21,48 @@ const SHORT_NAMES: Record<string, string> = {
   'Combat feedback': 'Combat Feedback',
 };
 
-interface SwimNode { name: string; cx: number; cy: number; color: string }
+export interface SwimNode { name: string; cx: number; cy: number; color: string }
+
+type Pt = { x: number; y: number };
+export interface SwimArrowGeometry {
+  start: Pt; c1: Pt; c2: Pt; end: Pt;
+  /** Arrowhead triangle: [tip, base1, base2] */
+  head: [Pt, Pt, Pt];
+  label: Pt;
+}
+
+/**
+ * Cubic-bezier edge from one feature node to another, with its arrowhead.
+ * Same-lane edges run right edge -> left edge; cross-lane edges run from the
+ * source's bottom (or top) to the target's top (or bottom) with vertical
+ * tangents, so the head always points the way the edge arrives (a horizontal
+ * edge to a node further left used to end with its head pointing backwards).
+ */
+export function swimArrowGeometry(from: SwimNode, to: SwimNode): SwimArrowGeometry {
+  if (from.cy !== to.cy) {
+    const dir = to.cy > from.cy ? 1 : -1;
+    const sx = from.cx;
+    const sy = from.cy + dir * (SNODE_H / 2);
+    const ex = to.cx;
+    const ey = to.cy - dir * (SNODE_H / 2);
+    const my = (sy + ey) / 2;
+    return {
+      start: { x: sx, y: sy }, c1: { x: sx, y: my }, c2: { x: ex, y: my }, end: { x: ex, y: ey },
+      head: [{ x: ex, y: ey }, { x: ex - 3, y: ey - dir * 5 }, { x: ex + 3, y: ey - dir * 5 }],
+      label: { x: (sx + ex) / 2 + 4, y: my - 2 },
+    };
+  }
+  const x1 = from.cx + SNODE_W / 2;
+  const y1 = from.cy;
+  const x2 = to.cx - SNODE_W / 2;
+  const y2 = to.cy;
+  const mx = (x1 + x2) / 2;
+  return {
+    start: { x: x1, y: y1 }, c1: { x: mx, y: y1 }, c2: { x: mx, y: y2 }, end: { x: x2, y: y2 },
+    head: [{ x: x2, y: y2 }, { x: x2 - 5, y: y2 - 3 }, { x: x2 - 5, y: y2 + 3 }],
+    label: { x: mx, y: (y1 + y2) / 2 - 5 },
+  };
+}
 
 const LANE_CX: number[][] = [
   [120, 310, 500],
@@ -42,7 +83,7 @@ const SWIM_LANE_DATA = LANES.map((lane, li) => {
   };
 });
 
-const SWIM_NODE_MAP = new Map<string, SwimNode>();
+export const SWIM_NODE_MAP = new Map<string, SwimNode>();
 for (const lane of SWIM_LANE_DATA) {
   for (const node of lane.nodes) SWIM_NODE_MAP.set(node.name, node);
 }
@@ -64,19 +105,15 @@ export function SwimLaneDiagram() {
         const from = SWIM_NODE_MAP.get(arrow.from);
         const to = SWIM_NODE_MAP.get(arrow.to);
         if (!from || !to) return null;
-        const x1 = from.cx + SNODE_W / 2;
-        const y1 = from.cy;
-        const x2 = to.cx - SNODE_W / 2;
-        const y2 = to.cy;
-        const mx = (x1 + x2) / 2;
+        const g = swimArrowGeometry(from, to);
         return (
           <g key={i}>
-            <path d={`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
+            <path d={`M ${g.start.x} ${g.start.y} C ${g.c1.x} ${g.c1.y}, ${g.c2.x} ${g.c2.y}, ${g.end.x} ${g.end.y}`}
               fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_15)} strokeWidth={1.5} />
-            <polygon points={`${x2},${y2} ${x2 - 5},${y2 - 3} ${x2 - 5},${y2 + 3}`}
+            <polygon points={g.head.map((p) => `${p.x},${p.y}`).join(' ')}
               fill={withOpacity(OVERLAY_WHITE, OPACITY_30)} />
             {arrow.label && (
-              <text x={mx} y={(y1 + y2) / 2 - 5} textAnchor="middle" style={{ fontSize: 8 }} className="font-mono"
+              <text x={g.label.x} y={g.label.y} textAnchor="middle" style={{ fontSize: 8 }} className="font-mono"
                 fill={withOpacity(OVERLAY_WHITE, OPACITY_30)}>{arrow.label}</text>
             )}
           </g>
