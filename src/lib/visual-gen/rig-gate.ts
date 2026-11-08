@@ -163,7 +163,11 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     const len = view.getUint32(off, true);
     const type = view.getUint32(off + 4, true);
     const start = off + 8;
-    if (start + len > buffer.byteLength) break;
+    // A chunk that overruns the file is damage. Skipping it would drop the BIN chunk and
+    // report a rigged character as "never rigged", which is a verdict on the wrong thing.
+    if (start + len > buffer.byteLength) {
+      throw new Error(`truncated .glb: a chunk declares ${len} bytes at offset ${start} but the file is ${buffer.byteLength} bytes`);
+    }
     if (type === CHUNK_JSON) json = JSON.parse(buffer.subarray(start, start + len).toString('utf8')) as Gltf;
     else if (type === CHUNK_BIN) bin = buffer.subarray(start, start + len);
     off = start + len;

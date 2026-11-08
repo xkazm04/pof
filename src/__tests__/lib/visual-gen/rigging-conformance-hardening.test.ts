@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { gateRig, parseGlbRig, scoreRig } from '@/lib/visual-gen/rig-gate';
 import { assembleMetaHuman, buildAssemblePython, buildConformPython, conformMeshToMetaHuman } from '@/lib/visual-gen/metahuman-conform';
 import type { ExperimentResult } from '@/lib/ue-experiment/runner';
 import { routePromptShape } from '@/lib/visual-gen/linear-prop-routing';
@@ -135,5 +137,17 @@ describe('metahuman conform: values embedded in editor Python', () => {
     const py = buildAssemblePython("/Game/O'X", { nameOverride: "It's" });
     expect(py).toContain("unreal.load_asset('/Game/O\\'X')");
     expect(py).toContain("'name_override', 'It\\'s'");
+  });
+});
+
+describe('rig gate: a damaged file is not an unrigged asset', () => {
+  const real = readFileSync(join(process.cwd(), 'src', '__tests__', 'fixtures', 'rig', 'skintokens_cube_rigged.glb'));
+
+  it('reports a GLB cut inside its binary chunk as unreadable', () => {
+    const cut = real.subarray(0, real.byteLength - 8);
+    const res = gateRig('x.glb', undefined, () => Buffer.from(cut));
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('truncated');
+    expect(res.verdict).toBeUndefined();
   });
 });
