@@ -1,9 +1,10 @@
 'use client';
 
-import { DUMMY_ITEMS, EQUIPMENT_SLOTS, ACCENT } from '../_shared/data';
+import { useMemo } from 'react';
+import { EQUIPMENT_SLOTS, ACCENT } from '../_shared/data';
+import { useInventoryItems } from '../_shared/useInventoryItems';
 import { withOpacity, OPACITY_50, STATUS_ERROR, STATUS_INFO, STATUS_SUCCESS } from '@/lib/chart-colors';
 
-const itemCount = DUMMY_ITEMS.length;
 const slotCount = EQUIPMENT_SLOTS.length;
 
 const TYPE_COLORS: Record<string, string> = {
@@ -12,18 +13,25 @@ const TYPE_COLORS: Record<string, string> = {
   Consumable: STATUS_SUCCESS,
 };
 
-const typeCounts = DUMMY_ITEMS.reduce<Record<string, number>>((acc, item) => {
-  acc[item.type] = (acc[item.type] ?? 0) + 1;
-  return acc;
-}, {});
-
-const typeSegments = Object.entries(typeCounts).map(([type, count]) => ({
-  type,
-  pct: (count / itemCount) * 100,
-  color: TYPE_COLORS[type] ?? ACCENT,
-}));
-
 export function GridMetric() {
+  // The catalog store is the system of record for which items exist (not the static seed list).
+  const items = useInventoryItems();
+  const { itemCount, typeCounts, typeSegments } = useMemo(() => {
+    const counts = items.reduce<Record<string, number>>((acc, item) => {
+      acc[item.type] = (acc[item.type] ?? 0) + 1;
+      return acc;
+    }, {});
+    return {
+      itemCount: items.length,
+      typeCounts: counts,
+      typeSegments: Object.entries(counts).map(([type, count]) => ({
+        type,
+        pct: (count / Math.max(items.length, 1)) * 100,
+        color: TYPE_COLORS[type] ?? ACCENT,
+      })),
+    };
+  }, [items]);
+
   return (
     <div className="flex items-center gap-1.5">
       <div className="flex gap-px h-3 w-8 shrink-0" aria-hidden="true">
