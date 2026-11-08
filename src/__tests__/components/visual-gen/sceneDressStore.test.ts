@@ -8,10 +8,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createElement } from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { SceneDressPanel } from '@/components/modules/visual-gen/scene-composer/SceneDressPanel';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { useSceneDressStore } from '@/components/modules/visual-gen/scene-composer/useSceneDressStore';
+import { useSceneDressStore, SCENE_IMAGE_MAX_BYTES } from '@/components/modules/visual-gen/scene-composer/useSceneDressStore';
 import { useSceneComposerStore } from '@/components/modules/visual-gen/scene-composer/useSceneComposerStore';
 import { useBlenderStore } from '@/components/modules/visual-gen/blender-pipeline/useBlenderStore';
 import { DRESS_FIXTURE } from '../../lib/visual-gen/sceneDressFixture';
@@ -192,5 +192,31 @@ describe('SceneDressPanel re-run after a build', () => {
     await planned();
     render(createElement(SceneDressPanel));
     expect(screen.getByRole('button', { name: /^Block out in Blender \(4\)$/ })).toBeTruthy();
+  });
+});
+
+describe('SceneDressPanel oversized reference image', () => {
+  function pick(size: number) {
+    const file = new File(['x'], 'huge.png', { type: 'image/png' });
+    Object.defineProperty(file, 'size', { value: size });
+    const input = screen.getByLabelText('Reference image');
+    fireEvent.change(input, { target: { files: [file] } });
+  }
+
+  it('refuses a file over the ceiling before any FileReader read', () => {
+    const read = vi.spyOn(FileReader.prototype, 'readAsDataURL');
+    render(createElement(SceneDressPanel));
+    pick(SCENE_IMAGE_MAX_BYTES + 1);
+    expect(read).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/huge\.png.*too large/);
+    expect(useSceneDressStore.getState().imageDataUrl).toBeNull();
+  });
+
+  it('reads a file exactly at the ceiling', () => {
+    const read = vi.spyOn(FileReader.prototype, 'readAsDataURL');
+    render(createElement(SceneDressPanel));
+    pick(SCENE_IMAGE_MAX_BYTES);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

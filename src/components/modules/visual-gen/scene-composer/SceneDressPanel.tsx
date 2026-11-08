@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Boxes, ImagePlus, Loader2, ScanSearch } from 'lucide-react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { useSceneDressStore, type SceneDressStatus } from './useSceneDressStore';
+import { useSceneDressStore, SCENE_IMAGE_MAX_BYTES, type SceneDressStatus } from './useSceneDressStore';
 import { DressPlanMap, DressPlanTable } from './DressPlanMap';
 
 /**
@@ -59,6 +59,10 @@ export function SceneDressPanel() {
   const onFile = (file: File | undefined) => {
     if (!file) return;
     setReadError(null);
+    if (file.size > SCENE_IMAGE_MAX_BYTES) {
+      setReadError(`“${file.name}” is too large: the limit is ${SCENE_IMAGE_MAX_BYTES / (1024 * 1024)} MB.`);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       if (!mounted.current) return;
