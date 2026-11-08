@@ -426,3 +426,33 @@ describe('computeSemanticDiff — the surface codegen emits is the surface it ex
     expect(change?.description).toMatch(/editor exposure/i);
   });
 });
+
+describe('computeSemanticDiff — event overrides', () => {
+  const beginPlayAsset = () =>
+    asset({
+      eventGraph: {
+        name: 'EventGraph',
+        graphType: 'event',
+        nodes: [{ id: 'e1', type: 'K2Node_Event', name: 'BeginPlay', memberName: 'BeginPlay', pins: [], posX: 0, posY: 0 }],
+      },
+    });
+  const header = (member: string) =>
+    ['UCLASS()', 'class MYGAME_API APlayer : public AActor', '{', '  GENERATED_BODY()', member, '};'].join('\n');
+
+  it('reports an event-scoped change when the header lacks the override the graph drives', () => {
+    const result = computeSemanticDiff(beginPlayAsset(), header('  void Other();'), 'P');
+    const change = result.changes.find((c) => c.scope === 'event' && c.name === 'BeginPlay');
+    expect(change?.type).toBe('add');
+    expect(change?.description).toMatch(/override/i);
+  });
+
+  it('reports nothing when the override is declared', () => {
+    const result = computeSemanticDiff(beginPlayAsset(), header('  virtual void BeginPlay() override;'), 'P');
+    expect(result.changes.filter((c) => c.name === 'BeginPlay')).toHaveLength(0);
+  });
+
+  it('ignores an override that only appears in a comment', () => {
+    const result = computeSemanticDiff(beginPlayAsset(), header('  // virtual void BeginPlay() override;'), 'P');
+    expect(result.changes.some((c) => c.name === 'BeginPlay')).toBe(true);
+  });
+});

@@ -24,6 +24,7 @@ import { deriveCppSurface, isEditorExposed } from '@/lib/blueprint-cpp-surface';
 import { parseHeader, hasSpecifier, type ParsedFunction } from '@/lib/cpp-semantic-parser';
 import { onRepHandlerName } from '@/lib/replication-scaffolder';
 import { definedNames } from '@/lib/blueprint-transpiler/overwrite-review';
+import { overrideDeclaration } from '@/lib/blueprint-cpp-codegen';
 import type {
   SemanticDiffResult,
   SemanticChange,
@@ -43,10 +44,11 @@ const COMPARED_DIMENSIONS = [
   'Function names (both directions)',
   'Function parameter arity, parameter types and return type',
   'Custom events and RepNotify handlers (declared or missing)',
+  'Engine event overrides (BeginPlay / Tick / EndPlay) declared or defined in C++',
 ];
 
 const NOT_COMPARED = [
-  'Event graph node logic — only the node count is summarised, never matched against C++ overrides',
+  'Event graph node logic — override presence is checked, the nodes behind each event are never matched against C++',
   'Custom event and RepNotify handler parameter lists — only their presence is checked',
   'Function bodies — no C++ statement is parsed, so identical declarations may still behave differently',
   'Default values, categories and tooltips',
@@ -58,6 +60,16 @@ const NO_SOURCE_NOT_COMPARED = 'Function definitions — the input held no Class
 
 /** Said only when a definition was present and was read. */
 const DEFINITION_DIMENSION = 'Definition presence of each declared Blueprint function (ClassName::Function)';
+
+/** Names declared `<name>(...) override` in the text, comments stripped first. */
+function declaredOverrideNames(cpp: string): Set<string> {
+  const src = cpp.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  const names = new Set<string>();
+  const re = /\b([A-Za-z_]\w*)\s*\([^)]*\)\s*(?:const\s*)?(?:noexcept\s*)?override\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src)) !== null) names.add(m[1]);
+  return names;
+}
 
 /** Compare declared C++ types ignoring spacing, `const` and reference-ness. */
 function normalizeType(t: string): string {
@@ -334,6 +346,25 @@ export function computeSemanticDiff(
       cppSide: renderCppSignature(cppFn),
       conflictLevel: 'compatible',
       resolution: 'Keep in C++ (may be a C++-only or event-graph-backed function) or remove if migrated to the Blueprint',
+    });
+  }
+
+  // Engine overrides the event graph drives (BeginPlay/Tick/EndPlay…). parseHeader
+  // reads UFUNCTIONs only, so presence is scanned from the comment-stripped text:
+  // an `override` declaration or a `Class::Name(` definition both count.
+  const presentOverrides = declaredOverrideNames(existingCpp);
+  for (const name of definedNames(existingCpp, surface.cppClassName)) presentOverrides.add(name);
+  for (const { override, node } of surface.overrides) {
+    if (presentOverrides.has(override.name)) continue;
+    changes.push({
+      id: `change-${changeId++}`,
+      type: 'add',
+      scope: 'event',
+      name: override.name,
+      description: `Event "${override.name}" drives ${node.name} in the Blueprint but the C++ declares no override for it`,
+      blueprintSide: `Event ${override.name}`,
+      conflictLevel: 'compatible',
+      resolution: `Declare ${overrideDeclaration(override)} so the Blueprint startup logic runs in C++`,
     });
   }
 
