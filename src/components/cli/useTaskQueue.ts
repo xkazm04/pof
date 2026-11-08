@@ -1011,8 +1011,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     clearHeartbeat();
     if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
     if (pendingNextTaskRef.current) { clearTimeout(pendingNextTaskRef.current); pendingNextTaskRef.current = null; }
-    if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
-  }, [visible, streaming, connectToStream, clearHeartbeat, clearStreamWatch]);
+    // Flush (not just cancel) the pending frame: lines buffered before the hide would
+    // otherwise wait for a next line that a run settling while hidden never sends.
+    if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); flushLogBuffer(); }
+  }, [visible, streaming, connectToStream, clearHeartbeat, clearStreamWatch, flushLogBuffer]);
   // `currentTaskIdRef`/`heartbeatIntervalRef` are refs (stable) — intentionally
   // not in deps; the effect re-runs on visible/streaming change, which is when
   // the heartbeat must be re-armed or torn down.
