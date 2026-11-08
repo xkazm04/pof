@@ -20,6 +20,7 @@ import {
   type InputGateOutcome,
 } from '@/lib/visual-gen/input-gate';
 import { meshPromptFor } from '@/lib/media-prompts/meshPrompts';
+import { logger } from '@/lib/logger';
 
 /** TripoSR's marching-cubes grid: the default is 256, and the cost grows with the cube of it. */
 const MC_RESOLUTION_MIN = 32;
@@ -206,8 +207,16 @@ export async function POST(request: NextRequest) {
     const sentPrompt = mode === 'text-to-3d' && prompt?.trim()
       ? meshPromptFor(assetClass, prompt) ?? prompt
       : prompt;
+    const startedAt = Date.now();
     const started = dispatch.start({
       mode: mode as RunnerMode, prompt: sentPrompt, imageDataUrl, viewDataUrls, assetClass, mcResolution, maxAttempts,
+    });
+    // One structured line per outcome: provider, status, duration. Never the prompt, image or error text.
+    (started.ok ? logger.info : logger.warn)('[visual-gen/generate] outcome', {
+      provider: providerId,
+      mode,
+      status: started.ok ? 202 : 400,
+      ms: Date.now() - startedAt,
     });
     if (!started.ok) return apiError(started.error, 400);
     // `inputGate` is absent on text-to-3d (nothing to gate) and on multiview without a
