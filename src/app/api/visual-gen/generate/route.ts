@@ -180,14 +180,19 @@ export async function POST(request: NextRequest) {
      * Submit-time only: never a paid vision call per keystroke.
      */
     let inputGate: InputGateOutcome | undefined;
-    if (mode === 'image-to-3d' && imageDataUrl) {
+    // Multiview is paid too: its FRONT view is the image the gate judges (one vision call);
+    // whether the side views are gated as well is left open.
+    const gatedImageUrl = mode === 'image-to-3d' ? imageDataUrl
+      : mode === 'multiview-to-3d' ? viewDataUrls?.front
+      : undefined;
+    if (gatedImageUrl) {
       if (gateInput === false) {
         inputGate = inputGateSkipped();
       } else {
-        const image = parseVisionImage(imageDataUrl);
+        const image = parseVisionImage(gatedImageUrl);
         inputGate = image
           ? summarizeInputGate(await gateInputImage(image, { subject: prompt?.trim().slice(0, 120) || undefined }))
-          : inputGateUnavailable('imageDataUrl is not a base64 image data URL the vision seam can read');
+          : inputGateUnavailable('the gated image is not a base64 image data URL the vision seam can read');
         const refusal = inputGateRefusal(inputGate);
         if (refusal) {
           if (overrideInputGate !== true) return apiError(refusal, 400);
