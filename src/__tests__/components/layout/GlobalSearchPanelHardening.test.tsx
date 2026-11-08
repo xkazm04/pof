@@ -27,7 +27,7 @@ import { readRecents } from '@/components/layout/GlobalSearchPanel/recentSelecti
 async function openPalette() {
   render(<GlobalSearchPanel />);
   act(() => { fireEvent.keyDown(window, { key: 'k', ctrlKey: true }); });
-  return screen.findByRole('textbox', { name: /search checklist items/i });
+  return screen.findByRole('combobox', { name: /search checklist items/i });
 }
 
 const feedEvent = (dismissed = false) => ({

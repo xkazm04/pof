@@ -102,7 +102,7 @@ describe('[guard] migrated chords still fire with focus inside a <textarea>', ()
     const ta = screen.getByRole('textbox', { name: 'notes' });
     ta.focus();
     key({ key: 'k', ctrlKey: true }, ta);
-    expect(await screen.findByRole('textbox', { name: /search checklist items/i })).toBeTruthy();
+    expect(await screen.findByRole('combobox', { name: /search checklist items/i })).toBeTruthy();
     key({ key: 'b', ctrlKey: true }, ta);
     expect(useNavigationStore.getState().sidebarMode).toBe('collapsed');
   });
