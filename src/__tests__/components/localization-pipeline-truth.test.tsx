@@ -111,3 +111,14 @@ describe('copy buttons report the verified write, not the attempt', () => {
     });
   }
 });
+
+describe('String Table CSV copy is RFC 4180 (UE string-table import format)', () => {
+  it('doubles embedded quotes so a quoted source string stays one field', async () => {
+    const writeText = stubCapturingClipboard();
+    render(<StringTableCard table={TABLE} />);
+    await press(/copy csv/i);
+    const csv = writeText.mock.calls[0][0] as string;
+    const [, row] = csv.split('\n');
+    expect(row).toBe('"Interact","Press ""E"" to interact","[ui_label] from arpg-ui"');
+  });
+});

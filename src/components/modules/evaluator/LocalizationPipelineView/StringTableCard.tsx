@@ -12,7 +12,9 @@ export function StringTableCard({ table }: { table: StringTable }) {
 
   const csvContent = useMemo(() => {
     const header = 'Key,SourceString,Comment';
-    const rows = table.rows.map((r) => `"${r.key}","${r.sourceString}","${r.comment}"`);
+    // RFC 4180: a quote inside a quoted field is doubled, or UE's CSV import splits the row.
+    const cell = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const rows = table.rows.map((r) => [r.key, r.sourceString, r.comment].map(cell).join(','));
     return [header, ...rows].join('\n');
   }, [table]);
 
