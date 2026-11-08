@@ -3,7 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import type { AnalyzedProperties } from '@/components/modules/content/materials/MaterialStyleTransfer';
 import type { SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
-import { STYLE_RULES } from '@/lib/visual-gen/style-keywords';
+import { STYLE_RULES, matchesStyleKeyword } from '@/lib/visual-gen/style-keywords';
 
 // ── POST — analyze reference ────────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ function analyzeFromDescription(description: string, hasImage: boolean): Analyze
   let matchCount = 0;
 
   for (const rule of STYLE_RULES) {
-    const matched = rule.keywords.some((kw) => lower.includes(kw));
+    const matched = rule.keywords.some((kw) => matchesStyleKeyword(lower, kw));
     if (!matched) continue;
     matchCount++;
 

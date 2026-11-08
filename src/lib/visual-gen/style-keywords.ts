@@ -63,3 +63,18 @@ export const STYLE_RULES: KeywordRule[] = [
   { keywords: ['hollow knight'], surfaceType: 'emissive', emissive: 6, subsurface: 0.4, colors: ['#e0e0e0', '#b0c0d0', '#6080a0', '#203040', '#ffffff'] },
   { keywords: ['zelda'], surfaceType: 'water', roughness: 0.3, opacity: 0.8, colors: ['#4169e1', '#87ceeb', '#00ced1', '#1e90ff', '#f0f8ff'] },
 ];
+
+const isWordChar = (c: string | undefined) => c !== undefined && /[a-z0-9]/.test(c);
+
+/**
+ * Does lowercased `text` hold `keyword` at the START of a word? Stems still match ("glow" in
+ * "glowing"); a keyword inside another word does not. A bare substring test read "face" out of
+ * "surface", so every chip fragment saying "surface" was analyzed as skin, and "iron" out of
+ * "environment" as metal.
+ */
+export function matchesStyleKeyword(text: string, keyword: string): boolean {
+  for (let at = text.indexOf(keyword); at !== -1; at = text.indexOf(keyword, at + 1)) {
+    if (!isWordChar(text[at - 1])) return true;
+  }
+  return false;
+}
