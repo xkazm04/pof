@@ -13,7 +13,7 @@
 
 import { getDb } from '@/lib/db';
 import type { EvalFinding } from './finding-collector';
-import type { EvalPass } from './module-eval-prompts';
+import { isEvalPass } from './module-eval-prompts';
 import type { PassOutcome } from './deep-eval-engine';
 
 let ensured = false;
@@ -65,20 +65,47 @@ export function readPassLedger(scanId: string): PassOutcome[] {
   const rows = getDb()
     .prepare('SELECT module_id, pass, status, error, findings_json FROM deep_eval_passes WHERE scan_id = ? ORDER BY id')
     .all(scanId) as PassRow[];
-  return rows.map((r) => ({
-    moduleId: r.module_id,
-    pass: r.pass as EvalPass,
-    status: r.status === 'done' ? 'done' : 'error',
-    error: r.error,
-    findings: parseFindingsJson(r.findings_json),
-  }));
+  const out: PassOutcome[] = [];
+  for (const r of rows) {
+    // A pass outside the vocabulary can never match a cell of this run: not read.
+    if (!isEvalPass(r.pass)) continue;
+    const findings = parseFindingsJson(r.findings_json);
+    if (findings === null) {
+      // A resumed run REPLAYS a done row's findings into its dedup, which throws on a
+      // non-finding. Unreadable findings are unmeasured: read as error, re-run on resume.
+      out.push({ moduleId: r.module_id, pass: r.pass, status: 'error', error: 'unreadable ledger findings', findings: [] });
+      continue;
+    }
+    out.push({
+      moduleId: r.module_id,
+      pass: r.pass,
+      status: r.status === 'done' ? 'done' : 'error',
+      error: r.error,
+      findings,
+    });
+  }
+  return out;
 }
 
-function parseFindingsJson(json: string): EvalFinding[] {
+/** The fields the engine's dedup/aggregate read off every replayed finding. */
+function isReplayableFinding(v: unknown): v is EvalFinding {
+  if (typeof v !== 'object' || v === null) return false;
+  const f = v as Record<string, unknown>;
+  return typeof f.id === 'string'
+    && typeof f.moduleId === 'string'
+    && typeof f.description === 'string'
+    && typeof f.category === 'string'
+    && typeof f.severity === 'string'
+    && (f.file === null || typeof f.file === 'string')
+    && (f.line === null || typeof f.line === 'number');
+}
+
+/** The recorded findings, or null when the column is not an array of findings. */
+function parseFindingsJson(json: string): EvalFinding[] | null {
   try {
     const parsed: unknown = JSON.parse(json);
-    return Array.isArray(parsed) ? (parsed as EvalFinding[]) : [];
+    return Array.isArray(parsed) && parsed.every(isReplayableFinding) ? parsed : null;
   } catch {
-    return [];
+    return null;
   }
 }
