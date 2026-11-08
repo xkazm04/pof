@@ -216,6 +216,41 @@ export function buildModuleTopology(
   return { nodes, edges: [...edgeIndex.values()], width, height, depMap };
 }
 
+export interface EdgeGeometry {
+  /** SVG path data: a quadratic curve bowed 20px off the straight line. */
+  d: string;
+  /** The curve's control point, where edge labels sit. */
+  labelX: number;
+  labelY: number;
+}
+
+/**
+ * The ONE edge derivation for the Dependencies and Nexus canvases: the segment
+ * between two node centres, shortened to stop at each node's border (4px clear at
+ * the source, 10px at the arrowhead) and bowed 20px perpendicular. Coincident centres
+ * (two modules on one cell, a self-edge) have no direction; a horizontal one is
+ * assumed so the path data stays finite instead of `MNaN,NaN`.
+ */
+export function edgePath(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  nodeW: number,
+  nodeH: number,
+): EdgeGeometry {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const ux = dist > 1e-6 ? dx / dist : 1;
+  const uy = dist > 1e-6 ? dy / dist : 0;
+  const x1 = from.x + ux * (nodeW / 2 + 4);
+  const y1 = from.y + uy * (nodeH / 2 + 4);
+  const x2 = to.x - ux * (nodeW / 2 + 10);
+  const y2 = to.y - uy * (nodeH / 2 + 10);
+  const labelX = (x1 + x2) / 2 - uy * 20;
+  const labelY = (y1 + y2) / 2 + ux * 20;
+  return { d: `M${x1},${y1} Q${labelX},${labelY} ${x2},${y2}`, labelX, labelY };
+}
+
 /**
  * viewBox for a zoom level: narrow the box around the graph centre instead of
  * CSS-scaling the `<svg>` (a scaled element keeps its layout box, so inside an

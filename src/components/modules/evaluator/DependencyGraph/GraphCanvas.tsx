@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_BLOCKER, OPACITY_20 } from '@/lib/chart-colors';
-import { zoomViewBox } from '@/lib/topology/moduleGraph';
+import { zoomViewBox, edgePath } from '@/lib/topology/moduleGraph';
 import { NODE_W, NODE_H } from './constants';
 import type { ModuleNode, Edge } from './types';
 
@@ -69,23 +69,8 @@ export function GraphCanvas({
           const toCenter = centres.get(edge.to);
           if (!fromCenter || !toCenter) return null;
 
-          // Shorten line to stop at node border
-          const dx = toCenter.x - fromCenter.x;
-          const dy = toCenter.y - fromCenter.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const ux = dx / dist;
-          const uy = dy / dist;
-
-          const x1 = fromCenter.x + ux * (NODE_W / 2 + 4);
-          const y1 = fromCenter.y + uy * (NODE_H / 2 + 4);
-          const x2 = toCenter.x - ux * (NODE_W / 2 + 10);
-          const y2 = toCenter.y - uy * (NODE_H / 2 + 10);
-
-          // Curve control point (perpendicular offset for overlapping edges)
-          const mx = (x1 + x2) / 2;
-          const my = (y1 + y2) / 2;
-          const perpX = -uy * 20;
-          const perpY = ux * 20;
+          // Shortened to the node borders and bowed: the shared derivation.
+          const geo = edgePath(fromCenter, toCenter, NODE_W, NODE_H);
 
           const edgeId = `${edge.from}->${edge.to}`;
           // A build preview lights the edges it would clear, over any module highlight.
@@ -97,7 +82,7 @@ export function GraphCanvas({
           return (
             <g key={edgeId} data-preview-cleared={isCleared || undefined}>
               <path
-                d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
+                d={geo.d}
                 fill="none"
                 stroke={isCleared ? STATUS_SUCCESS : blocked ? STATUS_BLOCKER : 'var(--text-muted)'}
                 strokeWidth={isCleared ? 3 : Math.min(3, 0.5 + edge.count * 0.5)}
@@ -108,8 +93,8 @@ export function GraphCanvas({
               />
               {isHighlighted && (
                 <text
-                  x={mx + perpX}
-                  y={my + perpY - 6}
+                  x={geo.labelX}
+                  y={geo.labelY - 6}
                   fill="var(--text-muted-hover)"
                   fontSize="9"
                   textAnchor="middle"
