@@ -42,7 +42,9 @@ export function councilFacts(c: CouncilFacts): Res {
       : bad('no council run', `no run under games/gtai/quests/_council/ holds the source paths ${list(c.sources)}`);
   }
   if (!c.runDirExists) return bad('council run folder missing', `${c.runDir} does not exist (run id ${c.runIdBasis})`);
-  const seats = c.seats.length ? c.seats.map((s) => `${s.seat} ${s.state}`).join(', ') : 'seats.json unrecorded';
+  const seats = c.seatsError
+    ? `seats.json unreadable: ${c.seatsError}`
+    : c.seats.length ? c.seats.map((s) => `${s.seat} ${s.state}`).join(', ') : 'seats.json unrecorded';
   return ok(`run ${c.runId} (${c.runIdBasis}) · ${seats} · ${c.paths.length} paths · fused from ${list(c.sources)}`);
 }
 
