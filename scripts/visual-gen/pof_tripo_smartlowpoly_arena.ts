@@ -36,7 +36,6 @@
  */
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
 import { runTripo, type TripoSpec } from '../../src/lib/visual-gen/tripo-runner';
 import { parseCritiqueMetrics, classifyComponents } from '../../src/lib/visual-gen/mesh-critique';
 import { polycountFor } from '../../src/lib/visual-gen/polycount-presets';
@@ -49,26 +48,9 @@ import { gradeFaceBudget } from '../../src/lib/visual-gen/face-budget';
 const CRITIQUE_PYTHON = process.env.POF_ARENA_PYTHON
   ?? 'C:/Users/kazda/AppData/Local/Programs/Python/Python312/python.exe';
 
-// Defense in depth, on top of the pof_mesh_critique.py fix (2026-08-18): a real run
-// against a heavily-fragmented, HD-PBR-textured mesh ran the python process to ~211GB
-// of virtual memory and crashed the host, because the script used mesh.split() — which
-// deep-copies material data per connected component — instead of the topology-only
-// adjacency grouping it uses now. This hand-rolled spawn had NO timeout at all, unlike
-// critiqueMesh()'s own `defaultRun` (60s + SIGKILL); that gap is why nothing stopped it.
-// Mirror that same guard here so a future unknown pathological mesh cannot repeat this.
-const CRITIQUE_TIMEOUT_MS = 60_000;
-
-function runCritiqueScript(glbPath: string): Promise<{ stdout: string; code: number | null }> {
-  return new Promise((resolve) => {
-    const child = spawn(CRITIQUE_PYTHON, ['scripts/visual-gen/pof_mesh_critique.py', '--mesh', glbPath], { windowsHide: true });
-    let stdout = '';
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stdout += d.toString(); });
-    const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch { /* already gone */ } }, CRITIQUE_TIMEOUT_MS);
-    child.on('exit', (code) => { clearTimeout(timer); resolve({ stdout, code }); });
-    child.on('error', (e) => { clearTimeout(timer); resolve({ stdout: `spawn error: ${e.message}`, code: null }); });
-  });
-}
+// Defense in depth (2026-08-18 crash: ~211GB python on a fragmented mesh): the spawn lives in
+// pof_arena_io.ts, bounded by CRITIQUE_TIMEOUT_MS and waiting for stdio to drain.
+import { runCritiqueScript, downloadToBase64 } from './pof_arena_io';
 import { TRIPO_AUDITED_MODEL, TRIPO_AUDITED_TEXTURE_QUALITY } from '../../src/lib/visual-gen/tripo-models';
 import { makeQwenVision } from '../../src/lib/anim-critique/qwen';
 import type { VisionImage } from '../../src/lib/anim-critique/critique';
@@ -93,13 +75,6 @@ const CASES: ClassCase[] = [
   { assetClass: 'prop', referenceImage: 'generated/icons/props__crate__hero.jpg', subject: 'a reinforced wooden shipping crate with metal corner brackets' },
   { assetClass: 'modular-part', referenceImage: '.benchmark-tripo/modular_pauldron.png', subject: 'a leather-and-steel shoulder pauldron armor piece with filigree engraving and a buckle strap' },
 ];
-
-async function downloadToBase64(url: string): Promise<VisionImage> {
-  const res = await fetch(url);
-  const buf = Buffer.from(await res.arrayBuffer());
-  const mime = res.headers.get('content-type') ?? 'image/jpeg';
-  return { mime, base64: buf.toString('base64') };
-}
 
 function fileToVisionImage(path: string): VisionImage {
   const buf = readFileSync(path);
@@ -176,7 +151,7 @@ async function runOne(c: ClassCase, v: Variant): Promise<RunOutcome> {
     return { assetClass: c.assetClass, variant: v.label, ok: false, error: result.error, durationMs: result.durationMs };
   }
 
-  const { stdout, code } = await runCritiqueScript(result.meshPath);
+  const { stdout, code } = await runCritiqueScript(result.meshPath, { python: CRITIQUE_PYTHON });
   const parsed = parseCritiqueMetrics(stdout);
   const critiqueError = !parsed.ok || !parsed.metrics ? (parsed.error ?? `critique script exit ${code}: ${stdout.slice(0, 300)}`) : undefined;
   const metrics = parsed.metrics;
