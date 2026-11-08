@@ -18536,7 +18536,11 @@
           "revision": 12,
           "changedAt": "2026-09-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/HazardCard.tsx:69 src/lib/localization/scan-engine.ts:108 emits a quoted `evidence` snippet for each hazard, but HazardCard shows only description, suggestion and file:line, so the operator never sees the matched content and must open the source to judge the claim.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:06416fce13bc2342",
+          "evaluatedRevision": 12
         }
       ],
       "governance": "governed"

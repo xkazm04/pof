@@ -16042,14 +16042,14 @@
       "subject": "codebase-scanning",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T21:52:12.774Z",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:13:01.905Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "18275cdf-318f-4434-8323-516f5d99d6c5",
+        "worker": "ec417a80-ef6a-4b8c-ac3d-b81ae7d7c95b",
         "state": "not-applicable",
-        "at": "2026-10-24T21:53:00.340725+00:00",
-        "reason": "reviewer (sonnet): The anchor (AudioCodeGenPanel.tsx:14) is only a type import and does not show that the precondition is absent. The directory also calls /api/audio-gen and /api/audio-codegen, whose server code I did not open, so I could not confirm 'deterministic' or that no model-generated artifact is consumed as t"
+        "at": "2026-11-08T00:14:20.570538+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchors are incidental. The audio one is a description paragraph and the materials one is a fetch call for image analysis, and neither shows that no code scanning exists. The grep terms (finding, antiPattern, codebase, detector) are narrow for this subject, and I couldn't confirm "
       }
     },
     "70030182-3a81-467f-979d-7bbad209473b/generative-artifact-gating": {
@@ -22749,6 +22749,42 @@
       "evaluatedTs": "2026-11-07T23:58:04.984Z",
       "worker": "869ed519-c9ff-48dc-a4b1-e42c475bed9e",
       "techniques": []
+    },
+    "6feb38b8-a274-49d1-b643-b9c7e058b344/codebase-scanning": {
+      "context": "localization-pipeline",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:13:01.905Z",
+      "worker": "ec417a80-ef6a-4b8c-ac3d-b81ae7d7c95b",
+      "techniques": [
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/HazardCard.tsx:69 The hazard's quoted evidence is dropped on screen. QAFindingCard.tsx:69 does quote sourceText and translatedText, so the gap is specific to hazards."
+        },
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/OverviewTab.tsx:156 The preview cap is disclosed. Coverage honesty is also visible elsewhere: index.tsx:142 prints files scanned and a 'stopped at the file/size cap' notice, ReadinessTab.tsx:30 says an empty scan 'is not a pass', and QATab.tsx:32 separates 'no translations' from 'passed QA'."
+        }
+      ]
+    },
+    "15282b56-0d42-43ed-b76d-d61c8e6e0309/codebase-scanning": {
+      "context": "material-style-tools",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:13:01.905Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "ec417a80-ef6a-4b8c-ac3d-b81ae7d7c95b",
+        "state": "not-applicable",
+        "at": "2026-11-08T00:14:20.571044+00:00",
+        "reason": "reviewer (sonnet): The not-applicable anchors are incidental. The audio one is a description paragraph and the materials one is a fetch call for image analysis, and neither shows that no code scanning exists. The grep terms (finding, antiPattern, codebase, detector) are narrow for this subject, and I couldn't confirm "
+      }
     }
   }
 }
