@@ -31,6 +31,24 @@ function intParam(params: URLSearchParams, name: string, fallback: number, min: 
   return n;
 }
 
+const BUILD_STATUSES = ['success', 'failed', 'cancelled'];
+const RECORD_NUMERIC_FIELDS = ['sizeBytes', 'durationMs', 'cookTimeMs', 'warningCount', 'errorCount'] as const;
+
+/** The caller's error in a `record` body, or null. The row feeds the dashboard's stats. */
+function recordFieldError(body: Record<string, unknown>): string | null {
+  if (body.platform !== undefined && typeof body.platform !== 'string') return 'platform must be a string';
+  if (body.status !== undefined && !BUILD_STATUSES.includes(body.status as string)) {
+    return `status must be one of: ${BUILD_STATUSES.join(', ')}`;
+  }
+  for (const key of RECORD_NUMERIC_FIELDS) {
+    const v = body[key];
+    if (v !== undefined && v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0)) {
+      return `${key} must be a non-negative number`;
+    }
+  }
+  return null;
+}
+
 // `?projectPath=` scopes every read to one project (own rows + the unattributed ones
 // recorded before builds carried a project). Omitting it is an UNSCOPED read of the
 // unattributed rows only — it is never "every project's builds shown as yours".
@@ -111,6 +129,8 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   switch (action) {
     case 'record': {
+      const invalid = recordFieldError(body);
+      if (invalid) return apiError(invalid, 400);
       const input: BuildRecordInput = {
         // Explicit or nothing — a build recorded without a project stays honestly
         // unattributed rather than being assigned to whichever project is open.
