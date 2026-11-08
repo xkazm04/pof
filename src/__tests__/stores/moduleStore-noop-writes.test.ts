@@ -35,3 +35,34 @@ describe('addScanFindings', () => {
     expect(store().scanResults['arpg-combat']).toHaveLength(1);
   });
 });
+
+describe('scan finding no-ops', () => {
+  const stored = { id: 'f1', file: 'A.cpp', description: 'x', severity: 'low', resolvedAt: '2026-01-01T00:00:00.000Z' } as never;
+
+  it('resolving an already resolved finding keeps its first timestamp and reference', () => {
+    useModuleStore.setState({ scanResults: { 'arpg-combat': [stored] } });
+    const before = store().scanResults;
+    store().resolveScanFinding('arpg-combat', 'f1');
+    expect(store().scanResults).toBe(before);
+  });
+
+  it('an unknown finding id changes nothing', () => {
+    useModuleStore.setState({ scanResults: { 'arpg-combat': [stored] } });
+    const before = store().scanResults;
+    store().resolveScanFinding('arpg-combat', 'nope');
+    expect(store().scanResults).toBe(before);
+  });
+
+  it('clearing an already empty module changes nothing', () => {
+    useModuleStore.setState({ scanResults: { 'arpg-combat': [] } });
+    const before = store().scanResults;
+    store().clearScanFindings('arpg-combat');
+    expect(store().scanResults).toBe(before);
+  });
+
+  it('resolving an open finding stamps it', () => {
+    useModuleStore.setState({ scanResults: { 'arpg-combat': [{ id: 'f2', file: 'B', description: 'y' } as never] } });
+    store().resolveScanFinding('arpg-combat', 'f2');
+    expect(store().scanResults['arpg-combat'][0].resolvedAt).toBeTruthy();
+  });
+});

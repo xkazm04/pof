@@ -263,14 +263,19 @@ export const useModuleStore = create<ModuleState>()(
       },
 
       clearScanFindings: (moduleId) => {
-        set((state) => ({
-          scanResults: { ...state.scanResults, [moduleId]: [] },
-        }));
+        set((state) =>
+          state.scanResults[moduleId]?.length === 0
+            ? state
+            : { scanResults: { ...state.scanResults, [moduleId]: [] } },
+        );
       },
 
       resolveScanFinding: (moduleId, findingId) => {
         set((state) => {
-          const findings = (state.scanResults[moduleId] ?? []).map((f) =>
+          const existing = state.scanResults[moduleId] ?? [];
+          // Unknown or already resolved: keep the first timestamp and the reference.
+          if (!existing.some((f) => f.id === findingId && !f.resolvedAt)) return state;
+          const findings = existing.map((f) =>
             f.id === findingId ? { ...f, resolvedAt: new Date().toISOString() } : f,
           );
           return { scanResults: { ...state.scanResults, [moduleId]: findings } };
