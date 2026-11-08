@@ -54,4 +54,17 @@ describe('WBPStarterPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /scaffold wbp/i }));
     expect(mockExecute).not.toHaveBeenCalled();
   });
+
+  it('chip selection is exposed as aria-pressed, one chip pressed at a time, and focus is visible', () => {
+    render(<WBPStarterPanel moduleId="arpg-ui" />);
+    const chips = Array.from(document.querySelectorAll('button[aria-pressed]')) as HTMLElement[];
+    const classes = Array.from(document.querySelectorAll('#wbp-class-suggestions option')).map((o) => (o as HTMLOptionElement).value);
+    expect(chips.length).toBe(classes.length);
+    expect(chips.filter((c) => c.getAttribute('aria-pressed') === 'true').map((c) => c.textContent)).toEqual([classes[0]]);
+    fireEvent.click(chips[1]);
+    expect(chips.map((c) => c.getAttribute('aria-pressed'))).toEqual(chips.map((_, i) => (i === 1 ? 'true' : 'false')));
+    for (const el of [...chips, screen.getByLabelText(/target widget class/i)]) {
+      expect(el.classList.contains('focus-ring')).toBe(true);
+    }
+  });
 });

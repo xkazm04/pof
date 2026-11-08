@@ -15,6 +15,8 @@ const ACCENT = ACCENT_PINK;
 const VIEW = 340;
 const CENTER = VIEW / 2;
 const RADIUS = 130;
+/** A transition drawn in both directions: each direction is shifted this far to its own side of the chord. */
+const PAIR_OFFSET = 5;
 
 interface FlowGraphProps {
   highlightedFlowNode: string | null;
@@ -38,10 +40,17 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
             const count = FLOW_NODES.length;
             const angleS = (2 * Math.PI * si) / count - Math.PI / 2;
             const angleT = (2 * Math.PI * ti) / count - Math.PI / 2;
-            const sx = CENTER + RADIUS * Math.cos(angleS);
-            const sy = CENTER + RADIUS * Math.sin(angleS);
-            const tx = CENTER + RADIUS * Math.cos(angleT);
-            const ty = CENTER + RADIUS * Math.sin(angleT);
+            // A reverse edge shares this chord: shift along the direction-relative normal, so the pair lands on opposite sides.
+            const hasReverse = FLOW_EDGES.some((o) => o.source === edge.target && o.target === edge.source);
+            const dx = Math.cos(angleT) - Math.cos(angleS);
+            const dy = Math.sin(angleT) - Math.sin(angleS);
+            const dist = Math.hypot(dx, dy) || 1;
+            const ox = hasReverse ? (-dy / dist) * PAIR_OFFSET : 0;
+            const oy = hasReverse ? (dx / dist) * PAIR_OFFSET : 0;
+            const sx = CENTER + RADIUS * Math.cos(angleS) + ox;
+            const sy = CENTER + RADIUS * Math.sin(angleS) + oy;
+            const tx = CENTER + RADIUS * Math.cos(angleT) + ox;
+            const ty = CENTER + RADIUS * Math.sin(angleT) + oy;
             const mx = (sx + tx) / 2;
             const my = (sy + ty) / 2;
             const isHighlighted = highlightedFlowNode === edge.source || highlightedFlowNode === edge.target;
@@ -68,7 +77,7 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
                   } as const, prefersReduced)}
                   style={isHighlighted ? { filter: `drop-shadow(0 0 3px ${withOpacity(ACCENT, OPACITY_50)})` } : undefined}
                 />
-                {edge.label && (
+                {edge.label && edge.style !== 'dashed' && (
                   <text x={mx} y={my - 6} textAnchor="middle"
                     className="text-xs font-mono"
                     fill={isHighlighted ? ACCENT : 'var(--text-muted)'}
