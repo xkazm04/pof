@@ -16,7 +16,9 @@ interface CanonState {
    *  optimistic write would cite a law the dispatch (which reads the DB) never carries. A refusal is
    *  returned (the server's reason), never swallowed. */
   upsert: (rule: ProjectRule) => Promise<Result<ProjectRule, string>>;
-  remove: (id: string) => Promise<void>;
+  /** DELETEs, and drops the rule locally ONLY when the server did - a refusal keeps the law in the cache
+   *  (the DB, which prompts read, still holds it) and is returned for the confirm dialog to show. */
+  remove: (id: string) => Promise<Result<void, string>>;
   /** Shipped-vs-DB canon drift (GET ?view=drift); null until loaded or when unreachable. */
   drift: CanonDrift | null;
   loadDrift: () => Promise<void>;
@@ -56,9 +58,11 @@ export const useCanonStore = create<CanonState>((set, get) => {
       return { ok: true, data: rule };
     },
     remove: async (id) => {
+      const r = await tryApiFetch(`/api/project-rules?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!r.ok) return { ok: false, error: r.error };
       set((s) => ({ rules: s.rules.filter((x) => x.id !== id) }));
-      await tryApiFetch(`/api/project-rules?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       void get().loadDrift();
+      return { ok: true, data: undefined };
     },
     drift: null,
     reviewError: null,

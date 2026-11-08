@@ -25,9 +25,9 @@ it('keeps non-selected chapters compact by default; expands one on click', () =>
   // The selected catalog's chapter (Core) is open; the other chapter (Content) is compact.
   expect(screen.getByTestId('harness-catalog-items')).toBeTruthy();
   expect(screen.queryByTestId('harness-catalog-audio')).toBeNull();
-  expect(screen.getByRole('button', { name: /Content/i }).getAttribute('aria-expanded')).toBe('false');
+  expect(screen.getByRole('treeitem', { name: /Content/i }).getAttribute('aria-expanded')).toBe('false');
   // Clicking the compact chapter expands just that one.
-  fireEvent.click(screen.getByRole('button', { name: /Content/i }));
+  fireEvent.click(screen.getByRole('treeitem', { name: /Content/i }));
   expect(screen.getByTestId('harness-catalog-audio')).toBeTruthy();
 });
 
@@ -36,16 +36,16 @@ it('lets the user collapse the auto-opened selected chapter', () => {
   // The selected chapter starts open…
   expect(screen.getByTestId('harness-catalog-items')).toBeTruthy();
   // …and the user can still collapse it.
-  fireEvent.click(screen.getByRole('button', { name: /Core/i }));
+  fireEvent.click(screen.getByRole('treeitem', { name: /Core/i }));
   expect(screen.queryByTestId('harness-catalog-items')).toBeNull();
 });
 
 it('collapses a category group when its header is toggled', () => {
   render(<CatalogTree t={LIGHT} groups={groups} selectedCatalogId="items" entities={[]} selectedEntityId={null} onSelectCatalog={() => {}} onSelectEntity={() => {}} />);
   expect(screen.getByTestId('harness-catalog-spellbook')).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: /Core/i }));
+  fireEvent.click(screen.getByRole('treeitem', { name: /Core/i }));
   expect(screen.queryByTestId('harness-catalog-spellbook')).toBeNull();
-  const coreHeader = screen.getByRole('button', { name: /Core/i });
+  const coreHeader = screen.getByRole('treeitem', { name: /Core/i });
   expect(coreHeader.getAttribute('aria-expanded')).toBe('false');
 });
 
@@ -61,7 +61,7 @@ it('selects a catalog via keyboard (ArrowDown + Enter)', () => {
 it('Enter on a group header toggles collapse without selecting a catalog', () => {
   const onSelectCatalog = vi.fn();
   render(<CatalogTree t={LIGHT} groups={groups} selectedCatalogId="items" entities={[]} selectedEntityId={null} onSelectCatalog={onSelectCatalog} onSelectEntity={() => {}} />);
-  const header = screen.getByRole('button', { name: /Core/i });
+  const header = screen.getByRole('treeitem', { name: /Core/i });
   header.focus();
   fireEvent.keyDown(header, { key: 'Enter' });
   // Enter on the header must NOT trigger a roving catalog-select (stopPropagation).

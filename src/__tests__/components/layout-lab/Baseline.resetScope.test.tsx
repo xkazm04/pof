@@ -60,3 +60,22 @@ describe('Baseline — a reset failure belongs to the entity it failed on', () =
     expect(screen.getByText(/Reset failed — server artifacts were NOT deleted: offline/i)).toBeTruthy();
   });
 });
+
+describe('Baseline — the in-flight Reset belongs to its entity too', () => {
+  it('keeps the open entity Reset enabled while another entity delete is pending', async () => {
+    let release: (v: unknown) => void = () => {};
+    deleteEntityArtifacts.mockReset().mockReturnValue(new Promise((r) => { release = r; }));
+    const { rerender } = render(view('item-1'));
+    fireEvent.click(screen.getByTestId('entity-reset'));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset everywhere' }));
+    expect(screen.getByTestId('entity-reset').textContent).toBe('Resetting…');
+
+    rerender(view('item-2'));
+    const btn = screen.getByTestId('entity-reset') as HTMLButtonElement;
+    expect(btn.textContent).toBe('Reset');
+    expect(btn.disabled).toBe(false);
+
+    release({ ok: true, data: null });
+    await Promise.resolve();
+  });
+});

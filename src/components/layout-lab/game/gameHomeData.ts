@@ -3,7 +3,9 @@
 /**
  * The Game home's reads — every number it shows, each from the source that owns it:
  *  - pipeline rows + coverage: the game's manifest (`gamePipelineRows`) over the game's entities
- *    (`statusEntitiesForGame`, the same set the lab tree counts);
+ *    (`statusEntitiesForGame` — the /status set: for PoF the seeds only, for another game seeds + its
+ *    persisted rows). The lab tree counts `labEntitiesOf` (seeds + hydrated ingests/drafts of the game), so
+ *    the two coincide for a non-PoF game and differ for PoF by the hydrated persisted rows);
  *  - readiness: the SAME /status model (`buildSwimlane` → `readinessOf`) over the game's artifact
  *    rows, reduced to the best reached rung, or "unmeasured" — never R0 for nothing measured;
  *  - canon: `rulesForProfile` over the canon store, union across the game's profiles;

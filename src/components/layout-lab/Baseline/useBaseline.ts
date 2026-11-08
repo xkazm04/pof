@@ -60,7 +60,9 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   );
   const [plainMode, setPlainMode] = useState(false);
   // Reset (local + server) state — a failed server delete must be reported, never swallowed.
-  const [resetting, setResetting] = useState(false);
+  // Keyed by entity like `resetFailure`: switching entities mid-delete must not paint the NEW
+  // entity's Reset as busy. A set, because a second entity's reset may start while the first runs.
+  const [resettingIds, setResettingIds] = useState<ReadonlySet<string>>(() => new Set());
   // Keyed by the entity the reset ran against: the banner's Retry re-runs a DESTRUCTIVE delete
   // against whichever entity is open, so a failure must never render on (or retry against)
   // another one. An unkeyed string followed the operator across entity switches.
@@ -271,16 +273,18 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const resetEntityEverywhere = useCallback(async () => {
     if (!catalogId || !entityKey) return;
     setResetFailure(null);
-    setResetting(true);
+    const resetId = entityKey;
+    setResettingIds((s) => new Set(s).add(resetId));
     try {
       const res = await deleteEntityArtifacts(catalogId, entityKey);
       if (!res.ok) { setResetFailure({ entityId: entityKey, error: res.error }); return; }
       useLabPipelineStore.getState().resetEntity(entityKey);
       invalidateArtifacts(catalogId, entityKey);
     } finally {
-      setResetting(false);
+      setResettingIds((s) => { const n = new Set(s); n.delete(resetId); return n; });
     }
   }, [catalogId, entityKey]);
+  const resetting = !!entityKey && resettingIds.has(entityKey);
 
   // ── Refresh from server ────────────────────────────────────────────────────
   // The lab could only ever ADD server truth: hydration merges verdicts but never content,
