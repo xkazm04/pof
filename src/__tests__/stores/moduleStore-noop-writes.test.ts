@@ -15,13 +15,13 @@ beforeEach(() => {
 
 describe('setChecklistItem', () => {
   it('schedules no save when the item already has that value', () => {
-    useModuleStore.setState({ checklistProgress: { 'arpg-combat': { a: true } } });
-    store().setChecklistItem('arpg-combat', 'a', true);
+    useModuleStore.setState({ checklistProgress: { 'arpg-combat': { 'acb-1': true } } });
+    store().setChecklistItem('arpg-combat', 'acb-1', true);
     expect(autoSaveLifecycle.isActive()).toBe(false);
   });
 
   it('schedules a save on a real change', () => {
-    store().setChecklistItem('arpg-combat', 'a', true);
+    store().setChecklistItem('arpg-combat', 'acb-1', true);
     expect(autoSaveLifecycle.isActive()).toBe(true);
     cancelAutoSave();
   });
