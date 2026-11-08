@@ -133,6 +133,24 @@ function damageStepProduce(e: LabEntity) {
   };
 }
 
+/**
+ * The base type's identity (slot / item type / handedness), hoisted so the Tooltip's sub-header
+ * says the SAME thing the Base Type & Rarity step stored for the same entity.
+ */
+function baseTypeIdentity(e: LabEntity) {
+  const entityData = (e.data as Record<string, unknown> | null) ?? {};
+  const effective = entityData.effective as Record<string, { value?: unknown }> | undefined;
+  const value = <T,>(field: string): T | undefined => effective?.[field]?.value as T | undefined;
+  const equipType = value<string>('equipType');
+  return {
+    slot: value<string>('slot') ?? 'Weapon',
+    itemType: value<string>('itemType') ?? 'Sword',
+    equipType,
+    oneHanded: equipType ? equipType === 'One-handed' : true,
+    twoHanded: equipType === 'Two-handed',
+  };
+}
+
 /** The tooltip's stat + implicit lines, formatted from {@link damageStepProduce} for the same
  *  entity. A line is present only when the Damage step derived its value. */
 function tooltipStatsFromDamage(e: LabEntity): { statLines: string[]; implicitLine?: string } {
@@ -145,6 +163,14 @@ function tooltipStatsFromDamage(e: LabEntity): { statLines: string[]; implicitLi
   if (d.critChance != null) statLines.push(`Critical Strike Chance: ${Math.round(d.critChance * 1000) / 10}%`);
   const label = typeof d.implicit === 'object' && d.implicit !== null ? (d.implicit as { label?: string }).label : undefined;
   return label ? { statLines, implicitLine: label } : { statLines };
+}
+
+/** "One-Handed Sword" for a one-handed weapon, "Two-Handed <type>" for a two-handed one, the bare
+ *  item type for anything that is not a weapon — from {@link baseTypeIdentity}. */
+function tooltipSubHeader(e: LabEntity): string {
+  const { slot, itemType, oneHanded, twoHanded } = baseTypeIdentity(e);
+  if (slot !== 'Weapon') return itemType;
+  return `${twoHanded || !oneHanded ? 'Two-Handed' : 'One-Handed'} ${itemType}`;
 }
 
 registerCatalogPipeline({
@@ -217,9 +243,7 @@ registerCatalogPipeline({
         const rarityReqLvl: Record<string, number> = { Common: 1, Magic: 14, Rare: 33, Set: 43, Legendary: 57 };
         const ilvl = effective ? Number(entityData.dropLevel ?? 1) : rarityIlvl[entityRarity] ?? 6;
         const requiredLevel = effectiveValue<number>('requiredLevel') ?? rarityReqLvl[entityRarity] ?? 1;
-        const slot = effectiveValue<string>('slot') ?? 'Weapon';
-        const itemType = effectiveValue<string>('itemType') ?? 'Sword';
-        const equipType = effectiveValue<string>('equipType');
+        const { slot, itemType, equipType, oneHanded } = baseTypeIdentity(e);
         const armor = effectiveValue<{ min: number; max: number }>('effectiveArmor');
         const armorSlot = ['Chest', 'Helm', 'OffHand'].includes(slot);
         const durability = effectiveValue<{ min: number; max: number }>('durability');
@@ -252,7 +276,7 @@ registerCatalogPipeline({
             baseType: e.name,
             slot,
             subType: itemType,
-            oneHanded: equipType ? equipType === 'One-handed' : true,
+            oneHanded,
             ...(equipType === 'Two-handed' ? { twoHanded: true } : {}),
             rarity: entityRarity,    // derived from entity seed (arpg-item-rarity §1a)
             ilvl,                    // rarity-gated: Common→6, Magic→20, Rare→45 (§2c)
@@ -806,7 +830,7 @@ registerCatalogPipeline({
               'A standard iron-forged longsword, edge kept sharp by a soldier\'s habit. ' +
               'Reliable and unremarkable — a weapon that outlasts the hands that wield it.',
             headerLine: e.name,
-            subHeaderLine: 'One-Handed Sword',
+            subHeaderLine: tooltipSubHeader(e),
             ...tooltipStatsFromDamage(e),
             separatorAfterImplicit: true,
             // Judge-refleet fix 2026-07-07: this item's authoritative rarity is COMMON
