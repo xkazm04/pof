@@ -41,7 +41,6 @@ export function useGlobalSearchPanel() {
   const [recents, setRecents] = useState<SearchResult[]>([]);
   const [rebuilding, setRebuilding] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [lastRebuilt, setLastRebuilt] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [searchFailed, setSearchFailed] = useState(false);
   const [reindexFailed, setReindexFailed] = useState(false);
@@ -123,7 +122,6 @@ export function useGlobalSearchPanel() {
         if (seq !== searchSeqRef.current) return; // superseded by a newer search
         setResults(data.results ?? []);
         setSearchFailed(false);
-        setLastRebuilt(data.lastRebuilt ?? null);
         setActiveIndex(0);
       } catch {
         if (seq !== searchSeqRef.current) return; // superseded by a newer search
@@ -148,7 +146,6 @@ export function useGlobalSearchPanel() {
     if (!silent) { setRebuilding(true); setReindexFailed(false); }
     try {
       await apiFetch('/api/search?rebuild=1');
-      setLastRebuilt(new Date().toISOString());
       // Mark the index as built for the current project only on success, so a
       // failed first rebuild is retried on the next open rather than left
       // permanently stale, and a later project switch forces a fresh rebuild.
@@ -251,7 +248,6 @@ export function useGlobalSearchPanel() {
     retrySearch,
     rebuilding,
     activeIndex, setActiveIndex,
-    lastRebuilt,
     activeFilter, setActiveFilter,
     inputRef,
     resultsRef,
