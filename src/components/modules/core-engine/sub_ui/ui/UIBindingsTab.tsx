@@ -102,7 +102,7 @@ export function UIBindingsTab() {
                         <g key={node.id}
                           onClick={() => setCurrentInputMode(node.id)}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCurrentInputMode(node.id); } }}
-                          tabIndex={0} role="button" aria-label={`Switch to ${node.label} input mode`}
+                          tabIndex={0} role="button" aria-pressed={isActive} aria-label={`Switch to ${node.label} input mode`}
                           className="sm-node cursor-pointer">
                           <circle className="focus-ring" cx={pos.x} cy={pos.y} r={(isActive ? 32 : 28) + 5}
                             fill="none" stroke={color} strokeWidth="2" strokeDasharray="4 3" opacity={0}
