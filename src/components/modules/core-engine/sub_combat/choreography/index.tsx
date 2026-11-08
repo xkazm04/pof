@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
-import { Users } from 'lucide-react';
+import { Users, Undo2 } from 'lucide-react';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { copyToClipboard } from '@/lib/clipboard';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -33,6 +33,7 @@ export function CombatChoreographyEditor() {
   const selectedArchetype = useEncounterDraftStore((s) => s.selectedArchetype);
   const placeLevel = useEncounterDraftStore((s) => s.placeLevel);
   const baseline = useEncounterDraftStore((s) => s.baseline);
+  const undoDepth = useEncounterDraftStore((s) => s.history.length);
   const dispatch = useEncounterDraftStore((s) => s.dispatch);
   const [scrubTime, setScrubTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -124,7 +125,13 @@ export function CombatChoreographyEditor() {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4">
         <BlueprintPanel className="p-3 space-y-3">
           <SectionHeader label={`Spatial Grid \u2014 Wave ${selectedWave}: ${waves[selectedWave]?.label}`} icon={Users} />
-          <div className="flex items-center justify-end -mt-2 mb-1">
+          <div className="flex items-center justify-end gap-2 -mt-2 mb-1">
+            {/* The reducer keeps a capped undo history; this is its one affordance. */}
+            <button type="button" onClick={() => dispatch({ type: 'undo' })} disabled={undoDepth === 0}
+              aria-label={`Undo last encounter edit (${undoDepth} available)`}
+              className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors text-text-muted disabled:opacity-40 disabled:cursor-not-allowed">
+              <Undo2 className="w-3 h-3" aria-hidden />Undo
+            </button>
             <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
               <Users className="w-3 h-3" />
               {enemies.filter((e) => e.waveIndex === selectedWave).length} placed
