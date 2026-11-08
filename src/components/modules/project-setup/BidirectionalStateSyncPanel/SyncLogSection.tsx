@@ -59,6 +59,7 @@ export function SyncLogSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            id="bss-log-panel"
             className="overflow-hidden"
           >
             <div className="px-4 pb-3">

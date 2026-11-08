@@ -223,3 +223,21 @@ describe('sync log header markup', () => {
     expect(container.querySelector('button button')).toBeNull();
   });
 });
+
+describe('section toggles point at real panels', () => {
+  const dangling = (root: HTMLElement) => [...root.querySelectorAll('[aria-controls]')]
+    .map((el) => el.getAttribute('aria-controls')!)
+    .filter((id) => document.getElementById(id) === null);
+
+  it('every aria-controls in the live panel resolves once sections are open', () => {
+    const { container } = renderLivePanel();
+    fireEvent.click(screen.getByRole('button', { name: /Viewport Teleport/ }));
+    expect(container.querySelectorAll('[aria-controls]').length).toBe(4);
+    expect(dangling(container)).toEqual([]);
+  });
+
+  it('the conflict section resolves too', () => {
+    const { container } = render(<ConflictSection showConflicts setShowConflicts={() => {}} conflicts={[]} />);
+    expect(dangling(container)).toEqual([]);
+  });
+});

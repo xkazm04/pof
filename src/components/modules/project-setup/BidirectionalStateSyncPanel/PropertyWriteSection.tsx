@@ -48,6 +48,7 @@ export function PropertyWriteSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            id="bss-property-write-panel"
             className="overflow-hidden"
           >
             <div className="px-4 pb-3 space-y-2">
