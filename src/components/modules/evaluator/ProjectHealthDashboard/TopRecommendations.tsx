@@ -1,6 +1,7 @@
 import { AlertTriangle, Zap } from 'lucide-react';
 import type { EvaluatorReport, Recommendation } from '@/types/evaluator';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { EVAL_ACCENT, PRIORITY_COLORS } from './constants';
 import { priorityOrder } from './helpers';
@@ -17,7 +18,7 @@ export function TopRecommendations({
   return (
     <SurfaceCard level={3} className="p-4">
       <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="w-3.5 h-3.5 text-[#fbbf24]" />
+        <AlertTriangle className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
         <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Top Recommendations
         </span>

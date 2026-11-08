@@ -10,7 +10,7 @@ export function ScanHistoryTimeline({ scanHistory }: { scanHistory: EvaluatorRep
   return (
     <SurfaceCard level={3} className="p-4">
       <div className="flex items-center gap-2 mb-3">
-        <TrendingUp className="w-3.5 h-3.5 text-[#4ade80]" />
+        <TrendingUp className="w-3.5 h-3.5" style={{ color: STATUS_SUCCESS }} />
         <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Scan History
         </span>

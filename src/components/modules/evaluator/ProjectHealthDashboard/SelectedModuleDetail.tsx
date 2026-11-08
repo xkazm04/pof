@@ -1,6 +1,7 @@
 import { AlertTriangle, Loader2, X, Zap } from 'lucide-react';
 import type { EvaluatorReport, Recommendation } from '@/types/evaluator';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 import { EVAL_ACCENT, PRIORITY_COLORS } from './constants';
 import { scoreColor, scoreBg } from './helpers';
 import { ModuleScoreTrend } from './ModuleScoreTrend';
@@ -57,7 +58,7 @@ export function SelectedModuleDetail({
           <div className="space-y-1">
             {selectedDetail.issues.map((issue, i) => (
               <div key={i} className="flex items-start gap-2 px-3 py-1.5 rounded-md bg-surface-deep">
-                <AlertTriangle className="w-3 h-3 text-[#fbbf24] flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: STATUS_WARNING }} />
                 <span className="text-xs text-text-muted">{issue}</span>
               </div>
             ))}
