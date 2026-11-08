@@ -333,12 +333,16 @@ export function generateCppFromBlueprint(
     const { returnType, entryNode } = fn;
     sourceLines.push(ufunctionDefinitionSignature(cppClassName, fn));
     sourceLines.push('{');
+    let bodyLogic: string | undefined;
     if (entryNode) {
-      sourceLines.push(generateNodeLogic(fn.graph, entryNode, cppClassName, warnings, ledger));
+      bodyLogic = generateNodeLogic(fn.graph, entryNode, cppClassName, warnings, ledger);
+      sourceLines.push(bodyLogic);
     } else {
       sourceLines.push('\t// TODO: Implement function logic');
     }
-    if (returnType !== 'void') {
+    // A top-level `return <expr>;` from the Result node already ends the body.
+    const returnsFromGraph = bodyLogic !== undefined && /^\treturn .*;$/m.test(bodyLogic);
+    if (returnType !== 'void' && !returnsFromGraph) {
       sourceLines.push(`\treturn ${returnType === 'bool' ? 'false' : returnType.includes('*') ? 'nullptr' : `${returnType}()`};`);
     }
     sourceLines.push('}');
@@ -497,6 +501,9 @@ export function renderPinLiteral(pin: BlueprintPin): PinExpression {
     return { ok: false, reason: `pin "${pin.name}" has no literal value` };
   }
   const type = pin.type.toLowerCase();
+  // FText has no constructor from a TCHAR literal; a bare TEXT("...") passed to
+  // an FText parameter does not compile.
+  if (type === 'text') return { ok: true, code: `FText::FromString(${cppStringLiteral(raw)})` };
   if (STRING_PIN_TYPES.has(type)) return { ok: true, code: cppStringLiteral(raw) };
   if (type === 'bool') {
     const v = raw.trim().toLowerCase();
@@ -726,7 +733,9 @@ export function generateNodeLogic(
         (p) => p.direction === 'input' && ['instring', 'string', 'text'].includes(p.name.toLowerCase()),
       );
       const literal = textPin
-        ? renderPinLiteral(textPin)
+        // UE_LOG takes a raw TEXT() format string, so an FText-typed pin is
+        // read as the string it holds (an FText argument would not compile).
+        ? renderPinLiteral({ ...textPin, type: textPin.type.toLowerCase() === 'text' ? 'string' : textPin.type })
         : { ok: false as const, reason: 'no string input pin' };
       if (literal.ok && literal.code.startsWith('TEXT(')) {
         lines.push(`${indent}UE_LOG(LogTemp, Log, ${literal.code});`);
@@ -815,6 +824,22 @@ export function generateNodeLogic(
       stub(node, indent, 'SpawnActor', 'use GetWorld()->SpawnActor<>()');
       recordDisposition(ledger, node.id, 'refused', 'SpawnActor requires manual completion — use GetWorld()->SpawnActor<>()');
       warn({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
+    } else if (node.type.includes('FunctionResult')) {
+      // The result node is where the graph says what the function returns. The
+      // signature already takes its type from the first value pin, so the same
+      // pin supplies the value; an underivable one is refused, never defaulted.
+      const returnPin = valueInputPins(node)[0];
+      if (!returnPin) {
+        recordDisposition(ledger, node.id, 'structural');
+      } else {
+        const value = resolveInputExpression(returnPin, endpointIndex);
+        if (value.ok) {
+          lines.push(`${indent}return ${value.code};`);
+          emitted(node, [value]);
+        } else {
+          untranslated(node, indent, `return value not emitted — ${value.reason}`);
+        }
+      }
     } else if (!node.type.includes('Event') && !node.type.includes('FunctionEntry')) {
       stub(node, indent, `[${node.type}] ${node.name}${node.memberName ? ` — ${node.memberName}` : ''}`);
       recordDisposition(ledger, node.id, 'refused', `no translation rule for node type "${node.type}"`);

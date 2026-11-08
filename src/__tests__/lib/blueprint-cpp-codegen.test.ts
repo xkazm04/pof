@@ -869,3 +869,78 @@ describe('generateCppFromBlueprint — multi-node exec chains end-to-end', () =>
     expect(result.sourceCode).toContain('LogReady();');
   });
 });
+
+describe('generateCppFromBlueprint — FunctionResult returns the graph value', () => {
+  function getterAsset(resultPin: BlueprintPin, extra: BlueprintNode[] = []) {
+    return asset({
+      variables: [variable({ name: 'Score', type: 'int' })],
+      functions: [
+        graph({
+          name: 'GetScore',
+          nodes: [
+            node({
+              id: 'entry',
+              type: 'K2Node_FunctionEntry',
+              pins: [pin({ name: 'then', type: 'exec', direction: 'output', linkedTo: ['result'] })],
+            }),
+            node({
+              id: 'result',
+              type: 'K2Node_FunctionResult',
+              pins: [pin({ name: 'exec', type: 'exec', direction: 'input' }), resultPin],
+            }),
+            ...extra,
+          ],
+        }),
+      ],
+    });
+  }
+
+  it('returns the VariableGet that feeds the result pin and marks the result emitted', () => {
+    const ledger: NodeLedgerEntry[] = [];
+    const get = node({ id: 'get', type: 'K2Node_VariableGet', memberName: 'Score' });
+    const result = generateCppFromBlueprint(
+      getterAsset(pin({ name: 'ReturnValue', type: 'int', direction: 'input', linkedTo: ['get'] }), [get]),
+      'P',
+    );
+    expect(result.sourceCode).toContain('return Score;');
+    expect(result.sourceCode).not.toContain('return int32();');
+    const disposition = (id: string) => result.nodeLedger?.find((e) => e.nodeId === id)?.disposition;
+    expect(disposition('result')).toBe('emitted');
+    void ledger;
+  });
+
+  it('refuses a result pin it cannot derive and keeps the default return', () => {
+    const calc = node({ id: 'calc', type: 'K2Node_CallFunction', memberName: 'Add' });
+    const result = generateCppFromBlueprint(
+      getterAsset(pin({ name: 'ReturnValue', type: 'int', direction: 'input', linkedTo: ['calc'] }), [calc]),
+      'P',
+    );
+    expect(result.sourceCode).toContain('return int32();');
+    expect(result.sourceCode).toContain('// TODO: [K2Node_FunctionResult]');
+  });
+});
+
+describe('renderPinLiteral — FText pins', () => {
+  it('does not render a text pin as a bare TEXT() literal (FText has no TCHAR* conversion)', () => {
+    const r = renderPinLiteral({ name: 'T', type: 'text', direction: 'input', defaultValue: 'Hi' });
+    expect(r).toEqual({ ok: true, code: 'FText::FromString(TEXT("Hi"))' });
+  });
+
+  it('keeps string and name pins as TEXT() literals', () => {
+    expect(renderPinLiteral({ name: 'S', type: 'string', direction: 'input', defaultValue: 'Hi' }))
+      .toEqual({ ok: true, code: 'TEXT("Hi")' });
+    expect(renderPinLiteral({ name: 'N', type: 'name', direction: 'input', defaultValue: 'Hi' }))
+      .toEqual({ ok: true, code: 'TEXT("Hi")' });
+  });
+
+  it('still logs a PrintString whose text pin is typed text', () => {
+    const print = node({
+      id: 'p',
+      type: 'K2Node_CallFunction',
+      name: 'PrintString',
+      memberName: 'PrintString',
+      pins: [pin({ name: 'InString', type: 'text', direction: 'input', defaultValue: 'Hi' })],
+    });
+    expect(generateNodeLogic({ nodes: [print] }, print, 'AFoo', [])).toContain('UE_LOG(LogTemp, Log, TEXT("Hi"));');
+  });
+});

@@ -57,9 +57,13 @@ export function HighlightedCodeBlock({ code, lang }: { code: string; lang: strin
     if (html !== null) return;
 
     let cancelled = false;
-    highlight(code, lang).then((result) => {
-      if (!cancelled) setHtml(result);
-    });
+    highlight(code, lang).then(
+      (result) => {
+        if (!cancelled) setHtml(result);
+      },
+      // The plain <pre> stays up; a failed grammar load is not an unhandled rejection.
+      () => {},
+    );
 
     return () => { cancelled = true; };
   }, [code, lang, html]);

@@ -316,9 +316,51 @@ describe('computeSemanticDiff — signature and flag fidelity', () => {
 
   it('names the fidelity rung and the dimensions it did NOT compare', () => {
     const result = computeSemanticDiff(asset(), '', 'P');
-    expect(result.fidelityRung).toBe('declared-and-defined');
+    expect(result.fidelityRung).toBe('parsed');
     expect(result.notCompared.join(' ')).toMatch(/event graph/i);
+    expect(result.notCompared.join(' ')).toMatch(/definitions/i);
     expect(result.comparedDimensions.length).toBeGreaterThan(0);
+  });
+
+  it('claims declared-and-defined only when a definition was actually read', () => {
+    const header = [
+      'UCLASS()',
+      'class MYGAME_API APlayer : public AActor',
+      '{',
+      '  GENERATED_BODY()',
+      '  UFUNCTION(BlueprintCallable)',
+      '  void Fire();',
+      '};',
+    ].join('\n');
+    const bp = asset({ functions: [fnGraph('Fire')] });
+    const headerOnly = computeSemanticDiff(bp, header, 'P');
+    expect(headerOnly.fidelityRung).not.toBe('declared-and-defined');
+
+    const withDefinition = computeSemanticDiff(bp, `${header}\n\nvoid APlayer::Fire()\n{\n}\n`, 'P');
+    expect(withDefinition.fidelityRung).toBe('declared-and-defined');
+    expect(withDefinition.changes.filter((c) => c.name === 'Fire')).toHaveLength(0);
+  });
+
+  it('reports a declared function that a present .cpp never defines', () => {
+    const src = [
+      'UCLASS()',
+      'class MYGAME_API APlayer : public AActor',
+      '{',
+      '  GENERATED_BODY()',
+      '  UFUNCTION(BlueprintCallable)',
+      '  void Fire();',
+      '  UFUNCTION(BlueprintCallable)',
+      '  void Reload();',
+      '};',
+      'void APlayer::Fire()',
+      '{',
+      '}',
+    ].join('\n');
+    const result = computeSemanticDiff(asset({ functions: [fnGraph('Fire'), fnGraph('Reload')] }), src, 'P');
+    const change = result.changes.find((c) => c.name === 'Reload');
+    expect(change?.scope).toBe('function');
+    expect(change?.description).toMatch(/declared but never defined/i);
+    expect(result.changes.some((c) => c.name === 'Fire')).toBe(false);
   });
 });
 
@@ -382,5 +424,35 @@ describe('computeSemanticDiff — the surface codegen emits is the surface it ex
     expect(change?.type).toBe('modify');
     expect(change?.scope).toBe('variable');
     expect(change?.description).toMatch(/editor exposure/i);
+  });
+});
+
+describe('computeSemanticDiff — event overrides', () => {
+  const beginPlayAsset = () =>
+    asset({
+      eventGraph: {
+        name: 'EventGraph',
+        graphType: 'event',
+        nodes: [{ id: 'e1', type: 'K2Node_Event', name: 'BeginPlay', memberName: 'BeginPlay', pins: [], posX: 0, posY: 0 }],
+      },
+    });
+  const header = (member: string) =>
+    ['UCLASS()', 'class MYGAME_API APlayer : public AActor', '{', '  GENERATED_BODY()', member, '};'].join('\n');
+
+  it('reports an event-scoped change when the header lacks the override the graph drives', () => {
+    const result = computeSemanticDiff(beginPlayAsset(), header('  void Other();'), 'P');
+    const change = result.changes.find((c) => c.scope === 'event' && c.name === 'BeginPlay');
+    expect(change?.type).toBe('add');
+    expect(change?.description).toMatch(/override/i);
+  });
+
+  it('reports nothing when the override is declared', () => {
+    const result = computeSemanticDiff(beginPlayAsset(), header('  virtual void BeginPlay() override;'), 'P');
+    expect(result.changes.filter((c) => c.name === 'BeginPlay')).toHaveLength(0);
+  });
+
+  it('ignores an override that only appears in a comment', () => {
+    const result = computeSemanticDiff(beginPlayAsset(), header('  // virtual void BeginPlay() override;'), 'P');
+    expect(result.changes.some((c) => c.name === 'BeginPlay')).toBe(true);
   });
 });
