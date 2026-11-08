@@ -60,6 +60,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   <span className="text-2xs text-text-muted font-mono">Soft Cap</span>
                   <input
                     type="number" min={10} max={100} step={5}
+                    aria-label={`${config.attribute} soft cap`}
                     value={config.softCap}
                     onChange={e => setField(idx, 'softCap', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
@@ -69,6 +70,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   <span className="text-2xs text-text-muted font-mono">Base/pt</span>
                   <input
                     type="number" min={0.001} max={100} step={0.5}
+                    aria-label={`${config.attribute} base value per point`}
                     value={config.baseValuePerPoint}
                     onChange={e => setField(idx, 'baseValuePerPoint', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
@@ -78,6 +80,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   <span className="text-2xs text-text-muted font-mono">Post-Cap</span>
                   <input
                     type="number" min={0.05} max={1} step={0.05}
+                    aria-label={`${config.attribute} post-cap multiplier`}
                     value={config.postCapMultiplier}
                     onChange={e => setField(idx, 'postCapMultiplier', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"

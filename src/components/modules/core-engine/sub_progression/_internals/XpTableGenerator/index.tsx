@@ -96,6 +96,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <span className="text-2xs font-mono text-text-muted w-14">HP/Lvl</span>
           <input
             type="number" min={1} max={100} step={1} value={hpPerLevel}
+            aria-label="HP per level"
             onChange={e => setHpPerLevel(Number(e.target.value))}
             className="flex-1 bg-surface-deep/50 border border-border/40 rounded px-2 py-1 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
           />
@@ -104,6 +105,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <span className="text-2xs font-mono text-text-muted w-14">Mana/Lvl</span>
           <input
             type="number" min={1} max={100} step={1} value={manaPerLevel}
+            aria-label="Mana per level"
             onChange={e => setManaPerLevel(Number(e.target.value))}
             className="flex-1 bg-surface-deep/50 border border-border/40 rounded px-2 py-1 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
           />
@@ -112,6 +114,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <span className="text-2xs font-mono text-text-muted w-14">Attr Pts</span>
           <input
             type="number" min={0} max={10} step={1} value={attrPointsPerLevel}
+            aria-label="Attribute points per level"
             onChange={e => setAttrPointsPerLevel(Number(e.target.value))}
             className="flex-1 bg-surface-deep/50 border border-border/40 rounded px-2 py-1 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
           />
