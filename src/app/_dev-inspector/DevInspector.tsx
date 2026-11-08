@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { UI_TIMEOUTS } from "@/lib/constants";
 
 import { buildChain, dedupeChain, pickDefaultIndex, type LocEntry } from "./devLocate";
 import { HighlightBox, InspectorHud, NavHint, SourceLabel, Z } from "./devInspectorUi";
@@ -88,7 +89,7 @@ export function DevInspector() {
     setCopyOk(ok);
     setCopied(loc);
     clearTimeout(copiedTimer.current);
-    copiedTimer.current = setTimeout(() => setCopied(null), 1800);
+    copiedTimer.current = setTimeout(() => setCopied(null), UI_TIMEOUTS.devInspectorCopied);
   }, []);
 
   // `;` enters keyboard mode, then `i` arms the inspector; Esc exits. Subscribed once (no `mode` dep) and
@@ -131,7 +132,7 @@ export function DevInspector() {
   // can't be double-scheduled/leaked, and switching to armed/off cancels it.
   useEffect(() => {
     if (mode !== "nav") return;
-    const t = setTimeout(() => setMode((cur) => (cur === "nav" ? "off" : cur)), 2000);
+    const t = setTimeout(() => setMode((cur) => (cur === "nav" ? "off" : cur)), UI_TIMEOUTS.devInspectorNavIdle);
     return () => clearTimeout(t);
   }, [mode]);
 
