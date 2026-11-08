@@ -116,3 +116,15 @@ describe('preview damage numbers live their full DamageLifetime across the loop 
     expect(fireId(1.6)).toBe(fireId(1.3));
   });
 });
+
+describe('HUD theme colour picker keeps the colour alpha', () => {
+  it('picking a new hue on a 0.5-alpha HealthBarColor keeps A = 0.50', async () => {
+    const { DEFAULT_THEME } = await import('@/components/modules/content/ui-hud/HudThemeEditor/constants');
+    useHudDesignStore.getState().setThemeDraft('C:/P1', { ...DEFAULT_THEME, healthyColor: { r: 0.1, g: 0.8, b: 0.1, a: 0.5 } });
+    render(<HudThemeEditor />);
+    const swatch = screen.getByText('Healthy Color').parentElement!.querySelector('input[type="color"]') as HTMLInputElement;
+    // eslint-disable-next-line no-restricted-syntax -- <input type="color"> only accepts a #rrggbb value
+    fireEvent.change(swatch, { target: { value: '#ff0000' } });
+    expect(screen.getByText(/FLinearColor HealthBarColor = FLinearColor\(1\.00f, 0\.00f, 0\.00f, 0\.50f\);/)).toBeTruthy();
+  });
+});

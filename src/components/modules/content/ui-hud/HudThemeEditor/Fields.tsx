@@ -17,7 +17,8 @@ export function ColorPickerField({ label, value, onChange }: {
       <input
         type="color"
         value={rgbaToHex(value)}
-        onChange={(e) => onChange(hexToRGBA(e.target.value))}
+        // <input type="color"> carries no alpha: keep the colour's own A (an imported 0.5 stays 0.5).
+        onChange={(e) => onChange({ ...hexToRGBA(e.target.value), a: value.a })}
         className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent shrink-0"
       />
       <span className="text-2xs text-text-muted flex-1 truncate">{label}</span>
