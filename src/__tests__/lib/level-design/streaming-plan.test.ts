@@ -103,7 +103,7 @@ describe('buildStreamingZonePrompt reads the lib plan', () => {
     );
     expect(prompt).toHaveLength(16571);
     expect(createHash('sha256').update(prompt).digest('hex'))
-      .toBe('');
+      .toBe('dd60172442a9b1f2b16718f8b7e05ca3237dfa28910aafc7abcd06ee7a2534c3');
   });
 
   it('src/lib/prompts/level-design.ts takes its plan types from lib, never from components', () => {
