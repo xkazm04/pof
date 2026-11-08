@@ -75,6 +75,7 @@ function deps(bytes: Uint8Array) {
       fetchFn: vi.fn().mockResolvedValue(response(bytes)) as unknown as typeof fetch,
       writeFile: (p: string, d: Uint8Array) => { writes.push({ path: p, bytes: d.byteLength }); },
       mkdir: () => {},
+      rename: () => {},
       outDir: '/tmp/generated/mcp',
     },
   };
