@@ -359,7 +359,8 @@ function escapeRegExp(s: string): string {
 // the join is "ambiguous" and resolved with a direct `includes` (a tiny set);
 // the rest are resolved by the fast regex. The union is bit-for-bit identical
 // to the original per-key includes loop.
-const AMBIGUOUS_KEYS: readonly string[] = JARGON_KEYS.filter((k) =>
+function buildAmbiguousKeys(): readonly string[] {
+  return JARGON_KEYS.filter((k) =>
   JARGON_KEYS.some((a) => {
     if (a !== k && a.includes(k)) return true; // substring of another key
     return JARGON_KEYS.some((b) => {
@@ -373,23 +374,30 @@ const AMBIGUOUS_KEYS: readonly string[] = JARGON_KEYS.filter((k) =>
       return false;
     });
   }),
-);
+  );
+}
 
 // The remaining keys are unambiguous: any occurrence is always matched standalone
 // by the regex, so the sweep reports them with full `includes` fidelity.
-const REGEX_KEYS: readonly string[] = JARGON_KEYS.filter(
-  (k) => !AMBIGUOUS_KEYS.includes(k),
-);
+// Built on the FIRST findJargonInText call, not at import: the lookup surfaces
+// (TermChip, JargonTerm, crash-glossary) import this module but never sweep text,
+// and the ambiguity scan is cubic in the key count.
+interface SweepIndex {
+  ambiguous: readonly string[];
+  regex: RegExp;
+}
+let sweepIndex: SweepIndex | undefined;
 
-// Sorted longest-first so the engine prefers the longest valid key at each
-// position; escaped so regex-special keys (e.g. `.generated.h`) match literally.
-const JARGON_REGEX: RegExp = new RegExp(
-  [...REGEX_KEYS]
-    .sort((a, b) => b.length - a.length)
-    .map(escapeRegExp)
-    .join('|'),
-  'g',
-);
+function getSweepIndex(): SweepIndex {
+  if (sweepIndex) return sweepIndex;
+  const ambiguous = buildAmbiguousKeys();
+  const regexKeys = JARGON_KEYS.filter((k) => !ambiguous.includes(k));
+  // Sorted longest-first so the engine prefers the longest valid key at each
+  // position; escaped so regex-special keys (e.g. `.generated.h`) match literally.
+  const regex = new RegExp([...regexKeys].sort((a, b) => b.length - a.length).map(escapeRegExp).join('|'), 'g');
+  sweepIndex = { ambiguous, regex };
+  return sweepIndex;
+}
 
 /**
  * Return all jargon terms found inside a text blob. Used to power inline
@@ -399,6 +407,7 @@ const JARGON_REGEX: RegExp = new RegExp(
 export function findJargonInText(text: string): JargonEntry[] {
   // One regex sweep collects the unambiguous keys present in the text.
   const present = new Set<string>();
+  const { ambiguous, regex: JARGON_REGEX } = getSweepIndex();
   JARGON_REGEX.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = JARGON_REGEX.exec(text)) !== null) {
@@ -406,7 +415,7 @@ export function findJargonInText(text: string): JargonEntry[] {
     if (m.index === JARGON_REGEX.lastIndex) JARGON_REGEX.lastIndex++; // zero-len guard
   }
   // Direct includes for the handful of ambiguous keys the sweep can hide.
-  for (const k of AMBIGUOUS_KEYS) {
+  for (const k of ambiguous) {
     if (text.includes(k)) present.add(k);
   }
   // Iterate keys in their original insertion order so the returned entries keep
