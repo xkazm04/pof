@@ -127,7 +127,7 @@ export function SubTabNavigation({ tabs, activeTabId, onChange, accent, ariaLabe
             onKeyDown={(e) => handleKeyDown(e, i)}
             className={`
               relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold
-              transition-all duration-300 focus:outline-none whitespace-nowrap
+              transition-all duration-300 focus:outline-none focus-ring whitespace-nowrap
               ${isActive ? 'text-white' : 'text-text-muted hover:text-text hover:bg-surface/50'}
             `}
           >

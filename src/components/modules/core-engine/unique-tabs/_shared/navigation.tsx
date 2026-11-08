@@ -138,7 +138,7 @@ export function SegmentedControl({ options, activeId, onChange, accent }: Segmen
           <button
             key={opt.id}
             onClick={() => onChange(opt.id)}
-            className={`relative flex items-center gap-1 px-2.5 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none whitespace-nowrap
+            className={`relative flex items-center gap-1 px-2.5 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus-ring whitespace-nowrap
               ${isActive ? 'text-white' : 'text-text-muted hover:text-text'}
             `}
           >

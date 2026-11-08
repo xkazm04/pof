@@ -41,7 +41,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
 
       <button
         onClick={() => onToggle(name)}
-        className="relative z-10 w-full text-left px-2.5 py-1.5 transition-colors focus:outline-none"
+        className="relative z-10 w-full text-left px-2.5 py-1.5 transition-colors focus:outline-none focus-ring-inset"
       >
         <div className="flex items-center gap-1.5">
           <motion.div

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
-import { CopyButton, TabHeader, ProgressChip, TabButtonGroup, SubTabNavigation } from '@/components/modules/core-engine/unique-tabs/_shared';
+import { CopyButton, TabHeader, ProgressChip, TabButtonGroup, SubTabNavigation, SegmentedControl, FeatureCard } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { STATUS_SUCCESS, ACCENT_CYAN } from '@/lib/chart-colors';
 import { Box } from 'lucide-react';
 
@@ -78,5 +78,23 @@ describe('TabButtonGroup — one tab stop, like SubTabNavigation', () => {
     cleanup();
     render(<TabButtonGroup items={items} selected={null} onSelect={vi.fn()} accent={ACCENT_CYAN} ariaLabel="g" />);
     expect(screen.getAllByRole('tab').map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1']);
+  });
+});
+
+describe('focus indicator — a control that removes the outline must draw .focus-ring', () => {
+  const lostFocus = (els: HTMLElement[]) =>
+    els.filter((b) => /(^|\s)focus:outline-none(\s|$)/.test(b.className) && !/(^|\s)focus-ring(-inset)?(\s|$)/.test(b.className)).length;
+
+  it('SubTabNavigation, SegmentedControl and the shared FeatureCard keep a visible keyboard focus', () => {
+    render(
+      <div>
+        <SubTabNavigation tabs={[{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]} activeTabId="a" onChange={vi.fn()} accent={ACCENT_CYAN} />
+        <SegmentedControl options={[{ id: 'x', label: 'X' }, { id: 'y', label: 'Y' }]} activeId="x" onChange={vi.fn()} accent={ACCENT_CYAN} />
+        <FeatureCard name="F" featureMap={new Map()} defs={[]} expanded={null} onToggle={vi.fn()} accent={ACCENT_CYAN} />
+      </div>,
+    );
+    const buttons = Array.from(document.querySelectorAll('button')) as HTMLElement[];
+    expect(buttons.length).toBe(5);
+    expect(lostFocus(buttons)).toBe(0);
   });
 });
