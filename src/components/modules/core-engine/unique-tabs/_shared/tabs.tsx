@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useId } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   OPACITY_20, OPACITY_30, OPACITY_37,
@@ -95,6 +95,7 @@ export interface SubTabNavigationProps {
 
 export function SubTabNavigation({ tabs, activeTabId, onChange, accent, ariaLabel = 'Sub-tab navigation' }: SubTabNavigationProps) {
   const prefersReduced = useReducedMotion();
+  const pillId = `activeSubTabBg-${useId()}`;
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const hasActive = tabs.some(t => t.id === activeTabId);
 
@@ -133,7 +134,7 @@ export function SubTabNavigation({ tabs, activeTabId, onChange, accent, ariaLabe
           >
             {isActive && (
               <motion.div
-                layoutId="activeSubTabBg"
+                layoutId={pillId}
                 className="absolute inset-0 rounded-lg opacity-20"
                 style={{ backgroundColor: accent }}
                 transition={prefersReduced ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 25 }}
