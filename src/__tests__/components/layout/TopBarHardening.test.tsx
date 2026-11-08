@@ -76,3 +76,12 @@ describe('controls have accessible names', () => {
     expect(nameless(document.body)).toHaveLength(0);
   });
 });
+
+describe('project dropdown semantics', () => {
+  it('announces a dialog: it holds a form and a confirm, not menu items', () => {
+    openDropdown();
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Project actions' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Project: Demo' }).getAttribute('aria-haspopup')).toBe('dialog');
+  });
+});

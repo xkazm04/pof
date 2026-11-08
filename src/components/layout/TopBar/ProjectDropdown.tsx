@@ -59,7 +59,7 @@ export function ProjectDropdown({
       <motion.div
         key="project-dropdown"
         {...(prefersReduced ? reducedDropdownMotion : dropdownMotion)}
-        role="menu"
+        role="dialog"
         aria-label="Project actions"
         className="absolute top-full left-0 mt-1 w-72 bg-surface border border-border rounded-lg shadow-xl z-50 overflow-hidden origin-top-left">
         {/* Switch Project */}
