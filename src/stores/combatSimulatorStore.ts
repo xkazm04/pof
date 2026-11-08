@@ -158,7 +158,18 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'simulate', scenario, tuning, config, stream: true }),
       });
-      if (!res.ok || !res.body) throw new Error(`Simulation request failed (${res.status})`);
+      if (!res.ok || !res.body) {
+        // The route validates BEFORE it streams, so a refusal is a plain `{ success:false, error }`
+        // envelope — carry its reason instead of a bare status code.
+        let reason: string | undefined;
+        if (!res.ok) {
+          try {
+            const env = (await res.json()) as { error?: unknown };
+            if (typeof env?.error === 'string' && env.error) reason = env.error;
+          } catch { /* not an envelope — the status is all there is */ }
+        }
+        throw new Error(`Simulation request failed (${res.status})${reason ? `: ${reason}` : ''}`);
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
