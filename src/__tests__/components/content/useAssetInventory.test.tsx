@@ -188,3 +188,28 @@ describe('AssetInventory: renders a scan and labels every edge\'s source', () =>
     expect(within(region).queryByText(/UE-declared/)).toBeNull();
   });
 });
+
+describe('useAssetInventory: a scan belongs to the project it was taken of', () => {
+  it('switching the project path drops the previous project\'s scan (back to pre-scan)', async () => {
+    const hook = await scanWith({ success: true, data: scanResult(ROCK, [ROCK_EDGE]) });
+    expect(hook.result.current.scanResult?.assets).toHaveLength(2);
+    act(() => { useProjectStore.setState({ projectPath: 'D:/Other' } as never); });
+    expect(hook.result.current.scanResult).toBeNull();
+    expect(hook.result.current.displayAssets).toEqual([]);
+    expect(hook.result.current.edges).toEqual([]);
+  });
+
+  it('a scan that resolves after the project changed never lands on the new project', async () => {
+    let release: (v: Response) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((r) => { release = r; })));
+    const hook = renderHook(() => useAssetInventory());
+    let pending: Promise<void> = Promise.resolve();
+    act(() => { pending = hook.result.current.handleScan(); });
+    act(() => { useProjectStore.setState({ projectPath: 'D:/Other' } as never); });
+    await act(async () => {
+      release({ ok: true, status: 200, json: async () => ({ success: true, data: scanResult(ROCK, [ROCK_EDGE]) }) } as unknown as Response);
+      await pending;
+    });
+    expect(hook.result.current.scanResult).toBeNull();
+  });
+});
