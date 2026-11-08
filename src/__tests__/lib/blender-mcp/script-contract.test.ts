@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { py, pyNum, pyJson } from '@/lib/blender-mcp/escape';
 import { readReceipt } from '@/lib/blender-mcp/receipt';
@@ -6,7 +8,7 @@ import { levelBlockoutScript } from '@/lib/blender-mcp/scripts/level-blockout';
 import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
 import { scatterVegetationScript } from '@/lib/blender-mcp/scripts/scatter-vegetation';
 import { compositorStackScript } from '@/lib/blender-mcp/scripts/compositor-stack';
-import { SCRIPT_CATALOG } from '@/lib/blender-mcp/scripts/catalog';
+import { SCRIPT_CATALOG, PROSE_ONLY_EMITTERS } from '@/lib/blender-mcp/scripts/catalog';
 import { printedReceipt } from './printedReceipt';
 
 /** Decode the first Python double-quoted string literal in `src` (handles \ \" \n \r). */
@@ -88,15 +90,34 @@ describe('emitters escape user text', () => {
 });
 
 describe('SCRIPT_CATALOG', () => {
-  it('has the receipted emitters', () => {
-    expect(SCRIPT_CATALOG.length).toBeGreaterThanOrEqual(10);
+  it('accounts for every exported *Script emitter in the scripts directory', () => {
+    const dir = path.resolve(process.cwd(), 'src/lib/blender-mcp/scripts');
+    const found = new Map<string, string>();
+    for (const rel of readdirSync(dir, { recursive: true, encoding: 'utf8' })) {
+      if (!rel.endsWith('.ts') || /(^|[\/])catalog\.ts$/.test(rel)) continue;
+      const src = readFileSync(path.join(dir, rel), 'utf8');
+      for (const m of src.matchAll(/^export (?:async )?function (\w+Script)\s*[(<]/gm)) found.set(m[1], src);
+    }
+    const receipted = SCRIPT_CATALOG.map((e) => e.emitter);
+    const prose = PROSE_ONLY_EMITTERS.map((e) => e.emitter);
+    expect(found.size).toBeGreaterThan(0);
+    expect([...found.keys()].filter((n) => !receipted.includes(n) && !prose.includes(n))).toEqual([]);
+    expect([...receipted, ...prose].filter((n) => !found.has(n))).toEqual([]);
+    expect(receipted.filter((n) => prose.includes(n))).toEqual([]);
+    expect(new Set([...receipted, ...prose]).size).toBe(receipted.length + prose.length);
+    // A prose-only emitter that gained a receipt belongs in the catalog.
+    expect(prose.filter((n) => found.get(n)?.includes('pyReceipt('))).toEqual([]);
+    // A catalogued emitter really prints a receipt.
+    expect(receipted.filter((n) => !found.get(n)?.includes('pyReceipt('))).toEqual([]);
+    for (const e of PROSE_ONLY_EMITTERS) expect(e.reason.trim().length).toBeGreaterThan(10);
   });
 
   for (const entry of SCRIPT_CATALOG) {
     it(`${entry.id}: last statement is a ${entry.receiptKind} receipt that confirms`, () => {
       const code = entry.build();
       const last = code.trimEnd().split(/\r?\n/).pop() ?? '';
-      expect(last).toContain('POF_RESULT=');
+      if (entry.receiptPlacement === 'per-item') expect(code).toContain('POF_RESULT=');
+      else expect(last).toContain('POF_RESULT=');
       const out = printedReceipt(code, entry.values);
       expect(readReceipt(out, entry.receiptKind).state).toBe('confirmed');
     });

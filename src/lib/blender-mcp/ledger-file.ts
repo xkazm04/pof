@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { logger } from '@/lib/logger';
 
 /**
  * Local-file persistence for the Blender-MCP generation ledger. Pure fs helpers: tolerant
  * load (anything unreadable is "no file"), atomic temp-then-rename save, and a microtask
  * coalescer so a burst of ledger mutations in one tick costs one write. Every failure
- * degrades silently to the in-memory-only behaviour.
+ * degrades to the in-memory-only behaviour, with one warning per failure streak.
  */
 export interface LedgerSnapshot<E> {
   epoch: string;
@@ -13,6 +14,8 @@ export interface LedgerSnapshot<E> {
 }
 
 let writes = 0;
+/** Files whose last write failed: one warn per failure streak, cleared by the next success. */
+const failing = new Set<string>();
 
 /** Number of file writes performed so far (observability for tests). */
 export function ledgerFileWriteCount(): number {
@@ -45,8 +48,15 @@ export function saveLedgerFile<E>(file: string, snapshot: LedgerSnapshot<E>): bo
     fs.writeFileSync(tmp, JSON.stringify(snapshot));
     fs.renameSync(tmp, file);
     writes++;
+    failing.delete(file);
     return true;
-  } catch {
+  } catch (e) {
+    if (!failing.has(file)) {
+      failing.add(file);
+      logger.warn(
+        `[BlenderMCP] ledger write failed for ${file}: ${e instanceof Error ? e.message : String(e)}; paid jobs will not survive a restart until it recovers`,
+      );
+    }
     try { fs.rmSync(tmp, { force: true }); } catch { /* ignore */ }
     return false;
   }
