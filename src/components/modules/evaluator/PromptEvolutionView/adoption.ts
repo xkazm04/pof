@@ -117,13 +117,33 @@ export function planAdoption(input: {
 /**
  * Drop adopt-winner suggestions whose variant is already the served one, so an
  * adopted winner stops being re-suggested (and stops crowding the 4-row bar).
+ * The server suggests one card per concluded test, but the action adopts the item's
+ * LATEST winner, so a card naming an earlier winner would adopt a different version.
  */
 export function filterAdoptSuggestions(
   suggestions: EvolutionSuggestion[],
   variants: PromptVariant[],
+  tests: AnyTest[] = [],
 ): EvolutionSuggestion[] {
   const activeIds = new Set(variants.filter((v) => v.active).map((v) => v.id));
-  return suggestions.filter((s) => !(s.type === 'adopt-winner' && s.variantId && activeIds.has(s.variantId)));
+  const latest = new Map<string, AnyTest>();
+  for (const t of tests) {
+    if (t.status !== 'concluded' || !t.winnerId) continue;
+    const key = `${t.moduleId}::${t.checklistItemId}`;
+    const current = latest.get(key);
+    if (!current || decidedAt(t) > decidedAt(current)) latest.set(key, t);
+  }
+  const seen = new Set<string>();
+  return suggestions.filter((s) => {
+    if (s.type !== 'adopt-winner' || !s.variantId) return true;
+    if (activeIds.has(s.variantId)) return false;
+    const key = `${s.moduleId}::${s.checklistItemId}`;
+    const current = latest.get(key);
+    if (current && current.winnerId !== s.variantId) return false;
+    if (seen.has(`${key}::${s.variantId}`)) return false;
+    seen.add(`${key}::${s.variantId}`);
+    return true;
+  });
 }
 
 export interface AdoptionHandle {

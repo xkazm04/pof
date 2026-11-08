@@ -228,7 +228,10 @@ export function usePromptEvolution() {
   }, [getBestVariant, variants, adoptPlanned]);
 
   // An adopted winner stops being re-suggested.
-  const visibleSuggestions = useMemo(() => filterAdoptSuggestions(suggestions, variants), [suggestions, variants]);
+  const visibleSuggestions = useMemo(
+    () => filterAdoptSuggestions(suggestions, variants, abTests),
+    [suggestions, variants, abTests],
+  );
 
   // Group variants by checklist item
   const variantsByItem = useMemo(() => {
