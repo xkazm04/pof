@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import {
   getLatestAudioImport,
   getLatestAudioImportForSet,
@@ -9,12 +9,10 @@ import {
 import { checkAudioImportPreflight } from '@/lib/audio-import-preflight';
 
 export async function POST(request: NextRequest) {
-  let body: { setName?: string; eventKey?: string | null; surface?: string | null; assetsImported?: number; cuePath?: string | null; wiredEvent?: string | null };
-  try { body = await request.json(); } catch { return apiError('Invalid JSON body', 400); }
   // JSON null parses; reading `.setName` off it was an unhandled TypeError 500.
-  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-    return apiError('Body must be a JSON object', 400);
-  }
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data as { setName?: string; eventKey?: string | null; surface?: string | null; assetsImported?: number; cuePath?: string | null; wiredEvent?: string | null };
   if (!body.setName || typeof body.assetsImported !== 'number') {
     return apiError('Missing setName or assetsImported', 400);
   }

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import {
   getAllAudioScenes,
   getAudioScene,
@@ -26,27 +26,13 @@ export async function GET(req: NextRequest) {
   return apiSuccess({ docs, summary });
 }
 
-/**
- * Read a JSON object body: malformed or non-object JSON is a 400 (the house shape, see
- * `pipeline-artifacts/_lib/sweepBody.ts`), never a 500 thrown out of `req.json()`.
- */
-async function readObjectBody(req: NextRequest): Promise<Record<string, unknown> | null> {
-  try {
-    const parsed: unknown = await req.json();
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 /** The JSON-blob columns rowToDoc / the summary / generateAudioCode iterate as arrays. */
 const ARRAY_FIELDS = ['zones', 'emitters'] as const;
 
 export async function POST(req: NextRequest) {
-  const body = await readObjectBody(req);
-  if (!body) return apiError('Body must be a JSON object', 400);
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
   const { name, description } = body;
   if (!name || typeof name !== 'string') {
     return apiError('name is required', 400);
@@ -76,8 +62,9 @@ function scalarFieldError(body: Record<string, unknown>): string | null {
 }
 
 export async function PUT(req: NextRequest) {
-  const body = await readObjectBody(req);
-  if (!body) return apiError('Body must be a JSON object', 400);
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
   if (!body.id || typeof body.id !== 'number') {
     return apiError('id is required', 400);
   }

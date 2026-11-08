@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { getAudioDb as db } from '@/lib/audio-db-conn';
 import { getAudioProvider } from '@/lib/audio-gen/registry';
 import { computePromptHash } from '@/lib/audio-gen/prompt-hash';
@@ -34,11 +34,6 @@ import { audioPromptFor } from '@/lib/media-prompts/audioPrompts';
 import { AUDIO_KINDS, type AudioKind } from '@/lib/audio-gen/types';
 import { isAudioKind, refusalMessage, supportsKind } from '@/lib/audio-gen/capabilities';
 import { ProviderNotConfiguredError } from '@/lib/audio-gen/errors';
-
-/** `null`, arrays and scalars parse as JSON but are not a request body: destructuring `null` was a TypeError 500. */
-function isJsonObject(v: unknown): boolean {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
 
 /** Start-of-current-month epoch ms — the window the usage meter counts within. */
 function startOfMonth(): number {
@@ -80,9 +75,9 @@ interface PostBody {
 }
 
 export async function POST(request: NextRequest) {
-  let body: PostBody;
-  try { body = await request.json() as PostBody; } catch { return apiError('Invalid JSON body', 400); }
-  if (!isJsonObject(body)) return apiError('Body must be a JSON object', 400);
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data as PostBody;
 
   const { provider, kind, prompt } = body;
   if (!provider || !kind || !prompt || (!body.setId && !body.setName)) {
@@ -193,9 +188,9 @@ export async function GET() {
 interface PatchBody { assetId?: string; favorite?: boolean }
 
 export async function PATCH(request: NextRequest) {
-  let body: PatchBody;
-  try { body = await request.json() as PatchBody; } catch { return apiError('Invalid JSON body', 400); }
-  if (!isJsonObject(body)) return apiError('Body must be a JSON object', 400);
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data as PatchBody;
   if (!body.assetId || typeof body.favorite !== 'boolean') {
     return apiError('Pass assetId + favorite:boolean', 400);
   }

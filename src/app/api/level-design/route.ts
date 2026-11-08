@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import {
   getAllDocs,
@@ -37,29 +37,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/**
- * Read a JSON object body: malformed or non-object JSON is the caller's fault (400), not
- * the route's catch-all 500.
- */
-async function readObjectBody(req: NextRequest): Promise<Record<string, unknown> | null> {
-  try {
-    const parsed: unknown = await req.json();
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 /** The JSON-blob columns: a non-array stored here is read back as [] and the doc renamed broken. */
 const ARRAY_FIELDS = ['rooms', 'connections', 'difficultyArc', 'syncReport'] as const;
 
 // POST /api/level-design
 // Body: CreateDocPayload
 export async function POST(req: NextRequest) {
-  const body = await readObjectBody(req);
-  if (!body) return apiError('Body must be a JSON object', 400);
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
   try {
     if (!body.name || typeof body.name !== 'string') {
       return apiError('name is required', 400);
@@ -75,8 +61,9 @@ export async function POST(req: NextRequest) {
 // PUT /api/level-design
 // Body: UpdateDocPayload
 export async function PUT(req: NextRequest) {
-  const body = await readObjectBody(req);
-  if (!body) return apiError('Body must be a JSON object', 400);
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
   try {
     if (!body.id) {
       return apiError('id is required', 400);

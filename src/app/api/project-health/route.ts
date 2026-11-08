@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { computeProjectHealth } from '@/lib/health-engine';
 import type { EvaluatorReport } from '@/types/evaluator';
 import type { PerfHealthInput, CrashHealthInput } from '@/types/project-health';
@@ -26,13 +26,9 @@ function badField(body: Record<string, unknown>): string | null {
 /* ---- POST: compute health from client-side store data ------------ */
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return apiError('Invalid JSON body', 400);
-  }
-  if (!isRecord(body)) return apiError('Body must be a JSON object', 400);
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
   const invalid = badField(body);
   if (invalid) return apiError(invalid, 400);
 

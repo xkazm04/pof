@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { recordMixamoRun, getLatestMixamoRun } from '@/lib/mixamo-db';
 
 // GET /api/animations/mixamo-result → latest run (or null)
@@ -24,16 +24,9 @@ function parseCount(v: unknown): number | null {
 }
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>;
-  try {
-    const parsed: unknown = await req.json();
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      return apiError('Body must be a JSON object', 400);
-    }
-    body = parsed as Record<string, unknown>;
-  } catch {
-    return apiError('Body must be valid JSON', 400);
-  }
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
   try {
     const importedCount = parseCount(body.importedCount);
     const importDir = typeof body.importDir === 'string' ? body.importDir : '';

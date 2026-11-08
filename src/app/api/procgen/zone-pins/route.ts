@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { saveZonePin, listZonePins, deleteZonePin } from '@/lib/procgen-db';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import type { ZoneGraphParams } from '@/lib/world/zone-graph-generator';
 
 export async function GET() {
@@ -13,16 +13,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   // A malformed or non-object body is a 400, not the catch-all's default 500.
-  let body: Record<string, unknown>;
-  try {
-    const parsed: unknown = await req.json();
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      return apiError('Body must be a JSON object', 400);
-    }
-    body = parsed as Record<string, unknown>;
-  } catch {
-    return apiError('Body must be valid JSON', 400);
-  }
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
   try {
     const { seed, params, label, zoneCount, topology } = body as {
       seed?: unknown; params?: ZoneGraphParams;

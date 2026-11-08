@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { getAudioScene } from '@/lib/audio-scene-db';
 import { listSets } from '@/lib/audio-asset-db';
 import { getAudioDb } from '@/lib/audio-db-conn';
@@ -31,16 +31,9 @@ function resolveAssetBindings(): AudioAssetBindings {
 // POST: generate code from an audio scene document
 export async function POST(req: NextRequest) {
   // A malformed or non-object body is a 400, not the catch-all 500 below.
-  let body: Record<string, unknown>;
-  try {
-    const parsed: unknown = await req.json();
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      return apiError('Body must be a JSON object', 400);
-    }
-    body = parsed as Record<string, unknown>;
-  } catch {
-    return apiError('Body must be valid JSON', 400);
-  }
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
 
   try {
     const { sceneId, moduleName, apiMacro } = body as { sceneId?: number; moduleName?: string; apiMacro?: string };

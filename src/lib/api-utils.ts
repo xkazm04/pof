@@ -18,6 +18,31 @@ export function apiError(message: string, status = 500, details?: unknown) {
 }
 
 /**
+ * Read a request body that must be a JSON object. The single authority for the house shape:
+ * malformed JSON and a non-object value (`null`, an array, a scalar) are both the caller's
+ * fault - 400, never a TypeError 500 thrown out of destructuring.
+ *
+ * @example
+ *   const body = await readJsonObject(req);
+ *   if (!body.ok) return body.error;
+ *   const { name } = body.data;
+ */
+export async function readJsonObject(
+  req: Request,
+): Promise<Result<Record<string, unknown>, ReturnType<typeof apiError>>> {
+  let parsed: unknown;
+  try {
+    parsed = await req.json();
+  } catch {
+    return err(apiError('Invalid JSON body', 400));
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return err(apiError('Body must be a JSON object', 400));
+  }
+  return ok(parsed as Record<string, unknown>);
+}
+
+/**
  * Convert a {@link Result} into the standard HTTP envelope: a success becomes
  * `apiSuccess(data, okStatus)`, a failure becomes `apiError(error, errorStatus)`.
  *
