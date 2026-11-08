@@ -150,6 +150,16 @@ describe('<GlobalCoach />', () => {
     expect(container.querySelector('[data-testid="global-coach-item-0"]')).toBeNull();
   });
 
+  it('does not claim NO catalog was read when only some failed (the rest were read and are clear)', () => {
+    coachMock.mockReturnValue([]);
+    failedMock.mockReturnValue([{ catalogId: 'items', label: 'Items', error: 'HTTP 500' }]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    const bar = container.querySelector('[data-testid="global-coach"]') as HTMLElement;
+    // The hook reports failures, not a total — so the row may only speak for what loaded.
+    expect(bar.textContent).not.toMatch(/no catalog status could be read/i);
+    expect(container.querySelector('[data-testid="global-coach-empty"]')?.textContent).toMatch(/catalogs that could be read/i);
+  });
+
   it('shows the concrete checker reason on a candidate that carries one (and falls back to the generic hint otherwise)', () => {
     coachMock.mockReturnValue([
       cand({ entityId: 'e1', priority: 'fail', reason: 'price/power 1.43x out of band' }),

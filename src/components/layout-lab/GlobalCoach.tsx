@@ -95,8 +95,11 @@ export function GlobalCoach({ t }: Props) {
             <span className="sr-only">Reading project status…</span>
           </span>
         ) : (
-          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
-            Nothing to advise — no catalog status could be read.
+          // Reached only with failed catalogs and no candidate. The hook names the failures but
+          // not how many catalogs DID load, so the sentence speaks only for those — "no catalog
+          // could be read" was false whenever one of many failed and the rest were clear.
+          <span data-testid="global-coach-empty" style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
+            Nothing to advise in the catalogs that could be read.
           </span>
         )}
         {moreCount > 0 && (
