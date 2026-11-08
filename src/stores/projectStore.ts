@@ -101,14 +101,18 @@ export const useProjectStore = create<ProjectState>()(
       completeSetup: async () => {
         set({ isSetupComplete: true });
         const { projectPath, isNewProject } = get();
-        // Auto-save to recent when setup completes
-        await get().saveToRecent();
-        // For existing projects, restore saved module progress from SQLite
-        // For new projects, save the (empty) initial state
-        if (isNewProject) {
-          await saveModuleProgress(projectPath);
-        } else {
-          await loadModuleProgress(projectPath);
+        try {
+          // For existing projects, restore saved module progress from SQLite
+          // For new projects, save the (empty) initial state
+          if (isNewProject) {
+            await saveModuleProgress(projectPath);
+          } else {
+            await loadModuleProgress(projectPath);
+          }
+        } finally {
+          // Auto-save to recent AFTER the progress load, so the row records this
+          // project's counts rather than whatever checklist was in memory.
+          await get().saveToRecent();
         }
       },
 
