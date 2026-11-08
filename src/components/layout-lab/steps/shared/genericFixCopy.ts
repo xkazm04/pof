@@ -11,8 +11,6 @@ import type { Acceptance } from '../StepFrame';
  * candidate), and it is the largest unit that can carry a real, specific instruction
  * WITHOUT inventing catalog content. These 9 authored blocks cover all ~344 steps;
  * hand-writing 344 bespoke ones would mean inventing target values no checker stated.
- *
- * A step may still override the whole thing with a bespoke `StepSpec.copy`.
  */
 const ARCHETYPE_FIX: Record<ArchetypeId, { noun: string; act: string }> = {
   brief: {
@@ -86,7 +84,7 @@ export function fixDirectionFor(spec: StepSpec, a: GradedGate): string {
  * served by the generic ArchetypeStep, which previously rendered no `why`/`suggestion`/fix
  * at all. It invents no catalog-specific content: the plain-language line is composed from
  * the acceptance `status` (+ the checker's own `reason`, when it returns one), so it can
- * never contradict the row's truth. Bespoke steps override it via `StepSpec.copy`.
+ * never contradict the row's truth.  Bespoke Items copy is applied inside the checker (`itemFixCopy`).
  *
  * `spec` is optional so the copy stays usable for a bare acceptance. When given, the
  * `suggestion` PREVIEWS the exact direction the fix button will dispatch — the operator
@@ -133,10 +131,11 @@ export function genericFixCopy(a: AcceptanceResult, spec?: StepSpec): StepFixCop
 export function withGenericFixCopy(
   spec: StepSpec,
   base: AcceptanceResult,
-  data: Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- artifact data kept in the signature (its callers pass it); copy no longer reads it
+  _data: Record<string, unknown>,
 ): Acceptance {
   if (base.status === 'pass') return base;
-  const copy = spec.copy?.(data) ?? genericFixCopy(base, spec);
+  const copy = genericFixCopy(base, spec);
   const fixDirection = base.status === 'deferred'
     ? undefined
     : (copy.fixDirection?.trim() || spec.defaultDirection?.trim() || fixDirectionFor(spec, base));

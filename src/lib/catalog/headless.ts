@@ -24,7 +24,7 @@ import { listVerdicts } from '@/lib/status/judge-verdicts-db';
 import { commitArtifact, type CommitDeps } from '@/lib/catalog/artifactCommit';
 import type { Provenance } from '@/lib/provenance';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
-import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
+import { bespokeCheckerFor, bespokeStepLabels } from '@/lib/catalog/acceptance/stepGradability';
 import { canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { stampTemplate } from '@/lib/catalog/produceTemplate';
@@ -292,9 +292,19 @@ export interface EntityLifecycleView extends DerivedLifecycle {
  * distinct step labels actually persisted when the catalog has no pipeline.
  */
 function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>, canonProfile?: string): number {
+  return entityStepLabels(catalogId, canonProfile)?.size ?? new Set(arts.map((a) => a.step)).size;
+}
+
+/**
+ * The step labels an entity of `canonProfile` owns in a registered catalog: its profile-scoped
+ * pipeline labels PLUS the catalog's bespoke labels (graded server-side through `stepGradability`,
+ * and shown by the lab's manifest). The one list for both the denominator and the row filter, so
+ * produced can never exceed total. `null` when the catalog has no pipeline (nothing to scope to).
+ */
+function entityStepLabels(catalogId: string, canonProfile?: string): Set<string> | null {
   const pipeline = getCatalogPipeline(catalogId);
-  if (pipeline) return stepsForProfile(pipeline, canonProfile).length;
-  return new Set(arts.map((a) => a.step)).size;
+  if (!pipeline) return null;
+  return new Set([...stepsForProfile(pipeline, canonProfile).map((s) => s.label), ...bespokeStepLabels(catalogId)]);
 }
 
 /**
@@ -314,7 +324,10 @@ function derivedByEntity(catalogId: string, entityId?: string): Map<string, Deri
     byEntity.set(a.entityId, arr);
   }
   const out = new Map<string, DerivedLifecycle>();
-  for (const [id, arts] of byEntity) out.set(id, deriveEntityLifecycle(arts, totalStepsFor(catalogId, allArts, profileOf.get(id))));
+  for (const [id, arts] of byEntity) {
+    const labels = entityStepLabels(catalogId, profileOf.get(id));
+    out.set(id, deriveEntityLifecycle(labels ? arts.filter((a) => labels.has(a.step)) : arts, totalStepsFor(catalogId, allArts, profileOf.get(id))));
+  }
   return out;
 }
 
