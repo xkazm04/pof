@@ -53,7 +53,8 @@ export function HitboxWireframeViewer() {
             <line x1={50} y1={-2} x2={50} y2={102} stroke={withOpacity(OVERLAY_WHITE, OPACITY_5)} strokeWidth="0.5" strokeDasharray="3 3" />
 
             {/* Hitbox zone overlays with animated entrance + hover highlight */}
-            {HITBOX_ZONES.filter(z => toggles[z.type]).map((zone, zi) => {
+            <AnimatePresence>
+            {HITBOX_ZONES.filter(z => toggles[z.type]).flatMap((zone, zi) => {
               const isHovered = hoveredZone === zone.type;
               const isDimmed = hoveredZone !== null && !isHovered;
               return zone.shapes.map((shape, si) => {
@@ -81,7 +82,7 @@ export function HitboxWireframeViewer() {
                     {...sharedProps}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: isDimmed ? 0.4 : 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
+                    exit={{ opacity: 0, scale: 0.8, transition: MOTION_CONFIG.micro }}
                     transition={{ delay, ...MOTION_CONFIG.standard }}
                   />
                 ) : (
@@ -91,12 +92,13 @@ export function HitboxWireframeViewer() {
                     {...sharedProps}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: isDimmed ? 0.4 : 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
+                    exit={{ opacity: 0, scale: 0.8, transition: MOTION_CONFIG.micro }}
                     transition={{ delay, ...MOTION_CONFIG.standard }}
                   />
                 );
               });
             })}
+            </AnimatePresence>
 
             {/* Animated scan line — uses framer-motion animate to avoid per-frame state updates */}
             <motion.g

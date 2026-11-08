@@ -8,7 +8,7 @@ import { OptimizerMetric, DodgeMetric } from '@/components/modules/core-engine/s
 import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
 import { resolveBindings, normalizeKeyEvent } from '@/lib/character/input-bindings';
-import { INPUT_BINDINGS, KEY_FREQUENCY_MAP } from '@/components/modules/core-engine/sub_character/_shared/data';
+import { INPUT_BINDINGS, KEY_FREQUENCY_MAP, HITBOX_ZONES } from '@/components/modules/core-engine/sub_character/_shared/data';
 vi.mock('@/hooks/useModuleCLI', () => ({
   useModuleCLI: () => ({ execute: vi.fn(), sendPrompt: vi.fn(), isRunning: false }),
 }));
@@ -97,6 +97,20 @@ describe('Input table never renders an unmeasured frequency as 0%', () => {
     const unmeasured = INPUT_BINDINGS.filter((b) => !KEY_FREQUENCY_MAP.has(b.defaultKey)).length;
     expect(unmeasured).toBeGreaterThan(0);
     expect(cells.filter((t) => t.trim() === '—')).toHaveLength(unmeasured);
+  });
+});
+
+describe('Hitbox layer toggle-off runs the exit animation', () => {
+  it('zone shapes are still mounted right after toggle-off, then leave', async () => {
+    const { container } = render(<HitboxWireframeViewer />);
+    const shapes = () => container.querySelectorAll('[stroke-dasharray="4 2"]').length;
+    const total = shapes();
+    expect(total).toBeGreaterThan(0);
+    fireEvent.click(container.querySelectorAll('button[aria-pressed]')[1]);
+    const hitboxShapes = HITBOX_ZONES.find((z) => z.type === 'Hitbox')!.shapes.length;
+    // Exit pending: nothing has been removed yet in this frame.
+    expect(shapes()).toBe(total);
+    await waitFor(() => expect(shapes()).toBe(total - hitboxShapes));
   });
 });
 
