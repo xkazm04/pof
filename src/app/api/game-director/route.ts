@@ -287,6 +287,11 @@ export async function POST(req: Request) {
         // default provenance is 'external'. The in-repo simulator never reaches
         // this branch — it calls updateSessionSummary directly with 'simulated'.
         const completedSource = normalizeSource(source, 'external');
+        // Reject at the boundary: a completed session must carry a finite 0-100 score.
+        const score = (summary as { overallScore?: unknown } | null | undefined)?.overallScore;
+        if (typeof score !== 'number' || !Number.isFinite(score) || score < 0 || score > 100) {
+          return apiError('summary.overallScore must be a finite number between 0 and 100', 400);
+        }
         updateSessionSummary(
           sessionId, summary, durationMs, systemsTestedCount, findingsCount,
           completedSource,
