@@ -31,3 +31,27 @@ export function polarSvgLayout(size: number, padding: number): PolarSvgLayout {
     radius: (size - padding * 2) / 2,
   };
 }
+
+/** A point on a ring; `angle` is the ring angle in radians (0 = +x, counter-clockwise on screen y-down). */
+export interface RingPoint {
+  x: number;
+  y: number;
+  angle: number;
+}
+
+/**
+ * `count` points at even angles (`2π·i/count`, starting at +x) around a ring of
+ * `radius`, offset by `center` on both axes (omit for an origin-centred ring).
+ * The one ring rule shared by AttackRingVisualizer and FlankAngleHeatmap.
+ */
+export function ringPoints(count: number, radius: number, center = 0): RingPoint[] {
+  const step = (2 * Math.PI) / count;
+  return Array.from({ length: count }, (_, i) => {
+    const angle = step * i;
+    return {
+      x: center + Math.cos(angle) * radius,
+      y: center + Math.sin(angle) * radius,
+      angle,
+    };
+  });
+}
