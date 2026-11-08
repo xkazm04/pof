@@ -36,7 +36,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  *
  * It declares `aria-modal`, so it keeps that promise itself (the shared `ui/Modal` is a
  * centred dialog, not a slide-over): focus moves in on open, Tab / Shift+Tab wrap inside the
- * panel, and focus returns to whatever opened it on close or unmount.
+ * panel, Escape closes it, and focus returns to whatever opened it on close or unmount.
  */
 export function LabDrawer({ t, open, onClose, id, title, width, children }: {
   t: LabTheme; open: boolean; onClose: () => void; id: string; title: string; width: number; children: ReactNode;
@@ -53,6 +53,8 @@ export function LabDrawer({ t, open, onClose, id, title, width, children }: {
   }, [open]);
 
   const trapTab = (e: KeyboardEvent<HTMLElement>) => {
+    // Focus is held inside the panel while open, so the panel's own keydown sees Escape.
+    if (e.key === 'Escape') { e.stopPropagation(); onClose(); return; }
     if (e.key !== 'Tab' || !panelRef.current) return;
     const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
     if (items.length === 0) return;
