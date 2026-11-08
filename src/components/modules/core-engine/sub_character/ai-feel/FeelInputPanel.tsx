@@ -52,7 +52,7 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
             onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onGenerate()}
             placeholder="e.g., 'Dark Souls heavy but with faster dodges' or 'Hades snappy with more weight'"
-            className="flex-1 text-xs font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus:outline-none focus:border-violet-500/50"
+            className="flex-1 text-xs font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-subtle focus:outline-none focus:border-violet-500/50"
           />
           <button
             onClick={onGenerate}

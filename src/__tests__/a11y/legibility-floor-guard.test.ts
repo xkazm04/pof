@@ -82,7 +82,6 @@ const CONTRAST_BASELINE: Record<string, Partial<Record<HitKind, number>>> = {
   'modules/core-engine/sub_animation/state-graph/StateGroupBrowser.tsx': { text: 3 },
   'modules/core-engine/sub_animation/state-graph/StateMachinePanel.tsx': { text: 2 },
   'modules/core-engine/sub_bestiary/ai-logic/BTFlowchartRow.tsx': { docs: 1 },
-  'modules/core-engine/sub_character/ai-feel/FeelInputPanel.tsx': { text: 1 },
   'modules/core-engine/sub_character/index.tsx': { text: 1 },
   'modules/core-engine/sub_character/overview/PropertyColumn.tsx': { text: 1 },
   'modules/core-engine/sub_combat/choreography/GridPanels.tsx': { text: 1 },

@@ -235,7 +235,7 @@ export function CharacterFeelPlayground({ moduleId }: CharacterFeelPlaygroundPro
       </div>
 
       {/* Hint */}
-      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted text-center opacity-60">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-subtle text-center">
         Drag a handle to set its value in the persisted feel stack (the Playground curves layer); every tab and
         Apply via CLI read the same resolved stack. Reset removes the Playground curves layer.
       </div>
