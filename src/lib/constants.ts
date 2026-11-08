@@ -64,6 +64,12 @@ export const UI_TIMEOUTS = {
   copyFeedback: 1500,
   /** Toast / snackbar auto-dismiss duration. */
   toast: 3000,
+  /** How long an inline error banner (e.g. the affix workbench's UE5 inject error) stays before it resets. */
+  injectErrorBanner: 5000,
+  /** Flash on a crafting-station button right after a craft runs. */
+  craftFlash: 400,
+  /** Glow on the synergy panel when a new synergy appears. */
+  synergyGlow: 600,
   /** Microtask buffer to let synchronous store writes settle. */
   raceConditionBuffer: 50,
   /** Delay for terminal component to mount before dispatching events. */

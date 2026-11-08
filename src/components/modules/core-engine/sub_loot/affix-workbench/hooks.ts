@@ -16,6 +16,7 @@ import { addAffix as addAffixTo, defaultWallet, eligiblePool, instantiateAffix, 
 import { priceCraftGoal } from './craftGoal';
 import type { CraftGoalReport } from './craftGoal';
 import { createRNG } from '@/lib/seeded-rng';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 /** Fixed seed: the same item always gets the same price. */
 const PRICE_SEED = 7;
@@ -98,7 +99,7 @@ export function useAffixWorkbench() {
   }, [activeSynergies]);
   useEffect(() => {
     if (!synergyGlow) return;
-    const t = setTimeout(() => setSynergyGlow(false), 600);
+    const t = setTimeout(() => setSynergyGlow(false), UI_TIMEOUTS.synergyGlow);
     return () => clearTimeout(t);
   }, [synergyGlow]);
 

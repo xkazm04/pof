@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { CraftedAffix, ItemBase } from './data';
 import type { CraftingActionId } from './types';
 import {
@@ -9,9 +10,6 @@ import {
 import type { CraftState } from './craftingKernel';
 
 type Ledger = Omit<CraftState, 'affixes'>;
-
-/** How long a craft button flashes after it fires (unchanged from the pre-kernel engine). */
-const CRAFT_FLASH_MS = 400;
 
 const freshLedger = (): Ledger => ({ wallet: defaultWallet(), totalSpent: zeroWallet(), craftCount: 0, log: [] });
 
@@ -47,7 +45,7 @@ export function useCraftingEngine(
     setLedger(next);
     if (affixes !== craftedAffixes) setCraftedAffixes(affixes);
     setCraftFlash(actionId);
-    setTimeout(() => setCraftFlash(null), CRAFT_FLASH_MS);
+    setTimeout(() => setCraftFlash(null), UI_TIMEOUTS.craftFlash);
   }, [craftedAffixes, ledger, selectedBase.rarity, setCraftedAffixes]);
 
   const resetWallet = useCallback(() => setLedger(freshLedger()), []);
