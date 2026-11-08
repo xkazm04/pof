@@ -1,0 +1,83 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9e9eee98-83d5-4b64-a3b8-0f64c589fdda",
+ "subject": "app-shell",
+ "evaluatedAt": "2026-11-08T04:53:02.300421+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "app-shell-and-chrome",
+   "subject": "app-shell",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout/AppShell.tsx:119 Re-checked and still true: AppShell paints nothing of its own frame until the projectStore persist hydration finishes (the `{hydrated && (` gate at line 84) and shows a full-frame ShellSkeleton over the top bar and rail instead, so the shell skeletons its own nav rather than painting at once from local knowledge, which the golden path's 'shell paints first and never waits' rule forbids.",
+   "techniques": [
+    {
+     "technique": "lazy-section-loading",
+     "verdict": "deviation",
+     "evidence": "src/components/layout/ModuleRenderer/index.tsx:271 Sections are code-split per module (registry.tsx React.lazy) and kept alive in a bounded LRU (LRU_CAP=5), which is good. But the fallback is one generic tile-grid shape shown with no warm-path delay, which breaks the 'section's shape or nothing' rule and the delayed-appearance rule. The shell itself also skeletons during hydration (AppShell.tsx:119), and ModuleErrorBoundary's Retry only resets state (line 32), so a rejected lazy chunk is retried against React.lazy's cached rejection and there is no version-skew refresh offer."
+    },
+    {
+     "technique": "nav-hierarchy",
+     "verdict": "deviation",
+     "evidence": "src/components/layout/Sidebar.tsx:44 L2 is correctly scoped to its section, and the L1 label posture (l1Expanded) is persisted. But the Ctrl+B 'collapsed' mode removes the whole sub-nav and puts no flyout in its place, so sub-module entries exist in one posture and not the other. The L1 flyout is aria-hidden and pointer-events-none, so the pointer cannot travel onto it and it cannot be dismissed in place."
+    },
+    {
+     "technique": "navigation-model",
+     "verdict": "deviation",
+     "evidence": "src/components/layout/SidebarL2/index.tsx:92 The store names navigateToModule 'the one navigate door' (navigationStore.ts:39), yet the L2 rail (and L1 via setActiveCategory) write location through raw, unvalidated setters. Active state is derived (isActive = activeCategory === cat.id), and useShellRouteSync pushes on moves and replaces on arrival, which conforms."
+    },
+    {
+     "technique": "badge-and-attention",
+     "verdict": "deviation",
+     "evidence": "src/components/layout/SidebarL2/StatusBadge.tsx:20 The badge is derived from session state (deriveStatusForModule), not hand-incremented, which is good. But the 'failed' alert grade is a 2px dot told apart from 'running' only by colour (plus an unguarded ping), with no shape or icon. No clearing rule for 'failed' is written down, and L1 categories show no aggregate of their children's alerts."
+    },
+    {
+     "technique": "shell-hosted-services",
+     "verdict": "conformant",
+     "evidence": "src/components/layout/AppShell.tsx:100 Session services (activity bridge, shortcuts, file watcher, title, PoF bridge, route sync) are mounted as hooks in one region of AppShell (lines 44-60). Global surfaces (search palette, preflight dialog) sit as siblings of ModuleRenderer, above the swap point. Caveat: the start order is commented but not declared as dependencies, and the leave guard is hosted in page.tsx by design."
+    },
+    {
+     "technique": "entitlement-gating",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/SidebarL1.tsx:67 Single-user local tool: the rail renders every category with no gate. Grepping for entitle/featureFlag/locked/devOnly/requiresRole in src/components/layout and module-registry.ts found no tier, role or flag gating."
+    },
+    {
+     "technique": "screen-contributed-second-level",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 L2 is a registry-driven, section-scoped sub-nav (nav-hierarchy's case). Screens do not portal their own sections into a shell slot, which is the 'when not to use it' branch."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "app-shell",
+   "context": "holistic-quality-overview",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T04:53:02.300421+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "app-shell"
+   ],
+   "techniques": [
+    "badge-and-attention",
+    "entitlement-gating",
+    "lazy-section-loading",
+    "nav-hierarchy",
+    "navigation-model",
+    "screen-contributed-second-level",
+    "shell-hosted-services"
+   ],
+   "deviations": 1,
+   "context": "app-shell-and-chrome",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
