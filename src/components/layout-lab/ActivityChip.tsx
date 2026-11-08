@@ -69,7 +69,8 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
         aria-expanded={open}
         data-testid="lab-activity-chip"
         data-state={summary.state}
-        ariaLabel="What is running right now"
+        // An aria-label replaces the label text inside the button, so the answer rides in it.
+        ariaLabel={`What is running right now — ${summary.label}`}
         title={summary.detail}
         style={{ color: tone, borderColor: summary.state === 'idle' ? t.line : tone, background: 'transparent' }}
       >
