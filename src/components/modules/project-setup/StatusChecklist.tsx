@@ -234,6 +234,7 @@ export function StatusChecklist({
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder="Paste manifest JSON..."
+                aria-label="Environment manifest JSON"
                 className={`w-full px-2 py-1.5 bg-surface rounded-md text-xs text-text placeholder-text-muted outline-none transition-colors resize-none font-mono ${
                   jsonValidation.status === 'error'
                     ? 'border border-red-400/60 focus:border-red-400'

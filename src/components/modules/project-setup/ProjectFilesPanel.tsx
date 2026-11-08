@@ -51,6 +51,7 @@ export function ProjectFilesPanel({ projectPath, projectFiles, onOpenInExplorer 
               onClick={() => copyToClipboard(filePath)}
               className="opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 p-1 text-text-muted hover:text-accent-setup transition-all"
               title="Copy path"
+              aria-label={`Copy path ${filePath}`}
             >
               {copiedPath === filePath ? (
                 <Check className="w-3.5 h-3.5 text-accent-setup" />
