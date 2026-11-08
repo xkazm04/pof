@@ -4,6 +4,9 @@
 
 export type DamageElement = 'physical' | 'fire' | 'ice' | 'lightning' | 'heal';
 
+/** Elements with a spawn weight; heals come only from CombatConfig.healPercent. */
+export type WeightedElement = Exclude<DamageElement, 'heal'>;
+
 export type PhysicsMode = 'linear' | 'gravity' | 'fountain' | 'directional';
 export type StackMode = 'none' | 'accumulate' | 'merge';
 
@@ -31,7 +34,7 @@ export interface CombatConfig {
   critMultiplier: number;
   attacksPerSecond: number;
   mobCount: number;
-  elementWeights: Record<DamageElement, number>;
+  elementWeights: Record<WeightedElement, number>;
   healPercent: number;       // 0-1 chance of heal instead of damage
 }
 

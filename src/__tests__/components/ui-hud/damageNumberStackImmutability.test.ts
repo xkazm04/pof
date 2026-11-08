@@ -28,7 +28,7 @@ describe.each(['accumulate', 'merge'] as const)('%s stacking on committed partic
     const { result } = renderHook(() => useDamageNumberPhysicsSimulator());
     act(() => result.current.updateCombat({
       mobCount: 1, attacksPerSecond: 20, critRate: 0, healPercent: 0,
-      elementWeights: { physical: 1, fire: 0, ice: 0, lightning: 0, heal: 0 },
+      elementWeights: { physical: 1, fire: 0, ice: 0, lightning: 0 },
     }));
     act(() => result.current.updatePhysics({ stackMode, stackWindowMs: 500 }));
     act(() => result.current.toggleRunning());

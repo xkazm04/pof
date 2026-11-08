@@ -67,7 +67,7 @@ export const DEFAULT_COMBAT: CombatConfig = {
   critMultiplier: 2.0,
   attacksPerSecond: 3,
   mobCount: 1,
-  elementWeights: { physical: 0.5, fire: 0.2, ice: 0.1, lightning: 0.1, heal: 0.1 },
+  elementWeights: { physical: 0.5, fire: 0.2, ice: 0.1, lightning: 0.1 },
   healPercent: 0,
 };
 

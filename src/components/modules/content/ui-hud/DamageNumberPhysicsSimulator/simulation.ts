@@ -1,6 +1,6 @@
 import { ELEMENT_COLORS } from './constants';
 import type {
-  DamageElement, PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics,
+  DamageElement, WeightedElement, PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics,
 } from './types';
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -9,9 +9,9 @@ import type {
 
 let nextParticleId = 0;
 
-export function pickElement(weights: Record<DamageElement, number>, healPercent: number): { element: DamageElement; isHeal: boolean } {
+export function pickElement(weights: Record<WeightedElement, number>, healPercent: number): { element: DamageElement; isHeal: boolean } {
   if (Math.random() < healPercent) return { element: 'heal', isHeal: true };
-  const entries = Object.entries(weights).filter(([k]) => k !== 'heal') as [DamageElement, number][];
+  const entries = Object.entries(weights) as [WeightedElement, number][];
   const total = entries.reduce((s, [, w]) => s + w, 0);
   let r = Math.random() * total;
   for (const [el, w] of entries) {
