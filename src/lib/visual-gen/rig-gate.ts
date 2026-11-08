@@ -78,6 +78,11 @@ export interface RigFacts {
   negativeWeights: number;
   /** NaN/Infinity weights. */
   nonFiniteWeights: number;
+  /**
+   * Non-zero influences naming a joint index the skin does not declare; such a vertex binds
+   * to a bone that does not exist. `undefined` on a facts record captured before this field.
+   */
+  outOfRangeJointRefs?: number;
   /** Largest number of non-zero influences on any single vertex. */
   maxInfluences: number;
   weightSumMin: number;
@@ -190,7 +195,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   const empty: RigFacts = {
     hasSkin: false, jointCount: 0, jointNames: [], referencedJoints: 0, hasInverseBindMatrices: false,
     vertexCount: 0, zeroWeightVertices: 0, negativeWeights: 0, nonFiniteWeights: 0,
-    maxInfluences: 0, weightSumMin: 0, weightSumMax: 0, weightSumMean: 0,
+    outOfRangeJointRefs: 0, maxInfluences: 0, weightSumMin: 0, weightSumMax: 0, weightSumMean: 0,
     morphTargetCount, morphTargetNames,
   };
 
@@ -249,6 +254,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   let negativeWeights = 0;
   let nonFiniteWeights = 0;
   let maxInfluences = 0;
+  let outOfRangeJointRefs = 0;
   let sumMin = Number.POSITIVE_INFINITY;
   let sumMax = Number.NEGATIVE_INFINITY;
   let sumTotal = 0;
@@ -267,7 +273,13 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
         if (!Number.isFinite(value)) { nonFiniteWeights++; continue; }
         if (value < 0) negativeWeights++;
         sum += value;
-        if (value > 0) { influences++; if (j[c] !== undefined) referenced.add(j[c]); }
+        if (value > 0) {
+          influences++;
+          if (j[c] !== undefined) {
+            if (j[c] < skin.joints.length) referenced.add(j[c]);
+            else outOfRangeJointRefs++;
+          }
+        }
       }
       if (sum < 1e-6) zeroWeightVertices++;
       if (influences > maxInfluences) maxInfluences = influences;
@@ -290,6 +302,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     zeroWeightVertices,
     negativeWeights,
     nonFiniteWeights,
+    outOfRangeJointRefs,
     maxInfluences,
     weightSumMin: Number.isFinite(sumMin) ? sumMin : 0,
     weightSumMax: Number.isFinite(sumMax) ? sumMax : 0,
@@ -357,6 +370,9 @@ export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
   }
   if (facts.negativeWeights > 0) failures.push(`${facts.negativeWeights} negative weight(s)`);
   if (facts.nonFiniteWeights > 0) failures.push(`${facts.nonFiniteWeights} non-finite weight(s)`);
+  if ((facts.outOfRangeJointRefs ?? 0) > 0) {
+    failures.push(`${facts.outOfRangeJointRefs} influence(s) name a joint index outside the skin — those vertices bind to a bone that does not exist`);
+  }
 
   const orphans = facts.jointCount - facts.referencedJoints;
   if (orphans > 0) warnings.push(`${orphans} orphan joint(s): declared but deforming no vertex`);

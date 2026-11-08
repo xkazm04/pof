@@ -231,3 +231,20 @@ describe('rig gate: every skinned primitive is graded', () => {
     expect(parseGlbRig(skinnedGlb([[good], [unweighted]], [0, 1])).zeroWeightVertices).toBe(0);
   });
 });
+
+describe('rig gate: a joint index the skin does not declare', () => {
+  const stray: TestPrim = { weights: [[1, 0, 0, 0]], joints: [[9, 0, 0, 0]] };
+
+  it('fails the rig and names the count', () => {
+    const facts = parseGlbRig(skinnedGlb([[good, stray]]));
+    expect(facts.outOfRangeJointRefs).toBe(1);
+    expect(facts.referencedJoints).toBe(2);
+    const verdict = scoreRig(facts);
+    expect(verdict.pass).toBe(false);
+    expect(verdict.failures.join(' ')).toContain('outside the skin');
+  });
+
+  it('reports zero on a clean rig', () => {
+    expect(parseGlbRig(skinnedGlb([[good]])).outOfRangeJointRefs).toBe(0);
+  });
+});
