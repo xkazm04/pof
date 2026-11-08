@@ -41,7 +41,7 @@
  * caller only READS the plan. The Blender application half is still specified, not built:
  * do not read this module's presence as "PoF conforms rigs".
  */
-import { classifyNaming, type BoneNaming } from './skeleton-profiles';
+import { VENDOR_PREFIX, classifyNaming, type BoneNaming } from './skeleton-profiles';
 
 /** Side of the body a bone belongs to, normalized away from spelling. */
 export type BoneSide = 'left' | 'right' | 'center';
@@ -69,9 +69,6 @@ export interface CanonicalBone {
  */
 const LEFT_TOKENS = new Set(['left', 'l']);
 const RIGHT_TOKENS = new Set(['right', 'r']);
-
-/** Vendor prefixes that carry no anatomical meaning. */
-const VENDOR_PREFIX = /^(?:mixamorig\d*|tripo|armature|root)[:_.-]+/i;
 
 /**
  * Synonyms that mean the same joint in different vocabularies. Left side is the canonical

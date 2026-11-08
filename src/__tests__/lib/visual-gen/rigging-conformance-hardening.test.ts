@@ -4,7 +4,8 @@ import { gateRig, parseGlbRig, scoreRig } from '@/lib/visual-gen/rig-gate';
 import { assembleMetaHuman, buildAssemblePython, buildConformPython, conformMeshToMetaHuman } from '@/lib/visual-gen/metahuman-conform';
 import type { ExperimentResult } from '@/lib/ue-experiment/runner';
 import { routePromptShape } from '@/lib/visual-gen/linear-prop-routing';
-import { planConform } from '@/lib/visual-gen/bone-conform';
+import { canonicalize, planConform } from '@/lib/visual-gen/bone-conform';
+import { classifyNaming, groupsPresent } from '@/lib/visual-gen/skeleton-profiles';
 import { bindRigToPreset } from '@/lib/visual-gen/rig-binding';
 import { getRigPreset } from '@/lib/visual-gen/rig-presets';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
@@ -298,5 +299,35 @@ describe('rig gate: weight-sum tolerance follows the weight encoding', () => {
   it('does not wave a sloppy 8-bit rig through (three steps off)', () => {
     const facts = { ...GRUNT_FACTS, ...sums, weightSumMin: 252 / 255, weightQuantStep: step8 };
     expect(scoreRig(facts).pass).toBe(false);
+  });
+});
+
+describe('one vendor-prefix rule across skeleton-profiles and bone-conform', () => {
+  const TABLE: Array<[string, string]> = [
+    ['mixamorig:Hips', 'Hips'],
+    ['mixamorig1:Hips', 'Hips'],
+    ['mixamorig12:LeftHandThumb1', 'LeftHandThumb1'],
+    ['tripo_Hips', 'Hips'],
+    ['Armature_Hips', 'Hips'],
+    ['root_Hips', 'Hips'],
+  ];
+
+  it('both modules read a prefixed name exactly as its bare form', () => {
+    const disagreements = TABLE.filter(
+      ([name, bare]) =>
+        canonicalize(name).key !== canonicalize(bare).key ||
+        [...groupsPresent([name])].sort().join() !== [...groupsPresent([bare])].sort().join(),
+    );
+    expect(disagreements).toEqual([]);
+  });
+
+  it('a bare root bone is still a root (only a PREFIX is stripped)', () => {
+    expect([...groupsPresent(['root'])]).toContain('root');
+    expect([...groupsPresent(['Armature'])]).toContain('root');
+  });
+
+  it('classification is unchanged: mixamorig1 is not routed to the exact-name table path', () => {
+    expect(classifyNaming(['mixamorig:Hips'])).toBe('mixamo');
+    expect(classifyNaming(['mixamorig1:Hips'])).toBe('semantic');
   });
 });
