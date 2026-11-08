@@ -124,8 +124,8 @@ function lifecycleTitle(name: string, lifecycle: LifecycleState, summary?: strin
 }
 
 function CatalogRow({
-  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps, derivedLifecycle,
-  verified,
+  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps, entityRovingProps,
+  derivedLifecycle, verified,
 }: {
   t: LabTheme;
   catalog: LabCatalog;
@@ -135,6 +135,8 @@ function CatalogRow({
   onSelectCatalog: (id: string) => void;
   onSelectEntity: (id: string) => void;
   rovingItemProps?: { tabIndex: number; 'data-roving-active'?: boolean };
+  /** Roving props for one of this catalog's entity rows (they share the tree's single tab-stop). */
+  entityRovingProps?: (entityId: string) => { tabIndex: number; 'data-roving-active'?: boolean };
   derivedLifecycle?: DerivedLifecycleMap;
   /** Entities derived as `verified`, or `null` when nothing has been derived for this catalog. */
   verified: number | null;
@@ -147,6 +149,7 @@ function CatalogRow({
     <>
       <button
         role="treeitem"
+        aria-level={2}
         aria-selected={isSelected}
         onClick={() => onSelectCatalog(catalog.catalogId)}
         data-testid={`harness-catalog-${catalog.catalogId}`}
@@ -185,7 +188,7 @@ function CatalogRow({
           {verified === null ? '—' : verified}/{catalog.total}
         </span>
       </button>
-      {isSelected && entities.map((entity) => {
+      {isSelected && entities.length > 0 && <div role="group" aria-label={`${catalog.label} entities`}>{entities.map((entity) => {
         const isDraft = entity.id.startsWith('draft-');
         // A draft whose server persist failed is BROWSER-ONLY: nothing on the server can
         // resolve it, so none of its gates can run. Say so on the row rather than letting it
@@ -212,8 +215,12 @@ function CatalogRow({
             }}
           >
             <button
+              role="treeitem"
+              aria-level={3}
+              aria-selected={isEntitySelected}
               onClick={() => onSelectEntity(entity.id)}
               aria-label={statusAriaLabel(entity.name, status)}
+              {...entityRovingProps?.(entity.id)}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: 8,
                 textAlign: 'left', padding: '6px 12px 6px 36px',
@@ -272,6 +279,8 @@ function CatalogRow({
             {isDraft && (
               <button
                 aria-label="discard draft"
+                // Enter/Space must activate THIS button, not the tree's roving select.
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
                 onClick={(e) => {
                   e.stopPropagation();
                   // Remove the SERVER rows first, then the local cache: the counts come back
@@ -295,7 +304,7 @@ function CatalogRow({
             )}
           </div>
         );
-      })}
+      })}</div>}
     </>
   );
 }
@@ -335,25 +344,38 @@ export function CatalogTree({
     [groups, selectedCatalogId],
   );
   const isOpen = (category: string) => (category in override ? override[category] : category === selectedCategory);
-  // Flatten the visible (open-chapter) catalogs once, and carry each catalog's
-  // flat index in the same pass so render rows do an O(1) Map lookup instead of
-  // an O(catalogs) indexOf per row (which was O(catalogs²) over the whole tree).
-  const { visibleCatalogs, visibleIndex } = useMemo(() => {
+  // Flatten the visible (open-chapter) catalogs once.
+  const visibleCatalogs = useMemo(() => {
     const list: LabCatalog[] = [];
-    const index = new Map<LabCatalog, number>();
     for (const g of groups) {
       if (!(g.category in override ? override[g.category] : g.category === selectedCategory)) continue;
-      for (const c of g.catalogs) {
-        index.set(c, list.length);
-        list.push(c);
+      for (const c of g.catalogs) list.push(c);
+    }
+    return list;
+  }, [groups, override, selectedCategory]);
+  // The roving list spans two levels: every visible catalog, and — directly after the open
+  // catalog — its entity rows, so ArrowDown walks Category -> Catalog -> Entity as one tree.
+  const { items, catalogIndex, entityIndex } = useMemo(() => {
+    const list: Array<{ kind: 'catalog' | 'entity'; id: string }> = [];
+    const cIdx = new Map<string, number>();
+    const eIdx = new Map<string, number>();
+    for (const c of visibleCatalogs) {
+      cIdx.set(c.catalogId, list.length);
+      list.push({ kind: 'catalog', id: c.catalogId });
+      if (c.catalogId !== selectedCatalogId) continue;
+      for (const e of entities) {
+        eIdx.set(e.id, list.length);
+        list.push({ kind: 'entity', id: e.id });
       }
     }
-    return { visibleCatalogs: list, visibleIndex: index };
-  }, [groups, override, selectedCategory]);
-  const activeIdx = Math.max(0, visibleCatalogs.findIndex((c) => c.catalogId === selectedCatalogId));
-  const roving = useRovingFocus(visibleCatalogs.length, activeIdx, (i) => {
-    const c = visibleCatalogs[i];
-    if (c) onSelectCatalog(c.catalogId);
+    return { items: list, catalogIndex: cIdx, entityIndex: eIdx };
+  }, [visibleCatalogs, selectedCatalogId, entities]);
+  const activeIdx = Math.max(0, catalogIndex.get(selectedCatalogId ?? '') ?? 0);
+  const roving = useRovingFocus(items.length, activeIdx, (i) => {
+    const item = items[i];
+    if (!item) return;
+    if (item.kind === 'catalog') onSelectCatalog(item.id);
+    else onSelectEntity(item.id);
   });
 
   // Keep the roving cursor in sync with the selected catalog + visible-list changes.
@@ -378,6 +400,9 @@ export function CatalogTree({
         return (
           <div key={group.category}>
             <button
+              role="treeitem"
+              aria-level={1}
+              aria-selected={false}
               onClick={() => setOverride((o) => ({ ...o, [group.category]: !open }))}
               aria-expanded={open}
               className="focus-ring-inset"
@@ -393,7 +418,7 @@ export function CatalogTree({
             >
               <span aria-hidden="true">{open ? '▾' : '▸'}</span> {group.category}
             </button>
-            {open && group.catalogs.map((catalog, ci) => (
+            {open && <div role="group" aria-label={`${group.category} catalogs`}>{group.catalogs.map((catalog, ci) => (
               <motion.div key={catalog.catalogId}
                 initial={reduce ? false : { opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -408,10 +433,11 @@ export function CatalogTree({
                   onSelectEntity={onSelectEntity}
                   derivedLifecycle={derivedLifecycle}
                   verified={catalog.catalogId === selectedCatalogId ? verifiedInSelected : null}
-                  rovingItemProps={roving.itemProps(visibleIndex.get(catalog) ?? -1)}
+                  rovingItemProps={roving.itemProps(catalogIndex.get(catalog.catalogId) ?? -1)}
+                  entityRovingProps={(id) => roving.itemProps(entityIndex.get(id) ?? -1)}
                 />
               </motion.div>
-            ))}
+            ))}</div>}
           </div>
         );
       })}

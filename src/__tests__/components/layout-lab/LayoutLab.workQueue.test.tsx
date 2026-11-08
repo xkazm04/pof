@@ -87,7 +87,7 @@ describe('LayoutLab walks a Matrix work queue through the canvas', { timeout: 60
     expect(position()).toBe('2 of 3');
 
     // A tree click on an entity outside the queue ends it.
-    fireEvent.click(screen.getByRole('button', { name: /^Crystal Caves:/ }));
+    fireEvent.click(screen.getByRole('treeitem', { name: /^Crystal Caves:/ }));
     expect(labEntity()).toBe('zone-z3');
     expect(screen.queryByTestId('work-queue-strip')).toBeNull();
   });

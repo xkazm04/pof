@@ -40,9 +40,9 @@ describe('CatalogTree status encoding (shape + label, not color alone)', () => {
     );
 
     // Each entity row carries an accessible name with a plain-language status word.
-    const pass = screen.getByRole('button', { name: 'Fireball: passed' });
-    const fail = screen.getByRole('button', { name: 'Frostbolt: failed' });
-    const pending = screen.getByRole('button', { name: 'Stoneskin: pending' });
+    const pass = screen.getByRole('treeitem', { name: 'Fireball: passed' });
+    const fail = screen.getByRole('treeitem', { name: 'Frostbolt: failed' });
+    const pending = screen.getByRole('treeitem', { name: 'Stoneskin: pending' });
 
     // Pass is conveyed by a filled dot (no glyph needed).
     expect(pass.textContent).toBe('Fireball');
