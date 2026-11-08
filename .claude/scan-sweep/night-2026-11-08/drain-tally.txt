@@ -97,3 +97,8 @@ loot-affix-workbench {"better":6,"demoted":1}
 coach-and-guidance {"better":5,"not-better":1}
 bestiary-archetypes-ai {"better":6}
 economy-simulator {"better":5}
+status-health-dashboard {"better":4}
+combat-damage-pipeline {"better":6}
+catalog-gap-analysis {"better":4,"demoted":1}
+visual-gen-asset-pipeline {"unmeasurable":2,"better":2}
+visual-gen-style-asset-library {"better":3,"unmeasurable":2}
