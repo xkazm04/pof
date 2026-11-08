@@ -4,12 +4,13 @@ import { mkdir } from 'node:fs/promises';
 import sharp from 'sharp';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { GENERATED_IMAGE_DIR, generateTwoDImage } from '@/lib/visual-gen/image-providers';
 import { DEFAULT_SHEET_PX, type ContactSheetSpec } from '@/lib/visual-gen/contact-sheet';
 import { runContactSheet, type SheetImageOps } from '@/lib/visual-gen/sheet-slice';
 import { commitLibraryIcon } from '@/lib/visual-gen/icon-library';
 import { styleClause, styleRequestOf } from '@/lib/visual-gen/style-apply';
-import { SHEET_DEFAULTS, SHEET_PROVIDER_ID } from '@/lib/visual-gen/icon-set-plan';
+import { SHEET_DEFAULTS, SHEET_GRIDS, SHEET_PROVIDER_ID } from '@/lib/visual-gen/icon-set-plan';
 import { getDb } from '@/lib/db';
 
 /**
@@ -37,6 +38,28 @@ function imageDir(): string {
 }
 function iconDir(): string {
   return join(process.cwd(), 'generated', 'icons').split(/[\\/]/).join('/');
+}
+
+/** The largest grid the icon-set plan ever asks for, and so the ceiling on one paid sheet. */
+const MAX_SHEET_CELLS = Math.max(...SHEET_GRIDS.map((g) => g.cells));
+const PATH_LIKE = /[\\/]|\.\./;
+
+/** The first wrongly shaped field as a refusal, or null when the body may reach a provider. */
+function bodyShapeRefusal(body: Record<string, unknown>): string | null {
+  for (const field of ['cellSubject', 'style', 'background', 'accent', 'providerId', 'size']) {
+    if (body[field] != null && typeof body[field] !== 'string') return `${field} must be a string`;
+  }
+  const grid = { cols: body.cols ?? 4, rows: body.rows ?? 4 };
+  for (const [field, n] of Object.entries(grid)) {
+    if (!(Number.isInteger(n) && (n as number) >= 1 && (n as number) <= MAX_SHEET_CELLS)) {
+      return `${field} must be a whole number from 1 to ${MAX_SHEET_CELLS}`;
+    }
+  }
+  if ((grid.cols as number) * (grid.rows as number) > MAX_SHEET_CELLS) {
+    return `a contact sheet holds at most ${MAX_SHEET_CELLS} cells, got ${grid.cols}x${grid.rows}`;
+  }
+  if (typeof body.catalogId === 'string' && PATH_LIKE.test(body.catalogId)) return 'catalogId must not be a path';
+  return null;
 }
 
 export const sharpImageOps: SheetImageOps = {
@@ -90,7 +113,11 @@ export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const shapeRefusal = bodyShapeRefusal(parsed);
+    if (shapeRefusal) return apiError(shapeRefusal, 400);
+    const body = parsed as {
       catalogId?: string;
       step?: string;
       cols?: number;
@@ -112,17 +139,18 @@ export async function POST(request: NextRequest) {
       return apiError('a contact sheet is filed under a (catalogId, step) — both are required', 400);
     }
     const cast = Array.isArray(body?.cast) ? body.cast : [];
-    if (cast.some((c) => !c?.entityId || !c?.brief)) {
+    if (cast.some((c) => typeof c?.entityId !== 'string' || !c.entityId || typeof c?.brief !== 'string' || !c.brief)) {
       return apiError('every cast member needs an entityId and a brief — a blank brief buys a random cell', 400);
     }
+    if (cast.some((c) => PATH_LIKE.test(c.entityId as string))) return apiError('a cast entityId must not be a path', 400);
 
     // Style DNA (optional, via the one canon-aware resolver): with `applyStyleDna` the resolved
     // style — the canon's own for a canon entity, never the project's — IS the sheet's medium.
     // Absent the flag (or withheld) the medium is exactly what it was: `style` or the default.
     const dna = styleClause(getDb, styleRequestOf(body));
     const spec: ContactSheetSpec = {
-      cols: Number(body?.cols) || 4,
-      rows: Number(body?.rows) || 4,
+      cols: body.cols ?? 4,
+      rows: body.rows ?? 4,
       cellSubject: body?.cellSubject ?? SHEET_DEFAULTS.cellSubject,
       style: dna.clause ?? body?.style ?? SHEET_DEFAULTS.style,
       background: body?.background ?? SHEET_DEFAULTS.background,
