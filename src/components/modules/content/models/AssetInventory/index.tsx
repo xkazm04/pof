@@ -9,7 +9,7 @@ import { STATUS_ERROR } from '@/lib/chart-colors';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { AssetType } from '@/app/api/filesystem/scan-assets/route';
 import { ACCENT, TYPE_CONFIG } from './constants';
-import { formatBytes } from './helpers';
+import { formatBytes } from '@/lib/format';
 import { AssetCard } from './AssetCard';
 import { BridgeManifestCard } from './BridgeManifestCard';
 import { FilterChip } from './FilterChip';

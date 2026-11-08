@@ -7,7 +7,8 @@ import { ScanLine, FolderOpen } from 'lucide-react';
 import type { ScannedAsset } from '@/app/api/filesystem/scan-assets/route';
 import type { InventoryEdge } from '@/lib/asset-inventory/declared-edges';
 import { TYPE_CONFIG } from './constants';
-import { formatBytes, formatDate } from './helpers';
+import { formatBytes } from '@/lib/format';
+import { formatDate } from './helpers';
 import { DependencyGraph } from './DependencyGraph';
 
 interface AssetCardProps {
