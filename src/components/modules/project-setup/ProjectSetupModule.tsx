@@ -21,6 +21,7 @@ import { ProjectNBACard } from '@/components/modules/shared/ProjectNBACard';
 import { deriveNextStep, type NextStepId } from './nextStep';
 import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ErrorBanner } from './ErrorBanner';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
@@ -66,6 +67,7 @@ export function ProjectSetupModule() {
     hasProject,
     okCount,
     missingToolCount,
+    projectReadError,
   } = useProjectScan(projectPath);
 
   // Wire scanRef so the hooks' onComplete can call scan() without circular deps
@@ -92,10 +94,12 @@ export function ProjectSetupModule() {
   }, [setupCLI, projectPath]);
 
   // The single "do this next" action, derived from scan truth. Only shown once
-  // a project path is configured (i.e. after the setup wizard).
+  // a project path is configured (i.e. after the setup wizard). An unreadable
+  // folder says nothing about whether a project is there, so no step is offered:
+  // "Create project" here would scaffold over whatever could not be read.
   const nextStep = useMemo(
-    () => (projectPath.trim() ? deriveNextStep({ missingToolCount, hasProject }) : null),
-    [projectPath, missingToolCount, hasProject],
+    () => (projectPath.trim() && !projectReadError ? deriveNextStep({ missingToolCount, hasProject }) : null),
+    [projectPath, projectReadError, missingToolCount, hasProject],
   );
 
   const handleNextStepAction = useCallback(() => {
@@ -153,6 +157,14 @@ export function ProjectSetupModule() {
           Create and configure your Unreal Engine project
         </p>
 
+        {projectReadError && (
+          <ErrorBanner
+            message={`Could not read the project folder: ${projectReadError}. Re-scan once it is reachable.`}
+            className="mb-6"
+            data-testid="pof-setup-project-read-error"
+          />
+        )}
+
         {/* Guided next step — the one calm "do this next" for the whole module */}
         {nextStep && (
           <NextStepBanner
@@ -204,7 +216,7 @@ export function ProjectSetupModule() {
         )}
 
         {/* Create Project */}
-        {!hasProject && projectPath.trim() && (
+        {!hasProject && projectPath.trim() && !projectReadError && (
           <div className={dimUnless('create-project')}>
             <CreateProjectPanel
               engines={engines}

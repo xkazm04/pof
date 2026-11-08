@@ -18,6 +18,7 @@ const { sendPromptMock, scanResult } = vi.hoisted(() => ({
       hasProject: false,
       okCount: 0,
       missingToolCount: 0,
+      projectReadError: null as string | null,
     },
   },
 }));
@@ -55,6 +56,7 @@ beforeEach(() => {
     hasProject: false,
     okCount: 0,
     missingToolCount: 0,
+    projectReadError: null,
   });
   useProjectStore.setState({ projectPath: 'C:/proj/PoF', projectName: 'PoF', ueVersion: '5.7.3' });
 });
@@ -119,6 +121,14 @@ describe('ProjectSetupModule next-step banner', () => {
     render(<ProjectSetupModule />);
     const buildBtn = screen.getByTestId('pof-setup-wizard-build-verify-btn');
     expect(buildBtn.closest('.opacity-50')).not.toBeNull();
+  });
+
+  it('offers no Create Project when the project folder could not be read', () => {
+    setScan({ missingToolCount: 0, hasProject: false, projectReadError: 'Cannot read directory (EPERM)' });
+    render(<ProjectSetupModule />);
+    expect(screen.queryByTestId('pof-setup-next-step-banner')).toBeNull();
+    expect(screen.queryByTestId('pof-setup-wizard-create-project-btn')).toBeNull();
+    expect(screen.getByTestId('pof-setup-project-read-error').textContent).toContain('EPERM');
   });
 
   it('triggers a tooling fetch when the Install Tools CTA is clicked', async () => {
