@@ -35,5 +35,7 @@ export interface DamageEvent {
   isCrit: boolean;
   isHeal: boolean;
   spawnTime: number;
+  /** Seconds since spawn at the sampled time (spans the loop wrap). */
+  age: number;
   offsetX: number; // random horizontal offset
 }

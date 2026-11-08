@@ -49,8 +49,8 @@ export function getCombatEvents(time: number, theme: HudTheme): {
   damageEvents: DamageEvent[];
 } {
   const t = time % CYCLE_DURATION;
+  const cycle = Math.floor(time / CYCLE_DURATION);
   const events: DamageEvent[] = [];
-  let nextId = Math.floor(time / CYCLE_DURATION) * 100;
 
   // Player health timeline: starts 100%, takes damage, heals, takes more
   let playerHealth: number;
@@ -90,19 +90,25 @@ export function getCombatEvents(time: number, theme: HudTheme): {
     return x - Math.floor(x);
   };
 
-  for (const hit of hitTimes) {
-    const age = t - hit.time;
-    if (age >= 0 && age < theme.damageLifetime) {
+  // A hit spawned late in the previous loop is still alive into this one when its
+  // lifetime outlasts the wrap (DamageLifetime up to 3.0s vs the 6.2s heal).
+  // Ids are (loop, hit index): stable for the event's whole life.
+  for (const spawnCycle of [cycle - 1, cycle]) {
+    if (spawnCycle < 0) continue;
+    hitTimes.forEach((hit, i) => {
+      const age = t + (cycle - spawnCycle) * CYCLE_DURATION - hit.time;
+      if (age < 0 || age >= theme.damageLifetime) return;
       events.push({
-        id: nextId++,
+        id: spawnCycle * 100 + i,
         amount: hit.amount,
         element: hit.element,
         isCrit: hit.isCrit,
         isHeal: hit.isHeal,
         spawnTime: hit.time,
+        age,
         offsetX: (seededRand(hit.time * 7.1) - 0.5) * 2 * theme.horizontalSpread,
       });
-    }
+    });
   }
 
   return { playerHealth, enemyHealth, damageEvents: events };

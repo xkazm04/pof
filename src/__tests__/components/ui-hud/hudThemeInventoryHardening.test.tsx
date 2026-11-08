@@ -96,3 +96,23 @@ describe('HUD theme slider readouts print the precision the .h export writes', (
     expect(readout('Enemy HP Bar', 'FadeOutDelay').shown()).toBe('3.0s');
   });
 });
+
+describe('preview damage numbers live their full DamageLifetime across the loop wrap', () => {
+  it('the 6.2s heal at DamageLifetime 3.0 is still alive 2.3s later (0.5s into the next loop)', async () => {
+    const { getCombatEvents } = await import('@/components/modules/content/ui-hud/HudThemeEditor/helpers');
+    const { DEFAULT_THEME, CYCLE_DURATION } = await import('@/components/modules/content/ui-hud/HudThemeEditor/constants');
+    const theme = { ...DEFAULT_THEME, damageLifetime: 3.0 };
+    const t = CYCLE_DURATION + 0.5;
+    const heal = getCombatEvents(t, theme).damageEvents.find((e) => e.amount === 350);
+    expect(heal).toBeTruthy();
+    expect(heal!.age).toBeCloseTo(2.3, 6);
+  });
+
+  it('an event keeps one id for its whole life, even after an earlier one expires', async () => {
+    const { getCombatEvents } = await import('@/components/modules/content/ui-hud/HudThemeEditor/helpers');
+    const { DEFAULT_THEME } = await import('@/components/modules/content/ui-hud/HudThemeEditor/constants');
+    const fireId = (t: number) => getCombatEvents(t, DEFAULT_THEME).damageEvents.find((e) => e.amount === 892)!.id;
+    // 1.3s: Physical (0.5s) still alive; 1.6s: it has expired (lifetime 1.0).
+    expect(fireId(1.6)).toBe(fireId(1.3));
+  });
+});

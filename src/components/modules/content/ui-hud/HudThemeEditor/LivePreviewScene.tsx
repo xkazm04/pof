@@ -110,8 +110,7 @@ export function LivePreviewScene({ theme, time }: { theme: HudTheme; time: numbe
 
       {/* ── Floating damage numbers ── */}
       {damageEvents.map((evt) => {
-        const age = (time % CYCLE_DURATION) - evt.spawnTime;
-        const progress = clamp(age / theme.damageLifetime, 0, 1);
+        const progress = clamp(evt.age / theme.damageLifetime, 0, 1);
         const floatY = progress * theme.floatDistance;
         // Fade: 100% for first 40%, then linear to 0%
         const fadeAlpha = progress < 0.4 ? 1 : clamp(1 - (progress - 0.4) / 0.6, 0, 1);
