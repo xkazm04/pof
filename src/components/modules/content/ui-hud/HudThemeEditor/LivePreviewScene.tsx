@@ -1,7 +1,7 @@
 'use client';
 
 import { CYCLE_DURATION } from './constants';
-import { getCombatEvents, lerpColor, clamp, rgbaToCSS } from './helpers';
+import { getCombatEvents, enemyBarAlpha as enemyBarAlphaAt, lerpColor, clamp, rgbaToCSS } from './helpers';
 import type { HudTheme } from './types';
 
 // ── Live preview scene ─────────────────────────────────────────────────────
@@ -17,16 +17,8 @@ export function LivePreviewScene({ theme, time }: { theme: HudTheme; time: numbe
     ? lerpColor(theme.dangerColor, theme.healthyColor, pulseAlpha)
     : theme.healthyColor;
 
-  // Enemy bar fade state
-  const cycleT = time % CYCLE_DURATION;
-  // Enemy bar visible after first hit (t=0.5) and stays until enemy dies
-  const enemyBarVisible = cycleT >= 0.5 && cycleT < 6.0 + theme.fadeOutDuration;
-  const enemyFadeIn = cycleT >= 0.5 && cycleT < 0.5 + theme.fadeInDuration;
-  const enemyFadeOut = cycleT >= 6.0 && cycleT < 6.0 + theme.fadeOutDuration;
-  let enemyBarAlpha = 1;
-  if (enemyFadeIn) enemyBarAlpha = clamp((cycleT - 0.5) / theme.fadeInDuration, 0, 1);
-  else if (enemyFadeOut) enemyBarAlpha = clamp(1 - (cycleT - 6.0) / theme.fadeOutDuration, 0, 1);
-  else if (!enemyBarVisible) enemyBarAlpha = 0;
+  // Enemy bar fade: the UE fade FSM stepped over the scripted hits (honours FadeOutDelay)
+  const enemyBarAlpha = enemyBarAlphaAt(time, theme);
 
   const healthCSS = rgbaToCSS(healthBarColor);
   const manaCSS = rgbaToCSS(theme.manaColor);
