@@ -11,6 +11,20 @@ import { NODE_W, NODE_H } from './constants';
 import type { LayerId } from './constants';
 import type { NexusNode, NexusEdge } from './types';
 
+/**
+ * Pattern-success heat bands, highest first. The node heat bar (NexusGraph) and the
+ * legend (NexusView) both read THIS list, so every colour drawn has a legend entry.
+ */
+export const PATTERN_HEAT_BANDS = [
+  { min: 0.7, color: STATUS_SUCCESS, label: '70%+' },
+  { min: 0.4, color: STATUS_WARNING, label: '40-69%' },
+  { min: 0, color: STATUS_ERROR, label: 'under 40%' },
+] as const;
+
+export function patternHeatColor(rate: number): string {
+  return (PATTERN_HEAT_BANDS.find((b) => rate >= b.min) ?? PATTERN_HEAT_BANDS[PATTERN_HEAT_BANDS.length - 1]).color;
+}
+
 export function NexusGraph({
   edges,
   nodes,
@@ -146,9 +160,7 @@ export function NexusGraph({
 
           // Layer 1: pattern heat
           const showPatternHeat = activeLayers.has('patterns') && node.patternSuccessRate !== null;
-          const patternColor = node.patternSuccessRate !== null
-            ? node.patternSuccessRate >= 0.7 ? STATUS_SUCCESS : node.patternSuccessRate >= 0.4 ? STATUS_WARNING : STATUS_ERROR
-            : undefined;
+          const patternColor = node.patternSuccessRate !== null ? patternHeatColor(node.patternSuccessRate) : undefined;
 
           // Layer 2: critical findings in the newest deep eval (null = never evaluated: no glow)
           const showBuildGlow = activeLayers.has('builds') && (node.criticalFindings ?? 0) > 0;
