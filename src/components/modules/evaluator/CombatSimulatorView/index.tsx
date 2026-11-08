@@ -12,9 +12,8 @@ import { ABComparisonPanel } from '@/components/modules/evaluator/ABComparisonPa
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
-import {
-  MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL, STATUS_ERROR,
-} from '@/lib/chart-colors';
+import { STATUS_NEUTRAL, STATUS_ERROR } from '@/lib/chart-colors';
+import { survivalTone } from '@/lib/balance/encounter-bands';
 import { LoadingRow } from '@/components/ui/LoadingRow';
 import { narrateSummary } from '@/lib/combat/fight-report';
 import type {
@@ -181,9 +180,8 @@ export function CombatSimulatorView() {
     return scenarioSignature(baselineResult.scenario) !== scenarioSignature(result.scenario);
   }, [baselineResult, comparison, result]);
 
-  const survivalColor = summary
-    ? summary.survivalRate > 0.7 ? ACCENT_EMERALD_DARK : summary.survivalRate > 0.4 ? MODULE_COLORS.content : MODULE_COLORS.evaluator
-    : STATUS_NEUTRAL;
+  // The band law owns the cuts, so this readout and the Fight Report Card's band agree.
+  const survivalColor = summary ? survivalTone(summary.survivalRate) : STATUS_NEUTRAL;
 
   return (
     <div className="flex flex-col h-full">
