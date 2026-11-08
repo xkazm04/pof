@@ -68,7 +68,7 @@ export function MonteCarloSimulator({ genome, rarity, level }: Props) {
                 className="text-xs font-mono font-bold px-2 py-1 rounded transition-all"
                 style={{
                   backgroundColor: iterations === n ? withOpacity(ACCENT, OPACITY_25) : withOpacity(ACCENT, OPACITY_10),
-                  color: iterations === n ? ACCENT : 'rgb(148 163 184)',
+                  color: iterations === n ? ACCENT : 'var(--text-muted)',
                   border: `1px solid ${withOpacity(ACCENT, iterations === n ? OPACITY_37 : OPACITY_12)}`,
                 }}
               >
