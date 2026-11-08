@@ -17,7 +17,10 @@ import { ScanHistory } from './ScanHistory';
 
 export function TelemetryEvolution() {
   const { stats, history, loading, scanning, scanError, scanProject, resolveSuggestion } = useGenreEvolution();
-  const { projectPath, dynamicContext } = useProjectStore();
+  // Two field selectors, not the whole store: a bare useProjectStore() re-rendered this
+  // panel on every unrelated project-store write (scan flags, setup step, recents).
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const dynamicContext = useProjectStore((s) => s.dynamicContext);
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();

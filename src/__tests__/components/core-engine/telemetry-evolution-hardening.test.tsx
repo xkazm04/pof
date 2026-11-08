@@ -33,6 +33,7 @@ vi.mock('@/hooks/useGenreEvolution', () => ({
 }));
 
 import { TelemetryEvolution } from '@/components/modules/core-engine/TelemetryEvolution';
+import { useProjectStore } from '@/stores/projectStore';
 
 function suggestion(): GenreEvolutionSuggestion {
   return {
@@ -71,5 +72,17 @@ describe('TelemetryEvolution — suggestion resolution failure', () => {
     } finally {
       process.off('unhandledRejection', unhandled);
     }
+  });
+});
+
+describe('TelemetryEvolution — project store subscription', () => {
+  beforeEach(() => { hook.stats = stats(); hook.renders = 0; });
+
+  it('does not re-render when an unrelated project-store field changes', () => {
+    render(<TelemetryEvolution />);
+    const before = hook.renders;
+    act(() => { useProjectStore.setState({ isScanning: true, setupStep: 3 }); });
+    act(() => { useProjectStore.setState({ isScanning: false, scanError: 'x' }); });
+    expect(hook.renders - before).toBe(0);
   });
 });
