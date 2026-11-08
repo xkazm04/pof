@@ -5,6 +5,7 @@ import type { LabTheme } from './theme';
 import type { ProjectRule, RuleCategory } from '@/lib/catalog/canon/types';
 import { CANON_PROFILES, DEFAULT_CANON_PROFILE, profileOfRule } from '@/lib/catalog/canon/profiles';
 import { TabBar } from '@/components/ui/TabBar';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useCanonStore } from './canonStore';
 import { CanonDriftPanel, driftCount } from './CanonDriftPanel';
 import { LabButton } from './steps/controls';
@@ -50,6 +51,9 @@ export function CanonView({ t }: { t: LabTheme }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   // '+ Add rule' opens a LOCAL draft: nothing is POSTed (or enters a prompt) until Save succeeds.
   const [draft, setDraft] = useState<ProjectRule | null>(null);
+  // Deleting a law takes it out of every produce prompt for this profile; it is confirmed
+  // through the shared ConfirmDialog (as entity Reset is), never fired on one click.
+  const [pendingDelete, setPendingDelete] = useState<ProjectRule | null>(null);
   const selectedProfile = CANON_PROFILES[selectedProfileId];
   const drifted = driftCount(drift?.byProfile[selectedProfileId]);
   const undoable = (drift?.adopted ?? []).filter((a) => a.profile === selectedProfileId).length;
@@ -137,7 +141,7 @@ export function CanonView({ t }: { t: LabTheme }) {
                 editingId === rule.id ? (
                   <CanonRuleEditor key={rule.id} t={t} rule={rule} onSave={handleSave} onCancel={closeEditor} />
                 ) : (
-                  <CanonRuleCard key={rule.id} t={t} rule={rule} onEdit={() => { setDraft(null); setEditingId(rule.id); }} onDelete={() => handleDelete(rule.id)} />
+                  <CanonRuleCard key={rule.id} t={t} rule={rule} onEdit={() => { setDraft(null); setEditingId(rule.id); }} onDelete={() => setPendingDelete(rule)} />
                 )
               )}
             </section>
@@ -155,6 +159,14 @@ export function CanonView({ t }: { t: LabTheme }) {
           </section>
         )}
       </div>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete.id); }}
+        title={`Delete “${pendingDelete?.title || 'Untitled'}”?`}
+        description={`This law stops entering the ${selectedProfile.title} produce prompts it reaches today. There is no undo for a delete here.`}
+        confirmLabel="Delete law"
+      />
     </div>
   );
 }
