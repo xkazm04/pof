@@ -23581,6 +23581,62 @@
         }
       ],
       "registryProposal": "grid-keyboard-model frames the choice as native table vs grid. It could say outright that a third shape, read-only tabular data drawn as styled divs with no table or grid roles, is the failure, because it loses header association for assistive technology."
+    },
+    "2a39555c-9199-48bf-b54a-6a13db05036c/agent-memory": {
+      "context": "cli-terminal-system",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:36:39.036Z",
+      "worker": "6560f59b-a950-4add-9035-443cd50f06ac",
+      "techniques": [
+        {
+          "technique": "recall-injection",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:260 The standard says a failed recall must be visibly different from an empty one. Here a failed skill-pack lookup (one of the learned patterns injected into the prompt) is swallowed and the dispatch looks normal."
+        },
+        {
+          "technique": "durable-store-failure-posture",
+          "verdict": "deviation",
+          "evidence": "src/hooks/useModuleCLI.ts:250 A non-ok response from the pattern store is turned into null and treated as 'no skills'. The read path quietly fails open to empty instead of degrading and saying so."
+        },
+        {
+          "technique": "owner-and-counterpart-scope",
+          "verdict": "conformant",
+          "evidence": "src/hooks/useModuleCLI.ts:215 Learned patterns are scoped to the current project explicitly. The comments at lines 213-214 note that the old unscoped read used to pull in another project's patterns."
+        }
+      ]
+    },
+    "2fd8d59d-6d5d-4aed-aeca-7926be0ca764/agent-memory": {
+      "context": "eqs-squad-combat-spatial",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:36:39.036Z",
+      "worker": "6560f59b-a950-4add-9035-443cd50f06ac",
+      "techniques": []
+    },
+    "0dd24399-c9cd-4a8a-a4ed-617ad69597a3/agent-memory": {
+      "context": "visual-gen-3d-model-runners",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:36:39.036Z",
+      "worker": "6560f59b-a950-4add-9035-443cd50f06ac",
+      "techniques": []
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/agent-memory": {
+      "context": "lab-shell-and-navigation",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:36:39.036Z",
+      "worker": "6560f59b-a950-4add-9035-443cd50f06ac",
+      "techniques": []
     }
   }
 }

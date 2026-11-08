@@ -10944,8 +10944,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "deviation",
+          "priorNotApplicable": 4,
+          "evidence": "src/hooks/useModuleCLI.ts:260 The skill packs come from telemetry patterns mined from past sessions, so they are learned memory added to the prompt. When that lookup fails, through a non-ok response or a thrown error, it is dropped silently. A failed recall then looks exactly like an empty one, and neither the agent nor the operator can tell the two apart.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "fleet-orchestration",
@@ -13980,8 +13984,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/game-systems/EQSComponentInventory/eqsComponents.ts:12 These are spatial design visualizers built on a static EQS catalog, with no LLM agent and no store carried between sessions. Searching the four EQS/squad/attack-ring directories found no recall, episode, consolidation or remember constructs, so agent memory has nothing to govern here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "table",
@@ -17869,8 +17877,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/layout-lab/LabSearch.tsx:25 The 'recall' and 'remember' words here belong to the user's navigation history (recent search picks, the remembered tab per game), not to anything an LLM agent carries forward. Searching src/components/layout-lab found no episode, agentMemory or memory-store constructs, so agent memory does not govern this shell.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "chat-transcript",
@@ -27324,8 +27336,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/visual-gen/tripo-job-store.ts:2 The only 'memory' in this context is in-process job-status stores for mesh-generation runs. They are not an agent's working, episodic or consolidated memory. Searching src/lib/visual-gen found no recall, episode or agentMemory constructs, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "render-submission-economy",

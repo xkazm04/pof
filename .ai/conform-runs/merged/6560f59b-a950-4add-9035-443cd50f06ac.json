@@ -1,0 +1,154 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6560f59b-a950-4add-9035-443cd50f06ac",
+ "subject": "agent-memory",
+ "evaluatedAt": "2026-11-08T04:36:39.036782+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:37 These files are display UI. They read crash diagnoses out of a store and show them. Searching the CrashAnalyzerView, CrashTimeMachine and evaluator directories found no recall, episode, consolidation or agent-memory construct (the one 'memory' hit is the out_of_memory crash-category label), so the subject's precondition does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "episod",
+    "consolidat",
+    "agentMemory"
+   ]
+  },
+  {
+   "context": "cli-terminal-system",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/hooks/useModuleCLI.ts:260 The skill packs come from telemetry patterns mined from past sessions, so they are learned memory added to the prompt. When that lookup fails, through a non-ok response or a thrown error, it is dropped silently. A failed recall then looks exactly like an empty one, and neither the agent nor the operator can tell the two apart.",
+   "techniques": [
+    {
+     "technique": "recall-injection",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useModuleCLI.ts:260 The standard says a failed recall must be visibly different from an empty one. Here a failed skill-pack lookup (one of the learned patterns injected into the prompt) is swallowed and the dispatch looks normal."
+    },
+    {
+     "technique": "durable-store-failure-posture",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useModuleCLI.ts:250 A non-ok response from the pattern store is turned into null and treated as 'no skills'. The read path quietly fails open to empty instead of degrading and saying so."
+    },
+    {
+     "technique": "owner-and-counterpart-scope",
+     "verdict": "conformant",
+     "evidence": "src/hooks/useModuleCLI.ts:215 Learned patterns are scoped to the current project explicitly. The comments at lines 213-214 note that the old unscoped read used to pull in another project's patterns."
+    }
+   ]
+  },
+  {
+   "context": "eqs-squad-combat-spatial",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/EQSComponentInventory/eqsComponents.ts:12 These are spatial design visualizers built on a static EQS catalog, with no LLM agent and no store carried between sessions. Searching the four EQS/squad/attack-ring directories found no recall, episode, consolidation or remember constructs, so agent memory has nothing to govern here.",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "episod",
+    "consolidat",
+    "remember"
+   ]
+  },
+  {
+   "context": "visual-gen-3d-model-runners",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/visual-gen/tripo-job-store.ts:2 The only 'memory' in this context is in-process job-status stores for mesh-generation runs. They are not an agent's working, episodic or consolidated memory. Searching src/lib/visual-gen found no recall, episode or agentMemory constructs, so the subject's precondition does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "recall",
+    "episod",
+    "agentMemory"
+   ]
+  },
+  {
+   "context": "lab-shell-and-navigation",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/LabSearch.tsx:25 The 'recall' and 'remember' words here belong to the user's navigation history (recent search picks, the remembered tab per game), not to anything an LLM agent carries forward. Searching src/components/layout-lab found no episode, agentMemory or memory-store constructs, so agent memory does not govern this shell.",
+   "techniques": [],
+   "absenceTerms": [
+    "episod",
+    "agentMemory"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T04:36:39.036782+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:36:39.036782+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [
+    "durable-store-failure-posture",
+    "owner-and-counterpart-scope",
+    "recall-injection"
+   ],
+   "deviations": 1,
+   "context": "cli-terminal-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:36:39.036782+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "eqs-squad-combat-spatial",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:36:39.036782+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "visual-gen-3d-model-runners",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:36:39.036782+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "lab-shell-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
