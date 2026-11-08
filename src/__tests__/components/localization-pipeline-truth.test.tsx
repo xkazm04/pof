@@ -12,11 +12,14 @@ import { HazardCard } from '@/components/modules/evaluator/LocalizationPipelineV
 import { QAFindingCard } from '@/components/modules/evaluator/LocalizationPipelineView/QAFindingCard';
 import { ReplacementCard } from '@/components/modules/evaluator/LocalizationPipelineView/ReplacementCard';
 import { StringTableCard } from '@/components/modules/evaluator/LocalizationPipelineView/StringTableCard';
+import { TranslationCard } from '@/components/modules/evaluator/LocalizationPipelineView/TranslationCard';
+import { ExpansionFactorBars } from '@/components/modules/evaluator/LocalizationPipelineView/ExpansionFactorBars';
 import type {
   LocalizationHazard,
   TranslationQAFinding,
   LOCTEXTReplacementSuggestion,
   StringTable,
+  TranslationEntry,
 } from '@/types/localization-pipeline';
 
 afterEach(() => {
@@ -120,5 +123,28 @@ describe('String Table CSV copy is RFC 4180 (UE string-table import format)', ()
     const csv = writeText.mock.calls[0][0] as string;
     const [, row] = csv.split('\n');
     expect(row).toBe('"Interact","Press ""E"" to interact","[ui_label] from arpg-ui"');
+  });
+});
+
+describe('expansion bars share one scale', () => {
+  const widthFor = (root: HTMLElement, label: string) => {
+    const pct = Array.from(root.querySelectorAll<HTMLElement>('[style*="width"]'))
+      .map((el) => el.style.width)
+      .filter((w) => w.endsWith('%'));
+    return { label, pct };
+  };
+
+  it('a German TranslationCard bar matches the Overview ExpansionFactorBars width', () => {
+    const entry: TranslationEntry = {
+      stringId: 'str-1', locale: 'de', translatedText: 'Inventar', status: 'translated',
+      translatorNotes: '', backTranslation: '', confidence: 0.9, expansionWarning: false, charDelta: 0,
+    };
+    const card = render(<TranslationCard entry={entry} sourceText="Inventory" />);
+    const cardWidth = widthFor(card.container, 'card').pct[0];
+    cleanup();
+    const bars = render(<ExpansionFactorBars />);
+    // German (x1.35) is the widest locale, so it is the first sorted bar.
+    const overviewWidth = widthFor(bars.container, 'overview').pct[0];
+    expect(cardWidth).toBe(overviewWidth);
   });
 });

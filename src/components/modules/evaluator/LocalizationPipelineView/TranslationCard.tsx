@@ -5,7 +5,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import type { TranslationEntry } from '@/types/localization-pipeline';
 import { SUPPORTED_LOCALES, REVIEW_GATE } from '@/lib/localization/definitions';
 import { ACCENT_EMERALD, STATUS_WARNING } from '@/lib/chart-colors';
-import { STATUS_STYLE } from './constants';
+import { STATUS_STYLE, MAX_EXPANSION } from './constants';
 import { expansionColor, formatExpansion } from './helpers';
 
 export function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourceText: string }) {
@@ -41,7 +41,8 @@ export function TranslationCard({ entry, sourceText }: { entry: TranslationEntry
                 <div
                   className="h-full rounded-full transition-[width] duration-300"
                   style={{
-                    width: `${Math.min((locInfo.expansionFactor / 1.5) * 100, 100)}%`,
+                    // Same scale as the Overview ExpansionFactorBars, so one locale reads one width.
+                    width: `${Math.min((locInfo.expansionFactor / MAX_EXPANSION) * 100, 100)}%`,
                     backgroundColor: expansionColor(locInfo.expansionFactor),
                   }}
                 />
