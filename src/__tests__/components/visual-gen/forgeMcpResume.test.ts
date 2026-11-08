@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createElement } from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { useForgeStore, type GenerationJob } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
 import { GenerationQueue } from '@/components/modules/visual-gen/asset-forge/GenerationQueue';
 
@@ -158,7 +158,11 @@ describe('GenerationQueue — the operator sees both recoveries and a server res
     ledgerJobs = [];
     sessionStorage.setItem('pof.forge.mcpLedgerEpoch', 'epoch-0');
     render(createElement(GenerationQueue));
-    await vi.advanceTimersByTimeAsync(0);
+    // The restart notice is a state update that lands after the ledger fetch resolves; act()
+    // flushes it deterministically instead of relying on the environment's scheduler.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(screen.getByTestId('forge-ledger-restarted').textContent).toContain('server restarted');
     expect(sessionStorage.getItem('pof.forge.mcpLedgerEpoch')).toBe('epoch-1');
     cleanup();
