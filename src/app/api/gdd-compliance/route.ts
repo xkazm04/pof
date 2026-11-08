@@ -23,7 +23,13 @@ export async function POST(req: Request) {
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
       return apiError('Request body must be a JSON object', 400);
     }
+    // Resolutions are scoped by this string: a number/object would silently write under a
+    // key no reader asks for, so a non-string is the caller's error.
+    if (body.projectPath !== undefined && body.projectPath !== null && typeof body.projectPath !== 'string') {
+      return apiError('projectPath must be a string', 400);
+    }
     const projectPath = body.projectPath ?? '';
+    const optionalString = (v: unknown) => v === undefined || v === null || typeof v === 'string';
 
     switch (body.action) {
       case 'audit': {
@@ -32,14 +38,17 @@ export async function POST(req: Request) {
       }
 
       case 'resolve-gap': {
-        if (!body.gapId) return apiError('resolve-gap requires a gapId', 400);
+        if (!body.gapId || typeof body.gapId !== 'string') return apiError('resolve-gap requires a gapId (string)', 400);
+        if (!optionalString(body.moduleId) || !optionalString(body.note)) {
+          return apiError('moduleId and note must be strings', 400);
+        }
         return apiSuccess(
           resolveGap(projectPath, body.gapId, { moduleId: body.moduleId, note: body.note }),
         );
       }
 
       case 'unresolve-gap': {
-        if (!body.gapId) return apiError('unresolve-gap requires a gapId', 400);
+        if (!body.gapId || typeof body.gapId !== 'string') return apiError('unresolve-gap requires a gapId (string)', 400);
         // `removed: false` means there was nothing to re-open — reported, not
         // swallowed, so a no-op can never read as a successful un-resolve.
         return apiSuccess({ gapId: body.gapId, removed: unresolveGap(projectPath, body.gapId) });
