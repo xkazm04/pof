@@ -39,6 +39,11 @@ export async function GET(req: NextRequest) {
   const step = q.get('step');
   const entityId = q.get('entityId');
   const slug = q.get('slug');
+  // A half-given filter is a malformed query, not "no filter": answering it with the whole
+  // library would hand another catalog's art back under a 200. Only the pair filters.
+  if (!slug && (catalogId || step || entityId) && !(catalogId && step)) {
+    return apiError('a filtered icon lookup needs both catalogId and step (entityId is optional)', 400);
+  }
   try {
     const all = await listIcons(dir);
     if (all === null) return apiSuccess({ icons: [] }); // dir absent → empty gallery, not an error
