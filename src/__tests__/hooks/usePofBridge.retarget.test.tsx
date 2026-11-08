@@ -59,3 +59,10 @@ describe('usePofBridge retarget on settings edit', () => {
     expect(mgr.connect).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('usePofBridge surface', () => {
+  it('returns only isConnected: connect/disconnect/status/pluginInfo have no caller', () => {
+    const { result } = renderHook(() => usePofBridge());
+    expect(Object.keys(result.current)).toEqual(['isConnected']);
+  });
+});
