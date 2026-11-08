@@ -33,8 +33,8 @@ interface PacingReportPanelProps {
 
 export function PacingReportPanel({ doc, accentColor, onSelectRoom }: PacingReportPanelProps) {
   const result = useMemo(() => lintLevelPacing(doc), [doc]);
-  const [severityFilter, setSeverityFilter] = useState<PacingSeverity | 'all'>('all');
-  const [ruleFilter, setRuleFilter] = useState<PacingRuleId | 'all'>('all');
+  const [pickedSeverity, setSeverityFilter] = useState<PacingSeverity | 'all'>('all');
+  const [pickedRule, setRuleFilter] = useState<PacingRuleId | 'all'>('all');
 
   const ruleCounts = useMemo(() => {
     const counts: Partial<Record<PacingRuleId, number>> = {};
@@ -43,6 +43,12 @@ export function PacingReportPanel({ doc, accentColor, onSelectRoom }: PacingRepo
     }
     return counts;
   }, [result.findings]);
+
+  // A filter is only live while its chip / option is on screen. Fixing the last
+  // finding of a rule removes that option; holding the stale pick hid EVERY
+  // finding behind "No findings match" while the select read "All rules".
+  const ruleFilter = pickedRule !== 'all' && !ruleCounts[pickedRule] ? 'all' : pickedRule;
+  const severityFilter = pickedSeverity !== 'all' && result.counts[pickedSeverity] === 0 ? 'all' : pickedSeverity;
 
   const filtered = useMemo(() => {
     return result.findings.filter((f) => {

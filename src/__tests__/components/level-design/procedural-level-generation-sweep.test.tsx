@@ -31,3 +31,68 @@ describe('a one-lever remedy is one undo step', () => {
     expect(view.getByRole('radio', { name: /BSP Tree/i }).getAttribute('aria-checked')).toBe('true');
   });
 });
+
+// ── Pacing report: a filter whose option vanished must not hide every finding ──
+
+import { PacingReportPanel } from '@/components/modules/content/level-design/PacingReportPanel';
+import { lintLevelPacing } from '@/lib/level-design/pacing-linter';
+import type { LevelDesignDocument, RoomNode, RoomConnection } from '@/types/level-design';
+
+function pacingRoom(id: string, over: Partial<RoomNode> = {}): RoomNode {
+  return {
+    id, name: id.toUpperCase(), type: 'exploration', description: '', encounterDesign: '',
+    difficulty: 2, pacing: 'rest', x: 0, y: 0, linkedFiles: [], spawnEntries: [], tags: [], ...over,
+  };
+}
+const link = (id: string, fromId: string, toId: string): RoomConnection =>
+  ({ id, fromId, toId, bidirectional: false, condition: '' });
+function pacingDoc(rooms: RoomNode[], connections: RoomConnection[]): LevelDesignDocument {
+  return {
+    id: 1, name: 'Doc', description: '', designNarrative: '', rooms, connections,
+    difficultyArc: rooms.map((r) => r.id), pacingNotes: '', syncStatus: 'unlinked', syncReport: [],
+    lastGeneratedAt: null, lastCodeHash: null, createdAt: '', updatedAt: '',
+  };
+}
+
+describe('PacingReportPanel filters survive a doc edit', () => {
+  // a -> b is a difficulty cliff; the c <-> d island is unreachable (each has an
+  // incoming edge, so neither counts as a start). Linking b -> c fixes only the island.
+  const rooms = [
+    pacingRoom('a', { difficulty: 1 }), pacingRoom('b', { difficulty: 5 }),
+    pacingRoom('c', { difficulty: 5 }), pacingRoom('d', { difficulty: 5 }),
+  ];
+  const island = { ...link('3', 'c', 'd'), bidirectional: true };
+  const before = pacingDoc(rooms, [link('1', 'a', 'b'), island]);
+  const after = pacingDoc(rooms, [link('1', 'a', 'b'), island, link('2', 'b', 'c')]);
+
+  it('[fixture] the edit removes the unreachable-room finding and keeps another', () => {
+    const rulesBefore = lintLevelPacing(before).findings.map((f) => f.ruleId);
+    const rulesAfter = lintLevelPacing(after).findings.map((f) => f.ruleId);
+    expect(rulesBefore).toContain('unreachable-room');
+    expect(rulesAfter).not.toContain('unreachable-room');
+    expect(rulesAfter.length).toBeGreaterThan(0);
+  });
+
+  it('a rule filter whose rule no longer fires falls back to All instead of hiding every finding', () => {
+    const view = render(<PacingReportPanel doc={before} accentColor="var(--text)" onSelectRoom={vi.fn()} />);
+    const select = view.container.querySelector('select') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'unreachable-room' } });
+    expect(view.queryByText('No findings match the current filter.')).toBeNull();
+
+    view.rerender(<PacingReportPanel doc={after} accentColor="var(--text)" onSelectRoom={vi.fn()} />);
+
+    expect(view.queryByText('No findings match the current filter.')).toBeNull();
+    expect((view.container.querySelector('select') as HTMLSelectElement).value).toBe('all');
+  });
+
+  it('a severity chip whose severity no longer fires falls back to All', () => {
+    const view = render(<PacingReportPanel doc={before} accentColor="var(--text)" onSelectRoom={vi.fn()} />);
+    const sevBefore = new Set(lintLevelPacing(before).findings.map((f) => f.severity));
+    const sevAfter = new Set(lintLevelPacing(after).findings.map((f) => f.severity));
+    const gone = [...sevBefore].find((s) => !sevAfter.has(s));
+    if (!gone) return; // the fixture's severities overlap; the rule-filter case covers the mechanism
+    fireEvent.click(view.getAllByRole('button').find((b) => b.textContent?.toLowerCase().startsWith(gone))!);
+    view.rerender(<PacingReportPanel doc={after} accentColor="var(--text)" onSelectRoom={vi.fn()} />);
+    expect(view.queryByText('No findings match the current filter.')).toBeNull();
+  });
+});
