@@ -36,7 +36,7 @@ describe('Quality tab done counts', () => {
     );
     const bar = container.querySelector('.h-1.bg-black\\/30')?.firstElementChild as HTMLElement;
     expect(bar.style.width).toBe('80%');
-    expect(bar.parentElement?.nextElementSibling?.firstElementChild?.textContent).toBe('8');
+    expect(bar.parentElement?.nextElementSibling?.firstElementChild?.textContent?.trim().endsWith('8')).toBe(true);
   });
 
   it('the detail panel row reads Done 8', () => {

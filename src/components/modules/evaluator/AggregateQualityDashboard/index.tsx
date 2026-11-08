@@ -76,9 +76,11 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
     fetchHistory();
   }, [fetchHistory]);
 
+  const [verdictsKey, setVerdictsKey] = useState(0);
   const fetchData = useCallback(() => {
     refreshAggregates();
     fetchHistory();
+    setVerdictsKey((k) => k + 1);
   }, [refreshAggregates, fetchHistory]);
 
   // The review actions default to the shared batch route (the only mount passes no
@@ -273,7 +275,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
         testId="pof-aggregate-quality-scope"
       />
 
-      <QualityDiscrepancyBanner cells={cells} />
+      <QualityDiscrepancyBanner cells={cells} refreshKey={verdictsKey} />
 
       <SummaryPanels
         overallPct={overallPct}
