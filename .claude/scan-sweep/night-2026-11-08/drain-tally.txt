@@ -85,3 +85,7 @@ combat-simulator {"better":6}
 game-ui-hud {"better":4,"demoted":1}
 catalog-pipelines {"better":5}
 module-evaluator {"demoted":1,"better":4}
+catalog-seed-data {"better":3}
+visual-gen-core {"better":5,"demoted":1}
+lab-hooks {"better":3}
+module-system {"better":6}
