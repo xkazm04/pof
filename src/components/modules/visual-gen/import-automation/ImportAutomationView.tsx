@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { FileUp, Code, Copy, Check } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FileUp, Copy, Check } from 'lucide-react';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { StyledSlider } from '@/components/ui/StyledSlider';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
@@ -21,7 +23,12 @@ const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
 function ConfigTab() {
   const [config, setConfig] = useState<ImportConfig>({ ...DEFAULT_IMPORT_CONFIG });
   const [activeOutput, setActiveOutput] = useState<'import' | 'dataasset'>('import');
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+  }, []);
 
   const plan = useMemo(() => importPlanFor(config), [config]);
   const glb = config.format !== 'fbx';
@@ -32,10 +39,11 @@ function ConfigTab() {
       : generateDataAsset(config);
   }, [config, activeOutput]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(output);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const ok = await copyToClipboard(output);
+    setCopyState(ok ? 'copied' : 'failed');
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
   };
 
   const updateConfig = <K extends keyof ImportConfig>(key: K, value: ImportConfig[K]) => {
@@ -203,11 +211,13 @@ function ConfigTab() {
           </button>
           <div className="flex-1" />
           <button
-            onClick={handleCopy}
+            onClick={() => void handleCopy()}
             className="flex items-center gap-1 px-2 py-1 rounded text-xs text-text-muted hover:text-text transition-colors"
           >
-            {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-            {copied ? 'Copied!' : 'Copy'}
+            {copyState === 'copied' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+            <span aria-live="polite">
+              {copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
+            </span>
           </button>
         </div>
         <pre className="flex-1 overflow-auto rounded-lg bg-[var(--surface-deep)] border border-border p-4 text-xs font-mono text-text-muted whitespace-pre-wrap">
