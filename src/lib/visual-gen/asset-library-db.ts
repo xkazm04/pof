@@ -124,10 +124,15 @@ export function listLibraryAssets(db: Database.Database, filter: LibraryFilter =
     params.push(filter.collectionId);
   }
   if (filter.query?.trim()) {
-    // Match name or any tag (tags are stored as a JSON array string).
-    where.push('(LOWER(name) LIKE ? OR LOWER(tags) LIKE ?)');
-    const like = `%${filter.query.trim().toLowerCase()}%`;
-    params.push(like, like);
+    // The SAME haystack `library-filter.ts` searches in memory: `name` + the tags joined by
+    // spaces, as a literal substring. Matching the raw JSON tag string let `"` and `,` hit
+    // every tagged row, and an unescaped `_` / `%` was a LIKE wildcard ("rock_m" matched
+    // "rockymoss"), so the two lists the user sees for one query disagreed.
+    where.push(
+      "LOWER(name || ' ' || CASE WHEN json_valid(tags) THEN COALESCE((SELECT group_concat(value, ' ') FROM json_each(asset_library.tags)), '') ELSE '' END) LIKE ? ESCAPE '\\'",
+    );
+    const literal = filter.query.trim().toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
+    params.push(`%${literal}%`);
   }
 
   const sql = `SELECT * FROM asset_library${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY createdAt DESC, rowid DESC`;
