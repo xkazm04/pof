@@ -42,3 +42,16 @@ describe('TransitionLines', () => {
     expect(container.querySelector('line')!.getAttribute('stroke')).toBe(TRANSITION_STYLES[style].color);
   });
 });
+
+describe('TransitionLines condition badge', () => {
+  const CONDITION = 'Collect 3 Rune Fragments From The Deep';
+
+  it('a long condition is upper-cased like a short one, and the badge wraps the text it shows', () => {
+    const { container } = render(<svg><TransitionLines lines={[{ ...LINE, condition: CONDITION }]} deleteTransition={() => {}} /></svg>);
+    const text = container.querySelector('text')!.textContent!;
+    expect(text).toBe(text.toUpperCase());
+    expect(text.length).toBeLessThan(CONDITION.length);
+    const width = Number(container.querySelector('rect')!.getAttribute('width'));
+    expect(width).toBeLessThan(CONDITION.length * 6);
+  });
+});

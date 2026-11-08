@@ -13,6 +13,7 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
       {lines.map((ln) => {
         const styleColor = TRANSITION_STYLES[ln.style].color;
         const isDashed = ln.style === 'loading-screen' || ln.style === 'portal';
+        const conditionLabel = (ln.condition.length > 20 ? ln.condition.slice(0, 20) + '...' : ln.condition).toUpperCase();
         return (
           <g key={ln.id}>
             <line
@@ -39,9 +40,9 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
             {ln.condition && (
               <g transform={`translate(${(ln.x1 + ln.x2) / 2}, ${(ln.y1 + ln.y2) / 2 - 12})`}>
                 <rect
-                  x={-ln.condition.length * 3 - 6}
+                  x={-conditionLabel.length * 3 - 6}
                   y={-8}
-                  width={ln.condition.length * 6 + 12}
+                  width={conditionLabel.length * 6 + 12}
                   height={16}
                   rx={4}
                   fill="rgba(5,5,16,0.9)"
@@ -57,7 +58,7 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
                   fontFamily="monospace"
                   fontWeight="bold"
                 >
-                  {ln.condition.length > 20 ? ln.condition.slice(0, 20) + '...' : ln.condition.toUpperCase()}
+                  {conditionLabel}
                 </text>
               </g>
             )}
