@@ -83,3 +83,17 @@ describe('Inventory UI Integration binding states only what the artifact records
     expect(text).toContain('Weapon');
   });
 });
+
+describe('Inventory UI Integration copy describes the failure its checker reports', () => {
+  it('wired but no slot category: the banner names the missing slot, not "Wired"', () => {
+    const copy = ITEM_STEP_COPY['Inventory UI Integration']({ wired: true });
+    expect(copy.why).toContain('slot');
+    expect(copy.why).not.toBe('Wired to the inventory widget.');
+    expect(copy.suggestion.length).toBeGreaterThan(0);
+  });
+
+  it('a truthy non-boolean `wired` is not read as wired (the checker requires wired === true)', () => {
+    const copy = ITEM_STEP_COPY['Inventory UI Integration']({ wired: 'yes', slot: 'Weapon' });
+    expect(copy.why).toContain('not yet registered');
+  });
+});

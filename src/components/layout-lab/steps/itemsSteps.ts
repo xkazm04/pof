@@ -394,10 +394,17 @@ function sfxCopy(data: Record<string, unknown>): AcceptanceCopy {
 }
 
 function inventoryCopy(data: Record<string, unknown>): AcceptanceCopy {
-  return data.wired
-    ? { why: 'Wired to the inventory widget.', suggestion: '' }
-    : { why: 'The item is not yet registered with the inventory widget — it will not appear in the grid.',
-        suggestion: 'Run Produce to register slot rules and stack size.' };
+  // Mirrors itemsInventoryWired: `wired === true` AND a non-empty slot. A wired artifact with no
+  // slot used to read "Wired to the inventory widget." under a PENDING banner.
+  if (data.wired !== true) {
+    return { why: 'The item is not yet registered with the inventory widget — it will not appear in the grid.',
+      suggestion: 'Run Produce to register slot rules and stack size.' };
+  }
+  if (data.slot == null || String(data.slot).length === 0) {
+    return { why: 'The item is wired to the inventory widget but declares no slot category — the grid cannot place it.',
+      suggestion: 'Re-run Produce so the binding names its slot category (e.g. Weapon).' };
+  }
+  return { why: 'Wired to the inventory widget.', suggestion: '' };
 }
 
 function tooltipCopy(data: Record<string, unknown>): AcceptanceCopy {
