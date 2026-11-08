@@ -16,6 +16,16 @@ interface SpawnEntriesPanelProps {
   onFlush?: () => void;
 }
 
+/**
+ * Count and wave are positive whole numbers. Typing must not be fought, so the
+ * bound is applied when the field is left: an empty, zero, negative or
+ * fractional value is replaced by the nearest valid one and written at once;
+ * a valid value just flushes the buffered edit.
+ */
+export function boundedSpawnValue(value: number): number {
+  return Number.isFinite(value) ? Math.max(1, Math.round(value)) : 1;
+}
+
 export function SpawnEntriesPanel({
   spawnEntries,
   showSpawns,
@@ -25,6 +35,12 @@ export function SpawnEntriesPanel({
   removeSpawn,
   onFlush,
 }: SpawnEntriesPanelProps) {
+  const commitBounded = (entry: SpawnEntry, field: 'count' | 'wave') => {
+    const bounded = boundedSpawnValue(entry[field]);
+    if (bounded !== entry[field]) updateSpawn(entry.id, { [field]: bounded }, 'commit');
+    else onFlush?.();
+  };
+
   return (
     <div className="bg-black/40 border border-violet-900/30 rounded-xl overflow-hidden">
       <button
@@ -71,7 +87,7 @@ export function SpawnEntriesPanel({
                     value={entry.count}
                     aria-label={`Spawn ${i + 1} count`}
                     onChange={(e) => updateSpawn(entry.id, { count: Number(e.target.value) }, 'debounce')}
-                    onBlur={onFlush}
+                    onBlur={() => commitBounded(entry, 'count')}
                     className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
                     min={1}
                   />
@@ -83,7 +99,7 @@ export function SpawnEntriesPanel({
                     value={entry.wave}
                     aria-label={`Spawn ${i + 1} wave`}
                     onChange={(e) => updateSpawn(entry.id, { wave: Number(e.target.value) }, 'debounce')}
-                    onBlur={onFlush}
+                    onBlur={() => commitBounded(entry, 'wave')}
                     className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
                     min={1}
                   />
