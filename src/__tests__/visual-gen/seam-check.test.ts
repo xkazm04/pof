@@ -86,6 +86,13 @@ describe('detectSeamsSafe', () => {
 });
 
 describe('detectSeamsFromUrl', () => {
+  it('gives the download a deadline so a stalled host cannot hang the generate route', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    await detectSeamsFromUrl('https://cdn/slow.png');
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it('returns null when the fetch fails (never throws)', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 }) as unknown as typeof fetch;
     const r = await detectSeamsFromUrl('https://cdn/missing.png');

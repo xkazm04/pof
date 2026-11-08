@@ -52,6 +52,9 @@ export interface SeamCheckOptions {
 /** ~20/255 mean per-channel edge difference — a conservative "visible seam" cutoff. */
 export const DEFAULT_SEAM_THRESHOLD = 0.08;
 
+/** How long the albedo download may take. The seam check is optional and runs inside a generate request. */
+const SEAM_FETCH_TIMEOUT_MS = 30_000;
+
 /**
  * Run a wrap-around edge diff on an encoded image (PNG/JPG/WebP bytes).
  * Pure analysis — never mutates or re-uploads the image.
@@ -131,7 +134,7 @@ export async function detectSeamsFromUrl(
   opts: SeamCheckOptions = {},
 ): Promise<SeamCheckResult | null> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(SEAM_FETCH_TIMEOUT_MS) });
     if (!res.ok) return null;
     const bytes = new Uint8Array(await res.arrayBuffer());
     return await detectSeamsSafe(bytes, opts);
