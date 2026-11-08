@@ -127,6 +127,11 @@ export function generateUE5LootTableJson(entries: (LootEditorEntry & { source?: 
   return JSON.stringify({ Entries: ue5Entries, NothingWeight: nothingWeight }, null, 2);
 }
 
+/** Imported text going into a // comment: line breaks would end the comment and start live code. */
+const commentSafe = (text: string): string => text.replace(/[\r\n\u2028\u2029\u0085]+/g, ' ');
+/** Imported text going into a UE asset path: UE-legal charset only (letters, digits, _ and -). */
+const assetPathSafe = (text: string): string => text.replace(/[^A-Za-z0-9_-]/g, '_');
+
 export function generateUE5LootTableCpp(entries: LootEditorEntry[], nothingWeight: number): string {
   const lines = [
     '// --- Generated UARPGLootTable Configuration ---',
@@ -138,7 +143,7 @@ export function generateUE5LootTableCpp(entries: LootEditorEntry[], nothingWeigh
   ];
   for (const e of entries) {
     lines.push(`// {`);
-    lines.push(`//     Item = "${e.name}",`);
+    lines.push(`//     Item = "${commentSafe(e.name)}",`);
     lines.push(`//     DropWeight = ${e.weight.toFixed(1)}f,`);
     lines.push(`//     MinQuantity = ${e.minQuantity ?? 1},`);
     lines.push(`//     MaxQuantity = ${e.maxQuantity ?? 1},`);
@@ -155,7 +160,7 @@ export function generateUE5LootTableCpp(entries: LootEditorEntry[], nothingWeigh
     const e = entries[i];
     lines.push(`{`);
     lines.push(`\tFLootEntry& E = Entries.AddDefaulted_GetRef();`);
-    lines.push(`\t// E.Item = LoadObject<UARPGItemDefinition>(nullptr, TEXT("/Game/Items/${e.name.replace(/ /g, '_')}"));`);
+    lines.push(`\t// E.Item = LoadObject<UARPGItemDefinition>(nullptr, TEXT("/Game/Items/${assetPathSafe(e.name)}"));`);
     lines.push(`\tE.DropWeight = ${e.weight.toFixed(1)}f;`);
     lines.push(`\tE.MinQuantity = ${e.minQuantity ?? 1};`);
     lines.push(`\tE.MaxQuantity = ${e.maxQuantity ?? 1};`);
