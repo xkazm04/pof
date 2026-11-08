@@ -14,6 +14,7 @@ import { ReplacementCard } from '@/components/modules/evaluator/LocalizationPipe
 import { StringTableCard } from '@/components/modules/evaluator/LocalizationPipelineView/StringTableCard';
 import { TranslationCard } from '@/components/modules/evaluator/LocalizationPipelineView/TranslationCard';
 import { OverviewTab } from '@/components/modules/evaluator/LocalizationPipelineView/OverviewTab';
+import { QATab } from '@/components/modules/evaluator/LocalizationPipelineView/QATab';
 import { ExpansionFactorBars } from '@/components/modules/evaluator/LocalizationPipelineView/ExpansionFactorBars';
 import type {
   LocalizationHazard,
@@ -167,5 +168,21 @@ describe('Overview names every string that needs conversion', () => {
       />,
     );
     expect(document.body.textContent).toContain('3 FText::FromString need conversion');
+  });
+});
+
+describe('QA tab never claims every locale ships when one has no data', () => {
+  const ready = { locale: 'de', totalEntries: 2, findingCount: 0, criticalCount: 0, blockingCount: 0, readyToShip: true };
+
+  it('a target locale with no QA status is not counted as clear to ship', () => {
+    render(<QATab findings={[]} byLocale={{ de: ready }} targetLocales={['de', 'fr']} hasTranslations />);
+    expect(document.body.textContent).toContain('no data');
+    expect(document.body.textContent).not.toContain('Every locale is clear to ship');
+    expect(document.body.textContent).toContain('1 of 2 locales clear to ship');
+  });
+
+  it('says every locale is clear only when each target locale is ready', () => {
+    render(<QATab findings={[]} byLocale={{ de: ready, fr: { ...ready, locale: 'fr' } }} targetLocales={['de', 'fr']} hasTranslations />);
+    expect(document.body.textContent).toContain('Every locale is clear to ship');
   });
 });
