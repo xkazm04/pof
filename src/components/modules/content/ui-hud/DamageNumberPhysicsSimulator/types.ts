@@ -56,6 +56,9 @@ export interface DmgParticle {
   color: string;
   stackCount: number;  // for accumulate mode
   trail: { x: number; y: number; opacity: number }[];
+  /** Accumulated collision-avoidance displacement, added to the analytic path each frame. */
+  offX?: number;
+  offY?: number;
   mobIndex: number;     // which mob spawned this
 }
 

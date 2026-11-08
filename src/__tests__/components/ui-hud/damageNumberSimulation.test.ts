@@ -36,6 +36,21 @@ describe('DamageNumberPalette format strings', () => {
   });
 });
 
+describe('collision avoidance', () => {
+  it('two numbers spawned on one spot are pushed apart past the collision radius', () => {
+    const physics = { ...DEFAULT_PHYSICS, collisionAvoidance: true, collisionRadius: 20, lifetime: 3 };
+    const combat = { ...DEFAULT_COMBAT, critRate: 0, healPercent: 0 };
+    const a0 = spawnParticle(physics, combat, 520, 300, 0);
+    let a = { ...a0, x: 100, startX: 100, y: 200, startY: 200 };
+    let b = { ...spawnParticle(physics, combat, 520, 300, 0), x: 101, startX: 101, y: 200, startY: 200 };
+    for (let i = 0; i < 60; i++) {
+      const all = [a, b];
+      [a, b] = [updateParticle(a, 1 / 60, physics, all), updateParticle(b, 1 / 60, physics, all)];
+    }
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(physics.collisionRadius * 0.9);
+  });
+});
+
 describe('merge-mode stack growth', () => {
   it('a merged number keeps its stack scale through the next frame', () => {
     const physics = { ...DEFAULT_PHYSICS, stackMode: 'merge' as const };

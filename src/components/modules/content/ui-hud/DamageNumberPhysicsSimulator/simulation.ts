@@ -120,20 +120,26 @@ export function updateParticle(p: DmgParticle, dt: number, physics: PhysicsConfi
       break;
   }
 
-  // Collision avoidance
+  // Collision avoidance. The path above is recomputed from the spawn point every
+  // frame, so the push must accumulate in offX/offY - applied once, it was undone
+  // on the next frame and two numbers never separated beyond ~2px per neighbour.
+  let offX = p.offX ?? 0;
+  let offY = p.offY ?? 0;
   if (physics.collisionAvoidance) {
     for (const other of allParticles) {
       if (other.id === p.id || other.opacity <= 0) continue;
-      const dx = x - other.x;
-      const dy = y - other.y;
+      const dx = x + offX - other.x;
+      const dy = y + offY - other.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < physics.collisionRadius && dist > 0) {
         const pushStrength = (physics.collisionRadius - dist) / physics.collisionRadius * 2;
-        x += (dx / dist) * pushStrength;
-        y += (dy / dist) * pushStrength;
+        offX += (dx / dist) * pushStrength;
+        offY += (dy / dist) * pushStrength;
       }
     }
   }
+  x += offX;
+  y += offY;
 
   // Fade: full opacity for fadeStart%, then linear fade
   let opacity: number;
@@ -158,7 +164,7 @@ export function updateParticle(p: DmgParticle, dt: number, physics: PhysicsConfi
     ? [{ x: p.x, y: p.y, opacity: p.opacity * 0.5 }, ...p.trail.slice(0, physics.trailLength - 1).map(t => ({ ...t, opacity: t.opacity * 0.7 }))]
     : [];
 
-  return { ...p, x, y, vx, vy, elapsed, opacity: Math.max(0, opacity), scale, trail };
+  return { ...p, x, y, vx, vy, elapsed, opacity: Math.max(0, opacity), scale, trail, offX, offY };
 }
 
 export function computeReadability(particles: DmgParticle[], physics: PhysicsConfig): ReadabilityMetrics {
