@@ -55,6 +55,8 @@ function ParamControl({ p, theme, setParam }: {
   }
   const scale = p.displayScale;
   const toDisplay = (v: number) => (scale === 1 ? v : Math.round(v * scale));
+  // The readout prints the export's precision, shifted by the display scale (0.25 at 2 dp, x100 -> "25").
+  const decimals = Math.max(0, p.precision - Math.round(Math.log10(scale)));
   return (
     <SliderField
       label={p.label}
@@ -62,6 +64,7 @@ function ParamControl({ p, theme, setParam }: {
       min={toDisplay(p.min)} max={toDisplay(p.max)} step={toDisplay(p.step)} unit={p.unit}
       onChange={(v) => setParam(p, v / scale)}
       color={p.accent}
+      decimals={decimals}
     />
   );
 }

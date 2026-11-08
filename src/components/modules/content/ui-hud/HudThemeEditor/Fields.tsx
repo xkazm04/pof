@@ -26,7 +26,7 @@ export function ColorPickerField({ label, value, onChange }: {
   );
 }
 
-export function SliderField({ label, value, min, max, step, unit, onChange, color }: {
+export function SliderField({ label, value, min, max, step, unit, onChange, color, decimals }: {
   label: string;
   value: number;
   min: number;
@@ -35,8 +35,13 @@ export function SliderField({ label, value, min, max, step, unit, onChange, colo
   unit: string;
   onChange: (v: number) => void;
   color?: string;
+  /** Decimal places of the readout; set it to the row's export precision so the label and the .h agree. */
+  decimals?: number;
 }) {
-  const displayValue = `${Number.isInteger(step) || step >= 1 ? value : value.toFixed(1)}${unit}`;
+  const shown = decimals !== undefined
+    ? value.toFixed(decimals)
+    : Number.isInteger(step) || step >= 1 ? value : value.toFixed(1);
+  const displayValue = `${shown}${unit}`;
   return (
     <StyledSlider
       min={min}

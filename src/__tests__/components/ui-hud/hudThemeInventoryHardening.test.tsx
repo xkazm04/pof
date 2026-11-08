@@ -73,3 +73,26 @@ describe('HUD theme .h download goes through the shared downloadBlob', () => {
     }
   });
 });
+
+describe('HUD theme slider readouts print the precision the .h export writes', () => {
+  function readout(section: string, label: string) {
+    fireEvent.click(screen.getByRole('tab', { name: section }));
+    const el = screen.getByText(label);
+    const row = el.parentElement!.parentElement!;
+    return { input: row.querySelector('input[type="range"]') as HTMLInputElement, shown: () => el.nextElementSibling!.textContent };
+  }
+
+  it('FadeInDuration 0.25 reads 0.25s, matching "FadeInDuration = 0.25f"', () => {
+    render(<HudThemeEditor />);
+    const r = readout('Enemy HP Bar', 'FadeInDuration');
+    fireEvent.change(r.input, { target: { value: '0.25' } });
+    expect(screen.getByText(/float FadeInDuration = 0\.25f;/)).toBeTruthy();
+    expect(r.shown()).toBe('0.25s');
+  });
+
+  it('a percent-scaled row and a 1-decimal row keep their readouts', () => {
+    render(<HudThemeEditor />);
+    expect(readout('Health & Mana', 'LowHealthThreshold').shown()).toBe('25%');
+    expect(readout('Enemy HP Bar', 'FadeOutDelay').shown()).toBe('3.0s');
+  });
+});
