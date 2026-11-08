@@ -82,6 +82,9 @@ export async function POST(request: Request) {
     if (mode === 'unzoom') {
       const imageId = body?.imageId;
       if (!imageId || typeof imageId !== 'string') return apiError('Missing "imageId" for unzoom', 400);
+      if (typeof body?.prompt === 'string' && body.prompt.length > MAX_PROMPT_LENGTH) {
+        return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
+      }
       const result = await unzoomImage(imageId, typeof body?.prompt === 'string' ? { prompt: body.prompt } : {});
       return apiSuccess(result);
     }
@@ -89,6 +92,7 @@ export async function POST(request: Request) {
     const { objBase64, prompt, preview } = body;
     if (!objBase64 || typeof objBase64 !== 'string') return apiError('Missing "objBase64" for texture3d', 400);
     if (!prompt || typeof prompt !== 'string') return apiError('Missing "prompt" for texture3d', 400);
+    if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
     const objBytes = new Uint8Array(Buffer.from(objBase64, 'base64'));
     const result = await generateTextureOn3DModel({ objBytes, prompt, preview: Boolean(preview) });
     return apiSuccess(result);
