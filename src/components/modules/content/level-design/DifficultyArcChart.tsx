@@ -1,18 +1,8 @@
 'use client';
 
 import type { RoomNode } from '@/types/level-design';
-import {
-  STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_ERROR,
-} from '@/lib/chart-colors';
 import { HorizontalGridLines } from '@/components/ui/svg/ChartAxes';
-
-const DIFFICULTY_COLORS: Record<number, string> = {
-  1: STATUS_SUCCESS,
-  2: STATUS_LIME,
-  3: STATUS_WARNING,
-  4: STATUS_BLOCKER,
-  5: STATUS_ERROR,
-};
+import { DIFFICULTY_COLORS } from './RoomDetailPanel/constants';
 
 const PACING_ICONS: Record<string, string> = {
   rest: '\u25CB',      // ○
