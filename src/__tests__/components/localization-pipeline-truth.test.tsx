@@ -141,18 +141,36 @@ describe('expansion bars share one scale', () => {
     return { label, pct };
   };
 
-  it('a German TranslationCard bar matches the Overview ExpansionFactorBars width', () => {
+  it('a German TranslationCard locale marker matches the Overview ExpansionFactorBars width', () => {
     const entry: TranslationEntry = {
       stringId: 'str-1', locale: 'de', translatedText: 'Inventar', status: 'translated',
       translatorNotes: '', backTranslation: '', confidence: 0.9, expansionWarning: false, charDelta: 0,
     };
     const card = render(<TranslationCard entry={entry} sourceText="Inventory" />);
-    const cardWidth = widthFor(card.container, 'card').pct[0];
+    const marker = card.container.querySelector<HTMLElement>('[data-testid="expansion-locale-marker"]');
+    const markerPos = marker?.style.left;
     cleanup();
     const bars = render(<ExpansionFactorBars />);
     // German (x1.35) is the widest locale, so it is the first sorted bar.
     const overviewWidth = widthFor(bars.container, 'overview').pct[0];
-    expect(cardWidth).toBe(overviewWidth);
+    expect(markerPos).toBe(overviewWidth);
+  });
+
+  it('TranslationCard fill reflects the entry, not the locale constant', () => {
+    const base: TranslationEntry = {
+      stringId: 'str-1', locale: 'de', translatedText: '', status: 'translated',
+      translatorNotes: '', backTranslation: '', confidence: 0.9, expansionWarning: false, charDelta: 0,
+    };
+    const fillOf = (translatedText: string) => {
+      const r = render(<TranslationCard entry={{ ...base, translatedText }} sourceText="Inventory" />);
+      const w = r.container.querySelector<HTMLElement>('[data-testid="expansion-entry-fill"]')?.style.width;
+      cleanup();
+      return w;
+    };
+    const shorter = fillOf('Inventar');
+    const longer = fillOf('Inventarverwaltung');
+    expect(shorter).toBeTruthy();
+    expect(shorter).not.toBe(longer);
   });
 });
 

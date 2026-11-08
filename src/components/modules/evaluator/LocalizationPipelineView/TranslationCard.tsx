@@ -14,6 +14,7 @@ export function TranslationCard({ entry, sourceText }: { entry: TranslationEntry
   const targetDir = locInfo?.direction ?? 'ltr';
   const isRtl = targetDir === 'rtl';
   const DirectionArrow = isRtl ? ArrowLeft : ArrowRight;
+  const ratio = sourceText.length > 0 ? entry.translatedText.length / sourceText.length : 1;
 
   return (
     <SurfaceCard level={2}>
@@ -37,17 +38,27 @@ export function TranslationCard({ entry, sourceText }: { entry: TranslationEntry
           </p>
           {locInfo && locInfo.expansionFactor !== 1.0 && (
             <div className="flex items-center gap-2 mt-1.5">
-              <div className="flex-1 h-1.5 bg-surface-2 rounded-full overflow-hidden max-w-[120px]">
+              {/* Fill = THIS entry's measured length ratio; the tick marks the locale's typical
+                  factor. Both sit on the Overview ExpansionFactorBars scale (MAX_EXPANSION). */}
+              <div
+                className="relative flex-1 h-1.5 bg-surface-2 rounded-full overflow-hidden max-w-[120px]"
+                title={`This entry ${formatExpansion(ratio)} vs source; ${locInfo.nativeName} typically ${formatExpansion(locInfo.expansionFactor)}`}
+              >
                 <div
+                  data-testid="expansion-entry-fill"
                   className="h-full rounded-full transition-[width] duration-300"
                   style={{
-                    // Same scale as the Overview ExpansionFactorBars, so one locale reads one width.
-                    width: `${Math.min((locInfo.expansionFactor / MAX_EXPANSION) * 100, 100)}%`,
-                    backgroundColor: expansionColor(locInfo.expansionFactor),
+                    width: `${Math.min((ratio / MAX_EXPANSION) * 100, 100)}%`,
+                    backgroundColor: expansionColor(ratio),
                   }}
                 />
+                <div
+                  data-testid="expansion-locale-marker"
+                  className="absolute top-0 h-full w-px bg-text-muted"
+                  style={{ left: `${Math.min((locInfo.expansionFactor / MAX_EXPANSION) * 100, 100)}%` }}
+                />
               </div>
-              <span className="text-2xs text-text-muted">{formatExpansion(locInfo.expansionFactor)}</span>
+              <span className="text-2xs text-text-muted">{formatExpansion(ratio)}</span>
             </div>
           )}
           {entry.translatorNotes && (
