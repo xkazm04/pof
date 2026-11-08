@@ -107,7 +107,13 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
           </>
         )}
       </div>
-      <svg width={svgW} height={svgH} className="block">
+      <svg
+        width={svgW}
+        height={svgH}
+        className="block"
+        role="img"
+        aria-label={`Dependency graph for ${asset.name}: ${sources.length} used by, ${targets.length} uses. Edges are listed as text below.`}
+      >
         <defs>
           <marker id={markerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)" />
@@ -167,8 +173,17 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
         {moreSources > 0 && <MoreNode x={10} y={nodeY(shownSources.length, leftRows)} count={moreSources} />}
         {moreTargets > 0 && <MoreNode x={svgW - 160} y={nodeY(shownTargets.length, rightRows)} count={moreTargets} />}
       </svg>
+      {/* The graph is one image to a screen reader; every edge is also exposed as text with its relation and provenance. */}
+      <ul className="sr-only" aria-label={`Dependencies of ${asset.name}`}>
+        {own.map((e, i) => (
+          <li key={`${i}-${e.from}-${e.to}-${e.relation}`}>
+            {`${assetMap[e.from]?.name ?? e.from} ${e.relation} ${assetMap[e.to]?.name ?? e.to} (${EDGE_STYLE[e.provenance].label})`}
+          </li>
+        ))}
+      </ul>
       {overflow.length > 0 && (
         <ul
+          aria-hidden="true"
           data-testid="dependency-overflow"
           className="w-full max-w-[520px] max-h-40 overflow-y-auto text-2xs text-text-muted font-mono space-y-0.5 border border-border rounded-md p-2"
         >
