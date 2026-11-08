@@ -71,7 +71,10 @@ export const POST = withRoute(async (request: NextRequest) => {
       typeof f?.featureName !== 'string' || !f.featureName ||
       typeof f.category !== 'string' ||
       typeof f.description !== 'string' ||
+      // Elements too, matching the import route's z.array(z.string()): a non-string
+      // element used to be stored and then silently dropped on read.
       !Array.isArray(f.filePaths) ||
+      !f.filePaths.every((p: unknown) => typeof p === 'string') ||
       typeof f.reviewNotes !== 'string'
     ) {
       return apiError(
