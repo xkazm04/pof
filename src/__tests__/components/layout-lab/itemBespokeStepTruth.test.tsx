@@ -71,3 +71,15 @@ describe('Material / Texture missing-map copy', () => {
     expect(ITEM_STEP_COPY['Material / Texture']({ maps: ['Albedo', 'Normal'] }).why).toBe('The ORM map is missing.');
   });
 });
+
+describe('Inventory UI Integration binding states only what the artifact records', () => {
+  it('a wired artifact {slot, wired} does not claim a stack size or a cell footprint it never wrote', () => {
+    seed('Inventory UI Integration', { slot: 'Weapon', wired: true });
+    const Step = getStepComponent('items', 'Inventory UI Integration')!;
+    const { container } = render(<Step t={t} entity={entity} step="Inventory UI Integration" />);
+    const text = container.textContent ?? '';
+    expect(text).not.toContain('stack size 1');
+    expect(text).not.toContain('occupies one grid cell');
+    expect(text).toContain('Weapon');
+  });
+});

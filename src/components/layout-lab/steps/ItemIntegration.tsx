@@ -33,7 +33,7 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
         { label: 'Binding', node: (
           <div style={{ display: 'grid', gap: 10 }}>
             <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>slot category: <span style={{ color: t.text }}>{slot}</span></span>
-            <span style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>{wired ? `${entity.name} occupies one grid cell; stack size 1; equippable to the ${slot} slot.` : 'Not yet bound to the inventory widget.'}</span>
+            <span style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>{wired ? `${entity.name} is declared wired to the inventory widget for the ${slot} slot. Grid footprint and stack size are not recorded on this artifact.` : 'Not yet bound to the inventory widget.'}</span>
           </div>
         ) },
         { label: 'Produce', node: (
