@@ -150,10 +150,8 @@ function accessibleName(el: HTMLElement): string {
   if (wrap?.textContent?.trim()) return wrap.textContent.trim();
   return el.tagName === 'BUTTON' ? (el.textContent ?? '').trim() : '';
 }
-// Range inputs come from the shared ui/StyledSlider, whose visible label is not wired to
-// the input — a primitive outside this context, carded rather than patched per consumer.
 const unnamed = (root: HTMLElement) =>
-  Array.from(root.querySelectorAll<HTMLElement>('button, input:not([type="range"]), textarea, select'))
+  Array.from(root.querySelectorAll<HTMLElement>('button, input, textarea, select'))
     .filter((el) => !accessibleName(el));
 
 describe('every HUD designer control has an accessible name', () => {

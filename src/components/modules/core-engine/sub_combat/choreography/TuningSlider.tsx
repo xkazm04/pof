@@ -29,6 +29,7 @@ export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color
           value={value}
           onChange={onChange}
           accentColor={c}
+          ariaLabel={label}
         />
         <div
           className="absolute top-1/2 -translate-y-1/2 w-[2px] h-2.5 rounded-full pointer-events-none z-0"
