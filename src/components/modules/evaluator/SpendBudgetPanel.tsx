@@ -18,6 +18,13 @@ function budgetColor(pct: number): string {
   return STATUS_SUCCESS;
 }
 
+/** '' clears a limit; anything else must be positive (the API would store it as "no limit"). */
+function parseLimit(raw: string): number | null | 'invalid' {
+  if (raw.trim() === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 'invalid';
+}
+
 interface SpendBudgetPanelProps {
   status: BudgetStatus;
   /** Recorded daily spend (the dashboard's rollup) — replayed to preview a typed daily limit. */
@@ -46,12 +53,15 @@ export function SpendBudgetPanel({ status, daily: history = NO_HISTORY, isSaving
   };
 
   const save = async () => {
+    const dailyLimitUsd = parseLimit(daily);
+    const monthlyLimitUsd = parseLimit(monthly);
+    if (dailyLimitUsd === 'invalid' || monthlyLimitUsd === 'invalid') {
+      setSaveError('Limits must be greater than 0, or blank for no limit.');
+      return;
+    }
     setSaveError(null);
     try {
-      await onSave({
-        dailyLimitUsd: daily.trim() === '' ? null : Number(daily),
-        monthlyLimitUsd: monthly.trim() === '' ? null : Number(monthly),
-      });
+      await onSave({ dailyLimitUsd, monthlyLimitUsd });
       setEditing(false);
     } catch (err) {
       setSaveError(`Could not save limits: ${err instanceof Error ? err.message : 'unknown error'}`);
