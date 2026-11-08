@@ -49,10 +49,15 @@ export function SensitivityChart({ curve, width, height, color }: {
   };
 
   const hp = hoveredIdx !== null ? pts[hoveredIdx] : null;
+  const pctOf = (r: number) => `${(r * 100).toFixed(0)}%`;
+  const ariaLabel = `${curve.attribute} sensitivity: survival ${pctOf(pts[0].survivalRate)} at ` +
+    `${formatSensValue(curve.attribute, xMin)} to ${pctOf(pts[pts.length - 1].survivalRate)} at ` +
+    `${formatSensValue(curve.attribute, xMax)}`;
 
   return (
     <svg
       ref={svgRef} width={width} height={height}
+      role="img" aria-label={ariaLabel}
       className="overflow-visible"
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setHoveredIdx(null)}
