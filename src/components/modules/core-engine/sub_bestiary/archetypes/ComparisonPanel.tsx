@@ -7,16 +7,11 @@ import { RadarChart } from '../../unique-tabs/_shared';
 import type { ArchetypeConfig } from '../_shared/data';
 import { RADAR_DATA } from '../_shared/data';
 import { ArchetypeIconGlyph } from './ArchetypeIconGlyph';
+import { sameStatScale } from '@/lib/bestiary/stat-vocabulary';
 
 import { ACCENT_EMERALD, ACCENT_RED, withOpacity, OPACITY_12, OPACITY_25 } from '@/lib/chart-colors';
 
-/**
- * An archetype's stat scale, named by its stat vocabulary. Combat-derived enemies carry
- * HP/Damage/Speed/Range as % of the roster max, hand-authored ones raw HP/ATK/DEF/SPD/INT,
- * so a label shared by both (HP) is not comparable across them — the same reason
- * ArchetypeCard suppresses its pooled average tick for mixed-scale labels.
- */
-const statScale = (a: ArchetypeConfig) => a.stats.map(s => s.label).sort().join('|');
+/* Stat comparability (vocabulary / scale) lives in @/lib/bestiary/stat-vocabulary. */
 
 interface ComparisonPanelProps {
   enemies: ArchetypeConfig[];
@@ -79,7 +74,7 @@ export function ComparisonPanel({ enemies, accent }: ComparisonPanelProps) {
                 const value = stat.value;
                 /* Average only over the enemies that carry this stat on the same scale. */
                 const peerValues = enemies
-                  .filter(e => e.id !== arch.id && statScale(e) === statScale(arch))
+                  .filter(e => e.id !== arch.id && sameStatScale(e, arch))
                   .map(e => e.stats.find(s => s.label === label)?.value)
                   .filter((v): v is number => v !== undefined);
                 const avgOther = peerValues.length > 0
