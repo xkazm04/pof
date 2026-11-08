@@ -112,7 +112,7 @@ export function ZoneEditor({
         <input
           type="checkbox"
           checked={zone.alwaysLoaded}
-          onChange={(e) => onUpdate({ alwaysLoaded: e.target.checked, loadPriority: e.target.checked ? 'always' : zone.loadPriority })}
+          onChange={(e) => onUpdate({ alwaysLoaded: e.target.checked, loadPriority: e.target.checked ? 'always' : zone.loadPriority === 'always' ? 'normal' : zone.loadPriority })}
           className="accent-[#f59e0b] w-3 h-3"
         />
         <span className="text-xs text-[#d0d4e8]">Always loaded (persistent zone)</span>
