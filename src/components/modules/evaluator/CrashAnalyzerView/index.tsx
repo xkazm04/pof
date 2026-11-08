@@ -229,6 +229,7 @@ export function CrashAnalyzerView() {
                 <input
                   type="text"
                   placeholder="Search crashes..."
+                  aria-label="Search crashes by message, function or module"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-status-red-strong"

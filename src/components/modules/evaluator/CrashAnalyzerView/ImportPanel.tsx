@@ -100,6 +100,7 @@ export function ImportPanel() {
         <textarea
           value={rawLog}
           onChange={(e) => setRawLog(e.target.value)}
+          aria-label="UE5 crash log to import"
           placeholder={`Paste crash log here...\n\nExample:\n[2026.02.14-22.15.33:456][  0]LogWindows: Error: Unhandled Exception: EXCEPTION_ACCESS_VIOLATION\n[2026.02.14-22.15.33:456][  0]LogWindows: Error: [Callstack]\n[2026.02.14-22.15.33:456][  0]LogWindows: Error: UnrealEditor-MyGame!MyFunction() [MyFile.cpp:123]`}
           className="w-full h-40 p-3 rounded-md border border-border bg-surface text-xs text-text font-mono placeholder:text-text-subtle focus:outline-none focus:ring-1 focus:ring-status-red-strong resize-none"
         />
