@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
+import type { KeyboardEvent } from 'react';
 import { isFeatureDone } from '@/lib/constellation/layout';
 import type { ConstellationNode } from '@/lib/constellation/layout';
 import { PLAN_STATUS_COLORS, STATUS_BLOCKER, STATUS_INFO } from '@/lib/chart-colors';
@@ -12,6 +13,7 @@ import { truncate } from './helpers';
 
 export function ConstellationNodeG({
   node, index, isNext, glowId, dimmed, onHoverStart, onHoverEnd,
+  tabStop = false, onFocusNode, onBlurNode, onKeyDown,
 }: {
   node: ConstellationNode;
   index: number;
@@ -21,6 +23,11 @@ export function ConstellationNodeG({
   dimmed: boolean;
   onHoverStart: () => void;
   onHoverEnd: () => void;
+  /** Roving tabindex: exactly one node is the map's tab stop. */
+  tabStop?: boolean;
+  onFocusNode?: () => void;
+  onBlurNode?: () => void;
+  onKeyDown?: (e: KeyboardEvent<SVGGElement>) => void;
 }) {
   // SMIL <animate> sits outside framer's reducedMotion policy and the CSS reset.
   const reduceMotion = useReducedMotion() ?? false;
@@ -31,6 +38,7 @@ export function ConstellationNodeG({
   const blockerLabel = node.blockers.length > 0
     ? `Blocked by ${node.blockers[0].featureName}${node.blockers.length > 1 ? ` +${node.blockers.length - 1}` : ''}`
     : null;
+  const label = `${node.featureName} — ${STATUS_LABEL[node.status]}${blockerLabel ? ` · ${blockerLabel}` : ''}`;
 
   return (
     <motion.g
@@ -39,9 +47,17 @@ export function ConstellationNodeG({
       transition={{ duration: MOTION.base, delay: Math.min(index * 0.02, 0.4) }}
       onHoverStart={onHoverStart}
       onHoverEnd={onHoverEnd}
+      role="group"
+      data-constellation-node=""
+      tabIndex={tabStop ? 0 : -1}
+      aria-label={label}
+      onFocus={onFocusNode}
+      onBlur={onBlurNode}
+      onKeyDown={onKeyDown}
+      className="focus-ring"
       style={{ cursor: 'default' }}
     >
-      <title>{`${node.featureName} — ${STATUS_LABEL[node.status]}${blockerLabel ? ` · ${blockerLabel}` : ''}`}</title>
+      <title>{label}</title>
 
       {/* "Do this next" pulsing ring */}
       {isNext && (

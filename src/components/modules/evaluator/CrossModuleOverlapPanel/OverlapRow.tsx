@@ -11,7 +11,7 @@ import {
 import type { OverlapPair } from '@/lib/overlap-detection';
 import { splitTwinKey, type TwinStatus } from '@/lib/evaluator/overlap-twins';
 import { MOTION } from '@/lib/constants';
-import { STATUS_SUCCESS, OPACITY_30, FEATURE_STATUS_COLORS } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, OPACITY_30, FEATURE_STATUS_COLORS, statusBg } from '@/lib/chart-colors';
 import { REASON_CONFIG, TWIN_KIND_CONFIG } from './constants';
 import { moduleLabel, similarityColor } from './helpers';
 
@@ -90,7 +90,7 @@ export function OverlapRow({ overlap, twin, reviewKeys, reviewBusy, onReview, is
           {kind && (
             <span
               className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-              style={{ backgroundColor: `${kind.color}18`, color: kind.color }}
+              style={{ backgroundColor: statusBg(kind.color, 0.08), color: kind.color }}
             >
               {kind.label}
             </span>
@@ -99,7 +99,7 @@ export function OverlapRow({ overlap, twin, reviewKeys, reviewBusy, onReview, is
           {/* Similarity badge */}
           <span
             className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-            style={{ backgroundColor: `${simColor}18`, color: simColor }}
+            style={{ backgroundColor: statusBg(simColor, 0.08), color: simColor }}
           >
             {simPct}%
           </span>
@@ -107,7 +107,7 @@ export function OverlapRow({ overlap, twin, reviewKeys, reviewBusy, onReview, is
           {/* Reason badge */}
           <span
             className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-            style={{ backgroundColor: `${cfg.color}18`, color: cfg.color }}
+            style={{ backgroundColor: statusBg(cfg.color, 0.08), color: cfg.color }}
           >
             {cfg.label}
           </span>

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useMemo, useId } from 'react';
-import { Sparkles, Loader2, RefreshCw, Stars } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
+import { Sparkles, RefreshCw, Stars } from 'lucide-react';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { layoutModuleConstellation } from '@/lib/constellation/layout';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
@@ -66,12 +68,26 @@ export function FeatureConstellation() {
     return { counts, done, total: layout.nodes.length, blocked };
   }, [layout]);
 
+  // canvas-accessibility: the map is ONE tab stop with a roving cursor; focus drives
+  // the same lit prerequisite chain as hover. Arrows / Home / End move the cursor.
+  const [cursor, setCursor] = useState(0);
+  const active = Math.min(cursor, Math.max(0, layout.nodes.length - 1));
+  const onNodeKey = (e: KeyboardEvent<SVGGElement>, i: number) => {
+    const step: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    const n = layout.nodes.length;
+    let target: number | null = null;
+    if (e.key in step) target = (i + step[e.key] + n) % n;
+    else if (e.key === 'Home') target = 0;
+    else if (e.key === 'End') target = n - 1;
+    if (target === null) return;
+    e.preventDefault();
+    setCursor(target);
+    const siblings = e.currentTarget.parentElement?.querySelectorAll<SVGGElement>(':scope > g[data-constellation-node]');
+    siblings?.[target]?.focus();
+  };
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
-      </div>
-    );
+    return <LoadingRow label="Loading feature statuses…" />;
   }
 
   // A failed status load must NOT fall through to the constellation: every node
@@ -129,7 +145,7 @@ export function FeatureConstellation() {
           </select>
           <button
             onClick={refresh}
-            className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
+            className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
             aria-label="Refresh statuses"
             title="Refresh statuses"
           >
@@ -150,8 +166,8 @@ export function FeatureConstellation() {
           {/* Constellation canvas */}
           <div className="rounded-lg overflow-x-auto border border-border" style={{ background: 'var(--background)' }}>
             <svg
-              role="img"
-              aria-label={`Feature constellation for ${MODULE_LABELS[moduleId] ?? moduleId}`}
+              role="group"
+              aria-label={`Feature constellation for ${MODULE_LABELS[moduleId] ?? moduleId}: ${summary.total} features, ${summary.blocked} blocked. Arrow keys move between features and light their prerequisite chain.`}
               width={layout.width}
               height={layout.height}
               viewBox={`0 0 ${layout.width} ${layout.height}`}
@@ -215,6 +231,10 @@ export function FeatureConstellation() {
                   dimmed={litKeys ? !litKeys.has(node.key) : false}
                   onHoverStart={() => setHoveredKey(node.key)}
                   onHoverEnd={() => setHoveredKey(null)}
+                  tabStop={i === active}
+                  onFocusNode={() => { setCursor(i); setHoveredKey(node.key); }}
+                  onBlurNode={() => setHoveredKey(null)}
+                  onKeyDown={(e) => onNodeKey(e, i)}
                 />
               ))}
             </svg>

@@ -5,13 +5,13 @@ import {
   Loader2, ZoomIn, ZoomOut, Maximize2,
   Network, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
-import { STATUS_BLOCKER, STATUS_SUCCESS, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { STATUS_BLOCKER, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
 import type { SourceStatus } from '@/lib/evaluator/nexus-signals';
 import { LAYERS } from './constants';
 import type { LayerConfig } from './constants';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useNexusView } from './useNexusView';
-import { NexusGraph } from './NexusGraph';
+import { NexusGraph, PATTERN_HEAT_BANDS } from './NexusGraph';
 import { NodeDeepDivePanel } from './NodeDeepDivePanel';
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -148,8 +148,12 @@ export function NexusView() {
           <span className="w-5 border-t border-dashed" style={{ borderColor: STATUS_BLOCKER }} /> Blocker
         </span>
         {activeLayers.has('patterns') && (
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: STATUS_SUCCESS }} /> Pattern success
+          <span className="flex items-center gap-3">
+            {PATTERN_HEAT_BANDS.map((b) => (
+              <span key={b.min} className="flex items-center gap-1.5">
+                <span data-pattern-legend-swatch="" className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: b.color }} /> Pattern success {b.label}
+              </span>
+            ))}
           </span>
         )}
         {activeLayers.has('builds') && (
@@ -204,7 +208,7 @@ function LayerToggle({
           {layer.label}
           <span style={{ color: STATUS_BLOCKER }}>unavailable</span>
         </button>
-        <button onClick={onRetry} aria-label={`Retry ${layer.label}`} className="flex items-center gap-0.5 hover:text-text transition-colors">
+        <button onClick={onRetry} aria-label={`Retry ${layer.label}`} className="focus-ring flex items-center gap-0.5 hover:text-text transition-colors">
           <RefreshCw className="w-2.5 h-2.5" /> Retry
         </button>
       </span>
@@ -215,7 +219,7 @@ function LayerToggle({
       onClick={onToggle}
       aria-pressed={active}
       aria-busy={state === 'loading'}
-      className={`flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
+      className={`focus-ring flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
         active
           ? 'border-border-bright bg-surface text-text'
           : 'border-border bg-surface-deep text-text-muted hover:text-text'

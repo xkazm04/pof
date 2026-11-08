@@ -31,8 +31,9 @@ describe('NodeDeepDivePanel a11y', () => {
 
   it('collapsible sections report aria-expanded and flip it on toggle', () => {
     render(
-      <NodeDeepDivePanel node={NODE} patterns={[]} recommendations={[REC]} sessions={{ state: 'loading', retry: () => {} }} onClose={() => {}} />,
+      <NodeDeepDivePanel node={NODE} patterns={[{ id: 'p1', title: 'P', successRate: 0.9, sessionCount: 1 } as never]} recommendations={[REC]} sessions={{ state: 'loading', retry: () => {} }} onClose={() => {}} />,
     );
+    // The first present section (patterns) opens on arrival; Recommendations starts collapsed.
     const toggle = screen.getByRole('button', { name: /Recommendations/ });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(toggle);

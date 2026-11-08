@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 import { KPICard } from '@/components/ui/KPICard';
 import type { ModuleOverlapSummary } from '@/lib/overlap-detection';
-import { STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_ERROR, statusBg, statusBorder } from '@/lib/chart-colors';
 import { moduleLabel } from './helpers';
 
 /** STATUS_ERROR at a continuous alpha (0..1) — the bubble scales with overlap count. */
@@ -58,9 +58,9 @@ export function FilterChip({ label, active, onClick, color, count }: {
       aria-pressed={active}
       className="focus-ring flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium transition-all"
       style={{
-        backgroundColor: active ? `${color}18` : 'transparent',
+        backgroundColor: active ? statusBg(color, 0.08) : 'transparent',
         color: active ? color : 'var(--text-muted)',
-        border: `1px solid ${active ? `${color}40` : 'transparent'}`,
+        border: `1px solid ${active ? statusBorder(color, 0.20) : 'transparent'}`,
       }}
     >
       {label}

@@ -6,10 +6,24 @@ import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_20,
 } from '@/lib/chart-colors';
-import { zoomViewBox } from '@/lib/topology/moduleGraph';
+import { zoomViewBox, edgePath } from '@/lib/topology/moduleGraph';
 import { NODE_W, NODE_H } from './constants';
 import type { LayerId } from './constants';
 import type { NexusNode, NexusEdge } from './types';
+
+/**
+ * Pattern-success heat bands, highest first. The node heat bar (NexusGraph) and the
+ * legend (NexusView) both read THIS list, so every colour drawn has a legend entry.
+ */
+export const PATTERN_HEAT_BANDS = [
+  { min: 0.7, color: STATUS_SUCCESS, label: '70%+' },
+  { min: 0.4, color: STATUS_WARNING, label: '40-69%' },
+  { min: 0, color: STATUS_ERROR, label: 'under 40%' },
+] as const;
+
+export function patternHeatColor(rate: number): string {
+  return (PATTERN_HEAT_BANDS.find((b) => rate >= b.min) ?? PATTERN_HEAT_BANDS[PATTERN_HEAT_BANDS.length - 1]).color;
+}
 
 export function NexusGraph({
   edges,
@@ -96,19 +110,7 @@ export function NexusGraph({
           const fromNode = byId.get(edge.from);
           const toNode = byId.get(edge.to);
           if (!fromNode || !toNode) return null;
-          const dx = toNode.cx - fromNode.cx;
-          const dy = toNode.cy - fromNode.cy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const ux = dx / dist;
-          const uy = dy / dist;
-          const x1 = fromNode.cx + ux * (NODE_W / 2 + 4);
-          const y1 = fromNode.cy + uy * (NODE_H / 2 + 4);
-          const x2 = toNode.cx - ux * (NODE_W / 2 + 10);
-          const y2 = toNode.cy - uy * (NODE_H / 2 + 10);
-          const mx = (x1 + x2) / 2;
-          const my = (y1 + y2) / 2;
-          const perpX = -uy * 20;
-          const perpY = ux * 20;
+          const geo = edgePath({ x: fromNode.cx, y: fromNode.cy }, { x: toNode.cx, y: toNode.cy }, NODE_W, NODE_H);
           const isHighlighted = highlightModule === edge.from || highlightModule === edge.to;
           const opacity = highlightModule ? (isHighlighted ? 1 : 0.12) : 0.4;
 
@@ -121,7 +123,7 @@ export function NexusGraph({
           return (
             <g key={`${edge.from}->${edge.to}`}>
               <path
-                d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
+                d={geo.d}
                 fill="none"
                 stroke={edge.hasBlockers ? STATUS_BLOCKER : 'var(--text-muted)'}
                 strokeWidth={Math.min(3, 0.5 + edge.count * 0.5)}
@@ -132,13 +134,13 @@ export function NexusGraph({
               />
               {/* Edge count label */}
               {isHighlighted && (
-                <text x={mx + perpX} y={my + perpY - 6} fill="var(--text-muted-hover)" fontSize="9" textAnchor="middle">
+                <text x={geo.labelX} y={geo.labelY - 6} fill="var(--text-muted-hover)" fontSize="9" textAnchor="middle">
                   {edge.count} deps
                 </text>
               )}
               {/* Layer 3: session duration annotation */}
               {showSessionAnnotation && avgMs > 0 && (
-                <text x={mx + perpX} y={my + perpY + 8} fill={STATUS_INFO} fontSize="8" textAnchor="middle" opacity="0.8">
+                <text x={geo.labelX} y={geo.labelY + 8} fill={STATUS_INFO} fontSize="8" textAnchor="middle" opacity="0.8">
                   ~{avgMs > 60000 ? `${Math.round(avgMs / 60000)}m` : `${Math.round(avgMs / 1000)}s`}
                 </text>
               )}
@@ -158,9 +160,7 @@ export function NexusGraph({
 
           // Layer 1: pattern heat
           const showPatternHeat = activeLayers.has('patterns') && node.patternSuccessRate !== null;
-          const patternColor = node.patternSuccessRate !== null
-            ? node.patternSuccessRate >= 0.7 ? STATUS_SUCCESS : node.patternSuccessRate >= 0.4 ? STATUS_WARNING : STATUS_ERROR
-            : undefined;
+          const patternColor = node.patternSuccessRate !== null ? patternHeatColor(node.patternSuccessRate) : undefined;
 
           // Layer 2: critical findings in the newest deep eval (null = never evaluated: no glow)
           const showBuildGlow = activeLayers.has('builds') && (node.criticalFindings ?? 0) > 0;

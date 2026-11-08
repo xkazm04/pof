@@ -11,7 +11,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { ImplementationPattern } from '@/types/pattern-library';
 import type { Recommendation } from '@/types/evaluator';
 import type { SessionRecord } from '@/types/session-analytics';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_15, OPACITY_30, statusBg } from '@/lib/chart-colors';
 import { scoreStatusToken } from '@/lib/status-token';
 import { MOTION } from '@/lib/constants';
 import type { NexusNode } from './types';
@@ -20,6 +20,9 @@ import type { RetryableSource } from './useNexusSignals';
 
 /** How many of the module's newest recorded runs the deep-dive lists. */
 const RECENT_SESSION_ROWS = 8;
+
+/** How many matching patterns the deep-dive lists before disclosing the rest. */
+const PATTERN_ROWS = 5;
 
 // ─── Deep Dive Panel ───────────────────────────────────────────────────────
 
@@ -37,7 +40,15 @@ export function NodeDeepDivePanel({
   sessions: RetryableSource<readonly SessionRecord[]>;
   onClose: () => void;
 }) {
-  const [expandedSection, setExpandedSection] = useState<string | null>('checklist');
+  // Open the first section that is actually present, in render order, so the panel
+  // never lands fully collapsed on an id no section uses. null = nothing to open.
+  const [expandedSection, setExpandedSection] = useState<string | null>(() => {
+    if (patterns.length > 0) return 'patterns';
+    if (recommendations.length > 0) return 'recs';
+    if (sessions.state === 'ready' && sessions.data.length > 0) return 'sessions';
+    if (node.genreItemCount > 0) return 'genre';
+    return null;
+  });
 
   // null = never deep-evaluated: no health shown (not a 0 score).
   const healthColor = node.healthScore === null ? undefined : scoreStatusToken(node.healthScore).color;
@@ -113,7 +124,7 @@ export function NodeDeepDivePanel({
               onToggle={() => setExpandedSection(expandedSection === 'patterns' ? null : 'patterns')}
             >
               <div className="space-y-1.5">
-                {patterns.slice(0, 5).map((p) => (
+                {patterns.slice(0, PATTERN_ROWS).map((p) => (
                   <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-background">
                     <BookOpen className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
                     <span className="text-xs text-text flex-1 truncate">{p.title}</span>
@@ -123,6 +134,9 @@ export function NodeDeepDivePanel({
                     <span className="text-2xs text-text-muted">{p.sessionCount} uses</span>
                   </div>
                 ))}
+                {patterns.length > PATTERN_ROWS && (
+                  <div className="px-2 py-1 text-2xs text-text-muted">+{patterns.length - PATTERN_ROWS} more</div>
+                )}
               </div>
             </CollapsibleSection>
           )}
@@ -146,7 +160,7 @@ export function NodeDeepDivePanel({
                         <span className="text-xs text-text">{rec.title}</span>
                         <p className="text-2xs text-text-muted mt-0.5 line-clamp-2">{rec.description}</p>
                       </div>
-                      <span className="text-2xs font-bold uppercase px-1 py-0.5 rounded" style={{ color: prioColor, backgroundColor: `${prioColor}15` }}>
+                      <span className="text-2xs font-bold uppercase px-1 py-0.5 rounded" style={{ color: prioColor, backgroundColor: statusBg(prioColor, 0.08) }}>
                         {rec.priority}
                       </span>
                     </div>
@@ -261,7 +275,7 @@ function CollapsibleSection({
         className="focus-ring-inset w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
       >
         <span className="text-xs font-semibold text-text">{title}</span>
-        <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ color, backgroundColor: `${color}15` }}>
+        <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ color, backgroundColor: statusBg(color, 0.08) }}>
           {count}
         </span>
         <span className="ml-auto text-text-muted" aria-hidden="true">

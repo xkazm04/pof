@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  Loader2,
   RefreshCw,
   AlertTriangle,
   Layers,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { KPICard } from '@/components/ui/KPICard';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { OverlapReport, OverlapPair } from '@/lib/overlap-detection';
@@ -28,6 +28,9 @@ import { REASON_CONFIG, TWIN_KIND_CONFIG, type FilterReason } from './constants'
 import { moduleLabel } from './helpers';
 import { StatCard, ModuleBubble, FilterChip } from './SummaryParts';
 import { OverlapRow } from './OverlapRow';
+
+/** How many modules the overlap-count heatmap draws before disclosing the rest. */
+const HEATMAP_MODULES = 12;
 
 /** The feature definition a twin key names (null = not a defined feature, so no review). */
 function twinDefinition(key: string) {
@@ -54,6 +57,16 @@ export function CrossModuleOverlapPanel() {
   const [copyError, setCopyError] = useState<{ overlap: OverlapPair; message: string } | null>(null);
   const [reviewError, setReviewError] = useState<{ key: string; message: string } | null>(null);
   const reviewing = useRef<string | null>(null);
+  // The Copied-feedback timer: kept so a re-copy restarts it and leaving the tab cancels it.
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unmounted = useRef(false);
+  useEffect(() => {
+    unmounted.current = false;
+    return () => {
+      unmounted.current = true;
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    };
+  }, []);
   const statuses = useFeatureStatuses();
   // A failed or unsettled status read is NOT an empty map: twins stay unclassified.
   const statusMap = statuses.loaded && !statuses.failed ? statuses.statusMap : null;
@@ -142,18 +155,16 @@ export function CrossModuleOverlapPanel() {
       setCopyError({ overlap, message: `Could not copy overlap details: ${err instanceof Error ? err.message : String(err)}` });
       return;
     }
+    if (unmounted.current) return;
     setCopyError(null);
     const id = `${overlap.moduleA}:${overlap.featureA}:${overlap.moduleB}:${overlap.featureB}`;
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), UI_TIMEOUTS.copyFeedback);
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopiedId(null), UI_TIMEOUTS.copyFeedback);
   }, []);
 
   if (source.state === 'loading') {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
-      </div>
-    );
+    return <LoadingRow label="Loading overlap report…" />;
   }
 
   // A failed read is an error with Retry - never the clean-separation empty state.
@@ -235,9 +246,14 @@ export function CrossModuleOverlapPanel() {
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {data.moduleSummaries.slice(0, 12).map((ms) => (
+          {data.moduleSummaries.slice(0, HEATMAP_MODULES).map((ms) => (
             <ModuleBubble key={ms.moduleId} summary={ms} maxCount={data.moduleSummaries[0]?.overlapCount ?? 1} />
           ))}
+          {data.moduleSummaries.length > HEATMAP_MODULES && (
+            <span className="px-3 py-1.5 text-xs text-text-muted">
+              +{data.moduleSummaries.length - HEATMAP_MODULES} more
+            </span>
+          )}
         </div>
       </SurfaceCard>
 
