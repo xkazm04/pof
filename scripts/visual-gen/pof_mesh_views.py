@@ -63,6 +63,14 @@ def parse_args():
     return glb, outdir, max(2, views), max(64, res)
 
 
+def camera_clip(size, dist):
+    """(near, far) around an asset of `size` seen from `dist`. Blender's defaults are fixed
+    distances, so a small separated part sat inside the near plane and rendered empty
+    (measured Blender 4.2, 2026-11-08: a 3 cm cube gave a blank view at the default 0.1)."""
+    reach = size * math.sqrt(3.0) / 2.0
+    return max(1e-6, (dist - reach) * 0.5), (dist + reach) * 2.0
+
+
 def linear_to_srgb(c):
     """Blender hands back scene-linear floats; a palette must be display-referred or the
     hex values will not match what anyone sees."""
@@ -166,6 +174,7 @@ def main():
     scene.render.film_transparent = True
 
     dist = size * 1.9
+    cam_data.clip_start, cam_data.clip_end = camera_clip(size, dist)
     elev = math.radians(20.0)
 
     def place(i):
