@@ -1,0 +1,113 @@
+/**
+ * Truthfulness guards for the Localization Pipeline view (scan-sweep 2026-11-08):
+ * every claim the view paints — a "Copied!" receipt, a copied CSV, a bar width,
+ * a ship verdict, a filter result — must match what actually happened.
+ *
+ * setup.ts has no afterEach(cleanup) and no jest-dom matchers — assert plain DOM.
+ * No translation/LLM provider is called: every test drives components with fixtures.
+ */
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { HazardCard } from '@/components/modules/evaluator/LocalizationPipelineView/HazardCard';
+import { QAFindingCard } from '@/components/modules/evaluator/LocalizationPipelineView/QAFindingCard';
+import { ReplacementCard } from '@/components/modules/evaluator/LocalizationPipelineView/ReplacementCard';
+import { StringTableCard } from '@/components/modules/evaluator/LocalizationPipelineView/StringTableCard';
+import type {
+  LocalizationHazard,
+  TranslationQAFinding,
+  LOCTEXTReplacementSuggestion,
+  StringTable,
+} from '@/types/localization-pipeline';
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+const HAZARD = {
+  id: 'hz-1',
+  type: 'string_concatenation',
+  severity: 'critical',
+  description: 'Concatenated UI text',
+  suggestion: 'Use FText::Format',
+  location: { filePath: 'Source/UI/Hud.cpp', lineNumber: 12, columnStart: 1, columnEnd: 5, codeSnippet: 'x' },
+  fixPrompt: 'Fix the concatenation',
+} as unknown as LocalizationHazard;
+
+const FINDING: TranslationQAFinding = {
+  id: 'qa-1',
+  stringId: 'str-1',
+  locale: 'fr',
+  check: 'untranslated',
+  severity: 'warning',
+  message: 'Translation is identical to the English source.',
+  sourceText: 'Inventory',
+  translatedText: 'Inventory',
+  suggestion: 'Translate it.',
+  fixPrompt: 'Fix the untranslated string',
+};
+
+const REPLACEMENT = {
+  stringId: 'str-1',
+  originalCode: 'TEXT("Inventory")',
+  suggestedCode: 'LOCTEXT("Inventory", "Inventory")',
+} as unknown as LOCTEXTReplacementSuggestion;
+
+const TABLE: StringTable = {
+  tableId: 'ST_PoF_UI',
+  namespace: 'PoF.UI',
+  rows: [{ key: 'Interact', sourceString: 'Press "E" to interact', comment: '[ui_label] from arpg-ui' }],
+} as StringTable;
+
+/** A clipboard whose write the platform rejects (insecure context / no focus). */
+function stubRejectingClipboard() {
+  const writeText = vi.fn().mockRejectedValue(new Error('NotAllowedError'));
+  vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+  return writeText;
+}
+
+function stubCapturingClipboard() {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+  return writeText;
+}
+
+async function press(name: RegExp) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name }));
+  });
+}
+
+describe('copy buttons report the verified write, not the attempt', () => {
+  const cases: [string, () => void, RegExp][] = [
+    ['HazardCard', () => {
+      render(<HazardCard hazard={HAZARD} />);
+      fireEvent.click(screen.getByRole('button', { name: /concatenated ui text/i }));
+    }, /copy fix prompt/i],
+    ['QAFindingCard', () => {
+      render(<QAFindingCard finding={FINDING} />);
+      fireEvent.click(screen.getByRole('button', { name: /identical to the english source/i }));
+    }, /copy fix prompt/i],
+    ['ReplacementCard', () => render(<ReplacementCard replacement={REPLACEMENT} />), /copy suggested/i],
+    ['StringTableCard', () => render(<StringTableCard table={TABLE} />), /copy csv/i],
+  ];
+
+  for (const [name, mount, button] of cases) {
+    it(`${name}: a rejected clipboard write never shows "Copied!" and says it failed`, async () => {
+      const writeText = stubRejectingClipboard();
+      mount();
+      await press(button);
+      expect(writeText).toHaveBeenCalledTimes(1);
+      expect(document.body.textContent).not.toContain('Copied!');
+      expect(document.body.textContent).toContain('Copy failed');
+    });
+
+    it(`${name}: a successful write shows "Copied!"`, async () => {
+      stubCapturingClipboard();
+      mount();
+      await press(button);
+      expect(document.body.textContent).toContain('Copied!');
+    });
+  }
+});

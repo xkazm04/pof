@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
-  AlertTriangle, ChevronDown, ChevronRight, Copy, Check,
+  AlertTriangle, ChevronDown, ChevronRight,
   ShieldAlert, Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,24 +8,17 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import type { TranslationQAFinding } from '@/types/localization-pipeline';
 import { SUPPORTED_LOCALES, QA_CHECKS } from '@/lib/localization/definitions';
-import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD, SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { SEVERITY_TOKENS } from '@/lib/chart-colors';
 import { FOCUS_RING_CLASS } from '@/lib/ui/focus-ring';
 import { SCALE, SEVERITY_BADGE } from './constants';
+import { CopyTextButton } from './CopyTextButton';
 
 export function QAFindingCard({ finding }: { finding: TranslationQAFinding }) {
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
   const token = SEVERITY_TOKENS[finding.severity];
   const meta = QA_CHECKS[finding.check];
   const locInfo = SUPPORTED_LOCALES.find((l) => l.code === finding.locale);
   const panelId = `loc-qa-${finding.id}`;
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(finding.fixPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [finding.fixPrompt]);
 
   return (
     <SurfaceCard level={2}>
@@ -79,13 +72,7 @@ export function QAFindingCard({ finding }: { finding: TranslationQAFinding }) {
                   <p className="text-2xs text-text-muted">{finding.suggestion}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
-                  >
-                    {copied ? <Check className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'Copied!' : 'Copy fix prompt'}
-                  </button>
+                  <CopyTextButton text={finding.fixPrompt} label="Copy fix prompt" />
                 </div>
               </div>
             </motion.div>

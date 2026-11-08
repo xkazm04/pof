@@ -1,15 +1,13 @@
-import { useState, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Copy, Check, Table2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronDown, ChevronRight, Table2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { StringTable } from '@/types/localization-pipeline';
-import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD } from '@/lib/chart-colors';
 import { FOCUS_RING_CLASS } from '@/lib/ui/focus-ring';
+import { CopyTextButton } from './CopyTextButton';
 
 export function StringTableCard({ table }: { table: StringTable }) {
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
   const panelId = `loc-table-${table.tableId}`;
 
   const csvContent = useMemo(() => {
@@ -17,12 +15,6 @@ export function StringTableCard({ table }: { table: StringTable }) {
     const rows = table.rows.map((r) => `"${r.key}","${r.sourceString}","${r.comment}"`);
     return [header, ...rows].join('\n');
   }, [table]);
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(csvContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [csvContent]);
 
   return (
     <SurfaceCard>
@@ -41,14 +33,7 @@ export function StringTableCard({ table }: { table: StringTable }) {
           </div>
         </button>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-1 rounded text-2xs bg-surface-2 hover:bg-surface text-text-muted transition-colors"
-          >
-            {copied ? <Check className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> : <Copy className="w-3 h-3" />}
-            {copied ? 'Copied!' : 'Copy CSV'}
-          </button>
+          <CopyTextButton text={csvContent} label="Copy CSV" />
           {expanded ? <ChevronDown aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" />}
         </div>
       </div>

@@ -1,28 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
-  AlertTriangle, ChevronDown, ChevronRight, Copy, Check,
+  AlertTriangle, ChevronDown, ChevronRight,
   ShieldAlert, Info,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import type { LocalizationHazard } from '@/types/localization-pipeline';
-import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD, SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { SEVERITY_TOKENS } from '@/lib/chart-colors';
 import { FOCUS_RING_CLASS } from '@/lib/ui/focus-ring';
 import { SCALE, SEVERITY_BADGE } from './constants';
+import { CopyTextButton } from './CopyTextButton';
 
 export function HazardCard({ hazard }: { hazard: LocalizationHazard }) {
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
   const token = SEVERITY_TOKENS[hazard.severity];
   const panelId = `loc-hazard-${hazard.id}`;
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(hazard.fixPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [hazard.fixPrompt]);
 
   return (
     <SurfaceCard level={2}>
@@ -69,13 +62,7 @@ export function HazardCard({ hazard }: { hazard: LocalizationHazard }) {
                   <p className="text-2xs text-text-muted">{hazard.location.filePath}:{hazard.location.lineNumber}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
-                  >
-                    {copied ? <Check className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'Copied!' : 'Copy fix prompt'}
-                  </button>
+                  <CopyTextButton text={hazard.fixPrompt} label="Copy fix prompt" />
                 </div>
               </div>
             </motion.div>
