@@ -80,6 +80,13 @@ describe('parseViewCritiqueReply', () => {
     expect(r.severity).toBe(0);
   });
 
+  it('reads a punctuated none sentinel as no defects', () => {
+    for (const body of ['None.', 'none!', 'NONE.']) {
+      const r = parseViewCritiqueReply(`DEFECTS=${body}; SEVERITY=0`);
+      expect(r).toEqual({ ok: true, defects: [], severity: 0 });
+    }
+  });
+
   it('survives the model wrapping its answer in prose', () => {
     const r = parseViewCritiqueReply('Looking at this view I can see issues.\nDEFECTS=hole in the mesh; SEVERITY=2\nHope that helps!');
     expect(r.ok).toBe(true);

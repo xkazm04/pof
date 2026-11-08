@@ -41,7 +41,7 @@
  * caller only READS the plan. The Blender application half is still specified, not built:
  * do not read this module's presence as "PoF conforms rigs".
  */
-import { classifyNaming, type BoneNaming } from './skeleton-profiles';
+import { VENDOR_PREFIX, classifyNaming, type BoneNaming } from './skeleton-profiles';
 
 /** Side of the body a bone belongs to, normalized away from spelling. */
 export type BoneSide = 'left' | 'right' | 'center';
@@ -70,9 +70,6 @@ export interface CanonicalBone {
 const LEFT_TOKENS = new Set(['left', 'l']);
 const RIGHT_TOKENS = new Set(['right', 'r']);
 
-/** Vendor prefixes that carry no anatomical meaning. */
-const VENDOR_PREFIX = /^(?:mixamorig\d*|tripo|armature|root)[:_.-]+/i;
-
 /**
  * Synonyms that mean the same joint in different vocabularies. Left side is the canonical
  * stem. Only pairs actually observed across Mixamo / UE5 / Tripo naming are listed —
@@ -94,6 +91,9 @@ const STEM_SYNONYMS: Record<string, string> = {
   foot: 'foot',
   ankle: 'foot',
 };
+
+/** Finger names, the only words a leading `hand` may be dropped in front of. */
+const FINGER_WORDS = new Set(['thumb', 'index', 'middle', 'ring', 'pinky']);
 
 /** Split a name into lowercase tokens, dropping the vendor prefix. */
 function tokens(name: string): string[] {
@@ -137,6 +137,10 @@ export function canonicalize(name: string): CanonicalBone {
     words.push(part);
   }
 
+  // Mixamo prefixes finger bones with their parent (`LeftHandThumb1`); UE5 and Tripo do not
+  // (`thumb_01_l`). Drop the `hand` word ahead of a finger name so both land on one stem. A
+  // lone `hand` is the wrist and is left alone.
+  if (words.length === 2 && words[0] === 'hand' && FINGER_WORDS.has(words[1])) words.shift();
   const joined = words.join('');
   const stem = STEM_SYNONYMS[joined] ?? joined;
   return {

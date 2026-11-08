@@ -112,3 +112,29 @@ describe('assembleMetaHuman', () => {
     expect(res.error).toMatch(/Optional Content/i);
   });
 });
+
+describe('MetaHuman results say when the run never started', () => {
+  const REFUSED = (): ExperimentResult => ({ ...RES({}, false), refused: true, error: 'a live editor holds the machine' });
+  const FAILED_WITH_OBSERVATIONS = (): ExperimentResult => ({
+    ...RES({ POF_MH_CHAR: 'NONE' }, true), logs: ['LogPython: ran'],
+  });
+
+  it('conform: a refused run is notRun, a run that observed something is not', async () => {
+    const refused = await conformMeshToMetaHuman('x.glb', { runExperimentFn: async () => REFUSED() });
+    expect(refused).toMatchObject({ ok: false, notRun: true });
+    const ran = await conformMeshToMetaHuman('x.glb', { runExperimentFn: async () => FAILED_WITH_OBSERVATIONS() });
+    expect(ran).toMatchObject({ ok: false, notRun: false });
+  });
+
+  it('assemble: a refused run is notRun, a run that observed something is not', async () => {
+    const refused = await assembleMetaHuman('/Game/X', { runExperimentFn: async () => REFUSED() });
+    expect(refused).toMatchObject({ ok: false, notRun: true });
+    const ran = await assembleMetaHuman('/Game/X', { runExperimentFn: async () => FAILED_WITH_OBSERVATIONS() });
+    expect(ran).toMatchObject({ ok: false, notRun: false });
+  });
+
+  it('a run that died before any log line or marker is notRun too', async () => {
+    const dead = await assembleMetaHuman('/Game/X', { runExperimentFn: async () => RES({}, false) });
+    expect(dead.notRun).toBe(true);
+  });
+});

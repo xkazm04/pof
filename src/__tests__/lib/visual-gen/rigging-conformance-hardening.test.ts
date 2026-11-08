@@ -4,7 +4,8 @@ import { gateRig, parseGlbRig, scoreRig } from '@/lib/visual-gen/rig-gate';
 import { assembleMetaHuman, buildAssemblePython, buildConformPython, conformMeshToMetaHuman } from '@/lib/visual-gen/metahuman-conform';
 import type { ExperimentResult } from '@/lib/ue-experiment/runner';
 import { routePromptShape } from '@/lib/visual-gen/linear-prop-routing';
-import { planConform } from '@/lib/visual-gen/bone-conform';
+import { canonicalize, planConform } from '@/lib/visual-gen/bone-conform';
+import { classifyNaming, groupsPresent } from '@/lib/visual-gen/skeleton-profiles';
 import { bindRigToPreset } from '@/lib/visual-gen/rig-binding';
 import { getRigPreset } from '@/lib/visual-gen/rig-presets';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
@@ -262,5 +263,71 @@ describe('rig gate: WEIGHTS_1 / JOINTS_1', () => {
     expect(facts.maxInfluences).toBe(5);
     expect(facts.referencedJoints).toBe(3);
     expect(scoreRig(facts).failures).toEqual([]);
+  });
+});
+
+describe('rig gate: a mesh bound to a second skin is named, not silently dropped', () => {
+  it('counts the ungraded mesh and warns with its number', () => {
+    const facts = parseGlbRig(skinnedGlb([[good], [unweighted]], [0, 1]));
+    expect(facts.ungradedMeshes).toBe(1);
+    const verdict = scoreRig(facts);
+    expect(verdict.warnings.some((w) => /1 mesh\(es\).*skin/i.test(w))).toBe(true);
+  });
+
+  it('stays silent for a single-skin file', () => {
+    const facts = parseGlbRig(skinnedGlb([[good], [good]], [0, 0]));
+    expect(facts.ungradedMeshes).toBe(0);
+    expect(scoreRig(facts).warnings.some((w) => /skin/i.test(w) && /mesh/i.test(w))).toBe(false);
+  });
+});
+
+describe('rig gate: weight-sum tolerance follows the weight encoding', () => {
+  const GRUNT_FACTS = parseGlbRig(skinnedGlb([[good]]));
+  const step8 = 1 / 255;
+  const sums = { weightSumMin: 254 / 255, weightSumMax: 1, weightSumMean: 0.999 };
+
+  it('passes 8-bit weights summing 254/255 (one quantization step)', () => {
+    const facts = { ...GRUNT_FACTS, ...sums, weightQuantStep: step8 };
+    expect(scoreRig(facts).pass).toBe(true);
+  });
+
+  it('keeps float weights strict: the same sum still fails', () => {
+    expect(scoreRig({ ...GRUNT_FACTS, ...sums }).pass).toBe(false);
+    expect(scoreRig({ ...GRUNT_FACTS, ...sums, weightQuantStep: 0 }).pass).toBe(false);
+  });
+
+  it('does not wave a sloppy 8-bit rig through (three steps off)', () => {
+    const facts = { ...GRUNT_FACTS, ...sums, weightSumMin: 252 / 255, weightQuantStep: step8 };
+    expect(scoreRig(facts).pass).toBe(false);
+  });
+});
+
+describe('one vendor-prefix rule across skeleton-profiles and bone-conform', () => {
+  const TABLE: Array<[string, string]> = [
+    ['mixamorig:Hips', 'Hips'],
+    ['mixamorig1:Hips', 'Hips'],
+    ['mixamorig12:LeftHandThumb1', 'LeftHandThumb1'],
+    ['tripo_Hips', 'Hips'],
+    ['Armature_Hips', 'Hips'],
+    ['root_Hips', 'Hips'],
+  ];
+
+  it('both modules read a prefixed name exactly as its bare form', () => {
+    const disagreements = TABLE.filter(
+      ([name, bare]) =>
+        canonicalize(name).key !== canonicalize(bare).key ||
+        [...groupsPresent([name])].sort().join() !== [...groupsPresent([bare])].sort().join(),
+    );
+    expect(disagreements).toEqual([]);
+  });
+
+  it('a bare root bone is still a root (only a PREFIX is stripped)', () => {
+    expect([...groupsPresent(['root'])]).toContain('root');
+    expect([...groupsPresent(['Armature'])]).toContain('root');
+  });
+
+  it('classification is unchanged: mixamorig1 is not routed to the exact-name table path', () => {
+    expect(classifyNaming(['mixamorig:Hips'])).toBe('mixamo');
+    expect(classifyNaming(['mixamorig1:Hips'])).toBe('semantic');
   });
 });

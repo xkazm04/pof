@@ -142,3 +142,27 @@ describe('attachClothToCharacter', () => {
     expect(res.ok).toBe(false);
   });
 });
+
+describe('buildClothGraphPython: a failed garment stops before any asset is created', () => {
+  const lines = buildClothGraphPython({ ...BASE, garmentGlbPath: 'C:/gen/skirt.glb' }).split('\n');
+  const at = (needle: string) => lines.findIndex((l) => l.includes(needle));
+
+  it('guards on the NONE marker between the garment marker and the first create_asset', () => {
+    const marker = at("POF_CLOTH_GARMENT='");
+    const guard = lines.findIndex((l) => /^if _garment == 'NONE': raise /.test(l));
+    const firstCreate = at('create_asset(');
+    expect(marker).toBeGreaterThanOrEqual(0);
+    expect(guard).toBeGreaterThan(marker);
+    expect(firstCreate).toBeGreaterThan(guard);
+  });
+
+  it('keeps the garment marker ahead of the guard so the caller still sees NONE', () => {
+    expect(at("POF_CLOTH_GARMENT='")).toBeLessThan(lines.findIndex((l) => l.includes("raise RuntimeError('garment import")));
+  });
+
+  it('counts create_asset calls reachable before the guard as zero', () => {
+    const guard = lines.findIndex((l) => /^if _garment == 'NONE': raise /.test(l));
+    expect(lines.slice(0, Math.max(guard, 0)).filter((l) => l.includes('create_asset(')).length).toBe(0);
+    expect(guard).toBeGreaterThanOrEqual(0);
+  });
+});

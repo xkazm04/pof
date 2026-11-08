@@ -102,6 +102,18 @@ export interface RigFacts {
   morphTargetCount?: number;
   /** Names from `meshes[].extras.targetNames`, deduped. Empty means declared-but-unnamed. */
   morphTargetNames?: string[];
+  /**
+   * Meshes a node binds to a skin other than `skins[0]`. They are NOT graded (the facts are
+   * single-skin: `jointCount` and `jointNames` come from `skins[0]`), so the count is carried
+   * for {@link scoreRig} to name them rather than let the verdict read as covering the file.
+   * `undefined` means NOT READ.
+   */
+  ungradedMeshes?: number;
+  /**
+   * Largest quantization step of the weight accessors read: 1/255 for 8-bit, 1/65535 for
+   * 16-bit, 0 for float. `undefined` means NOT READ and is treated as float (strict).
+   */
+  weightQuantStep?: number;
 }
 
 export interface RigVerdict {
@@ -211,6 +223,11 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     const bound = boundSkin.get(index);
     return bound === undefined || bound === 0 ? (mesh.primitives ?? []) : [];
   });
+  const ungradedMeshes = (json.meshes ?? []).filter((_, index) => {
+    const bound = boundSkin.get(index);
+    return bound !== undefined && bound !== 0;
+  }).length;
+  empty.ungradedMeshes = ungradedMeshes;
   if (primitives.length === 0) return empty;
 
   const readAccessor = (index: number | undefined): number[][] | null => {
@@ -240,6 +257,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     const componentType = json!.accessors![index].componentType;
     return componentType === 5121 ? 1 / 255 : componentType === 5123 ? 1 / 65535 : 1;
   };
+  let weightQuantStep = 0;
   const skinned = primitives.flatMap((p) => {
     const weights = readAccessor(p.attributes.WEIGHTS_0);
     const joints = readAccessor(p.attributes.JOINTS_0);
@@ -247,6 +265,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     const weights1 = readAccessor(p.attributes.WEIGHTS_1);
     const joints1 = readAccessor(p.attributes.JOINTS_1);
     // A vertex over four influences continues in the second set, and its sum is over both.
+    weightQuantStep = Math.max(weightQuantStep, scaleOf(p.attributes.WEIGHTS_0), weights1 ? scaleOf(p.attributes.WEIGHTS_1) : 0);
     const second = weights1 && joints1 ? { weights1, joints1, scale1: scaleOf(p.attributes.WEIGHTS_1) } : undefined;
     return [{ weights, joints, scale: scaleOf(p.attributes.WEIGHTS_0), second }];
   });
@@ -314,15 +333,25 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     weightSumMean: sumTotal / n,
     morphTargetCount,
     morphTargetNames,
+    ungradedMeshes,
+    weightQuantStep: weightQuantStep === 1 ? 0 : weightQuantStep,
   };
 }
 
 /**
- * Tolerance on the weight sum. Both captured rigs sum to exactly 1.0, so this is loose
- * on purpose: it is here to survive 8/16-bit weight quantization, not to accommodate a
- * sloppy rig.
+ * Floor of the tolerance on the weight sum. Float weights are held to this. Integer
+ * encodings get a wider band from {@link weightSumTolerance}, because one 8-bit step is
+ * 3.9e-3 and a 1e-3 band cannot survive it.
  */
 const WEIGHT_SUM_TOLERANCE = 1e-3;
+
+/**
+ * Tolerance for one file: the float floor, widened to two quantization steps for integer
+ * weights (four influences each rounded by up to half a step is at most two steps off).
+ */
+function weightSumTolerance(facts: RigFacts): number {
+  return Math.max(WEIGHT_SUM_TOLERANCE, 2 * (facts.weightQuantStep ?? 0));
+}
 
 /** A skeleton this thin is more likely a degenerate prediction than a real rig. */
 const THIN_SKELETON_JOINTS = 2;
@@ -365,10 +394,8 @@ export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
       `${facts.zeroWeightVertices} of ${facts.vertexCount} vertices carry no weight — they cannot follow the skeleton`,
     );
   }
-  if (
-    Math.abs(facts.weightSumMin - 1) > WEIGHT_SUM_TOLERANCE ||
-    Math.abs(facts.weightSumMax - 1) > WEIGHT_SUM_TOLERANCE
-  ) {
+  const tolerance = weightSumTolerance(facts);
+  if (Math.abs(facts.weightSumMin - 1) > tolerance || Math.abs(facts.weightSumMax - 1) > tolerance) {
     failures.push(
       `weights are not normalized (sums ${facts.weightSumMin.toFixed(4)}–${facts.weightSumMax.toFixed(4)}, expected 1) — vertices will scale as the skeleton moves`,
     );
@@ -377,6 +404,13 @@ export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
   if (facts.nonFiniteWeights > 0) failures.push(`${facts.nonFiniteWeights} non-finite weight(s)`);
   if ((facts.outOfRangeJointRefs ?? 0) > 0) {
     failures.push(`${facts.outOfRangeJointRefs} influence(s) name a joint index outside the skin — those vertices bind to a bone that does not exist`);
+  }
+
+  if ((facts.ungradedMeshes ?? 0) > 0) {
+    warnings.push(
+      `${facts.ungradedMeshes} mesh(es) bound to a skin other than the first were not graded — ` +
+        'this verdict covers the first skin only',
+    );
   }
 
   const orphans = facts.jointCount - facts.referencedJoints;
