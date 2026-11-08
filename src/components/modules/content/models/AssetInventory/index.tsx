@@ -2,8 +2,9 @@
 
 import { AnimatePresence } from 'framer-motion';
 import {
-  Search, ScanLine, Loader2, AlertCircle, FolderOpen, ArrowUpDown,
+  Search, ScanLine, Loader2, FolderOpen, ArrowUpDown,
 } from 'lucide-react';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { AssetType } from '@/app/api/filesystem/scan-assets/route';
 import { ACCENT, TYPE_CONFIG } from './constants';
 import { formatBytes } from './helpers';
@@ -89,26 +90,18 @@ export function AssetInventory() {
   // ── Scanning state ──
   if (isScanning) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: ACCENT }} />
+      <div role="status" className="flex flex-col items-center justify-center py-16 gap-3">
+        <Loader2 className="w-6 h-6 animate-spin" aria-hidden="true" style={{ color: ACCENT }} />
         <p className="text-xs text-text-muted">Scanning Content/ directory...</p>
       </div>
     );
   }
 
-  // ── Error state ──
+  // ── Error state ── (the shared error + Retry surface: role="alert", focus ring)
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <AlertCircle className="w-6 h-6 text-red-400" />
-        <p className="text-xs text-red-400">{error}</p>
-        <button
-          onClick={handleScan}
-          className="text-xs underline hover:no-underline"
-          style={{ color: ACCENT }}
-        >
-          Retry
-        </button>
+      <div className="flex justify-center py-16">
+        <InlineErrorRetry message={error} onRetry={handleScan} className="w-full max-w-md" />
       </div>
     );
   }

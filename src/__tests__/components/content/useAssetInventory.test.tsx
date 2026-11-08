@@ -213,3 +213,21 @@ describe('useAssetInventory: a scan belongs to the project it was taken of', () 
     expect(hook.result.current.scanResult).toBeNull();
   });
 });
+
+describe('AssetInventory: the scan async states are announced', () => {
+  it('a running scan is a status region', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+    render(<AssetInventory />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Scan Content/ })); });
+    expect(screen.getByRole('status').textContent).toMatch(/Scanning Content/);
+  });
+
+  it('a failed scan is an alert that keeps its text and a Retry', async () => {
+    respond({ success: false, error: 'Project path does not exist' }, false, 404);
+    render(<AssetInventory />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Scan Content/ })); });
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('Project path does not exist');
+    expect(within(alert).getByRole('button', { name: /Retry/ })).toBeTruthy();
+  });
+});
