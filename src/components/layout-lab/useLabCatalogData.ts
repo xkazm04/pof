@@ -8,7 +8,7 @@ import { resolveCatalogSteps } from './catalogManifest';
 import { toLabEntity } from './entityPipeline';
 import type { CatalogLink, LifecycleState } from '@/lib/catalog/types';
 import { useActiveGame } from '@/stores/activeGameStore';
-import { entityInGame, scopeCatalogIds, statusEntitiesForGame, type CatalogScope } from '@/lib/games/scope';
+import { entityInGame, scopeCatalogIds, type CatalogScope, type ProfiledEntity } from '@/lib/games/scope';
 import type { GameDef } from '@/lib/games/types';
 
 export interface LabCatalog {
@@ -49,14 +49,14 @@ export function useLabCatalogData(): LabGroup[] {
   const { gameId, game, scope } = useGameCatalogScope();
 
   return useMemo(() => {
-    // The game's entities: for PoF exactly the seed map (today's count); for another game its
-    // seeds + persisted rows of that game (it has no code seeds of its own).
-    const counted = statusEntitiesForGame(gameId, entitiesByCatalog, draftEntitiesByCatalog);
+    // The count is the set the tree LISTS for this catalog (`labEntitiesOf`, shared with
+    // `useLabDetail`): seeds + persisted/ingested/draft rows of the active game. It used to be
+    // PoF's seed map alone, so a catalog with hydrated ingests read `n/3` above 43 rows.
     const visible = new Set(scope.visible);
     const byCat = new Map<string, LabCatalog[]>();
     for (const s of CATALOG_SECTIONS) {
       if (!visible.has(s.catalogId)) continue;
-      const entities = Object.values(counted[s.catalogId] ?? {});
+      const entities = labEntitiesOf(entitiesByCatalog[s.catalogId], draftEntitiesByCatalog[s.catalogId], gameId);
       const cat: LabCatalog = {
         catalogId: s.catalogId,
         label: s.label,
@@ -70,6 +70,20 @@ export function useLabCatalogData(): LabGroup[] {
     }
     return [...byCat.entries()].map(([category, catalogs]) => ({ category, catalogs }));
   }, [entitiesByCatalog, draftEntitiesByCatalog, gameId, game, scope]);
+}
+
+/**
+ * The ONE entity set a catalog shows for a game: its code seeds, then its persisted rows
+ * (other sessions' one-shots, `/diablo` ingests, local drafts), kept when they belong to
+ * `gameId`. The tree's list and its catalog count both read this, so a count can never
+ * disagree with the rows it sits above.
+ */
+export function labEntitiesOf<E extends ProfiledEntity>(
+  seeded: Readonly<Record<string, E>> | undefined,
+  drafts: Readonly<Record<string, E>> | undefined,
+  gameId: GameDef['id'],
+): E[] {
+  return [...Object.values(seeded ?? {}), ...Object.values(drafts ?? {})].filter((e) => entityInGame(e, gameId));
 }
 
 /** Every catalog the lab can open, in section order — the list a game scopes. */
@@ -122,10 +136,8 @@ export function useLabDetail(catalogId: string | null): LabDetail | null {
     if (!catalogId) return null;
     const section = CATALOG_SECTIONS.find((s) => s.catalogId === catalogId);
     if (!section) return null;
-    const seeded = Object.values(entitiesByCatalog[catalogId] ?? {});
-    const drafts = Object.values(draftEntitiesByCatalog[catalogId] ?? {});
     // Only the active game's entities — seeded AND draft/persisted, by derived game.
-    const all = [...seeded, ...drafts].filter((e) => entityInGame(e, gameId));
+    const all = labEntitiesOf(entitiesByCatalog[catalogId], draftEntitiesByCatalog[catalogId], gameId);
     return {
       catalog: {
         catalogId, label: section.label, description: section.description ?? '',

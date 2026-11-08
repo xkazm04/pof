@@ -307,14 +307,15 @@ export function CatalogTree({
    * absent fetch (which resolves to an EMPTY map — see `useDerivedLifecycle`). Costs zero
    * extra requests: the one fetch the open catalog already issues serves both.
    *
-   * Drafts are excluded because `LabCatalog.total` counts persisted entities only — a count
-   * that could exceed its own denominator would be a new lie, not a fix for the old one.
+   * Counted over EVERY listed entity, drafts included: `LabCatalog.total` is the same list
+   * (`labEntitiesOf`), so numerator and denominator cover one set. Skipping `draft-` ids while
+   * counting other persisted rows (`d1-*` ingests) under-counted drafts and, against the old
+   * seeds-only total, let the numerator exceed its own denominator.
    */
   const verifiedInSelected = useMemo(() => {
     if (!derivedLifecycle || derivedLifecycle.size === 0) return null;
     let n = 0;
     for (const e of entities) {
-      if (e.id.startsWith('draft-')) continue;
       if (derivedLifecycle.get(e.id)?.lifecycle === 'verified') n++;
     }
     return n;
