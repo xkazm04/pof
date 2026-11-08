@@ -74,7 +74,13 @@ export function BuildDurationTrendChart({ data, baselineMs, height = 180 }: Buil
 
     const baselineY = baselineMs != null ? yFor(baselineMs) : null;
 
-    return { pts, polyline, yTicks, xLabels, baselineY };
+    // Text equivalent of the plot: the points alone convey nothing to a screen reader.
+    const last = data[data.length - 1];
+    const summary = `Build duration trend: ${data.length} build${data.length === 1 ? '' : 's'}, `
+      + `${fmtSeconds(Math.min(...durations))} to ${fmtSeconds(Math.max(...durations))}; `
+      + `latest ${fmtSeconds(last.durationMs)}, ${last.status}`;
+
+    return { pts, polyline, yTicks, xLabels, baselineY, summary };
   }, [data, baselineMs, height]);
 
   if (!view) {
@@ -86,7 +92,7 @@ export function BuildDurationTrendChart({ data, baselineMs, height = 180 }: Buil
   }
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Build duration trend">
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="xMidYMid meet" role="img" aria-label={view.summary}>
       {/* Grid lines */}
       {view.yTicks.map((t, i) => (
         <line key={i} x1={PADDING.left} y1={t.y} x2={width - PADDING.right} y2={t.y} stroke="var(--border)" strokeWidth="0.5" />
