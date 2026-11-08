@@ -118,3 +118,26 @@ describe('useFileWatcher auto-verify — a failure never ticks', () => {
     }
   });
 });
+
+describe('useFileWatcher auto-verify - a late verdict never crosses a project switch', () => {
+  it('projectPath switched while verify-semantic is pending: no write lands', async () => {
+    let release: (v: unknown) => void = () => {};
+    fetchMock.mockReturnValue(new Promise((r) => { release = r; }));
+    await emit(changes(decl('UARPGItemDefinition')));
+    expect(verifyCalls()).toHaveLength(1);
+    useProjectStore.setState({ projectPath: 'C:/OtherProj' });
+    await act(async () => {
+      release({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          success: true,
+          data: { results: [{ moduleId: 'arpg-inventory', itemId: 'ai-1', status: 'full', completeness: 1, missingMembers: [] }] },
+        }),
+      });
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    });
+    expect(setVerification).not.toHaveBeenCalled();
+    expect(setChecklistItem).not.toHaveBeenCalled();
+  });
+});
