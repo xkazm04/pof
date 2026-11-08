@@ -214,9 +214,17 @@ export interface ConformanceDeps {
   subject?: string;
 }
 
+/** A reference is operator-supplied art, so it is not always PNG; some vision APIs reject a mislabeled image. */
+function mimeOf(path: string): string {
+  const lower = path.toLowerCase();
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'image/png';
+}
+
 const defaultReadImage = async (path: string): Promise<VisionImage> => ({
   base64: (await readFile(path)).toString('base64'),
-  mime: path.toLowerCase().endsWith('.jpg') || path.toLowerCase().endsWith('.jpeg') ? 'image/jpeg' : 'image/png',
+  mime: mimeOf(path),
 });
 
 /**
