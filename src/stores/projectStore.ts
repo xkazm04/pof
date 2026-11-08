@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import {
   registerProjectStore,
   saveModuleProgress,
@@ -61,6 +62,11 @@ interface ProjectState {
 
 /** Cache duration: 5 minutes. Avoids re-scanning on every prompt. */
 const SCAN_CACHE_MS = 5 * 60 * 1000;
+
+/** Recent-project calls are non-fatal to their callers, but never silent. */
+function warnRecentFailure(action: string, err: unknown): void {
+  logger.warn(`projectStore.${action} failed — ${err instanceof Error ? err.message : String(err)}`);
+}
 
 /** Ticket of the newest scan; an older one's response never lands. */
 let latestScanTicket = 0;
@@ -210,8 +216,8 @@ export const useProjectStore = create<ProjectState>()(
             }
           );
           if (projects) set({ recentProjects: projects });
-        } catch {
-          // Silent fail — not critical
+        } catch (err) {
+          warnRecentFailure('saveToRecent', err);
         }
       },
 
@@ -219,8 +225,8 @@ export const useProjectStore = create<ProjectState>()(
         try {
           const projects = await apiFetch<RecentProject[]>('/api/recent-projects');
           set({ recentProjects: projects });
-        } catch {
-          // Silent fail
+        } catch (err) {
+          warnRecentFailure('loadRecentProjects', err);
         }
       },
 
@@ -255,8 +261,9 @@ export const useProjectStore = create<ProjectState>()(
             }
           );
           if (projects) set({ recentProjects: projects });
-        } catch {
+        } catch (err) {
           // Continue switching even if touch fails
+          warnRecentFailure('switchProject touch', err);
         }
 
         // Restore the target project's state
@@ -290,8 +297,8 @@ export const useProjectStore = create<ProjectState>()(
           set((state) => ({
             recentProjects: state.recentProjects.filter((p) => p.id !== projectId),
           }));
-        } catch {
-          // Silent fail
+        } catch (err) {
+          warnRecentFailure('removeRecentProject', err);
         }
       },
     }),
