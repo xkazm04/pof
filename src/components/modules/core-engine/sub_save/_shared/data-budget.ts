@@ -48,19 +48,6 @@ export function projectGrowth(history: number[]): number {
   return Math.max(0, Math.round(slope * n + intercept));
 }
 
-/* ── Save Diff ───────────────────────────────────────────────────────────── */
-
-export const SAVE_DIFF_ENTRIES: DiffEntry[] = [
-  { field: 'Level', oldValue: 13, newValue: 14, changeType: 'changed' },
-  { field: 'XP', oldValue: 4200, newValue: 5100, changeType: 'changed' },
-  { field: 'CurrentZone', oldValue: 'Verdant Plains', newValue: 'The Ashlands', changeType: 'changed' },
-  { field: 'Health', oldValue: 340, newValue: 380, changeType: 'changed' },
-  { field: 'SteelSword', oldValue: '', newValue: 'Steel Sword +2', changeType: 'added' },
-  { field: 'AshlandsVisited', oldValue: '', newValue: 'true', changeType: 'added' },
-  { field: 'OldTutorialFlag', oldValue: 'skip_intro', newValue: '', changeType: 'removed' },
-  { field: 'GoldAmount', oldValue: 1250, newValue: 1250, changeType: 'unchanged' },
-];
-
 /* ── Enhanced Slots ──────────────────────────────────────────────────────── */
 
 export interface EnhancedSlot {
