@@ -150,6 +150,28 @@ describe('ProjectSetupModule next-step banner', () => {
     expect((screen.getByTestId('pof-setup-wizard-create-project-btn') as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('leaves reference panels at full strength in the steady state', () => {
+    setScan({
+      missingToolCount: 0,
+      hasProject: true,
+      projectFiles: ['C:/proj/PoF/PoF.uproject'],
+      checklist: [{ id: 'uproject', label: 'UE Project', ok: true, detail: 'PoF.uproject' }],
+    });
+    render(<ProjectSetupModule />);
+    expect(screen.getByText('Project Files').closest('.opacity-50')).toBeNull();
+  });
+
+  it('still dims reference panels while a setup step is pending', () => {
+    setScan({
+      missingToolCount: 1,
+      hasProject: true,
+      projectFiles: ['C:/proj/PoF/PoF.uproject'],
+      checklist: [{ id: 'uproject', label: 'UE Project', ok: true, detail: 'PoF.uproject' }],
+    });
+    render(<ProjectSetupModule />);
+    expect(screen.getByText('Project Files').closest('.opacity-50')).not.toBeNull();
+  });
+
   it('triggers a tooling fetch when the Install Tools CTA is clicked', async () => {
     const fetchMock = mockFetch({ body: { success: true, data: { allInstalled: false, prompt: 'install winget pkgs' } } });
     setScan({ missingToolCount: 2, hasProject: false });

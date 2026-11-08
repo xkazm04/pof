@@ -128,6 +128,10 @@ export function ProjectSetupModule() {
     nextStep?.id === 'create-project' ? (!projectName.trim() || engines.length === 0) :
     nextStep?.id === 'build-verify' ? engines.length === 0 : false);
 
+  // Build & Verify is the steady state deriveNextStep always lands on, not a pending
+  // setup step: dimming on it would hold the reference panels at half opacity forever.
+  const setupPending = nextStep !== null && nextStep.id !== 'build-verify';
+
   // De-emphasize every panel except the one matching the suggested next step.
   const dimUnless = (stepId: NextStepId) =>
     nextStep && nextStep.id !== stepId ? 'opacity-50 transition-opacity duration-base' : '';
@@ -186,7 +190,7 @@ export function ProjectSetupModule() {
             I build next", without first guessing which module to open. Dimmed
             like every other panel while a setup step is still pending. */}
         {projectPath.trim() && (
-          <div className={nextStep ? 'opacity-50 transition-opacity duration-base' : ''}>
+          <div className={setupPending ? 'opacity-50 transition-opacity duration-base' : ''}>
             <ProjectNBACard />
           </div>
         )}
@@ -234,7 +238,7 @@ export function ProjectSetupModule() {
 
         {/* Project Files — reference info, de-emphasized while a step is pending */}
         {hasProject && projectFiles.length > 0 && (
-          <div className={nextStep ? 'opacity-50 transition-opacity duration-base' : ''}>
+          <div className={setupPending ? 'opacity-50 transition-opacity duration-base' : ''}>
             <ProjectFilesPanel
               projectPath={projectPath}
               projectFiles={projectFiles}
@@ -269,7 +273,7 @@ export function ProjectSetupModule() {
         {/* Blueprint Inspector — on-demand bridge introspection, reference info
             like Project Files, so it dims the same way while a step is pending */}
         {hasProject && (
-          <div className={`mb-6 ${nextStep ? 'opacity-50 transition-opacity duration-base' : ''}`}>
+          <div className={`mb-6 ${setupPending ? 'opacity-50 transition-opacity duration-base' : ''}`}>
             <BlueprintInspector />
           </div>
         )}
