@@ -12,21 +12,14 @@
  */
 
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { parseCodegenReport } from '@/lib/ability/codegen-report';
 import { setCodegenReport } from '@/lib/ability/ability-spec-db';
 
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return apiError('Invalid JSON body', 400);
-  }
-
-  if (typeof body !== 'object' || body === null) {
-    return apiError('Body must be a JSON object', 400);
-  }
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
 
   // catalogId/entityId arrive as callback staticFields (server-controlled), but
   // they are still checked — the route is a public POST endpoint.

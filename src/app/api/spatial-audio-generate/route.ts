@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { getAllDocs, getDoc } from '@/lib/level-design-db';
 import { getAudioScene, updateAudioScene, createAudioScene } from '@/lib/audio-scene-db';
 import { generateSpatialAudio } from '@/lib/spatial-audio-generator';
@@ -16,16 +16,9 @@ const EMPTY_SCENE: SceneDraft = { zones: [], emitters: [] };
  */
 export async function POST(req: NextRequest) {
   // A malformed or non-object body is the caller's fault: 400, not the catch-all 500 below.
-  let body: Record<string, unknown>;
-  try {
-    const parsed: unknown = await req.json();
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      return apiError('Body must be a JSON object', 400);
-    }
-    body = parsed as Record<string, unknown>;
-  } catch {
-    return apiError('Body must be valid JSON', 400);
-  }
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
 
   try {
     const { action } = body;

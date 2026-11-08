@@ -59,4 +59,31 @@ describe('PUT /api/audio-scene request shape', () => {
     expect(res.status).toBe(400);
     expect((await res.json()).error).toContain(field);
   });
+
+  it.each([
+    ['soundPoolSize', { soundPoolSize: 'lots' }],
+    ['soundPoolSize', { soundPoolSize: 2.5 }],
+    ['maxConcurrentSounds', { maxConcurrentSounds: -1 }],
+    ['maxConcurrentSounds', { maxConcurrentSounds: 0 }],
+    ['globalReverbPreset', { globalReverbPreset: 42 }],
+    ['globalReverbPreset', { globalReverbPreset: 'echo-chamber' }],
+    ['name', { name: {} }],
+    ['name', { name: '' }],
+  ])('refuses a bad %s with 400 and names the field', async (field, patch) => {
+    const res = await PUT(req('PUT', JSON.stringify({ id: 1, ...patch })));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain(field);
+  });
+
+  it('accepts valid scalar fields', async () => {
+    const created = await POST(req('POST', JSON.stringify({ name: 'scalars-ok' })));
+    const { doc } = (await created.json()).data;
+    const res = await PUT(req('PUT', JSON.stringify({
+      id: doc.id, name: 'scalars-ok-2', globalReverbPreset: 'cave', soundPoolSize: 64, maxConcurrentSounds: 8,
+    })));
+    expect(res.status).toBe(200);
+    const updated = (await res.json()).data.doc;
+    expect(updated.globalReverbPreset).toBe('cave');
+    expect(updated.soundPoolSize).toBe(64);
+  });
 });

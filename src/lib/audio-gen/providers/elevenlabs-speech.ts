@@ -14,6 +14,7 @@
  */
 import type { SpeechDesignRequest, SpeechDesignResult, SpeechRequest, SpeechResult } from '@/lib/audio-gen/types';
 import { logger } from '@/lib/logger';
+import { ProviderNotConfiguredError } from '@/lib/audio-gen/errors';
 
 const API = 'https://api.elevenlabs.io';
 export const DEFAULT_SPEECH_MODEL = 'eleven_v3';
@@ -37,7 +38,7 @@ export function speechText(text: string, direction: string, model: string): stri
 
 function key(): string {
   const k = process.env.ELEVENLABS_API_KEY;
-  if (!k) throw new Error('ELEVENLABS_API_KEY not configured');
+  if (!k) throw new ProviderNotConfiguredError('ELEVENLABS_API_KEY not configured');
   return k;
 }
 
