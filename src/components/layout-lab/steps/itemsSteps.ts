@@ -8,6 +8,7 @@ import {
   DEFAULT_TRI_CAP,
   DEFAULT_VFX_MS_CAP,
   REQUIRED_PBR_MAPS,
+  formatGpuMs,
 } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
 import { gradeGallerySelection } from '@/lib/catalog/acceptance/galleryArtifact';
 import { readHistory } from './shared/genHistory';
@@ -70,6 +71,7 @@ function declared(entity: LabEntity, step: string): string[] {
  * Produce actually writes.
  */
 export type { ItemAttr } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
+export { formatGpuMs };
 export { ITEM_ATTR_SCHEMA };
 /** Attribute key list — derived from the schema; drives accept() / copy completeness. */
 const ATTR_KEYS = ITEM_ATTR_KEYS;
@@ -361,20 +363,6 @@ function animationsCopy(data: Record<string, unknown>): AcceptanceCopy {
         suggestion: 'Run Produce to retarget pickup / equip / idle from SK_Mannequin.' }
     : { why: `Only ${clips.length} clip(s) present — at least ${MIN_ANIM_CLIPS} (pickup and equip) are required.`,
         suggestion: 'Re-run Produce to add the missing clips.' };
-}
-
-/**
- * A GPU cost printed beside its budget, with only as many decimals as it takes to keep a cost
- * that differs from the cap from READING as the cap. `toFixed(1)` printed 0.85 ms as "0.8" next to
- * a 0.8 ms budget, so an over-budget step read "0.8 ms of 0.8 ms" under a FAIL. Shared by the VFX
- * copy and the VFX view.
- */
-export function formatGpuMs(cost: number, cap: number): string {
-  for (let d = 1; d <= 4; d++) {
-    const s = String(Number(cost.toFixed(d)));
-    if (cost === cap || s !== String(cap)) return s;
-  }
-  return String(cost);
 }
 
 function vfxCopy(data: Record<string, unknown>): AcceptanceCopy {

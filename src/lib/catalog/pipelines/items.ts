@@ -133,6 +133,24 @@ function damageStepProduce(e: LabEntity) {
   };
 }
 
+/**
+ * The base type's identity (slot / item type / handedness), hoisted so the Tooltip's sub-header
+ * says the SAME thing the Base Type & Rarity step stored for the same entity.
+ */
+function baseTypeIdentity(e: LabEntity) {
+  const entityData = (e.data as Record<string, unknown> | null) ?? {};
+  const effective = entityData.effective as Record<string, { value?: unknown }> | undefined;
+  const value = <T,>(field: string): T | undefined => effective?.[field]?.value as T | undefined;
+  const equipType = value<string>('equipType');
+  return {
+    slot: value<string>('slot') ?? 'Weapon',
+    itemType: value<string>('itemType') ?? 'Sword',
+    equipType,
+    oneHanded: equipType ? equipType === 'One-handed' : true,
+    twoHanded: equipType === 'Two-handed',
+  };
+}
+
 /** The tooltip's stat + implicit lines, formatted from {@link damageStepProduce} for the same
  *  entity. A line is present only when the Damage step derived its value. */
 function tooltipStatsFromDamage(e: LabEntity): { statLines: string[]; implicitLine?: string } {
@@ -145,6 +163,14 @@ function tooltipStatsFromDamage(e: LabEntity): { statLines: string[]; implicitLi
   if (d.critChance != null) statLines.push(`Critical Strike Chance: ${Math.round(d.critChance * 1000) / 10}%`);
   const label = typeof d.implicit === 'object' && d.implicit !== null ? (d.implicit as { label?: string }).label : undefined;
   return label ? { statLines, implicitLine: label } : { statLines };
+}
+
+/** "One-Handed Sword" for a one-handed weapon, "Two-Handed <type>" for a two-handed one, the bare
+ *  item type for anything that is not a weapon — from {@link baseTypeIdentity}. */
+function tooltipSubHeader(e: LabEntity): string {
+  const { slot, itemType, oneHanded, twoHanded } = baseTypeIdentity(e);
+  if (slot !== 'Weapon') return itemType;
+  return `${twoHanded || !oneHanded ? 'Two-Handed' : 'One-Handed'} ${itemType}`;
 }
 
 registerCatalogPipeline({
@@ -217,9 +243,7 @@ registerCatalogPipeline({
         const rarityReqLvl: Record<string, number> = { Common: 1, Magic: 14, Rare: 33, Set: 43, Legendary: 57 };
         const ilvl = effective ? Number(entityData.dropLevel ?? 1) : rarityIlvl[entityRarity] ?? 6;
         const requiredLevel = effectiveValue<number>('requiredLevel') ?? rarityReqLvl[entityRarity] ?? 1;
-        const slot = effectiveValue<string>('slot') ?? 'Weapon';
-        const itemType = effectiveValue<string>('itemType') ?? 'Sword';
-        const equipType = effectiveValue<string>('equipType');
+        const { slot, itemType, equipType, oneHanded } = baseTypeIdentity(e);
         const armor = effectiveValue<{ min: number; max: number }>('effectiveArmor');
         const armorSlot = ['Chest', 'Helm', 'OffHand'].includes(slot);
         const durability = effectiveValue<{ min: number; max: number }>('durability');
@@ -252,7 +276,7 @@ registerCatalogPipeline({
             baseType: e.name,
             slot,
             subType: itemType,
-            oneHanded: equipType ? equipType === 'One-handed' : true,
+            oneHanded,
             ...(equipType === 'Two-handed' ? { twoHanded: true } : {}),
             rarity: entityRarity,    // derived from entity seed (arpg-item-rarity §1a)
             ilvl,                    // rarity-gated: Common→6, Magic→20, Rare→45 (§2c)
@@ -653,18 +677,24 @@ registerCatalogPipeline({
         highlightKey: 'baseValue',
         max: 16,
       },
-      produce: () => {
+      produce: (e: LabEntity) => {
         // Judge-refleet fix 2026-07-07: the old version hardcoded baseValue = powerScore = 12
         // with a justifying comment — a ratio engineered to 1.0, not derived. Power now sums
         // the item's ACTUAL contributions; baseValue stays the plan.md anchor; the ratio is
         // whatever the division yields.
-        // Iron Longsword (Common, tier 1): base DPS 12.5 (avg dmg 10 × APS 1.25, §1 weapon
-        // math) → dpsPower = 12.5 × 0.8 (one-hand norm) = 10.0; implicit +30 accuracy at T8
-        // values ≈ 30 × 0.06 = 1.8 power; Common = 0 explicit affixes (§1) → affixPower 0.
-        const powerBreakdown = { dpsPower: 10.0, implicitAccuracyPower: 1.8, affixPower: 0 };
-        const powerScore = powerBreakdown.dpsPower + powerBreakdown.implicitAccuracyPower + powerBreakdown.affixPower; // 11.8
+        // dpsPower = the Damage / Implicit step's OWN baseDPS (damageStepProduce, one authority
+        // per quantity) x 0.8 (one-hand norm); an item the Damage step derived no weapon DPS for
+        // (armour, trinkets) contributes 0 DPS power. Implicit +30 accuracy at T8 values ≈ 30 x 0.06
+        // = 1.8 power; Common = 0 explicit affixes (§1) → affixPower 0.
+        const baseDPS = (damageStepProduce(e).data as { baseDPS?: number }).baseDPS;
+        const powerBreakdown = {
+          dpsPower: Math.round((baseDPS ?? 0) * 0.8 * 100) / 100,
+          implicitAccuracyPower: 1.8,
+          affixPower: 0,
+        };
+        const powerScore = Math.round((powerBreakdown.dpsPower + powerBreakdown.implicitAccuracyPower + powerBreakdown.affixPower) * 100) / 100; // item-1: 11.8
         const baseValue = 12; // plan.md anchor (vendor gold), independent of the power sum
-        const pricePowerRatio = Math.round((baseValue / powerScore) * 100) / 100; // 1.02 — lands in band, not pinned to it
+        const pricePowerRatio = Math.round((baseValue / powerScore) * 100) / 100; // item-1: 1.02 — derived per item, may fall outside the band
         return {
           data: {
             economy: {
@@ -688,7 +718,7 @@ registerCatalogPipeline({
                 'set of Rare items (one per slot) → receive one Chaos Orb shard (1 sink per full set). ' +
                 'Every currency declares ≥1 sink (canon proj-economy); the set recipe is the item row\'s contribution.',
               balanceNote:
-                `pricePowerRatio(${pricePowerRatio}) is within the 0.8–1.2× canon band (proj-balance). ` +
+                `pricePowerRatio(${pricePowerRatio}) is ${pricePowerRatio >= 0.8 && pricePowerRatio <= 1.2 ? 'within' : 'OUTSIDE'} the 0.8–1.2× canon band (proj-balance). ` +
                 'Rare multiplier (×8) reflects 4–6 affixes with mid-tier rolls at ilvl 45; ' +
                 'the exact vendor value caps to avoid soft-currency inflation (canon proj-economy).',
             },
@@ -800,7 +830,7 @@ registerCatalogPipeline({
               'A standard iron-forged longsword, edge kept sharp by a soldier\'s habit. ' +
               'Reliable and unremarkable — a weapon that outlasts the hands that wield it.',
             headerLine: e.name,
-            subHeaderLine: 'One-Handed Sword',
+            subHeaderLine: tooltipSubHeader(e),
             ...tooltipStatsFromDamage(e),
             separatorAfterImplicit: true,
             // Judge-refleet fix 2026-07-07: this item's authoritative rarity is COMMON

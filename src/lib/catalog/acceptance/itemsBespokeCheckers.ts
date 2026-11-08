@@ -135,6 +135,20 @@ export const itemsAnimClipsPresent: Checker = (data) => {
   };
 };
 
+/**
+ * A GPU cost printed beside its budget, with only as many decimals as it takes to keep a cost
+ * that differs from the cap from READING as the cap. `toFixed(1)` printed 0.85 ms as "0.8" next to
+ * a 0.8 ms budget, so an over-budget step read "0.8 ms of 0.8 ms" under a FAIL. Shared by this checker, the VFX
+ * copy and the VFX view.
+ */
+export function formatGpuMs(cost: number, cap: number): string {
+  for (let d = 1; d <= 4; d++) {
+    const s = String(Number(cost.toFixed(d)));
+    if (cost === cap || s !== String(cap)) return s;
+  }
+  return String(cost);
+}
+
 /** ≥1 VFX variant is bound and the declared GPU cost fits its budget. */
 export const itemsVfxWithinBudget: Checker = (data) => {
   const variants = list(data.variants);
@@ -145,12 +159,12 @@ export const itemsVfxWithinBudget: Checker = (data) => {
     label: 'At least one VFX bound · GPU cost under budget',
     tier: 'L0',
     status: ok ? 'pass' : 'pending',
-    detail: variants.length ? `${cost.toFixed(1)} / ${cap} ms` : 'no vfx',
+    detail: variants.length ? `${formatGpuMs(cost, cap)} / ${cap} ms` : 'no vfx',
     ...(ok
       ? {}
       : {
           reason: variants.length
-            ? `VFX cost ${cost.toFixed(1)} ms exceeds the ${cap} ms budget`
+            ? `VFX cost ${formatGpuMs(cost, cap)} ms exceeds the ${cap} ms budget`
             : 'no VFX variant bound',
         }),
   };

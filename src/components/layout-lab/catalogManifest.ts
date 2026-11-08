@@ -75,8 +75,9 @@ const BESPOKE_CATALOGS = new Set<string>(['items']);
 export const ITEMS_SPEC_DUALITY = {
   catalogId: 'items',
   reason:
-    'The 13 bespoke labels key the on-screen step UIs + the reference e2e walk; the 11 registry ' +
-    'labels key persisted artifacts, judge verdicts, step facts and the headless drains. Merging ' +
+    'The 7 bespoke-owned labels keep their on-screen step UIs + the reference e2e walk (the 13 ' +
+    'on-screen labels minus the 6 the registry owns); the 11 registry labels render through the ' +
+    'generic ArchetypeStep and key persisted artifacts, judge verdicts, step facts and the headless drains. Merging ' +
     'either side orphans recorded data, so both are declared and guarded instead. The lab renders ' +
     'the ordered UNION of the two — bespoke first, then the registry-only labels — each tagged ' +
     'with the spec that OWNS it (registered wins the 6 shared labels, the server order, since ' +

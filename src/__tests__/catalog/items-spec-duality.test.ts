@@ -8,6 +8,7 @@ import { ITEM_STEP_SPECS, ITEM_STEP_NAMES } from '@/components/layout-lab/steps/
 import { getStepFact } from '@/lib/status/statusModel';
 import { appendBatch, emptyHistory, historyData, makeBatch } from '@/components/layout-lab/steps/shared/genHistory';
 import { WALKER_SKIP } from '../../../e2e/helpers/pipeline-coverage';
+import { itemsLabelOwner } from '@/components/layout-lab/itemsLabelOwner';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { CheckerContext } from '@/lib/catalog/acceptance/types';
 import { TEMPLATE_FIELD } from '@/lib/catalog/acceptance/template';
@@ -116,6 +117,17 @@ describe('Items spec duality — declared, not implied', () => {
     expect(reason).toContain('catalog-items-reference.spec.ts');
     // The reason must name the spec that is actually walked — the bespoke on-screen count.
     expect(reason).toContain(String(ITEMS_ON_SCREEN_STEPS.length));
+  });
+
+  it('states the screen composition derived from itemsLabelOwner, not the pre-2026-09-29 "13 bespoke UIs"', () => {
+    const owners = itemsAllStepLabels().map((l) => itemsLabelOwner(l));
+    const bespoke = owners.filter((o) => o === 'bespoke').length;
+    const registry = owners.filter((o) => o === 'registry').length;
+    for (const [name, text] of [['WALKER_SKIP.items', WALKER_SKIP.items ?? ''], ['ITEMS_SPEC_DUALITY.reason', ITEMS_SPEC_DUALITY.reason]] as const) {
+      expect(text, `${name} names the bespoke count`).toContain(`${bespoke} bespoke`);
+      expect(text, `${name} names the registry count`).toContain(`${registry} registry`);
+      expect(text, `${name} must not say "13 bespoke"`).not.toMatch(/13 bespoke/);
+    }
   });
 });
 

@@ -64,3 +64,34 @@ describe('items Economy states the ratio it computed', () => {
     expect(data.economy.balanceNote).toContain(`pricePowerRatio(${data.pricePowerRatio})`);
   });
 });
+
+describe('items Economy power follows the entity own Damage step', () => {
+  it.each(entities.map((e) => [e.id, e] as const))('%s: dpsPower is the Damage step baseDPS x 0.8 (one-hand norm)', (_id, e) => {
+    const damageData = step('Damage / Implicit').produce(e).data as { baseDPS?: number };
+    const economy = (step('Economy').produce(e).data as { economy: { powerScore: number; powerBreakdown: { dpsPower: number; implicitAccuracyPower: number; affixPower: number } } }).economy;
+    expect(economy.powerBreakdown.dpsPower).toBe(Math.round((damageData.baseDPS ?? 0) * 0.8 * 100) / 100);
+    const { dpsPower, implicitAccuracyPower, affixPower } = economy.powerBreakdown;
+    expect(economy.powerScore).toBeCloseTo(dpsPower + implicitAccuracyPower + affixPower, 6);
+  });
+});
+
+describe('items Tooltip sub-header agrees with Base Type & Rarity', () => {
+  const withEffective = (effective: Record<string, { value: unknown }>) =>
+    ({ ...entities[0], data: { ...(entities[0].data as object), effective } }) as unknown as LabEntity;
+  const subHeader = (e: LabEntity) => (step('Tooltip / Compare').produce(e).data as { tooltip: { subHeaderLine: string } }).tooltip.subHeaderLine;
+  const baseType = (e: LabEntity) => (step('Base Type & Rarity').produce(e).data as { baseType: { subType: string; oneHanded: boolean } }).baseType;
+
+  it('a seeded sword keeps One-Handed Sword', () => {
+    expect(subHeader(entities[0])).toBe('One-Handed Sword');
+  });
+
+  it.each([
+    ['two-handed axe', { slot: { value: 'Weapon' }, itemType: { value: 'Axe' }, equipType: { value: 'Two-handed' } }, 'Two-Handed Axe'],
+    ['one-handed dagger', { slot: { value: 'Weapon' }, itemType: { value: 'Dagger' }, equipType: { value: 'One-handed' } }, 'One-Handed Dagger'],
+    ['chest armour', { slot: { value: 'Chest' }, itemType: { value: 'Plate' } }, 'Plate'],
+  ])('%s: sub-header is %s from the base type', (_n, effective, expected) => {
+    const e = withEffective(effective);
+    expect(subHeader(e)).toBe(expected);
+    expect(subHeader(e)).toContain(baseType(e).subType);
+  });
+});
