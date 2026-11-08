@@ -184,3 +184,16 @@ describe('the narrative tab names its fields', () => {
     expect(screen.getByRole('button', { name: 'Create level design' })).toBeTruthy();
   });
 });
+
+describe('Add Room never reuses a name already on the canvas', () => {
+  it("rooms 'Room 1' + 'Room 3' (Room 2 deleted) -> the new room is not a second 'Room 3'", async () => {
+    const api = installApi([{ ...DOC, rooms: [room('r1', 100, { name: 'Room 1' }), room('r3', 300, { name: 'Room 3' })] }]);
+    await openDoc();
+    fireEvent.click(screen.getByRole('button', { name: /Add Room/ }));
+    await waitFor(() => expect(api.calls.some((c) => c.method === 'PUT')).toBe(true));
+    const put = api.calls.find((c) => c.method === 'PUT')!.body as { rooms: RoomNode[] };
+    const names = put.rooms.map((r) => r.name);
+    expect(names).toHaveLength(3);
+    expect(new Set(names).size).toBe(3);
+  });
+});

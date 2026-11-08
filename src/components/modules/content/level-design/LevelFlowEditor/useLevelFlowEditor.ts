@@ -48,9 +48,13 @@ export function useLevelFlowEditor({
 
   const addRoom = useCallback(() => {
     const id = `room-${Date.now()}-${++roomSeqRef.current}`;
+    // `Room <count+1>` collides once a room was deleted; take the next free number.
+    const taken = new Set(rooms.map((r) => r.name));
+    let n = rooms.length + 1;
+    while (taken.has(`Room ${n}`)) n++;
     const newRoom: RoomNode = {
       id,
-      name: `Room ${rooms.length + 1}`,
+      name: `Room ${n}`,
       type: 'combat',
       description: '',
       encounterDesign: '',
