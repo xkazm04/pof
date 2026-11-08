@@ -92,7 +92,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   const pts = config.softCap + 20;
                   const linear = pts * config.baseValuePerPoint;
                   const effective = drEffectiveBonus(config, pts);
-                  const savings = ((1 - effective / linear) * 100).toFixed(0);
+                  const savings = linear > 0 ? ((1 - effective / linear) * 100).toFixed(0) : '0';
                   return (
                     <div className="flex items-center gap-2 text-2xs font-mono">
                       <span className="text-text-muted">Linear: <span className="text-text">{linear.toFixed(1)}</span></span>
@@ -176,7 +176,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
         >
           {drConfigs.map((config) => {
             const color = config.color;
-            const maxLinear = 100 * config.baseValuePerPoint;
+            const maxLinear = 100 * config.baseValuePerPoint || 1;
             const points: string[] = [];
             const linearPoints: string[] = [];
             for (let pts = 0; pts <= 100; pts += 5) {
