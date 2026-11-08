@@ -23,3 +23,37 @@ describe('AdvancedTexturePanel — Scenario generate guard', () => {
     expect(generate.disabled).toBe(false);
   });
 });
+
+describe('AdvancedTexturePanel — every tile reports failure through TileError', () => {
+  const fill = (id: string, value: string) =>
+    fireEvent.change(screen.getByTestId(id), { target: { value } });
+
+  const tiles: Array<{ name: string; testId: string; prepare: () => void; run: string }> = [
+    { name: 'scenario', testId: 'scenario-error', prepare: () => fill('scenario-prompt', 'stone'), run: 'scenario-generate' },
+    { name: 'upscale', testId: 'upscale-error', prepare: () => fill('upscale-image-id', 'img-1'), run: 'upscale-run' },
+    { name: 'unzoom', testId: 'unzoom-error', prepare: () => fill('unzoom-image-id', 'img-1'), run: 'unzoom-run' },
+    {
+      name: 'controlnet', testId: 'controlnet-error', run: 'controlnet-run',
+      prepare: () => { fill('controlnet-prompt', 'icon'); fill('controlnet-image-id', 'init-1'); },
+    },
+    {
+      name: 'inpaint', testId: 'inpaint-error', run: 'inpaint-run',
+      prepare: () => { fill('inpaint-prompt', 'patch'); fill('inpaint-image-id', 'base-1'); },
+    },
+  ];
+
+  it.each(tiles)('$name: a 429 is an announced, classified alert with a Retry that re-runs the call', async (tile) => {
+    const fetchMock = mockFetch({ status: 429, body: { success: false, error: 'Leonardo generation failed (429): rate limit exceeded' } });
+    render(<AdvancedTexturePanel />);
+    tile.prepare();
+    fireEvent.click(screen.getByTestId(tile.run));
+
+    const node = await screen.findByTestId(tile.testId);
+    expect(node.getAttribute('role')).toBe('alert');
+    expect(node.getAttribute('data-error-kind')).toBe('rate-limit');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId(`${tile.testId}-retry`));
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  });
+});

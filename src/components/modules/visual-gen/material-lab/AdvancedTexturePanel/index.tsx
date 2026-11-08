@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles, Loader2, ArrowUpRight, Maximize2, Workflow, Brush, ArrowRight, Wand2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
-import { isNotConfigured } from './helpers';
+import { TileError } from '../TileError';
 import { PBR_MAP_CHANNELS, tileBtn, tileInput } from './constants';
 import { useAdvancedTexturePanel } from './useAdvancedTexturePanel';
 
@@ -50,13 +50,7 @@ export function AdvancedTexturePanel() {
           Generate PBR set
         </button>
 
-        {pbrErr && (
-          <div data-testid="scenario-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">
-            {isNotConfigured(pbrErr)
-              ? 'Configure SCENARIO_API_KEY + SCENARIO_API_SECRET in the app .env to use Scenario PBR generation.'
-              : pbrErr}
-          </div>
-        )}
+        {pbrErr && <TileError error={pbrErr} onRetry={runScenario} testId="scenario-error" />}
 
         {pbr && (
           <>
@@ -183,9 +177,7 @@ export function AdvancedTexturePanel() {
           Upscale
         </button>
 
-        {upErr && (
-          <div data-testid="upscale-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{upErr}</div>
-        )}
+        {upErr && <TileError error={upErr} onRetry={runUpscale} testId="upscale-error" />}
         {jobId && (
           <div data-testid="upscale-job" className="text-[11px] text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
             Upscale job started: {jobId}
@@ -216,7 +208,7 @@ export function AdvancedTexturePanel() {
           {uzLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Maximize2 className="w-3.5 h-3.5" />}
           Unzoom
         </button>
-        {uzErr && <div data-testid="unzoom-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{uzErr}</div>}
+        {uzErr && <TileError error={uzErr} onRetry={runUnzoom} testId="unzoom-error" />}
         {uzJob && (
           <div data-testid="unzoom-job" className="text-[11px] text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
             Unzoom job started: {uzJob}
@@ -254,7 +246,7 @@ export function AdvancedTexturePanel() {
           {cnLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Workflow className="w-3.5 h-3.5" />}
           Generate (ControlNet)
         </button>
-        {cnErr && <div data-testid="controlnet-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{cnErr}</div>}
+        {cnErr && <TileError error={cnErr} onRetry={runControlNet} testId="controlnet-error" />}
         {cnResult?.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img data-testid="controlnet-result" src={cnResult.imageUrl} alt="controlnet result" className="w-full aspect-square object-cover rounded border border-white/10" />
@@ -291,7 +283,7 @@ export function AdvancedTexturePanel() {
           {ipLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brush className="w-3.5 h-3.5" />}
           Inpaint
         </button>
-        {ipErr && <div data-testid="inpaint-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{ipErr}</div>}
+        {ipErr && <TileError error={ipErr} onRetry={runInpaint} testId="inpaint-error" />}
         {ipResult?.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img data-testid="inpaint-result" src={ipResult.imageUrl} alt="inpaint result" className="w-full aspect-square object-cover rounded border border-white/10" />
