@@ -102,6 +102,8 @@ export const UI_TIMEOUTS = {
   storyWalkPoll: 750,
   /** Short settle time for DB writes before UI refresh. */
   dbSettle: 300,
+  /** Debounce before the CLI input's anti-pattern prompt check fires (after the user stops typing). */
+  antiPatternCheckDebounce: 600,
   /** Debounce before persisting an edited ability spec to /api/ability-spec. */
   specSaveDebounce: 600,
   /** Debounce before persisting a free-text / numeric field edit (audio scene

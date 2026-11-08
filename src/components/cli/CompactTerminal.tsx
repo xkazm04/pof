@@ -110,7 +110,8 @@ export function CompactTerminal({
       // re-render (unstable handleSubmit dep), so the prompt routinely sat
       // unsent. Submitting straight through removes the race entirely.
       const queue = tqRef.current;
-      if (typeof prompt !== 'string' || !prompt.trim() || queue.isStreaming) return;
+      if (typeof prompt !== 'string' || !prompt.trim()) return;
+      if (queue.isStreaming) { queue.logBusyDrop(); return; }
       // `resume: false` asks for a fresh Claude session (e.g. an exact Retry); by
       // default a dispatch continues the terminal's session when it has one.
       const wantsResume = resume !== false;
@@ -169,6 +170,8 @@ export function CompactTerminal({
         isStreaming={tq.isStreaming}
         executionInfo={tq.executionInfo}
         lastResult={tq.lastResult}
+        error={tq.error}
+        outcomeUnknown={tq.outcomeUnknown}
         logFilePath={tq.logFilePath}
         editCount={editCount}
         writeCount={writeCount}

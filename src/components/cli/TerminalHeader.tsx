@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import {
   Terminal, CheckCircle, Loader2, Trash2, RotateCcw, FileText, Copy,
-  ListTodo, FileEdit, FilePlus, ArrowDown, ArrowUp, Circle, AlertCircle,
+  ListTodo, FileEdit, FilePlus, ArrowDown, ArrowUp, Circle, AlertCircle, HelpCircle,
 } from 'lucide-react';
 import type { ExecutionInfo, ExecutionResult } from './types';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -15,6 +15,10 @@ interface TerminalHeaderProps {
   isStreaming: boolean;
   executionInfo: ExecutionInfo | null;
   lastResult: ExecutionResult | null;
+  /** How the last run ended when it ended in error (start failure, error frame). */
+  error?: string | null;
+  /** The run ended but its outcome was never observed (server lost it). */
+  outcomeUnknown?: boolean;
   logFilePath: string | null;
   editCount: number;
   writeCount: number;
@@ -28,7 +32,7 @@ interface TerminalHeaderProps {
 }
 
 export function TerminalHeader({
-  title, sessionId, isStreaming, executionInfo, lastResult,
+  title, sessionId, isStreaming, executionInfo, lastResult, error, outcomeUnknown,
   logFilePath, editCount, writeCount, queuePendingCount,
   resolvedModel, resolvedEffort,
   onClear, onResume, onCopyOutput,
@@ -107,7 +111,9 @@ export function TerminalHeader({
           <span role="status" aria-live="polite" className="flex items-center gap-1">
             {isStreaming ? (
               <span data-testid="pof-cli-panel-running-indicator" className={`flex items-center gap-1 ${CLI_COLORS.warning}`}><Loader2 className="w-2.5 h-2.5 animate-spin" aria-hidden="true" />Running</span>
-            ) : lastResult?.isError ? (
+            ) : outcomeUnknown ? (
+              <span className="flex items-center gap-1"><HelpCircle className="w-2.5 h-2.5" aria-hidden="true" />Unknown</span>
+            ) : error || lastResult?.isError ? (
               <span className={`flex items-center gap-1 ${CLI_COLORS.error}`}><AlertCircle className="w-2.5 h-2.5" aria-hidden="true" />Error</span>
             ) : lastResult ? (
               <span className={`flex items-center gap-1 ${CLI_COLORS.success}`}><CheckCircle className="w-2.5 h-2.5" aria-hidden="true" />Done</span>
