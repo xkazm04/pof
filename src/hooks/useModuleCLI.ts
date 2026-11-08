@@ -6,7 +6,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
 import { type CLITask, type CallbackStatus } from '@/lib/cli-task';
-import { composeTaskDispatch, STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
+import { composeTaskDispatch } from '@/lib/prompt-evolution/dispatch-resolve';
 import type { SkillId } from '@/components/cli/skills';
 import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
 import { logger } from '@/lib/logger';
@@ -95,7 +95,6 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   const taskStartRef = useRef<string>('');
   // The prompt-evolution variant the last dispatch resolved to (or 'static') —
   // recorded with the outcome so A/B attribution can close the loop.
-  const lastVariantIdRef = useRef<string>(STATIC_VARIANT_ID);
   // The module the last dispatch was FOR (null = the host module).
   const lastRunModuleRef = useRef<SubModuleId | null>(null);
 
@@ -147,7 +146,6 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
             success,
             durationMs,
             startedAt: taskStartRef.current,
-            promptVariantId: lastVariantIdRef.current,
           });
           // The context belongs to THAT dispatch. A later run in this session the
           // hook did not dispatch (a follow-up typed in the terminal, an Activity
@@ -167,7 +165,6 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // Track for analytics
       lastPromptRef.current = prompt;
       taskStartRef.current = new Date().toISOString();
-      lastVariantIdRef.current = meta?.variantId ?? STATIC_VARIANT_ID;
       const runModuleId = meta?.moduleId ?? opts.moduleId;
       lastRunModuleRef.current = meta?.moduleId ?? null;
 
