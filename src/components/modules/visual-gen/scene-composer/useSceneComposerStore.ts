@@ -29,11 +29,9 @@ interface SceneComposerState {
   actionResult: string | null;
   /** True once at least one refresh has completed (success or failure). */
   hasRefreshed: boolean;
-  transformMode: 'translate' | 'rotate' | 'scale';
 
   refreshScene: () => Promise<void>;
   selectObject: (name: string | null) => void;
-  setTransformMode: (mode: 'translate' | 'rotate' | 'scale') => void;
   deleteObject: (name: string) => Promise<void>;
   duplicateObject: (name: string) => Promise<void>;
   clearActionFeedback: () => void;
@@ -52,7 +50,6 @@ export const useSceneComposerStore = create<SceneComposerState>()(
     failedAction: null,
     actionResult: null,
     hasRefreshed: false,
-    transformMode: 'translate',
 
     refreshScene: async () => {
       const refresh = ++latestRefresh;
@@ -69,8 +66,6 @@ export const useSceneComposerStore = create<SceneComposerState>()(
     },
 
     selectObject: (name) => set({ selectedObject: name }),
-
-    setTransformMode: (mode) => set({ transformMode: mode }),
 
     /**
      * Run one object operation and REPORT it.
