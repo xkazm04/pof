@@ -5,6 +5,7 @@ import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 import { StatBar } from '@/components/ui/StatBar';
 import type { ModuleStats } from '@/types/session-analytics';
 import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
+import { formatDuration } from '@/lib/format';
 import { scoreBand } from './helpers';
 
 export function ModuleStatsRow({
@@ -77,10 +78,7 @@ export function ModuleStatsRow({
             <div>
               <span className="text-2xs text-text-muted block">Avg Time</span>
               <span className="text-xs text-text-muted-hover font-medium">
-                {stats.avgDurationMs > 60000
-                  ? `${Math.round(stats.avgDurationMs / 60000)}m`
-                  : `${Math.round(stats.avgDurationMs / 1000)}s`
-                }
+                {formatDuration(Math.round(stats.avgDurationMs))}
               </span>
             </div>
           </div>

@@ -8,6 +8,7 @@ import {
 import { useSessionDashboard } from '@/hooks/useSessionAnalytics';
 import { FetchError } from '../../shared/FetchError';
 import { MetricCard } from '@/components/ui/MetricCard';
+import { formatDuration } from '@/lib/format';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_STALE, OPACITY_10 } from '@/lib/chart-colors';
@@ -66,7 +67,7 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
     );
   }
 
-  const avgDurationSec = dashboard.totalDurationMs / dashboard.totalSessions / 1000;
+  const avgDurationMs = Math.round(dashboard.totalDurationMs / dashboard.totalSessions);
 
   return (
     <div className="space-y-6">
@@ -86,7 +87,7 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
         />
         <MetricCard
           label="Avg Duration"
-          value={avgDurationSec < 60 ? `${Math.round(avgDurationSec)}s` : `${Math.round(avgDurationSec / 60)}m`}
+          value={formatDuration(avgDurationMs)}
           icon={Clock}
           accent={STATUS_STALE}
         />
