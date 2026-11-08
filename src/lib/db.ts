@@ -555,8 +555,9 @@ function bootstrap(conn: Database.Database): void {
 
 /** Columns copied by the rebuild, in the order the new table declares them. Named
  *  EXPLICITLY — a `SELECT *` positional copy silently shifts every value one column
- *  left the moment the source and target column orders differ. */
-const FEATURE_MATRIX_COLUMN_LIST = [
+ *  left the moment the source and target column orders differ. Exported for the drift gate
+ *  (db-rebuild-column-lists.test.ts), which checks it against the live schema. */
+export const FEATURE_MATRIX_COLUMN_LIST = [
   'id', 'module_id', 'feature_name', 'category', 'status', 'description',
   'file_paths', 'review_notes', 'quality_score', 'next_steps', 'last_reviewed_at',
   'created_at', 'updated_at', 'project_id', 'source',
@@ -802,7 +803,7 @@ function migrateFeatureMatrixImprovedStatus(database: Database.Database): void {
 // so this is a rebuild too, and it carried the same `SELECT *` / no-transaction /
 // no-count-check pattern as the one above.
 
-const SESSION_ANALYTICS_COLUMN_LIST = [
+export const SESSION_ANALYTICS_COLUMN_LIST = [
   'id', 'module_id', 'session_key', 'prompt', 'prompt_preview', 'had_project_context',
   'prompt_length', 'success', 'duration_ms', 'started_at', 'completed_at',
 ];
