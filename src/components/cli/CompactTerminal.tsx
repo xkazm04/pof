@@ -90,10 +90,13 @@ export function CompactTerminal({
     handleSubmit(resume);
   }, [handleSubmit]);
 
+  // Submit 'Continue' directly: the old setInput + setTimeout(handleSubmit) read the
+  // `input` of the render BEFORE the setInput, so it sent nothing (or the stale draft).
   const handleResume = useCallback(() => {
-    setInput('Continue');
-    setTimeout(() => handleSubmit(true), 0);
-  }, [handleSubmit]);
+    if (tq.isStreaming || tq.sessionId === null) return;
+    history.pushHistory('Continue');
+    void tq.submitPrompt('Continue', true);
+  }, [tq, history]);
 
   // Listen for pof-cli-prompt events + announce readiness so a just-dispatched
   // sendPrompt can target this terminal (replaces the old fixed mount-delay).
