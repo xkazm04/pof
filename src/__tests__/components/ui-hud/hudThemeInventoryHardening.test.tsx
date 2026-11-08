@@ -51,3 +51,25 @@ describe('HUD theme Copy goes through the shared copyToClipboard', () => {
     expect(copyButton().textContent).toContain('Copied');
   });
 });
+
+describe('HUD theme .h download goes through the shared downloadBlob', () => {
+  it('does not revoke the blob URL in the same tick as the click', () => {
+    vi.useFakeTimers();
+    const saved = { create: URL.createObjectURL, revoke: URL.revokeObjectURL };
+    try {
+      const revoke = vi.fn();
+      URL.createObjectURL = () => 'blob:hud';
+      URL.revokeObjectURL = revoke;
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      render(<HudThemeEditor />);
+      fireEvent.click(screen.getByTitle('Download .h file'));
+      expect(revoke).not.toHaveBeenCalled();
+      vi.runAllTimers();
+      expect(revoke).toHaveBeenCalledWith('blob:hud');
+    } finally {
+      URL.createObjectURL = saved.create;
+      URL.revokeObjectURL = saved.revoke;
+      vi.useRealTimers();
+    }
+  });
+});

@@ -19,6 +19,7 @@ import { ApplyToProjectBar } from './ApplyToProjectBar';
 import type { CopyState } from './ExportPanel';
 import { useHudDesignStore } from '@/stores/hudDesignStore';
 import { copyToClipboard } from '@/lib/clipboard';
+import { downloadBlob } from '@/lib/download';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { useProjectStore } from '@/stores/projectStore';
 import type { HudTheme, RGBA } from './types';
@@ -60,13 +61,8 @@ export function HudThemeEditor() {
   }, [exportConfig]);
 
   const handleDownload = useCallback(() => {
-    const blob = new Blob([exportConfig], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'HUDThemeConfig.h';
-    a.click();
-    URL.revokeObjectURL(url);
+    // Shared helper defers the revoke so the click is not raced into a 0-byte file.
+    downloadBlob(new Blob([exportConfig], { type: 'text/plain' }), 'HUDThemeConfig.h');
   }, [exportConfig]);
 
   // Section config tabs
