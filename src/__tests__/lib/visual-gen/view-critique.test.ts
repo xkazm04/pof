@@ -94,7 +94,8 @@ describe('parseViewCritiqueReply', () => {
 
   it('clamps a severity the model pushed out of range', () => {
     expect(parseViewCritiqueReply('DEFECTS=x; SEVERITY=9').severity).toBe(SEVERITY_MAX);
-    expect(parseViewCritiqueReply('DEFECTS=x; SEVERITY=-4').severity).toBe(0);
+    // A negative severity is off the scale, not a clean view: refusing it keeps it out of the score.
+    expect(parseViewCritiqueReply('DEFECTS=x; SEVERITY=-4').ok).toBe(false);
   });
 
   it('rejects a non-numeric severity rather than defaulting it to clean', () => {
