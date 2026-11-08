@@ -110,6 +110,7 @@ interface SnapshotRow {
   reviewed_at: string;
   total: number;
   implemented: number;
+  improved: number;
   partial: number;
   avg_quality: number | null;
 }
@@ -165,7 +166,9 @@ export function synthesizeGDD(
   let implementedFeatures = 0;
   for (const row of featureSummary) {
     totalFeatures += row.cnt;
-    if (row.status === 'implemented') implementedFeatures += row.cnt;
+    // `improved` is a done status — the compliance engine credits it as implemented
+    // (DONE_STATUSES), so the GDD headline must too or the two disagree on one row.
+    if (row.status === 'implemented' || row.status === 'improved') implementedFeatures += row.cnt;
   }
 
   // 2. Checklist progress — registry-based tally (single source of truth,
@@ -204,7 +207,7 @@ export function synthesizeGDD(
   // module" is the latest point this project can see — not another project's newer
   // one, which would put a trend line the reader never produced into their GDD.
   const snapshots = db.prepare(
-    `SELECT module_id, reviewed_at, total, implemented, partial, avg_quality
+    `SELECT module_id, reviewed_at, total, implemented, COALESCE(improved, 0) as improved, partial, avg_quality
      FROM review_snapshots
      WHERE id IN (SELECT MAX(id) FROM review_snapshots ${scope.sql} GROUP BY module_id)
        ${scope.sql ? scope.sql.replace(/^WHERE/, 'AND') : ''}
@@ -420,7 +423,7 @@ function buildRoadmapSection(
       const mod = SUB_MODULE_MAP[s.module_id as SubModuleId];
       const label = mod?.label ?? s.module_id;
       mermaidLines.push(`        "${label.slice(0, 12)}",`);
-      implData.push(s.total > 0 ? Math.round((s.implemented / s.total) * 100) : 0);
+      implData.push(s.total > 0 ? Math.round(((s.implemented + s.improved) / s.total) * 100) : 0);
     }
     mermaidLines.push('    ]');
     mermaidLines.push(`    y-axis "Implementation %" 0 --> 100`);
@@ -652,7 +655,8 @@ function buildSystemArchitectureDiagram(): string {
 
 function statusEmoji(status: FeatureStatus): string {
   switch (status) {
-    case 'implemented': return '✅';
+    case 'implemented':
+    case 'improved': return '✅';
     case 'partial': return '🟡';
     case 'missing': return '❌';
     default: return '❓';
