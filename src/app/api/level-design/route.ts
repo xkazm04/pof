@@ -13,7 +13,8 @@ import type { CreateDocPayload, UpdateDocPayload } from '@/types/level-design';
 
 // GET /api/level-design
 // ?id=<number> → single doc
-// (no params) → all docs + summary
+// (no params) → all docs (the client derives its own summary)
+// ?summary=1 → all docs + the server-side summary
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -26,8 +27,10 @@ export async function GET(req: NextRequest) {
     }
 
     const docs = getAllDocs();
-    const summary = getSummary();
-    return apiSuccess({ docs, summary });
+    // The summary is a second full-table read + JSON parse; the only client re-derives
+    // it locally, so it is computed only when asked for.
+    if (searchParams.get('summary') === '1') return apiSuccess({ docs, summary: getSummary() });
+    return apiSuccess({ docs });
   } catch (err) {
     logger.error('GET /api/level-design error:', err);
     return apiError('Internal error', 500);
