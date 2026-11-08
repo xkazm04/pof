@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       components?: number;
     };
 
+    if (body.glbPath !== undefined && typeof body.glbPath !== 'string') return apiError('glbPath must be a string', 400);
     const glbPath = body.glbPath?.trim();
     if (!glbPath) return apiError('glbPath is required', 400);
     if (!/\.glb$/i.test(glbPath)) {

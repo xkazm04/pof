@@ -41,8 +41,8 @@ export interface UeImportResult {
 
 type RunExperimentFn = (spec: ExperimentSpec, deps?: RunnerDeps) => Promise<ExperimentResult>;
 
-const UE_CONTENT_PATH = /^\/[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*$/;
-const UE_ASSET_NAME = /^[A-Za-z0-9_-]+$/;
+export const UE_CONTENT_PATH = /^\/[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*$/;
+export const UE_ASSET_NAME = /^[A-Za-z0-9_-]+$/;
 
 /**
  * Why these strings cannot be written into the import python, or undefined when they can.

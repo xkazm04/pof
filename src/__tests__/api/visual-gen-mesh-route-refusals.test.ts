@@ -236,4 +236,40 @@ describe('mesh-split fields', () => {
   });
 });
 
+describe('ue-import fields', () => {
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['assetName', '../Crate'],
+    ['assetName', 'SM Crate'],
+    ['assetName', 7],
+    ['destPath', '../Game'],
+    ['destPath', 'C:/Content'],
+    ['destPath', 7],
+    ['settleMs', 0],
+    ['settleMs', 'soon'],
+    ['settleMs', 99_000_000],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)} before the editor launch`, async () => {
+      const res = await ueImport(json({ glbPath: glb, use: 'blocking', [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  for (const [name, handler] of [['ue-import', ueImport], ['ue-import/plan', uePlan]] as const) {
+    it(`${name} refuses a non-string glbPath with a 400`, async () => {
+      const res = await handler(json({ glbPath: 7, use: 'blocking', assetName: 'SM_Crate' }));
+      expect(res.status).toBe(400);
+      expectNothingStarted();
+    });
+  }
+
+  it('still starts a job for a valid request', async () => {
+    const res = await ueImport(json({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', destPath: '/Game/Generated/SM_Crate', settleMs: 1000 }));
+    expect(res.status).toBe(202);
+    expect(seams.startImport).toHaveBeenCalledTimes(1);
+  });
+});
+
 // FINDINGS-APPEND
