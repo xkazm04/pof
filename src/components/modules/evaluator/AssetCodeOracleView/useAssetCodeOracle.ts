@@ -83,6 +83,17 @@ export function useAssetCodeOracle(): AssetCodeOracleState {
         body: JSON.stringify({ classes: project.classes, assets: scan.assets, dependencies: scan.dependencies }),
       });
 
+      // A scan that found no classes and no assets measured nothing: the oracle's score
+      // falls back to 100 for an empty input, which is not a verdict. Show the result (the
+      // view refuses to grade it) but keep it out of the history the next delta reads.
+      if (oracle.stats.totalClasses + oracle.stats.totalAssets === 0) {
+        setScanDelta(null);
+        setSinceLabel('');
+        setDiff(EMPTY_ORACLE_DIFF);
+        setResult(oracle);
+        return;
+      }
+
       // Diff vs. the previous recorded scan *before* recording this one.
       const projectKey = projectPath ?? projectName ?? 'default';
       const history = useMarketplaceStore.getState().consistencyScans[projectKey] ?? [];

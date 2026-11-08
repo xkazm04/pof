@@ -26,6 +26,7 @@ export function AssetCodeOracleView() {
     fix, remedy, remedyRunning,
   } = useAssetCodeOracle();
   const projectPath = useProjectStore((s) => s.projectPath);
+  const nothingScanned = result !== null && result.stats.totalClasses + result.stats.totalAssets === 0;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<FilterSeverity>('all');
@@ -95,8 +96,23 @@ export function AssetCodeOracleView() {
         </div>
       )}
 
+      {/* Nothing scanned: an empty input has no consistency to grade (the oracle's score
+          defaults to 100 for it), so refuse the verdict and say what to check instead. */}
+      {result && nothingScanned && (
+        <div
+          data-testid="oracle-nothing-scanned"
+          role="status"
+          className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
+          style={{ color: STATUS_WARNING, backgroundColor: statusBg(STATUS_WARNING), border: `1px solid ${statusBorder(STATUS_WARNING)}` }}
+        >
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          No C++ classes or Content/ assets were found under {projectPath}, so there is nothing to grade.
+          Check the project path and module name, then run the analysis again.
+        </div>
+      )}
+
       {/* Results */}
-      {result && (
+      {result && !nothingScanned && (
         <>
           {/* Stats bar — consistency hero spans 2 columns, supporting metrics fill the rest */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
