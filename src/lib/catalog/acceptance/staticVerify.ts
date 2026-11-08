@@ -10,7 +10,7 @@
  */
 import type { AcceptanceResult } from './types';
 import type { UeChecker } from './ueStaticCheckers';
-import { resolveUeRoot, withHeaderCorpus } from './ueStaticCheckers';
+import { resolveUeRoot, runChecker, withHeaderCorpus } from './ueStaticCheckers';
 import { isPackagingLabel } from './packagingStep';
 import { foldContentHold, holdsBackAtDataTier } from './combineVerdicts';
 import { getCatalogPipeline } from '../pipeline-registry';
@@ -94,7 +94,7 @@ export function staticVerdictForGame(
   checks: UeChecker[], label: string, game: GameId, pofRoot: string | null, rootForGame: (id: GameId) => string | null,
   godot: GodotL2Deps = defaultGodotL2,
 ): AcceptanceResult | null {
-  if (game === DEFAULT_GAME) return aggregateStatic(checks.map((c) => c(pofRoot)), label);
+  if (game === DEFAULT_GAME) return aggregateStatic(checks.map((c) => runChecker(c, pofRoot)), label);
   if (getGame(game).engine.kind === 'godot') {
     if (!checks.length) return null;
     const gameRoot = godot.rootFor(game);
@@ -103,7 +103,7 @@ export function staticVerdictForGame(
   }
   const root = rootForGame(game);
   if (root === null) return checks.length ? unboundStaticVerdict(game, label) : null;
-  return aggregateStatic(checks.map((c) => c(root)), label);
+  return aggregateStatic(checks.map((c) => runChecker(c, root)), label);
 }
 
 // ── Godot L2: the game-written evidence (pof.godot-evidence/1) stands in for the UE checkers ──
