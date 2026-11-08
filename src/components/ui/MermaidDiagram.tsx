@@ -21,6 +21,17 @@ interface MermaidDiagramProps {
 }
 
 /**
+ * Keyboard focus indicator for interactive nodes. SVG `<g>` elements draw no default
+ * focus outline, so the shape inside the focused node takes a stroke from the repo's
+ * `--focus-accent` token (WCAG 2.4.7). `!important` because mermaid scopes its own node
+ * strokes under an id selector, which outranks a class rule.
+ */
+export const MERMAID_NODE_FOCUS_CSS =
+  '.mermaid-interactive .node[tabindex]:focus-visible :is(rect, polygon, circle, ellipse, path) {' +
+  ' stroke: var(--focus-accent, var(--setup)) !important; stroke-width: 3px !important; }' +
+  ' .mermaid-interactive .node[tabindex]:focus-visible { outline: none; }';
+
+/**
  * Renders Mermaid source to a real inline SVG, lazily loading the (large) mermaid
  * library only when a diagram actually mounts. The raw source stays visible as a
  * readable `<pre>` fallback while rendering and if it ever fails (offline, parse
@@ -93,10 +104,11 @@ export function MermaidDiagram({
   return (
     <div
       ref={containerRef}
-      className={className}
+      className={interactive ? `mermaid-interactive ${className ?? ''}`.trim() : className}
       role={interactive ? 'group' : 'img'}
       aria-label={ariaLabel}
     >
+      {interactive && <style>{MERMAID_NODE_FOCUS_CSS}</style>}
       {svg ? (
         <div className="mermaid-rendered flex justify-center" dangerouslySetInnerHTML={{ __html: svg }} />
       ) : (
