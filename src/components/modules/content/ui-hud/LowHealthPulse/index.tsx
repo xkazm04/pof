@@ -23,6 +23,7 @@ export function LowHealthPulse() {
     currentCSS,
     healthyCSS,
     dangerCSS,
+    dimCSS,
     handleReset,
     diagramPath,
     cyclePhase,
@@ -171,7 +172,7 @@ export function LowHealthPulse() {
                 <div>
                   <div className="text-2xs font-bold text-text">Current Color</div>
                   <div className="text-2xs font-mono text-text-muted">
-                    Alpha: {alpha.toFixed(2)} &middot; Lerp(Danger, Healthy, {alpha.toFixed(2)})
+                    Alpha: {alpha.toFixed(2)} &middot; Lerp(Danger × 0.35, Danger, {alpha.toFixed(2)})
                   </div>
                 </div>
               </div>
@@ -206,7 +207,7 @@ export function LowHealthPulse() {
                 className="w-full h-32"
                 preserveAspectRatio="none"
                 role="img"
-                aria-label={`Sine wave over one ${(1 / pulseSpeed).toFixed(2)} second pulse cycle, oscillating the bar colour between danger red and healthy green.${isLow && playing ? ` Playhead at ${Math.round(cyclePhase * 100)} percent of the cycle.` : ' Playback is stopped.'}`}
+                aria-label={`Sine wave over one ${(1 / pulseSpeed).toFixed(2)} second pulse cycle, oscillating the bar colour between dim and bright danger red.${isLow && playing ? ` Playhead at ${Math.round(cyclePhase * 100)} percent of the cycle.` : ' Playback is stopped.'}`}
               >
                 {/* Grid lines */}
                 <line x1="0" y1="50" x2="100" y2="50" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" />
@@ -228,9 +229,8 @@ export function LowHealthPulse() {
                 {/* Gradient for the sine wave */}
                 <defs>
                   <linearGradient id="pulse-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={healthyCSS} />
-                    <stop offset="50%" stopColor={STATUS_WARNING} />
-                    <stop offset="100%" stopColor={dangerCSS} />
+                    <stop offset="0%" stopColor={dangerCSS} />
+                    <stop offset="100%" stopColor={dimCSS} />
                   </linearGradient>
                 </defs>
 
@@ -251,8 +251,8 @@ export function LowHealthPulse() {
                 )}
 
                 {/* Y-axis labels */}
-                <text x="-6" y="3" fontSize="6" fill={healthyCSS} textAnchor="end" dominantBaseline="middle" fontFamily="monospace">G</text>
-                <text x="-6" y="103" fontSize="6" fill={dangerCSS} textAnchor="end" dominantBaseline="middle" fontFamily="monospace">R</text>
+                <text x="-6" y="3" fontSize="6" fill={dangerCSS} textAnchor="end" dominantBaseline="middle" fontFamily="monospace">Hi</text>
+                <text x="-6" y="103" fontSize="6" fill={dimCSS} textAnchor="end" dominantBaseline="middle" fontFamily="monospace">Lo</text>
 
                 {/* X-axis labels */}
                 <text x="0" y="110" fontSize="5" fill="var(--text-muted)" textAnchor="middle" fontFamily="monospace">0</text>
@@ -311,7 +311,7 @@ export function LowHealthPulse() {
             <div className="text-2xs font-bold text-text-muted uppercase">C++ Formula</div>
             <code className="block text-2xs font-mono text-text-muted leading-relaxed whitespace-pre-wrap">
 {`Alpha = (sin(PulseTime * ${pulseSpeed.toFixed(1)} * 2*PI) + 1) * 0.5
-Color = Lerp(LowHealthColor, HealthBarColor, Alpha)
+Color = Lerp(LowHealthColor * 0.35, LowHealthColor, Alpha)
 // Trigger: HealthPct < ${(threshold * 100).toFixed(0)}% && > 0%`}
             </code>
           </SurfaceCard>

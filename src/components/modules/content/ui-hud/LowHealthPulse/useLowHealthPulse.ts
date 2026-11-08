@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
-import { DEFAULT_THRESHOLD, DEFAULT_PULSE_SPEED, HEALTHY_COLOR, DANGER_COLOR } from './constants';
+import { DEFAULT_THRESHOLD, DEFAULT_PULSE_SPEED, HEALTHY_COLOR, DANGER_COLOR, DIM_FACTOR } from './constants';
 import { toCSS, lerpColor } from './helpers';
 
 // ── Custom hook for RAF-driven animation counter ───────────────────────────
@@ -74,20 +74,24 @@ export function useLowHealthPulse() {
   // Animation driven by RAF
   const [pulseTime, resetTime] = useAnimationTime(playing && isLow);
 
-  // Compute the current alpha exactly as UE5 does:
+  // Compute the current alpha exactly as UE5 does (ARPGHUDWidget.cpp NativeTick):
   // Alpha = (sin(PulseTime * PulseSpeed * 2 * PI) + 1) * 0.5
-  // Color  = Lerp(LowHealthColor, HealthBarColor, Alpha)
+  // Color = Lerp(LowHealthColor * 0.35, LowHealthColor, Alpha)  - dim to bright red
   const alpha = isLow
     ? (Math.sin(pulseTime * pulseSpeed * 2 * Math.PI) + 1) * 0.5
     : 1;
 
+  const dimColor = {
+    r: DANGER_COLOR.r * DIM_FACTOR, g: DANGER_COLOR.g * DIM_FACTOR, b: DANGER_COLOR.b * DIM_FACTOR,
+  };
   const currentColor = isLow
-    ? lerpColor(DANGER_COLOR, HEALTHY_COLOR, alpha)
+    ? lerpColor(dimColor, DANGER_COLOR, alpha)
     : HEALTHY_COLOR;
 
   const currentCSS = toCSS(currentColor);
   const healthyCSS = toCSS(HEALTHY_COLOR);
   const dangerCSS = toCSS(DANGER_COLOR);
+  const dimCSS = toCSS(dimColor);
 
   const handleReset = useCallback(() => {
     setThreshold(DEFAULT_THRESHOLD);
@@ -128,6 +132,7 @@ export function useLowHealthPulse() {
     currentCSS,
     healthyCSS,
     dangerCSS,
+    dimCSS,
     handleReset,
     diagramPath,
     cyclePhase,
