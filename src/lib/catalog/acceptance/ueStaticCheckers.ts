@@ -85,13 +85,18 @@ function filesContain(root: string, subdir: string, ext: string, needle: RegExp)
   return walk(path.join(root, subdir), ext).some((f) => needle.test(fs.readFileSync(f, 'utf8')));
 }
 
+/** A name matched LITERALLY: a metacharacter in a row/symbol name must neither throw nor act as a wildcard. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Best-effort: matches the symbol anywhere in a .h (incl. comments/forward-decls). Adequate for an "exists in source" L2 gate, not a semantic guarantee.
 /** L2: the C++ class/struct symbol is declared somewhere in Source/. */
 export function cppSymbolExists(symbol: string, label: string): UeChecker {
   return (ueRoot) => {
     const { fs } = serverModules();
     if (!ueRoot || !fs.existsSync(ueRoot)) return { label, tier: 'L2', status: 'deferred', detail: 'UE root unavailable', reason: 'UE root not found — static check skipped' };
-    const found = filesContain(ueRoot, 'Source', '.h', new RegExp(`\\b${symbol}\\b`));
+    const found = filesContain(ueRoot, 'Source', '.h', new RegExp(`\\b${escapeRegExp(symbol)}\\b`));
     return found
       ? { label, tier: 'L2', status: 'pass', detail: `${symbol} declared in Source/` }
       : { label, tier: 'L2', status: 'deferred', detail: `${symbol} not in Source/`, reason: `${symbol} not found in UE Source — generate/commit C++ then re-check` };
@@ -104,7 +109,7 @@ export function seedRowPresent(seedFile: string, rowName: string, label: string)
     const { fs, path } = serverModules();
     if (!ueRoot || !fs.existsSync(ueRoot)) return { label, tier: 'L2', status: 'deferred', detail: 'UE root unavailable', reason: 'UE root not found — static check skipped' };
     const filePath = path.join(ueRoot, 'Content', 'Python', seedFile);
-    const found = fs.existsSync(filePath) && new RegExp(`["']${rowName}["']`).test(fs.readFileSync(filePath, 'utf8'));
+    const found = fs.existsSync(filePath) && new RegExp(`["']${escapeRegExp(rowName)}["']`).test(fs.readFileSync(filePath, 'utf8'));
     return found
       ? { label, tier: 'L2', status: 'pass', detail: `${rowName} seeded in ${seedFile}` }
       : { label, tier: 'L2', status: 'deferred', detail: `${rowName} not in ${seedFile}`, reason: `${rowName} not found in ${seedFile}` };
