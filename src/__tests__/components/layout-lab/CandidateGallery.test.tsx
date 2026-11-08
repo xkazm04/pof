@@ -64,3 +64,23 @@ describe('CandidateGallery', () => {
     expect(screen.getByTestId('batch-prompt-b1').textContent).toContain('full prompt: ornate gold filigree');
   });
 });
+
+describe('<CandidateGallery /> accessible state', () => {
+  afterEach(cleanup);
+
+  it('announces the prompt toggle as expanded or collapsed', () => {
+    render(<CandidateGallery t={LIGHT} history={twoBatches()} onSelect={vi.fn()} />);
+    const toggle = screen.getAllByRole('button', { name: 'view prompt' })[0];
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(screen.getAllByRole('button', { name: 'hide prompt' })[0].getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('keeps the visible caption inside the candidate accessible name', () => {
+    render(<CandidateGallery t={LIGHT} history={twoBatches()} onSelect={vi.fn()} />);
+    const name = screen.getByTestId('candidate-b0-c2').getAttribute('aria-label') ?? '';
+    const caption = screen.getByTestId('candidate-b0-c2').textContent ?? '';
+    expect(caption.length).toBeGreaterThan(0);
+    expect(name).toContain(caption);
+  });
+});
