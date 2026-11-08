@@ -13,6 +13,7 @@ import { QAFindingCard } from '@/components/modules/evaluator/LocalizationPipeli
 import { ReplacementCard } from '@/components/modules/evaluator/LocalizationPipelineView/ReplacementCard';
 import { StringTableCard } from '@/components/modules/evaluator/LocalizationPipelineView/StringTableCard';
 import { TranslationCard } from '@/components/modules/evaluator/LocalizationPipelineView/TranslationCard';
+import { OverviewTab } from '@/components/modules/evaluator/LocalizationPipelineView/OverviewTab';
 import { ExpansionFactorBars } from '@/components/modules/evaluator/LocalizationPipelineView/ExpansionFactorBars';
 import type {
   LocalizationHazard,
@@ -20,6 +21,7 @@ import type {
   LOCTEXTReplacementSuggestion,
   StringTable,
   TranslationEntry,
+  ScanResult,
 } from '@/types/localization-pipeline';
 
 afterEach(() => {
@@ -146,5 +148,24 @@ describe('expansion bars share one scale', () => {
     // German (x1.35) is the widest locale, so it is the first sorted bar.
     const overviewWidth = widthFor(bars.container, 'overview').pct[0];
     expect(cardWidth).toBe(overviewWidth);
+  });
+});
+
+describe('Overview names every string that needs conversion', () => {
+  it('shows the FText::FromString count even when no raw hardcoded strings remain', () => {
+    const scan = {
+      totalFilesScanned: 1, totalStringsFound: 5, hardcodedCount: 0, ftextFromStringCount: 3,
+      alreadyLocalizedCount: 2, strings: [], hazards: [], moduleBreakdown: {},
+    } as ScanResult;
+    render(
+      <OverviewTab
+        scanResult={scan} locReadiness={40} localizedCount={2} totalStrings={5}
+        hardcoded={0} ftextCount={3} progress={{}} expansionIssues={{}} qaByLocale={{}}
+        replacements={[]}
+        readiness={{ total: 0, overflow: 0, nearBudget: 0, bypassesCatalog: 0, fragments: 0, fits: 0, reflow: 0, unbudgeted: 0 }}
+        scanProvenance={null} onOpenReadiness={() => {}}
+      />,
+    );
+    expect(document.body.textContent).toContain('3 FText::FromString need conversion');
   });
 });

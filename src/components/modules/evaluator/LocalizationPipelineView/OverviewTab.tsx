@@ -53,7 +53,8 @@ export function OverviewTab({
             <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5`}>
               {localizedCount} of {totalStrings} strings use NSLOCTEXT/LOCTEXT macros
             </p>
-            {hardcoded > 0 && (
+            {/* Both kinds need conversion — the header 'Hardcoded' stat sums them too. */}
+            {hardcoded + ftextCount > 0 && (
               <p className={`${TEXT_SCALE.meta} mt-1`} style={{ color: STATUS_ERROR }}>
                 {hardcoded} hardcoded + {ftextCount} FText::FromString need conversion
               </p>
