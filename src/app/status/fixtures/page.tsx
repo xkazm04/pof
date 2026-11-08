@@ -25,6 +25,8 @@ interface PurgeCounts {
   revisions: number;
   verdicts: number;
   verdictHistory: number;
+  craftVerdicts: number;
+  craftHistory: number;
 }
 interface FixtureEntity {
   entityId: string;
@@ -40,12 +42,18 @@ interface FixtureInventory {
 
 const ENDPOINT = '/api/pipeline-artifacts/purge-fixtures';
 
-/** The four tables a produced step writes into, in the order the report reads them. */
+/**
+ * The six tables a produced step writes into (`PURGE_TABLES` in `@/lib/catalog/artifact-purge`),
+ * in the order the report reads them. Row totals are summed from THIS list, so a column and the
+ * total can never disagree about which tables count.
+ */
 const COLUMNS: { field: keyof PurgeCounts; label: string; table: string }[] = [
   { field: 'artifacts', label: 'Artifacts', table: 'pipeline_artifacts' },
   { field: 'revisions', label: 'Revisions', table: 'pipeline_artifact_revisions' },
   { field: 'verdicts', label: 'Verdicts', table: 'judge_verdicts' },
   { field: 'verdictHistory', label: 'Verdict log', table: 'judge_verdict_history' },
+  { field: 'craftVerdicts', label: 'Craft', table: 'craft_verdicts' },
+  { field: 'craftHistory', label: 'Craft log', table: 'craft_verdict_history' },
 ];
 
 const cell = { padding: 'var(--lab-s2)', textAlign: 'right' as const, fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)' };
@@ -182,14 +190,14 @@ export default function FixturesPage() {
                 <tr key={e.entityId} style={{ borderTop: '1px solid var(--lab-line)' }}>
                   <th scope="row" style={{ ...cell, textAlign: 'left', color: 'var(--lab-ink-deep)', fontWeight: 500 }}>{e.entityId}</th>
                   <td style={cell}>{e.catalogIds.length}</td>
-                  {COLUMNS.map((c) => <td key={c.field} style={cell}>{e.counts[c.field]}</td>)}
+                  {COLUMNS.map((c) => <td key={c.field} style={cell}>{e.counts[c.field] ?? 0}</td>)}
                   <td style={{ ...cell, color: 'var(--lab-ink-deep)', fontWeight: 600 }}>{rowTotal(e.counts)}</td>
                 </tr>
               ))}
               <tr style={{ borderTop: '2px solid var(--lab-ink)' }}>
                 <th scope="row" style={{ ...cell, textAlign: 'left', color: 'var(--lab-ink-deep)', fontWeight: 600 }}>All fixtures</th>
                 <td style={cell} />
-                {COLUMNS.map((c) => <td key={c.field} style={{ ...cell, fontWeight: 600 }}>{shown.total[c.field]}</td>)}
+                {COLUMNS.map((c) => <td key={c.field} style={{ ...cell, fontWeight: 600 }}>{shown.total[c.field] ?? 0}</td>)}
                 <td style={{ ...cell, color: 'var(--lab-ink-deep)', fontWeight: 700 }}>{rowTotal(shown.total)}</td>
               </tr>
             </tbody>
@@ -232,5 +240,5 @@ export default function FixturesPage() {
 }
 
 function rowTotal(c: PurgeCounts): number {
-  return c.artifacts + c.revisions + c.verdicts + c.verdictHistory;
+  return COLUMNS.reduce((n, col) => n + (c[col.field] ?? 0), 0);
 }

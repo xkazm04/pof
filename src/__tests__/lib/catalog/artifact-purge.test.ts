@@ -22,6 +22,10 @@ import {
 import { upsertArtifact, listArtifacts, listRevisions } from '@/lib/pipeline-artifacts-db';
 import { upsertVerdict, listVerdicts, listVerdictHistory } from '@/lib/status/judge-verdicts-db';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
+import { upsertCraftVerdict, listCraftVerdicts, listCraftVerdictHistory } from '@/lib/craft/craft-verdicts-db';
+import type { LensId } from '@/lib/craft/lens-map';
+
+const CRAFT_LENS: LensId = 'game-systems-code';
 
 const CAT = 'purge-test';
 
@@ -54,7 +58,7 @@ describe('purgeEntity — all four tables, real changes()', () => {
     expect(listVerdictHistory(CAT, 'pe-1', 'Alpha')).toHaveLength(2);
 
     const counts = purgeEntity(CAT, 'pe-1');
-    expect(counts).toEqual({ artifacts: 2, revisions: 2, verdicts: 1, verdictHistory: 2 });
+    expect(counts).toEqual({ artifacts: 2, revisions: 2, verdicts: 1, verdictHistory: 2, craftVerdicts: 0, craftHistory: 0 });
     expect(totalPurged(counts)).toBe(7);
 
     expect(listArtifacts(CAT, 'pe-1')).toHaveLength(0);
@@ -72,11 +76,50 @@ describe('purgeEntity — all four tables, real changes()', () => {
     produceTwice('pe-3', 'Beta');
     judgeTwice('pe-3', 'Alpha');
 
-    expect(purgeEntity(CAT, 'pe-3', 'Alpha')).toEqual({ artifacts: 1, revisions: 1, verdicts: 1, verdictHistory: 2 });
+    expect(purgeEntity(CAT, 'pe-3', 'Alpha')).toEqual({ artifacts: 1, revisions: 1, verdicts: 1, verdictHistory: 2, craftVerdicts: 0, craftHistory: 0 });
     expect(listArtifacts(CAT, 'pe-3').map((a) => a.step)).toEqual(['Beta']);
 
     // Nothing there — an honest zero, not an attempt count.
-    expect(purgeEntity(CAT, 'pe-3', 'Never Produced')).toEqual({ artifacts: 0, revisions: 0, verdicts: 0, verdictHistory: 0 });
+    expect(purgeEntity(CAT, 'pe-3', 'Never Produced')).toEqual({ artifacts: 0, revisions: 0, verdicts: 0, verdictHistory: 0, craftVerdicts: 0, craftHistory: 0 });
+  });
+});
+
+/** Gauge a step twice on the A-axis, so `craft_verdicts` holds one row and its history two. */
+function craftTwice(entityId: string, step: string) {
+  for (const aLevel of ['A1', 'A2'] as const) {
+    upsertCraftVerdict({
+      catalogId: CAT, entityId, step, lens: CRAFT_LENS, lensVersion: 1, aLevel,
+      findings: [], model: 'test',
+    });
+  }
+}
+
+describe('purgeEntity — craft verdicts are step-keyed too', () => {
+  // Measured on the real DB (2026-11-08): 374 of 845 `craft_verdicts` rows had no artifact,
+  // 342 of them (plus 342 history rows) on the purged fixture `test-headless-mcp` — the purge
+  // removed the step and left its A-axis gauge behind.
+  it('removes the craft verdict and its history with the step, and counts them', () => {
+    produceTwice('pc-1', 'Alpha');
+    craftTwice('pc-1', 'Alpha');
+    craftTwice('pc-2', 'Alpha'); // a neighbour that must survive
+
+    const counts = purgeEntity(CAT, 'pc-1', 'Alpha');
+    expect(counts.craftVerdicts).toBe(1);
+    expect(counts.craftHistory).toBe(2);
+    expect(listCraftVerdicts(CAT).filter((v) => v.entityId === 'pc-1')).toHaveLength(0);
+    expect(listCraftVerdictHistory(CAT, 'pc-1', 'Alpha')).toHaveLength(0);
+    expect(listCraftVerdicts(CAT).filter((v) => v.entityId === 'pc-2')).toHaveLength(1);
+    purgeEntity(CAT, 'pc-2');
+  });
+
+  it('inventories and purges a fixture entity\'s craft rows', () => {
+    craftTwice('test-headless-mcp', 'Craft Only');
+    const inv = inventorySyntheticFixtures();
+    const fixture = inv.entities.find((e) => e.entityId === 'test-headless-mcp');
+    expect(fixture?.counts.craftVerdicts).toBe(1);
+    expect(fixture?.counts.craftHistory).toBe(2);
+    purgeSyntheticFixtures();
+    expect(listCraftVerdicts(CAT).filter((v) => v.entityId === 'test-headless-mcp')).toHaveLength(0);
   });
 });
 
@@ -93,7 +136,7 @@ describe('synthetic fixture inventory + purge', () => {
     expect(inv.purged).toBe(false);
     expect(inv.entities.map((e) => e.entityId)).toEqual(['item-mcp-smoke', 'test-headless-mcp']);
     expect(inv.entities.find((e) => e.entityId === 'test-headless-mcp')!.counts)
-      .toEqual({ artifacts: 1, revisions: 1, verdicts: 1, verdictHistory: 2 });
+      .toEqual({ artifacts: 1, revisions: 1, verdicts: 1, verdictHistory: 2, craftVerdicts: 0, craftHistory: 0 });
     expect(totalPurged(inv.total)).toBe(7);
 
     // A dry run must not delete: measuring twice gives the same answer.
