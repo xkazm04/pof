@@ -83,12 +83,15 @@ function BarsChart({ t, rows, max, labelWidth = 90, ariaLabel, staggerSec, reduc
         return (
           <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: labelWidth, fontSize: 14, color: t.text, flexShrink: 0 }}>{r.label}</span>
-            <div style={{ flex: 1, height: 16, background: t.line, opacity: 0.4 }}>
+            <div style={{ flex: 1, height: 16, position: 'relative' }}>
+              {/* The tint is a SIBLING layer: opacity composes, so a dimmed track wrapping the fill dimmed it too. */}
+              <div aria-hidden style={{ position: 'absolute', inset: 0, background: t.line, opacity: 0.4 }} />
               <motion.div
+                data-testid="bar-fill"
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(100, Math.max(0, scale(r.value)))}%` }}
                 transition={{ duration: reduced ? 0 : 0.55, delay: i * staggerSec, ease: 'easeOut' }}
-                style={{ height: '100%', background: fill, opacity: r.highlight ? 1 : 0.85 }}
+                style={{ position: 'relative', height: '100%', background: fill, opacity: r.highlight ? 1 : 0.85 }}
               />
             </div>
             <span className={t.fontMono} style={{ width: 44, textAlign: 'right', fontSize: 14, color: t.text }}>

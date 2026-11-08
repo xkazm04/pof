@@ -32,6 +32,26 @@ describe('scaleLinear', () => {
   });
 });
 
+describe('<ChartPanel variant="bars" /> effective fill opacity', () => {
+  /** CSS opacity composes down the tree, so a dimmed track that CONTAINS the fill dims the fill too. */
+  function effectiveAlpha(el: HTMLElement, root: HTMLElement): number {
+    let a = 1;
+    for (let n: HTMLElement | null = el; n && n !== root.parentElement; n = n.parentElement) {
+      if (n.style.opacity !== '') a *= Number(n.style.opacity);
+    }
+    return a;
+  }
+
+  it('a fill reaches its requested opacity (1 highlighted, 0.85 normal)', () => {
+    render(<ChartPanel t={LIGHT} variant="bars" rows={[{ label: 'hi', value: 5, highlight: true }, { label: 'lo', value: 3 }]} />);
+    const fig = screen.getByRole('figure');
+    const fills = Array.from(fig.querySelectorAll<HTMLElement>('[data-testid="bar-fill"]'));
+    expect(fills.length).toBe(2);
+    expect(effectiveAlpha(fills[0], fig)).toBeCloseTo(1, 5);
+    expect(effectiveAlpha(fills[1], fig)).toBeCloseTo(0.85, 5);
+  });
+});
+
 describe('<ChartPanel variant="bars" />', () => {
   it('prints valueText instead of the bare number when a row gives one', () => {
     render(<ChartPanel t={LIGHT} variant="bars" rows={[{ label: 'fast', value: 0.08, valueText: '0.08', unit: 's' }, { label: 'slow', value: 1, valueText: '1.00', unit: 's' }]} />);

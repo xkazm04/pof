@@ -8,6 +8,7 @@ import { DataTable } from './shared/DataTable';
 import { ChartPanel, type BarsRow, type ScatterPoint } from './shared/ChartPanel';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from './shared/GlbPreviewPanel';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
+import { AssetTarget } from './shared/assetHonesty';
 import { StepHistoryPanel } from './shared/StepHistoryPanel';
 import { PackageLedgerPanel } from './PackageLedgerPanel';
 import { isPackagingStep } from '@/lib/catalog/acceptance/packagingStep';
@@ -510,7 +511,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
           </span>
           <span data-testid="gallery-asset-target" style={{ display: 'contents' }}>
             {sel && assetPath
-              ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ asset target: {assetPath} <span style={{ color: t.muted }}>(written by the drain)</span></span>
+              ? <AssetTarget t={t} path={assetPath} />
               : sel
                 ? <span style={{ fontSize: 14, color: t.warn }}>This artifact records no asset target — re-run Produce to stamp one before the gate drain runs.</span>
                 : <span style={{ fontSize: 14, color: t.muted }}>Pick a candidate; the choice + its prompt persist. The asset is written to that path when the gate drain runs.</span>}
