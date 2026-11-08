@@ -11,6 +11,7 @@ import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
 import { formatBytes, formatDuration } from '@/lib/format';
 import { normalizeProjectId } from '@/lib/project-id';
+import { shadowedScopeSql } from '@/lib/feature-matrix-db';
 
 // ─── GDD Section Types ──────────────────────────────────────────────────────
 
@@ -121,8 +122,9 @@ interface SnapshotRow {
  * Scope fragment for the three `feature_matrix` / `review_snapshots` reads below.
  *
  * A named project sees its own rows plus the unattributed legacy ones — the SAME
- * rule `feature-matrix-db.projectScopeSql` applies everywhere else, so the GDD and
- * the matrix cannot disagree about which rows exist.
+ * rule `projectScopeSql` applies everywhere else. The two `feature_matrix` reads go
+ * one step further, through `feature-matrix-db.shadowedScopeSql` (a legacy twin of an
+ * owned feature is hidden), so the GDD and the matrix cannot disagree about which rows exist.
  *
  * NO project given ⇒ the reads stay GLOBAL, deliberately: this is the historical
  * behaviour and the only one that still produces a document. Applying the scoped
@@ -152,15 +154,20 @@ export function synthesizeGDD(
   const now = new Date().toISOString();
   const scope = gddScope(projectId);
   const docScope: GDDScope = { projectId: normalizeProjectId(projectId), scoped: scope.params.length > 0 };
+  // The two feature_matrix reads use the matrix's OWN read rule, which shadows a legacy
+  // ('') twin when the project owns the same (module, feature) — raw `own OR ''` listed
+  // such a feature twice, in two statuses. Unscoped stays global (see gddScope).
+  const shadowed = shadowedScopeSql(docScope.projectId);
+  const featureScope = docScope.scoped ? { sql: `WHERE ${shadowed.sql}`, params: shadowed.params } : scope;
 
   // 1. Feature Matrix
   const featureSummary = db.prepare(
-    `SELECT module_id, status, COUNT(*) as cnt FROM feature_matrix ${scope.sql} GROUP BY module_id, status`
-  ).all(...scope.params) as FeatureSummaryRow[];
+    `SELECT module_id, status, COUNT(*) as cnt FROM feature_matrix fm ${featureScope.sql} GROUP BY module_id, status`
+  ).all(...featureScope.params) as FeatureSummaryRow[];
 
   const featureDetails = db.prepare(
-    `SELECT module_id, feature_name, status, description, quality_score FROM feature_matrix ${scope.sql} ORDER BY module_id, feature_name`
-  ).all(...scope.params) as FeatureDetailRow[];
+    `SELECT module_id, feature_name, status, description, quality_score FROM feature_matrix fm ${featureScope.sql} ORDER BY module_id, feature_name`
+  ).all(...featureScope.params) as FeatureDetailRow[];
 
   let totalFeatures = 0;
   let implementedFeatures = 0;

@@ -247,7 +247,7 @@ function toFeatureRow(raw: RawRow): FeatureRow {
  *
  * The query must alias `feature_matrix` as `fm`.
  */
-function shadowedScopeSql(projectId: string): { sql: string; params: string[] } {
+export function shadowedScopeSql(projectId: string): { sql: string; params: string[] } {
   if (!projectId) return projectScopeSql(projectId, 'fm.project_id');
   return {
     sql:

@@ -80,3 +80,16 @@ describe('synthesizeGDD — improved counts as implemented', () => {
     expect(trend).toContain('bar [100]');
   });
 });
+
+describe('synthesizeGDD — a legacy twin is shadowed by the project\'s own row', () => {
+  // The matrix, summary, NBA and aggregates read through shadowedScopeSql: when a
+  // project owns (module, feature), the '' twin is hidden. The GDD's own scope
+  // fragment read `own OR ''` raw and listed the feature twice.
+  it('counts a feature held both as own row and legacy twin ONCE, with the own status', () => {
+    insertFeature('Combo Chain', 'implemented');
+    insertFeature('Combo Chain', 'missing', '');
+    const gdd = synthesizeGDD('PoF', {}, PROJECT);
+    expect(gdd.stats.totalFeatures).toBe(1);
+    expect(gdd.stats.implementedFeatures).toBe(1);
+  });
+});
