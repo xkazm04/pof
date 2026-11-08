@@ -35,14 +35,8 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
     compareMode,
     setCompareMode,
     fileInputRef,
-    overrideRoughness,
-    setOverrideRoughness,
-    overrideMetallic,
-    setOverrideMetallic,
-    overrideEmissive,
-    setOverrideEmissive,
-    overrideSurface,
-    setOverrideSurface,
+    overrides,
+    setOverride,
     effectiveAnalysis,
     handleFileSelect,
     handleDrop,
@@ -251,14 +245,8 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
             effectiveAnalysis={effectiveAnalysis!}
             adjustmentsOpen={adjustmentsOpen}
             setAdjustmentsOpen={setAdjustmentsOpen}
-            overrideRoughness={overrideRoughness}
-            setOverrideRoughness={setOverrideRoughness}
-            overrideMetallic={overrideMetallic}
-            setOverrideMetallic={setOverrideMetallic}
-            overrideEmissive={overrideEmissive}
-            setOverrideEmissive={setOverrideEmissive}
-            overrideSurface={overrideSurface}
-            setOverrideSurface={setOverrideSurface}
+            overrides={overrides}
+            setOverride={setOverride}
             handleAnalyze={handleAnalyze}
             isAnalyzing={isAnalyzing}
             handleGenerate={handleGenerate}

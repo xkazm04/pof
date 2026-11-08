@@ -10,21 +10,15 @@ import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_WARNING } from '@/lib/chart-color
 import { SURFACE_LABELS, SURFACE_COLORS, FEATURE_LABELS } from './constants';
 import { PropertyBar } from './PropertyBar';
 import { AdjustSlider } from './AdjustSlider';
-import type { AnalyzedProperties } from './types';
+import type { AnalyzedProperties, StyleOverrides } from './types';
 
 interface AnalysisResultsProps {
   analysis: AnalyzedProperties;
   effectiveAnalysis: AnalyzedProperties;
   adjustmentsOpen: boolean;
   setAdjustmentsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  overrideRoughness: number | null;
-  setOverrideRoughness: React.Dispatch<React.SetStateAction<number | null>>;
-  overrideMetallic: number | null;
-  setOverrideMetallic: React.Dispatch<React.SetStateAction<number | null>>;
-  overrideEmissive: number | null;
-  setOverrideEmissive: React.Dispatch<React.SetStateAction<number | null>>;
-  overrideSurface: SurfaceType | null;
-  setOverrideSurface: React.Dispatch<React.SetStateAction<SurfaceType | null>>;
+  overrides: StyleOverrides;
+  setOverride: <K extends keyof StyleOverrides>(key: K, value: StyleOverrides[K] | null) => void;
   handleAnalyze: () => void;
   isAnalyzing: boolean;
   handleGenerate: () => void;
@@ -36,14 +30,8 @@ export function AnalysisResults({
   effectiveAnalysis,
   adjustmentsOpen,
   setAdjustmentsOpen,
-  overrideRoughness,
-  setOverrideRoughness,
-  overrideMetallic,
-  setOverrideMetallic,
-  overrideEmissive,
-  setOverrideEmissive,
-  overrideSurface,
-  setOverrideSurface,
+  overrides,
+  setOverride,
   handleAnalyze,
   isAnalyzing,
   handleGenerate,
@@ -173,12 +161,12 @@ export function AnalysisResults({
                   <label className="text-2xs font-medium text-text-muted block mb-1">Surface Type</label>
                   <div className="flex flex-wrap gap-1">
                     {(Object.keys(SURFACE_LABELS) as SurfaceType[]).map((st) => {
-                      const isActive = (overrideSurface ?? analysis.surfaceType) === st;
+                      const isActive = (overrides.surfaceType ?? analysis.surfaceType) === st;
                       return (
                         <button
                           key={st}
                           type="button"
-                          onClick={() => setOverrideSurface(st === analysis.surfaceType ? null : st)}
+                          onClick={() => setOverride('surfaceType', st === analysis.surfaceType ? null : st)}
                           aria-pressed={isActive}
                           className={`focus-ring px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
                             isActive
@@ -197,27 +185,27 @@ export function AnalysisResults({
                 {/* Parameter sliders */}
                 <AdjustSlider
                   label="Roughness"
-                  value={overrideRoughness ?? analysis.roughness}
+                  value={overrides.roughness ?? analysis.roughness}
                   defaultValue={analysis.roughness}
                   min={0} max={1} step={0.05}
-                  onChange={setOverrideRoughness}
-                  onReset={() => setOverrideRoughness(null)}
+                  onChange={(v) => setOverride('roughness', v)}
+                  onReset={() => setOverride('roughness', null)}
                 />
                 <AdjustSlider
                   label="Metallic"
-                  value={overrideMetallic ?? analysis.metallic}
+                  value={overrides.metallic ?? analysis.metallic}
                   defaultValue={analysis.metallic}
                   min={0} max={1} step={0.05}
-                  onChange={setOverrideMetallic}
-                  onReset={() => setOverrideMetallic(null)}
+                  onChange={(v) => setOverride('metallic', v)}
+                  onReset={() => setOverride('metallic', null)}
                 />
                 <AdjustSlider
                   label="Emissive Intensity"
-                  value={overrideEmissive ?? analysis.emissiveIntensity}
+                  value={overrides.emissiveIntensity ?? analysis.emissiveIntensity}
                   defaultValue={analysis.emissiveIntensity}
                   min={0} max={20} step={0.5}
-                  onChange={setOverrideEmissive}
-                  onReset={() => setOverrideEmissive(null)}
+                  onChange={(v) => setOverride('emissiveIntensity', v)}
+                  onReset={() => setOverride('emissiveIntensity', null)}
                 />
               </div>
             </motion.div>

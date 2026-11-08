@@ -63,3 +63,15 @@ export function formatDurationBetween(startIso: string, endIso: string | null): 
   const end = endIso ? new Date(endIso).getTime() : Date.now();
   return formatDuration(Math.max(0, end - start));
 }
+
+/**
+ * Slider readout precision follows the step: whole numbers for a unit-or-larger
+ * step, otherwise at least two decimals and as many as the step itself carries
+ * (a live parent's 0 - 0.07 scalar steps by 0.0007 and must not read "0.00").
+ * A value-based rule changes the decimal count mid-drag, so key off the step.
+ */
+export function readoutDecimals(step: number): number {
+  if (step >= 1) return 0;
+  const frac = String(step).split('.')[1] ?? '';
+  return Math.min(6, Math.max(2, frac.length));
+}

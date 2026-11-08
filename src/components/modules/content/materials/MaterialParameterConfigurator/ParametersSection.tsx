@@ -1,3 +1,4 @@
+import { readoutDecimals } from '@/lib/format';
 import { ParamCue } from '@/components/modules/evaluator/ParamCue';
 import type { ParamDef, SurfaceDef } from './types';
 
@@ -7,17 +8,6 @@ interface ParametersSectionProps {
   explainMode: boolean;
   surfaceDef: SurfaceDef;
   setParam: (name: string, value: number) => void;
-}
-
-/**
- * Readout precision follows the step: whole numbers for a unit-or-larger step,
- * otherwise at least two decimals and as many as the step itself carries (a
- * live parent's 0 – 0.07 scalar steps by 0.0007 and must not read "0.00").
- */
-function readoutDecimals(step: number): number {
-  if (step >= 1) return 0;
-  const frac = String(step).split('.')[1] ?? '';
-  return Math.min(6, Math.max(2, frac.length));
 }
 
 export function ParametersSection({ applicableParams, paramValues, explainMode, surfaceDef, setParam }: ParametersSectionProps) {

@@ -2,8 +2,7 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import { formatBytes } from '@/lib/format';
 import { logger } from '@/lib/logger';
 import type { ApiResponse } from '@/types/api';
-import type { SurfaceType } from '../MaterialParameterConfigurator';
-import type { AnalyzedProperties, StyleTransferConfig } from './types';
+import type { AnalyzedProperties, StyleOverrides, StyleTransferConfig } from './types';
 
 /** Upload ceiling advertised on the drop zone — rejections must say so, not fail mute. */
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -32,23 +31,30 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   // Latest-wins token: an analysis answers the reference it was asked about. Clearing or
   // replacing that reference mints a new token, so a late completion is inert.
   const analyzeTokenRef = useRef(0);
+  // Same rule for the file read: each pick mints a token, so an older (larger) read that
+  // finishes after a newer pick can neither replace the reference nor report an error.
+  const readTokenRef = useRef(0);
 
   // Adjustable overrides on top of analysis
-  const [overrideRoughness, setOverrideRoughness] = useState<number | null>(null);
-  const [overrideMetallic, setOverrideMetallic] = useState<number | null>(null);
-  const [overrideEmissive, setOverrideEmissive] = useState<number | null>(null);
-  const [overrideSurface, setOverrideSurface] = useState<SurfaceType | null>(null);
+  // One record, one setter, one reset: an absent key means "as analyzed".
+  const [overrides, setOverrides] = useState<StyleOverrides>({});
+  const setOverride = useCallback(<K extends keyof StyleOverrides>(key: K, value: StyleOverrides[K] | null) => {
+    setOverrides((prev) => {
+      if (value === null) {
+        if (!(key in prev)) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: value };
+    });
+  }, []);
+  const clearOverrides = useCallback(() => setOverrides({}), []);
 
   const effectiveAnalysis = useMemo(() => {
     if (!analysis) return null;
-    return {
-      ...analysis,
-      roughness: overrideRoughness ?? analysis.roughness,
-      metallic: overrideMetallic ?? analysis.metallic,
-      emissiveIntensity: overrideEmissive ?? analysis.emissiveIntensity,
-      surfaceType: overrideSurface ?? analysis.surfaceType,
-    };
-  }, [analysis, overrideRoughness, overrideMetallic, overrideEmissive, overrideSurface]);
+    return { ...analysis, ...overrides };
+  }, [analysis, overrides]);
 
   /** One accept path for both the picker and the drop zone — every rejection reports why. */
   const acceptFile = useCallback((file: File) => {
@@ -57,25 +63,25 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       setUploadError(reason);
       return;
     }
+    const readToken = ++readTokenRef.current;
     const reader = new FileReader();
     reader.onload = () => {
+      if (readToken !== readTokenRef.current) return;
       analyzeTokenRef.current += 1;
       setIsAnalyzing(false);
       setUploadError(null);
       setImageDataUrl(reader.result as string);
       setAnalysis(null);
       setAnalyzeError(null);
-      setOverrideRoughness(null);
-      setOverrideMetallic(null);
-      setOverrideEmissive(null);
-      setOverrideSurface(null);
+      clearOverrides();
     };
     reader.onerror = () => {
+      if (readToken !== readTokenRef.current) return;
       logger.warn('[MaterialStyleTransfer] reference file could not be read', reader.error);
       setUploadError(`"${file.name}" could not be read — the file may be corrupt or still downloading.`);
     };
     reader.readAsDataURL(file);
-  }, []);
+  }, [clearOverrides]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     // No file means the picker was dismissed — that is not a failure to report.
@@ -96,18 +102,16 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   }, [acceptFile]);
 
   const handleClearImage = useCallback(() => {
+    readTokenRef.current += 1;
     analyzeTokenRef.current += 1;
     setIsAnalyzing(false);
     setImageDataUrl(null);
     setAnalysis(null);
     setAnalyzeError(null);
     setUploadError(null);
-    setOverrideRoughness(null);
-    setOverrideMetallic(null);
-    setOverrideEmissive(null);
-    setOverrideSurface(null);
+    clearOverrides();
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
+  }, [clearOverrides]);
 
   const handleAnalyze = useCallback(async () => {
     if (!imageDataUrl && !referenceDescription.trim()) return;
@@ -176,14 +180,9 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       imageDataUrl,
       referenceDescription,
       analysis: effectiveAnalysis,
-      adjustments: {
-        roughness: overrideRoughness ?? undefined,
-        metallic: overrideMetallic ?? undefined,
-        emissiveIntensity: overrideEmissive ?? undefined,
-        surfaceType: overrideSurface ?? undefined,
-      },
+      adjustments: { ...overrides },
     });
-  }, [onGenerate, imageDataUrl, referenceDescription, effectiveAnalysis, overrideRoughness, overrideMetallic, overrideEmissive, overrideSurface]);
+  }, [onGenerate, imageDataUrl, referenceDescription, effectiveAnalysis, overrides]);
 
   const handleExampleClick = useCallback((desc: string) => {
     setReferenceDescription(desc);
@@ -202,14 +201,8 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
     compareMode,
     setCompareMode,
     fileInputRef,
-    overrideRoughness,
-    setOverrideRoughness,
-    overrideMetallic,
-    setOverrideMetallic,
-    overrideEmissive,
-    setOverrideEmissive,
-    overrideSurface,
-    setOverrideSurface,
+    overrides,
+    setOverride,
     effectiveAnalysis,
     handleFileSelect,
     handleDrop,
