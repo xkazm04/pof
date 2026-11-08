@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { startDeepEvalJob, getDeepEvalJob, cancelDeepEvalJob } from '@/lib/evaluator/deep-eval-job';
+import { getEngineFacts } from '@/lib/engine-facts';
 
 /**
  * The Deep Eval tab's server job (see `src/lib/evaluator/deep-eval-job.ts`).
  *
- * POST `{ projectPath, projectName?, ueVersion?, moduleIds?, scanId?, model?, effort? }`
+ * POST `{ projectPath, ueVersion, projectName?, moduleIds?, scanId?, model?, effort? }`
  *   starts a job and answers `{ scanId, job }`; 409 while one is running for the project.
  *   Only the tab's Run buttons call it: a reload reattaches through GET and never starts one.
  * GET `?project=<path>` answers `{ job }` (the progress snapshot + result), or `{ job: null }`.
@@ -34,12 +35,21 @@ export const POST = withRoute(async (req: NextRequest) => {
     : undefined;
   if (moduleIds && moduleIds.length === 0) return apiError('moduleIds must name at least one module', 400);
 
+  // Refused here, by the prompt builder's own rule: a version getEngineFacts rejects used to
+  // start a job in which every pass failed, and the job then settled as "completed".
+  const ueVersion = typeof body.ueVersion === 'string' ? body.ueVersion : '';
+  try {
+    getEngineFacts(ueVersion);
+  } catch {
+    return apiError('ueVersion must be a UE5 version such as "5.8"', 400);
+  }
+
   const started = startDeepEvalJob({
     projectPath,
     projectContext: {
       projectName: typeof body.projectName === 'string' ? body.projectName : '',
       projectPath,
-      ueVersion: typeof body.ueVersion === 'string' ? body.ueVersion : '',
+      ueVersion,
     },
     moduleIds,
     scanId: typeof body.scanId === 'string' && body.scanId ? body.scanId : undefined,
