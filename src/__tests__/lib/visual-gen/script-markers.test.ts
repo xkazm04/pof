@@ -32,6 +32,9 @@ function emittedKeys(src: string, prefix: string): Set<string> {
     for (const m of line.matchAll(printed)) keys.add(slot(m[1]));
   }
   // marker("KEY", v) / marker(\n "KEY", v) / marker("A" if c else "B", v) / marker("BAKE_%s" % k, v)
+  // emit("KEY", v) through a local `def emit(k, v)` helper (pof_mesh_critique.py).
+  for (const m of src.matchAll(/\bemit\(\s*"([^"]+)"/g)) keys.add(slot(m[1]));
+  if (/\bdef emit\(/.test(src)) keys.delete('{}'); // the helper's own f"POF_X_{k}=" line
   const called = /\bmarker\(\s*"([^"]+)"(?:\s+if\s+[^"]+?\s+else\s+"([^"]+)")?/g;
   for (const m of src.matchAll(called)) {
     keys.add(slot(m[1]));
@@ -43,9 +46,9 @@ function emittedKeys(src: string, prefix: string): Set<string> {
 describe('SCRIPT_MARKERS — declared vocabulary equals what each script prints', () => {
   const ids = Object.keys(SCRIPT_MARKERS) as ScriptId[];
 
-  it('declares the six locally spawned scripts and the operator Tripo CLI', () => {
+  it('declares the seven locally spawned scripts and the operator Tripo CLI', () => {
     expect(ids.map((id) => SCRIPT_MARKERS[id].script).sort()).toEqual([
-      'pof_hunyuan.py', 'pof_mesh_finish.py', 'pof_mesh_split.py',
+      'pof_hunyuan.py', 'pof_mesh_critique.py', 'pof_mesh_finish.py', 'pof_mesh_split.py',
       'pof_mesh_views.py', 'pof_trellis.py', 'pof_tripo.mjs', 'pof_triposr.py',
     ]);
   });
