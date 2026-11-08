@@ -35,6 +35,7 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
     subsystemSignals,
     isLoading,
     error,
+    crashError,
     perfTriage,
     perfSession,
     viewTab,
@@ -74,6 +75,17 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
           <div className="flex items-center gap-2 text-red-400">
             <XCircle className="w-4 h-4 shrink-0" />
             <span className="text-xs">{error}</span>
+          </div>
+        </SurfaceCard>
+      )}
+
+      {/* A failed crash read is not "no crashes": without this the Crash Analyzer
+          signal reads "Ready" over crash data that exists but did not load. */}
+      {crashError && (
+        <SurfaceCard level={2}>
+          <div className="flex items-center gap-2 text-amber-400" role="status" data-testid="holistic-crash-read-error">
+            <XCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className="text-xs">Crash data couldn&apos;t be loaded — {crashError}. The crash signal below does not reflect it.</span>
           </div>
         </SurfaceCard>
       )}

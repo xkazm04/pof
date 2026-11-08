@@ -34,6 +34,9 @@ export function useHolisticHealthView() {
   const perfSession = usePerformanceProfilingStore((s) => s.activeSession);
   const crashStats = useCrashAnalyzerStore((s) => s.stats);
   const fetchCrashAnalysis = useCrashAnalyzerStore((s) => s.fetchAnalysis);
+  // A failed crash read leaves the stats at their zero defaults, which the health
+  // engine reads as "no crash data" (a "Ready" signal). Carry the reason instead.
+  const crashError = useCrashAnalyzerStore((s) => s.error);
 
   const [viewTab, setViewTab] = useState<ViewTab>('overview');
 
@@ -110,6 +113,7 @@ export function useHolisticHealthView() {
     subsystemSignals,
     isLoading,
     error,
+    crashError,
     perfTriage,
     perfSession,
     viewTab,
