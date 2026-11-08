@@ -7,8 +7,12 @@ import { countChecklist } from '@/lib/checklist-progress';
 // Defines which modules should be completed before starting another.
 // Derived from the implicit aRPG curriculum order and cross-module feature deps.
 
-export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> = {
+// Exhaustive over SubModuleId (enforced by feature-definitions-wiring.test.ts): `[]` means
+// "decided: no prerequisites", never "not yet decided".
+export const MODULE_PREREQUISITES: Record<SubModuleId, SubModuleId[]> = {
   // Core Engine — aRPG curriculum sequence
+  'arpg-character': [],
+  'core-engine-plan': [],
   'arpg-animation': ['arpg-character'],
   'arpg-gas': ['arpg-character'],
   'arpg-combat': ['arpg-gas', 'arpg-animation'],
@@ -22,6 +26,7 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'arpg-polish': ['arpg-combat', 'arpg-world'],
 
   // Content modules — lighter dependencies
+  'models': [],
   'animations': ['models'],
   'materials': ['models'],
   'level-design': ['models', 'materials'],
@@ -36,6 +41,9 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'input-handling': [],
   'dialogue-quests': [],
   'packaging': [],
+  // Owner to confirm: curriculum position of the transpiler (no prerequisite enforced today)
+  'blueprint-transpiler': [],
+  'game-design-doc': [],
 
   // Visual Generation (Asset Studio)
   'asset-viewer': [],

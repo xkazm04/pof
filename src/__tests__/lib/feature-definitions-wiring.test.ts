@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SUB_MODULE_IDS } from '@/types/modules';
 import {
+  MODULE_PREREQUISITES,
   MODULE_WIRING_ASSETS,
   getWiringAssets,
   moduleNeedsBinaryContent,
@@ -17,6 +18,13 @@ const VALID_KINDS: WiringAsset['kind'][] = [
   'Material',
   'Other',
 ];
+
+describe('MODULE_PREREQUISITES coverage', () => {
+  it('has an explicit entry (possibly []) for every SubModuleId', () => {
+    const missing = SUB_MODULE_IDS.filter((id) => !(id in MODULE_PREREQUISITES));
+    expect(missing).toEqual([]);
+  });
+});
 
 describe('MODULE_WIRING_ASSETS coverage', () => {
   it('has an explicit entry for every SubModuleId', () => {
