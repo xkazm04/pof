@@ -67,9 +67,15 @@ export function ImportPanel() {
         setImportError(null);
         setRawLog(''); // only clear the paste on success
       } else {
-        // importCrashLog returned null → parse/API failure captured in store.error
+        // importCrashLog returns null for EVERY failure (parse rejection,
+        // network, server error) and records the real reason in store.error.
+        // Report that reason; only fall back to the format hint when none exists,
+        // or a server outage reads as "fix your paste".
         setOutcome(null);
-        setImportError('Could not parse that log — check the format and try again.');
+        setImportError(
+          useCrashAnalyzerStore.getState().error
+            ?? 'Could not parse that log — check the format and try again.',
+        );
       }
     } catch (err) {
       setOutcome(null);
