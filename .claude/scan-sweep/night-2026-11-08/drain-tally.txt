@@ -13,3 +13,12 @@ module-cli-orchestration-hooks {"demoted":1,"better":4,"partially_superseded":1}
 material-lab {"demoted":2,"better":3}
 feature-design-state-hooks {"demoted":1,"better":6}
 observation-testing {"better":7}
+topbar-and-activity {"better":4}
+streaming-zone-planner {"better":4,"demoted":1}
+blueprint-tools {"better":7,"superseded":1}
+core-engine-planning-shell {"better":8,"demoted":1}
+inventory-economy-simulator {"better":9}
+cli-terminal-output {"better":3,"superseded":1}
+catalog-acceptance {"better":8}
+level-flow-editor {"better":7}
+world-module {"better":1}
