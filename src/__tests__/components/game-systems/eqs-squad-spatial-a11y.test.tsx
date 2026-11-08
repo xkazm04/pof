@@ -100,3 +100,28 @@ describe('EQS spatial diagrams — each SVG is a named image like FormationView'
     expect(patrol.getAttribute('aria-label')).toContain(`${EQS_PATROL_POINTS.maxRadius}`);
   });
 });
+
+describe('PatrolPointsDistribution labels — at the 12px floor and inside the viewBox', () => {
+  /** Monospace advance ≈ 0.6em; text-xs = 12px. */
+  const MONO_ADVANCE = 0.6;
+  const FLOOR_PX = 12;
+  it('no label uses a sub-floor fontSize attribute, and each radius label fits horizontally', async () => {
+    const { PatrolPointsDistribution } = await import('@/components/modules/game-systems/PatrolPointsDistribution');
+    const { container } = render(<PatrolPointsDistribution />);
+    const svg = container.querySelector('[data-testid="patrol-points-svg"] svg')!;
+    const size = Number(svg.getAttribute('width'));
+    const texts = Array.from(svg.querySelectorAll('text'));
+    expect(texts.length).toBe(3);
+    for (const t of texts) {
+      expect(t.getAttribute('font-size')).toBeNull();
+      expect(t.getAttribute('class') ?? '').toContain('text-xs');
+      const width = (t.textContent ?? '').length * MONO_ADVANCE * FLOOR_PX;
+      const x = Number(t.getAttribute('x'));
+      const anchor = t.getAttribute('text-anchor') ?? 'start';
+      const left = anchor === 'middle' ? x - width / 2 : anchor === 'end' ? x - width : x;
+      expect(left).toBeGreaterThanOrEqual(0);
+      expect(left + width).toBeLessThanOrEqual(size);
+      expect(Number(t.getAttribute('y'))).toBeGreaterThanOrEqual(FLOOR_PX);
+    }
+  });
+});

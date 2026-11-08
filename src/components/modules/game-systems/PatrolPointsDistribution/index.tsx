@@ -8,6 +8,7 @@ import {
   OPACITY_10, OPACITY_15,
 } from '@/lib/chart-colors';
 import { eqsFloat } from '@/lib/ai-director/eqs-defaults';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 import {
   DEFAULT_MIN_RADIUS, DEFAULT_MAX_RADIUS, DEFAULT_NUM_POINTS,
   SVG_SIZE, SVG_CENTER, DRAW_RADIUS,
@@ -181,24 +182,26 @@ export function PatrolPointsDistribution() {
               );
             })}
 
-            {/* Labels */}
+            {/* Labels — at the 12px floor (TEXT_SCALE.body) and centred just above
+                each ring's top edge, so the MaxRadius value can't run past the
+                viewBox the way a label to the ring's right did. */}
             <text
-              x={SVG_CENTER + maxSvgR + 2}
-              y={SVG_CENTER - 4}
+              x={SVG_CENTER}
+              y={SVG_CENTER - maxSvgR - 4}
               fill={ACCENT_VIOLET}
-              fontSize={9}
-              fontFamily="monospace"
-              opacity={0.7}
+              className={`${TEXT_SCALE.body} font-mono`}
+              textAnchor="middle"
+              opacity={0.8}
             >
               {DEFAULT_MAX_RADIUS}
             </text>
             <text
-              x={SVG_CENTER + minSvgR + 2}
-              y={SVG_CENTER + 12}
+              x={SVG_CENTER}
+              y={SVG_CENTER - minSvgR - 4}
               fill={ACCENT_VIOLET}
-              fontSize={9}
-              fontFamily="monospace"
-              opacity={0.7}
+              className={`${TEXT_SCALE.body} font-mono`}
+              textAnchor="middle"
+              opacity={0.8}
             >
               {DEFAULT_MIN_RADIUS}
             </text>
@@ -206,10 +209,9 @@ export function PatrolPointsDistribution() {
             {/* Querier label */}
             <text
               x={SVG_CENTER}
-              y={SVG_CENTER + 20}
+              y={SVG_CENTER + 22}
               fill={ACCENT_CYAN}
-              fontSize={8}
-              fontFamily="monospace"
+              className={`${TEXT_SCALE.body} font-mono`}
               textAnchor="middle"
               opacity={0.8}
             >
