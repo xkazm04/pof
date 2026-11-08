@@ -14,7 +14,7 @@ import { TimelineStrip } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import {
   ACCENT, FEEDBACK_PARAMS, FEEDBACK_PRESETS, FEEDBACK_CATEGORIES,
-  HITSTOP_ABILITIES, MAX_HITSTOP,
+  HITSTOP_ABILITIES,
   STAGGER_TIMELINE, STAGGER_CONFIG,
 } from '../_shared/data';
 import type { FeedbackPreset, FeedbackCategory } from '../_shared/data';
@@ -25,6 +25,9 @@ const CATEGORY_ICONS: Record<FeedbackCategory, typeof Gauge> = {
   Particles: Sparkles,
   Sound: Volume2,
 };
+
+/** One time axis for the Hitstop Timing bars: the longest authored animation, so width = duration. */
+const HITSTOP_AXIS_SEC = Math.max(...HITSTOP_ABILITIES.map((a) => a.animDuration));
 
 /** Displayed value string for a param — also used as the slider's aria-valuetext. */
 function formatParamValue(value: number, step: number, unit: string): string {
@@ -176,8 +179,8 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
                 <motion.div key={ability.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3">
                   <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[100px] flex-shrink-0">{ability.name}</span>
                   <div className="flex-1 h-2 rounded-full border border-border/20 bg-surface-deep relative">
-                    <div className="absolute top-0 bottom-0 left-0 bg-surface-hover border-r border-border/50" style={{ width: `${(ability.animDuration / 1.5) * 100}%` }} />
-                    <div className="absolute top-0 bottom-0 left-0 animate-pulse" style={{ width: `${(ability.hitstop / MAX_HITSTOP) * 30}%`, left: '10%', backgroundColor: ability.color, boxShadow: `${GLOW_MD} ${withOpacity(ability.color, OPACITY_50)}` }} />
+                    <div className="absolute top-0 bottom-0 left-0 bg-surface-hover border-r border-border/50" style={{ width: `${(ability.animDuration / HITSTOP_AXIS_SEC) * 100}%` }} />
+                    <div className="absolute top-0 bottom-0 left-0 animate-pulse" style={{ width: `${(ability.hitstop / HITSTOP_AXIS_SEC) * 100}%`, backgroundColor: ability.color, boxShadow: `${GLOW_MD} ${withOpacity(ability.color, OPACITY_50)}` }} />
                   </div>
                   <span className="text-xs font-mono font-bold w-[45px] text-right" style={{ color: ability.color }}>{ability.hitstop}s</span>
                 </motion.div>
