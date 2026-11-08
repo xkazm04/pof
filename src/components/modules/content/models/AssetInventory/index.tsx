@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import {
   Search, ScanLine, Loader2, FolderOpen, ArrowUpDown,
 } from 'lucide-react';
+import { STATUS_ERROR } from '@/lib/chart-colors';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { AssetType } from '@/app/api/filesystem/scan-assets/route';
 import { ACCENT, TYPE_CONFIG } from './constants';
@@ -28,6 +29,8 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
  * every search keystroke. The grid mounts one page and grows by one page on demand.
  */
 export const GRID_PAGE_SIZE = 200;
+
+const PATH_HINT_ID = 'asset-inventory-path-hint';
 
 // ── Main Component ──
 
@@ -89,6 +92,7 @@ export function AssetInventory() {
         <button
           onClick={handleScan}
           disabled={!projectPath}
+          aria-describedby={projectPath ? undefined : PATH_HINT_ID}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all hover:brightness-110 disabled:opacity-40"
           style={{ backgroundColor: `${ACCENT}18`, color: ACCENT, border: `1px solid ${ACCENT}35` }}
         >
@@ -99,7 +103,7 @@ export function AssetInventory() {
           <BridgeManifestCard summary={bridgeSummary} className="w-full max-w-sm" />
         )}
         {!projectPath && (
-          <p className="text-xs text-red-400/70">Set your project path in Project Setup first</p>
+          <p id={PATH_HINT_ID} className="text-xs" style={{ color: STATUS_ERROR }}>Set your project path in Project Setup first</p>
         )}
       </div>
     );
