@@ -67,6 +67,7 @@ export function ProjectSetupModule() {
     hasProject,
     okCount,
     missingToolCount,
+    unknownToolCount,
     projectReadError,
   } = useProjectScan(projectPath);
 
@@ -114,8 +115,8 @@ export function ProjectSetupModule() {
   // folder says nothing about whether a project is there, so no step is offered:
   // "Create project" here would scaffold over whatever could not be read.
   const nextStep = useMemo(
-    () => (projectPath.trim() && !projectReadError && hasScanResult ? deriveNextStep({ missingToolCount, hasProject }) : null),
-    [projectPath, projectReadError, hasScanResult, missingToolCount, hasProject],
+    () => (projectPath.trim() && !projectReadError && !unknownToolCount && hasScanResult ? deriveNextStep({ missingToolCount, hasProject }) : null),
+    [projectPath, projectReadError, unknownToolCount, hasScanResult, missingToolCount, hasProject],
   );
 
   const handleNextStepAction = useCallback(() => {

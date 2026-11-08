@@ -5,6 +5,7 @@
  */
 
 import type { DetectedEngine } from './useProjectScan';
+import { toolRow } from '@/lib/project-setup/toolchain';
 
 export interface ProjectIdentity {
   projectName: string;
@@ -36,6 +37,26 @@ Create all files directly inside "${projectPath}" (this IS the project root, do 
 Enable the EnhancedInput plugin in the .uproject.`;
 }
 
+/**
+ * The engine Build & Verify compiles with: the install matching the project's major.minor,
+ * else the first detected one (`mismatch` set, so the caller can say so).
+ */
+export function selectBuildEngine(
+  ueVersion: string,
+  engines: readonly DetectedEngine[],
+): { engine: DetectedEngine | undefined; mismatch: string | null } {
+  const majorMinor = ueVersion.split('.').slice(0, 2).join('.');
+  // By reported version, not install-folder name: a custom folder has no UE_x.y, and
+  // a substring test takes UE_5.10 for 5.1.
+  const match = engines.find((e) => e.version.split('.').slice(0, 2).join('.') === majorMinor);
+  if (match || engines.length === 0) return { engine: match, mismatch: null };
+  const engine = engines[0];
+  return {
+    engine,
+    mismatch: `No installed engine matches UE ${majorMinor}; this build uses UE ${engine.version} instead.`,
+  };
+}
+
 export function buildBuildVerifyPrompt({
   projectName,
   projectPath,
@@ -43,24 +64,24 @@ export function buildBuildVerifyPrompt({
   engines,
 }: ProjectIdentity & { engines: DetectedEngine[] }): string {
   const majorMinor = ueVersion.split('.').slice(0, 2).join('.');
-  // By reported version, not install-folder name: a custom folder has no UE_x.y, and
-  // a substring test takes UE_5.10 for 5.1.
-  const matchedEngine =
-    engines.find((e) => e.version.split('.').slice(0, 2).join('.') === majorMinor) ?? engines[0];
+  const dotnetX = `${toolRow('dotnet').version}.x`;
+  const { engine: matchedEngine, mismatch } = selectBuildEngine(ueVersion, engines);
   const eng = (matchedEngine?.path ?? '').replace(/\\/g, '/');
   const proj = projectPath.replace(/\\/g, '/');
 
-  return `Build-verify the UE ${majorMinor} project "${projectName}" at "${proj}" using engine at "${eng}".
+  return `Build-verify the UE ${majorMinor} project "${projectName}" at "${proj}" using engine at "${eng}".${mismatch ? `
+
+ENGINE MISMATCH: ${mismatch} State this in the report: the result verifies the project against that engine, not UE ${majorMinor}.` : ''}
 
 RULES: Be concise. Do NOT use TodoWrite. Maximize parallel Bash calls. Every Bash command MUST exit 0 — use \`test ... && echo "OK" || echo "FAIL"\` or append \`|| true\`.
 
 STEP 1 — Pre-flight (run ALL in parallel):
   a) \`test -d "${proj}/Source" && echo "SOURCE OK" || echo "SOURCE MISSING"\`
-  b) \`ls "C:/Program Files/dotnet/x64/shared/Microsoft.NETCore.App/" 2>/dev/null || true; echo "---"; ls "C:/Program Files/dotnet/shared/Microsoft.NETCore.App/" 2>/dev/null || true\` — look for 8.x in either path. If x64 has 8.x, use DOTNET="C:/Program Files/dotnet/x64/dotnet.exe". If default has 8.x, use DOTNET=dotnet.
+  b) \`ls "C:/Program Files/dotnet/x64/shared/Microsoft.NETCore.App/" 2>/dev/null || true; echo "---"; ls "C:/Program Files/dotnet/shared/Microsoft.NETCore.App/" 2>/dev/null || true\` — look for ${dotnetX} in either path. If x64 has ${dotnetX}, use DOTNET="C:/Program Files/dotnet/x64/dotnet.exe". If default has ${dotnetX}, use DOTNET=dotnet.
   c) \`test -f "${eng}/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" && echo "UBT OK" || echo "UBT MISSING"\`
 
 Evaluate:
-- If no .NET 8.x in either path → BLOCKING, stop.
+- If no .NET ${dotnetX} in either path → BLOCKING, stop.
 - If UBT MISSING → BLOCKING, stop.
 - If SOURCE MISSING → proceed to Step 2 to create it.
 

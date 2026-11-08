@@ -151,9 +151,9 @@ export function StatusChecklist({
           >
             <div className="relative mt-[2px] shrink-0">
               <StatusDot
-                state={item.ok ? 'ok' : 'fail'}
+                state={item.ok ? 'ok' : item.unknown ? 'warn' : 'fail'}
                 size="md"
-                title={`${item.label}: ${item.ok ? 'OK' : 'Missing'}`}
+                title={`${item.label}: ${item.ok ? 'OK' : item.unknown ? 'Unknown' : 'Missing'}`}
               />
               {i < checklist.length - 1 && (
                 <div className="absolute top-3.5 left-[5px] w-px h-4 bg-border" />
@@ -171,7 +171,7 @@ export function StatusChecklist({
               >
                 {item.detail}
               </span>
-              {!item.ok && <InstallLink checklistId={item.id} />}
+              {!item.ok && !item.unknown && <InstallLink checklistId={item.id} />}
             </div>
           </div>
         ))}

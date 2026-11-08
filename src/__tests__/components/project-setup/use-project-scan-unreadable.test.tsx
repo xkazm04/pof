@@ -6,12 +6,12 @@ afterEach(cleanup);
 
 type Reply = { status: number; body: unknown };
 
-function route(listReply: Reply) {
+function route(listReply: Reply, probes: { engines?: Reply; tooling?: Reply } = {}) {
   globalThis.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
     const { action } = JSON.parse(String(init?.body ?? '{}')) as { action: string };
     let reply: Reply = { status: 200, body: { success: true, data: {} } };
-    if (action === 'detect-engines') reply = { status: 200, body: { success: true, data: { engines: [] } } };
-    if (action === 'detect-tooling') reply = { status: 200, body: { success: true, data: { tools: [] } } };
+    if (action === 'detect-engines') reply = probes.engines ?? { status: 200, body: { success: true, data: { engines: [] } } };
+    if (action === 'detect-tooling') reply = probes.tooling ?? { status: 200, body: { success: true, data: { tools: [] } } };
     if (action === 'list') reply = listReply;
     return Promise.resolve({
       ok: reply.status < 400,
@@ -45,5 +45,49 @@ describe('useProjectScan project folder read', () => {
 
     expect(result.current.projectReadError).toBeNull();
     expect(result.current.checklist.find((c) => c.id === 'uproject')?.detail).toBe('No .uproject found');
+  });
+});
+
+describe('useProjectScan failed probes', () => {
+  const emptyList: Reply = {
+    status: 200,
+    body: { success: true, data: { path: 'C:/p', parent: 'C:/', directories: [], uprojectFiles: [], isUEProject: false } },
+  };
+  const oneEngine: Reply = { status: 200, body: { success: true, data: { engines: [{ version: '5.8.0', path: 'C:/UE_5.8' }] } } };
+  const fail: Reply = { status: 500, body: { success: false, error: 'boom' } };
+
+  it('marks tooling rows unknown when detect-tooling fails, and counts none as missing', async () => {
+    route(emptyList, { tooling: fail, engines: oneEngine });
+    const { result } = renderHook(() => useProjectScan('C:/p'));
+    await waitFor(() => expect(result.current.scanState).toBe('settled'));
+
+    const tools = result.current.checklist.filter((c) => c.id.startsWith('tool-'));
+    expect(tools.length).toBe(4);
+    expect(tools.every((t) => t.unknown === true && t.ok === false)).toBe(true);
+    expect(result.current.missingToolCount).toBe(0);
+    expect(result.current.unknownToolCount).toBe(4);
+  });
+
+  it('marks the engine row unknown, not "Not found", when detect-engines fails', async () => {
+    route(emptyList, { engines: fail });
+    const { result } = renderHook(() => useProjectScan('C:/p'));
+    await waitFor(() => expect(result.current.scanState).toBe('settled'));
+
+    const engine = result.current.checklist.find((c) => c.id === 'engine');
+    expect(engine?.unknown).toBe(true);
+    expect(engine?.detail).not.toBe('Not found');
+    expect(result.current.missingToolCount).toBe(0);
+  });
+
+  it('keeps a probe that answered "no engine" as plainly missing', async () => {
+    route(emptyList);
+    const { result } = renderHook(() => useProjectScan('C:/p'));
+    await waitFor(() => expect(result.current.scanState).toBe('settled'));
+
+    const engine = result.current.checklist.find((c) => c.id === 'engine');
+    expect(engine?.unknown).toBeUndefined();
+    expect(engine?.detail).toBe('Not found');
+    expect(result.current.missingToolCount).toBe(1);
+    expect(result.current.unknownToolCount).toBe(0);
   });
 });
