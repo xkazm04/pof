@@ -75,6 +75,7 @@ export function SimulationResults({
   summary, result, verdicts, config, activeTab, setActiveTab, onExtend, extendNote,
 }: Props) {
   const inflation = verdicts.find((v) => v.family === 'rarity-inflation')!;
+  const saturation = verdicts.find((v) => v.family === 'modifier-saturation')!;
   return (
     <div className="space-y-3">
       <CoverageStrip result={result} onExtend={onExtend} extendNote={extendNote} />
@@ -111,7 +112,7 @@ export function SimulationResults({
         >
           {activeTab === 'power' && <PowerTab result={result} config={config} />}
           {activeTab === 'rarity' && <RarityTab result={result} config={config} inflation={inflation} />}
-          {activeTab === 'affixes' && <AffixTab result={result} />}
+          {activeTab === 'affixes' && <AffixTab result={result} saturationThreshold={saturation.threshold} />}
           {activeTab === 'alerts' && <AlertsTab verdicts={verdicts} config={config} />}
         </motion.div>
       </AnimatePresence>

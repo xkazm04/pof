@@ -35,7 +35,11 @@ function StaggerItem({ index, children }: { index: number; children: ReactNode }
 
 /* ── Affix Saturation Tab ─────────────────────────────────────────────── */
 
-export function AffixTab({ result }: { result: ItemEconomyResult }) {
+export function AffixTab({ result, saturationThreshold }: {
+  result: ItemEconomyResult;
+  /** The modifier-saturation verdict's threshold, so this list and the verdict flag the same stats */
+  saturationThreshold: number;
+}) {
   return (
     <div className="space-y-3">
       <StaggerItem index={0}>
@@ -55,7 +59,7 @@ export function AffixTab({ result }: { result: ItemEconomyResult }) {
             {Object.entries(result.globalAffixSaturation)
               .sort(([, a], [, b]) => b - a)
               .map(([stat, pct]) => {
-                const isSaturated = pct > 0.15;
+                const isSaturated = pct > saturationThreshold;
                 return (
                   <div key={stat} className="flex items-center gap-2 text-xs font-mono">
                     <span
