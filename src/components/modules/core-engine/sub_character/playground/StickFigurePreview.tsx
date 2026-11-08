@@ -192,7 +192,7 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
       };
       cancelAnimationFrame(animRef.current);
     };
-  }, [isPlaying, speedFactor, accelFactor, dodgeDistFactor, dodgeDurFactor, values, runKey]);
+  }, [isPlaying, speedFactor, accelFactor, dodgeDistFactor, dodgeDurFactor, runKey]);
 
   // The canvas pixels are invisible to AT; the name carries the tuning it animates.
   const label = `Movement preview (${isPlaying ? 'playing' : 'paused, press play'}): walk speed ${
