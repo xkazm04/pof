@@ -1,4 +1,5 @@
-import { STATUS_ERROR, ACCENT_VIOLET, STATUS_WARNING } from '@/lib/chart-colors';
+import { STATUS_WARNING } from '@/lib/chart-colors';
+import { TRANSITION_STYLES } from './constants';
 import type { TransitionLine } from './types';
 
 interface TransitionLinesProps {
@@ -10,11 +11,7 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
   return (
     <>
       {lines.map((ln) => {
-        const styleColor =
-          ln.style === 'loading-screen' ? STATUS_ERROR
-            : ln.style === 'fade' ? ACCENT_VIOLET
-              : ln.style === 'portal' ? STATUS_WARNING
-                : '#3a3a6a';
+        const styleColor = TRANSITION_STYLES[ln.style].color;
         const isDashed = ln.style === 'loading-screen' || ln.style === 'portal';
         return (
           <g key={ln.id}>

@@ -5,6 +5,9 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { ZoneCell } from '@/components/modules/content/level-design/StreamingZonePlanner/ZoneCell';
 import { CELL_SIZE } from '@/components/modules/content/level-design/StreamingZonePlanner/constants';
+import { TransitionLines } from '@/components/modules/content/level-design/StreamingZonePlanner/TransitionLines';
+import { TRANSITION_STYLES } from '@/components/modules/content/level-design/StreamingZonePlanner/constants';
+import type { TransitionLine } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
 import type { StreamingZone } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
 
 afterEach(cleanup);
@@ -25,5 +28,17 @@ describe('ZoneCell preload ring', () => {
     expect(x + size / 2).toBe(ZONE.gridX * CELL_SIZE + CELL_SIZE / 2);
     expect(y + size / 2).toBe(ZONE.gridY * CELL_SIZE + CELL_SIZE / 2);
     expect(size).toBe((preloadRadius * 2 + 1) * CELL_SIZE - 8);
+  });
+});
+
+const LINE: TransitionLine = {
+  id: 't', fromId: 'a', toId: 'b', style: 'seamless', triggerType: 'proximity', condition: '',
+  x1: 0, y1: 0, x2: 72, y2: 0, fromName: 'Town', toName: 'Forest',
+};
+
+describe('TransitionLines', () => {
+  it.each(Object.keys(TRANSITION_STYLES) as TransitionLine['style'][])('%s draws in the colour the list names it', (style) => {
+    const { container } = render(<svg><TransitionLines lines={[{ ...LINE, style }]} deleteTransition={() => {}} /></svg>);
+    expect(container.querySelector('line')!.getAttribute('stroke')).toBe(TRANSITION_STYLES[style].color);
   });
 });
