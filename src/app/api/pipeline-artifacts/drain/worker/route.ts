@@ -32,6 +32,14 @@ export async function POST(req: NextRequest) {
     }
     if (body.action === 'stop') return apiSuccess(stopDrainWorker());
     if (body.action !== 'start') return apiError("action must be 'start' or 'stop'", 400);
+    // `Math.max(MIN, "abc")` is NaN and `setInterval(fn, NaN)` fires ~every millisecond — a
+    // non-numeric interval used to start a drain hot-loop against the shared editor.
+    for (const knob of ['intervalMs', 'cooldownMs'] as const) {
+      const v: unknown = body[knob];
+      if (v !== undefined && (typeof v !== 'number' || !Number.isFinite(v) || v < 0)) {
+        return apiError(`${knob} must be a non-negative number of milliseconds`, 400);
+      }
+    }
 
     const filter = parseDrainFilter((k) => body[k]);
     return apiSuccess(startDrainWorker({
