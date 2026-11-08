@@ -87,17 +87,21 @@ export function useDamageNumberPhysicsSimulator() {
             p.element === newP.element &&
             p.isCrit === newP.isCrit
           );
+          // Replace the stacked entry rather than edit it: the old object is the one the
+          // last render committed to `particles`.
           if (existing && physics.stackMode === 'accumulate') {
-            existing.amount += newP.amount;
-            existing.stackCount++;
-            existing.displayText = `${existing.stackCount}x ${Math.round(existing.amount / existing.stackCount)} = ${existing.amount}`;
+            const amount = existing.amount + newP.amount;
+            const stackCount = existing.stackCount + 1;
+            const displayText = `${stackCount}x ${Math.round(amount / stackCount)} = ${amount}`;
+            particlesRef.current = particlesRef.current.map(p => (p === existing ? { ...p, amount, stackCount, displayText } : p));
             continue;
           }
           if (existing && physics.stackMode === 'merge') {
-            existing.amount += newP.amount;
-            existing.stackCount++;
-            existing.displayText = existing.isHeal ? `+${existing.amount}` : `${existing.amount}`;
+            const amount = existing.amount + newP.amount;
+            const stackCount = existing.stackCount + 1;
+            const displayText = existing.isHeal ? `+${amount}` : `${amount}`;
             // Growth is derived from stackCount in updateParticle (stackScale)
+            particlesRef.current = particlesRef.current.map(p => (p === existing ? { ...p, amount, stackCount, displayText } : p));
             continue;
           }
         }
