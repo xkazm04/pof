@@ -59,6 +59,10 @@ const CPP_KEYWORDS = new Set([
   'long', 'namespace', 'new', 'nullptr', 'operator', 'private', 'protected', 'public', 'return', 'short',
   'signed', 'sizeof', 'static', 'struct', 'switch', 'template', 'this', 'throw', 'true', 'try', 'typedef',
   'union', 'unsigned', 'using', 'virtual', 'void', 'volatile', 'while',
+  // C++20 remainder (underscored words never reach this check: zoneEnumIdentifier strips '_').
+  'alignas', 'alignof', 'and', 'asm', 'bitand', 'bitor', 'char8t', 'char16t', 'char32t', 'compl', 'concept',
+  'consteval', 'constexpr', 'constinit', 'decltype', 'export', 'extern', 'mutable', 'noexcept', 'not', 'or',
+  'register', 'requires', 'typeid', 'typename', 'wchart', 'xor',
 ]);
 
 function identifierProblem(id: string): string | null {
