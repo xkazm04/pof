@@ -24,6 +24,45 @@ def parse_score(raw):
     return value if 0 <= value <= 10 else None
 
 
+def manifest_problem(items):
+    if not isinstance(items, list) or not items:
+        return "manifest must be a non-empty list"
+    for i, it in enumerate(items):
+        if not isinstance(it, dict) or any(k not in it for k in ("id", "file", "subject")):
+            return f"manifest entry {i} needs id, file and subject"
+    return None
+
+
+def judge(it, model, proc, torch, Image, max_new_tokens):
+    img = Image.open(it["file"]).convert("RGB")
+    prompt = (
+        f"This image is an AI-generated 2D game asset that should be: {it['subject']}. "
+        "Judge it strictly as a shippable GAME ASSET (icon/art). Reply on ONE line EXACTLY as: "
+        "SCORE=<0-10 integer>; DEFECTS=<comma-separated visual problems>; VERDICT=<one short sentence>."
+    )
+    messages = [{"role": "user", "content": [
+        {"type": "image", "image": img},
+        {"type": "text", "text": prompt},
+    ]}]
+    inputs = proc.apply_chat_template(
+        messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt",
+    ).to(model.device)
+    with torch.no_grad():
+        out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
+    gen = proc.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
+    gen = gen.replace("\n", " ").strip()
+    rec = {"id": it["id"], "raw": gen[:400]}
+    for key in ("SCORE", "DEFECTS", "VERDICT"):
+        m = re.search(key + r"=([^;]+)", gen)
+        if m:
+            rec[key.lower()] = m.group(1).strip()
+    score = parse_score(rec.get("score"))
+    rec["score"] = int(score) if score is not None else None
+    if score is None:
+        rec["error"] = "no 0-10 score in the reply"
+    return rec
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
@@ -39,6 +78,10 @@ def main() -> int:
 
         with open(args.manifest, "r", encoding="utf-8") as fh:
             items = json.load(fh)
+        problem = manifest_problem(items)
+        if problem:  # before the model load: an empty run must not finish "ok"
+            print("POF_VLM_BATCH_ERROR=" + problem)
+            return 1
 
         t0 = time.time()
         model = AutoModelForImageTextToText.from_pretrained(args.model, dtype="auto", device_map="cuda")
@@ -47,35 +90,9 @@ def main() -> int:
 
         for it in items:
             try:
-                img = Image.open(it["file"]).convert("RGB")
-            except Exception as e:  # noqa: BLE001
-                print("POF_VLM_ITEM=" + json.dumps({"id": it["id"], "score": None, "error": repr(e)}))
-                continue
-            prompt = (
-                f"This image is an AI-generated 2D game asset that should be: {it['subject']}. "
-                "Judge it strictly as a shippable GAME ASSET (icon/art). Reply on ONE line EXACTLY as: "
-                "SCORE=<0-10 integer>; DEFECTS=<comma-separated visual problems>; VERDICT=<one short sentence>."
-            )
-            messages = [{"role": "user", "content": [
-                {"type": "image", "image": img},
-                {"type": "text", "text": prompt},
-            ]}]
-            inputs = proc.apply_chat_template(
-                messages, add_generation_prompt=True, tokenize=True, return_dict=True, return_tensors="pt",
-            ).to(model.device)
-            with torch.no_grad():
-                out = model.generate(**inputs, max_new_tokens=args.max_new_tokens, do_sample=False)
-            gen = proc.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
-            gen = gen.replace("\n", " ").strip()
-            rec = {"id": it["id"], "raw": gen[:400]}
-            for key in ("SCORE", "DEFECTS", "VERDICT"):
-                m = re.search(key + r"=([^;]+)", gen)
-                if m:
-                    rec[key.lower()] = m.group(1).strip()
-            score = parse_score(rec.get("score"))
-            rec["score"] = int(score) if score is not None else None
-            if score is None:
-                rec["error"] = "no 0-10 score in the reply"
+                rec = judge(it, model, proc, torch, Image, args.max_new_tokens)
+            except Exception as e:  # noqa: BLE001 - one item's failure costs that item only
+                rec = {"id": it["id"], "score": None, "error": repr(e)}
             print("POF_VLM_ITEM=" + json.dumps(rec))
             sys.stdout.flush()
 
