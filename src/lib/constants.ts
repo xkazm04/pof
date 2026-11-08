@@ -83,6 +83,10 @@ export const UI_TIMEOUTS = {
   callbackSettleMax: 10000,
   /** Flash duration after a checklist item completes. */
   completionFlash: 2000,
+  /** Dev inspector: how long the "copied" confirmation shows (dev-only tool). */
+  devInspectorCopied: 1800,
+  /** Dev inspector: how long nav mode waits for a pick before switching itself off (dev-only tool). */
+  devInspectorNavIdle: 2000,
   /** Delay between batch-queued checklist items. */
   batchItemDelay: 800,
   /** Watchdog interval: recover stuck batch state. */

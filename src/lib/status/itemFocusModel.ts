@@ -175,16 +175,18 @@ export function resolveItemFocus(catalogId: string, entityId: string, ctx: ItemF
     ...nodeGrade(catalogId, entityId, entity.name, ctx),
   };
 
-  const seen = new Set<string>([selfKey]);
+  // Dedupe PER DIRECTION: an entity linked both ways shows under Links to AND Referenced by.
+  // Within one direction a target reached under several roles is one node whose role merges them.
   const dedup = (refs: CatalogRef[]): FocusNode[] => {
-    const out: FocusNode[] = [];
+    const byKey = new Map<string, CatalogRef & { roles: string[] }>();
     for (const ref of refs) {
       const key = entityKey(ref.catalogId, ref.entityId);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(toNode(ref, ctx));
+      if (key === selfKey) continue;
+      const hit = byKey.get(key);
+      if (!hit) byKey.set(key, { ...ref, roles: [ref.role] });
+      else if (!hit.roles.includes(ref.role)) hit.roles.push(ref.role);
     }
-    return out;
+    return [...byKey.values()].map(({ roles, ...ref }) => toNode({ ...ref, role: roles.join(', ') }, ctx));
   };
 
   const forwardRefs: CatalogRef[] = (ctx.index.forward.get(selfKey) ?? []).map((l) => ({

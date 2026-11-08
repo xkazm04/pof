@@ -437,7 +437,7 @@ export function PipelinesView({
       <div role="group" aria-label="Highlight steps by production readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)' }}>
         <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)', alignSelf: 'center', width: 56 }}>readiness</span>
         {LADDER.map((level: ReadinessLevel) => {
-          const active = highlight?.kind === 'readiness' && highlight.value === level;
+          const active = activeHighlight?.kind === 'readiness' && activeHighlight.value === level;
           const count = rungCounts.get(level) ?? 0;
           const name = READINESS_NAME[level];
           return (
@@ -454,7 +454,7 @@ export function PipelinesView({
           );
         })}
         {(['waiting', 'blocked'] as const).map((state: ReadinessState) => {
-          const active = highlight?.kind === 'state' && highlight.value === state;
+          const active = activeHighlight?.kind === 'state' && activeHighlight.value === state;
           const count = stateCounts.get(state) ?? 0;
           const waiting = state === 'waiting';
           return (
@@ -508,7 +508,7 @@ export function PipelinesView({
             key={e.name}
             label={e.name}
             count={e.count}
-            active={highlight?.kind === 'engine' && highlight.value === e.name}
+            active={activeHighlight?.kind === 'engine' && activeHighlight.value === e.name}
             title={`Highlight the ${e.count} step${e.count === 1 ? '' : 's'} powered by ${e.name}`}
             onClick={() => toggle('engine', e.name)}
           />
