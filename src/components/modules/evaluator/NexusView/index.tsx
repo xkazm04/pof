@@ -97,14 +97,28 @@ export function NexusView() {
 
           {/* Zoom */}
           <div className="flex items-center gap-0.5 ml-2">
-            <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors">
+            <button
+              onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
+              disabled={zoom <= 0.5}
+              aria-label="Zoom out"
+              className="focus-ring p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            >
               <ZoomOut className="w-3 h-3" />
             </button>
-            <span className="text-2xs text-text-muted w-8 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom((z) => Math.min(1.5, z + 0.1))} className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors">
+            <span className="text-2xs text-text-muted w-8 text-center" role="status" aria-live="polite">{Math.round(zoom * 100)}%</span>
+            <button
+              onClick={() => setZoom((z) => Math.min(1.5, z + 0.1))}
+              disabled={zoom >= 1.5}
+              aria-label="Zoom in"
+              className="focus-ring p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            >
               <ZoomIn className="w-3 h-3" />
             </button>
-            <button onClick={() => setZoom(1)} className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors">
+            <button
+              onClick={() => setZoom(1)}
+              aria-label="Reset zoom to 100%"
+              className="focus-ring p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
+            >
               <Maximize2 className="w-3 h-3" />
             </button>
           </div>
