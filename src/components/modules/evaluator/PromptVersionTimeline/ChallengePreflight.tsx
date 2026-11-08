@@ -90,7 +90,7 @@ function PlanBody({ plan }: { plan: ChallengePlan }) {
         <ArmCard slot="A" role="current" entry={plan.incumbent} evidence={plan.evidence.incumbent} />
         <ArmCard slot="B" role="challenger" entry={plan.challenger} evidence={plan.evidence.challenger} />
       </div>
-      <PromptDiffView before={plan.incumbent.variant.prompt} after={plan.challenger.variant.prompt} maxHeightClass="max-h-56" />
+      <PromptDiffView before={plan.incumbent.variant.prompt} after={plan.challenger.variant.prompt} maxHeightClass="max-h-56" beforeLabel="Current" afterLabel="Challenger" />
     </>
   );
 }

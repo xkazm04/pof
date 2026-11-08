@@ -74,3 +74,16 @@ describe('PromptDiffView', () => {
     });
   });
 });
+
+describe('PromptDiffView — labels name what is compared', () => {
+  it('uses the caller labels for the columns and the copy action', () => {
+    const { getByRole, getByText, queryByText } = render(
+      <PromptDiffView before="a b" after="a c" beforeLabel="Older" afterLabel="Newer" />,
+    );
+    fireEvent.click(getByRole('button', { name: /split/i }));
+    expect(getByText('Older')).toBeTruthy();
+    expect(getByText('Newer')).toBeTruthy();
+    expect(queryByText('Optimized')).toBeNull();
+    expect(getByRole('button', { name: 'Copy newer prompt' })).toBeTruthy();
+  });
+});

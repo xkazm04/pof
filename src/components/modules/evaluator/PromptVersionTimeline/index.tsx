@@ -158,7 +158,7 @@ export function PromptVersionTimeline({
               <X className="w-3 h-3" /> Clear
             </button>
           </div>
-          <PromptDiffView before={comparePair.before.variant.prompt} after={comparePair.after.variant.prompt} />
+          <PromptDiffView before={comparePair.before.variant.prompt} after={comparePair.after.variant.prompt} beforeLabel="Older" afterLabel="Newer" />
         </SurfaceCard>
       )}
 
