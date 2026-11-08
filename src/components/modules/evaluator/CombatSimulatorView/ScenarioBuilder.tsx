@@ -228,8 +228,9 @@ export function ScenarioBuilder({
               </div>
             ))}
             <button
-              onClick={() => setEnemySetup([...enemySetup, { archetypeId: 'melee-grunt', count: 1, level: playerLevel }])}
-              className="text-2xs text-cyan-400 hover:text-cyan-300 transition-colors"
+              onClick={() => setEnemySetup([...enemySetup, { archetypeId: enemyArchetypes[0].id, count: 1, level: playerLevel }])}
+              disabled={enemyArchetypes.length === 0}
+              className="text-2xs text-cyan-400 hover:text-cyan-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               + Add enemy group
             </button>

@@ -77,7 +77,7 @@ export function CombatSimulatorView() {
 
   // Scenario state
   const [playerLevel, setPlayerLevel] = useState(5);
-  const [gearId, setGearId] = useState('starter');
+  const [gearIdChoice, setGearId] = useState('starter');
   const [selectedAbilities, setSelectedAbilities] = useState<string[]>([
     'ga-melee-attack', 'ga-combo-finisher', 'ga-fireball', 'ga-ground-slam', 'ga-dodge',
   ]);
@@ -99,10 +99,19 @@ export function CombatSimulatorView() {
     fetchDefaults();
   }, [fetchDefaults]);
 
+  // Defaults are literal ids, so they are reconciled against the LOADED catalog: a missing id would
+  // otherwise show another option in the select while the run submits the missing one (the engine
+  // skips unknown archetypes, yielding an encounter with fewer or zero enemies and no error).
   const gear = useMemo(() =>
-    gearLoadouts.find((g) => g.id === gearId) ?? gearLoadouts[0],
-    [gearLoadouts, gearId],
+    gearLoadouts.find((g) => g.id === gearIdChoice) ?? gearLoadouts[0],
+    [gearLoadouts, gearIdChoice],
   );
+  const gearId = gear?.id ?? gearIdChoice;
+  const enemyGroups = useMemo(() => {
+    if (enemies.length === 0) return enemySetup;
+    return enemySetup.map((e) =>
+      enemies.some((a) => a.id === e.archetypeId) ? e : { ...e, archetypeId: enemies[0].id });
+  }, [enemies, enemySetup]);
 
   const playerAbils = useMemo(() =>
     abilities.filter((a) => selectedAbilities.includes(a.id)),
@@ -124,11 +133,11 @@ export function CombatSimulatorView() {
   const handleRun = useCallback(async () => {
     if (!canRun || !tuning || !defaultConfig || !gear) return;
     const scenario: CombatScenario = {
-      name: `Lvl ${playerLevel} vs ${enemySetup.map((e) => `${e.count}x ${enemies.find((a) => a.id === e.archetypeId)?.name ?? e.archetypeId}`).join(', ')}`,
+      name: `Lvl ${playerLevel} vs ${enemyGroups.map((e) => `${e.count}x ${enemies.find((a) => a.id === e.archetypeId)?.name ?? e.archetypeId}`).join(', ')}`,
       playerLevel,
       playerGear: gear,
       playerAbilities: playerAbils,
-      enemies: enemySetup,
+      enemies: enemyGroups,
     };
     // A candidate diffed against a pinned baseline reuses the baseline's seed: with an
     // unchanged tuning the delta is then exactly zero instead of RNG noise from two
@@ -137,7 +146,7 @@ export function CombatSimulatorView() {
     const config: CombatSimConfig = { ...defaultConfig, iterations, seed };
     setActiveIterations(iterations);
     await runSimulation(scenario, tuning, config);
-  }, [canRun, tuning, defaultConfig, gear, playerLevel, playerAbils, enemySetup, enemies, iterations, baselineResult, runSimulation]);
+  }, [canRun, tuning, defaultConfig, gear, playerLevel, playerAbils, enemyGroups, enemies, iterations, baselineResult, runSimulation]);
 
   const handleTuningChange = useCallback((key: keyof TuningOverrides, value: number) => {
     if (!tuning) return;
@@ -302,7 +311,7 @@ export function CombatSimulatorView() {
                 selectedAbilities={selectedAbilities}
                 setSelectedAbilities={setSelectedAbilities}
                 abilities={abilities}
-                enemySetup={enemySetup}
+                enemySetup={enemyGroups}
                 setEnemySetup={setEnemySetup}
                 enemyArchetypes={enemies}
                 iterations={iterations}
