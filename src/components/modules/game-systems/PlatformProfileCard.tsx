@@ -10,7 +10,7 @@ import {
 import type { BuildProfile, PlatformId } from '@/lib/packaging/build-profiles';
 import { PLATFORM_NOTES, unappliedCookSettings } from '@/lib/packaging/uat-command-generator';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, STATUS_MUTED, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   Win64: Monitor,
@@ -20,12 +20,14 @@ const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   IOS: Tablet,
 };
 
+// Hex tokens only: the card appends a hex alpha suffix (`${color}30`), which turns a
+// CSS variable into invalid CSS (`var(--x)cc`) that the browser drops.
 const PLATFORM_COLORS: Record<PlatformId, string> = {
   Win64: MODULE_COLORS.core,
   Linux: ACCENT_ORANGE,
   Mac: ACCENT_VIOLET,
   Android: STATUS_SUCCESS,
-  IOS: 'var(--text-muted)',
+  IOS: STATUS_MUTED,
 };
 
 interface PlatformProfileCardProps {
@@ -44,7 +46,7 @@ export function PlatformProfileCard({
   const [cmdCopied, setCmdCopied] = useState(false);
 
   const Icon = PLATFORM_ICONS[profile.platform] ?? Monitor;
-  const color = PLATFORM_COLORS[profile.platform] ?? 'var(--text-muted)';
+  const color = PLATFORM_COLORS[profile.platform] ?? STATUS_MUTED;
   const notes = PLATFORM_NOTES[profile.platform] ?? [];
   const unapplied = unappliedCookSettings(profile.cookSettings);
 
