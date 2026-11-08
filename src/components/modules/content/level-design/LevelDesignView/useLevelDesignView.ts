@@ -22,7 +22,7 @@ import type { RoomNode, SyncDivergence } from '@/types/level-design';
 import type { LevelEditOp } from '@/lib/level-design/level-edit';
 import {
   streamingPlanReducer, initialStreamingPlan,
-  type StreamingPlanStore, type StreamingZonePlannerConfig,
+  type StreamingPlanState, type StreamingOp, type StreamingPlanStore, type StreamingZonePlannerConfig,
 } from '@/lib/level-design/streaming-plan';
 import {
   procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecStore,
@@ -32,6 +32,14 @@ import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import type { TabId } from './types';
 import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
 import { useDocCommitBuffer } from './useDocCommitBuffer';
+
+/** Streaming plans keyed by document id; an absent key means "still the seed". */
+type StreamingPlans = Record<number, StreamingPlanState>;
+function streamingPlansReducer(plans: StreamingPlans, action: { docId: number; op: StreamingOp }): StreamingPlans {
+  const current = plans[action.docId] ?? initialStreamingPlan();
+  const next = streamingPlanReducer(current, action.op);
+  return next === current && action.docId in plans ? plans : { ...plans, [action.docId]: next };
+}
 
 export function useLevelDesignView() {
   const {
@@ -130,13 +138,23 @@ export function useLevelDesignView() {
   });
 
   // The streaming plan lives HERE, not in the planner: the planner is unmounted
-  // on every tab switch (same reason as the procgen spec below).
-  const [streamingPlanState, dispatchStreamingPlan] = useReducer(
-    streamingPlanReducer, undefined, initialStreamingPlan,
+  // on every tab switch (same reason as the procgen spec below). One plan PER
+  // DOCUMENT: a document nobody has edited shows the seed, never a sibling's zones.
+  const streamingDocId = activeDoc?.id ?? null;
+  const [streamingPlans, dispatchStreamingPlans] = useReducer(streamingPlansReducer, {});
+  const streamingPlanState = useMemo(
+    () => (streamingDocId === null ? undefined : streamingPlans[streamingDocId]) ?? initialStreamingPlan(),
+    [streamingPlans, streamingDocId],
+  );
+  const dispatchStreamingPlan = useCallback(
+    (op: StreamingOp) => {
+      if (streamingDocId !== null) dispatchStreamingPlans({ docId: streamingDocId, op });
+    },
+    [streamingDocId],
   );
   const streamingPlanStore = useMemo<StreamingPlanStore>(
     () => ({ state: streamingPlanState, dispatch: dispatchStreamingPlan }),
-    [streamingPlanState],
+    [streamingPlanState, dispatchStreamingPlan],
   );
 
   const handleGenerateStreaming = useCallback((config: StreamingZonePlannerConfig) => {

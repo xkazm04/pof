@@ -67,14 +67,14 @@ const DOC: LevelDesignDocument = {
   lastCodeHash: null, createdAt: '2026-09-30 10:00:00', updatedAt: '2026-09-30 10:00:00',
 };
 
-function installApi() {
+function installApi(docs: LevelDesignDocument[] = [DOC]) {
   const envelope = (data: unknown) => ({
     ok: true, status: 200,
     json: () => Promise.resolve({ success: true, data }),
     text: () => Promise.resolve(''),
   });
   globalThis.fetch = vi.fn(async (url: string | URL) => {
-    if (String(url).startsWith('/api/level-design')) return envelope({ docs: [DOC] });
+    if (String(url).startsWith('/api/level-design')) return envelope({ docs });
     return envelope({});
   }) as unknown as typeof fetch;
 }
@@ -102,5 +102,28 @@ describe('the level-design view keeps the streaming plan across tabs', () => {
     expect(emptyCellAt00(container)).toBeNull();
     expect(zoneNames(container)).toContain('Forest');
     // Renders the whole level-design view; under full-suite load it needs headroom.
+  });
+});
+
+describe('the streaming plan is scoped to its level document', () => {
+  it('edit under doc A, switch to B -> the seed; back to A -> the edit', async () => {
+    installApi([DOC, { ...DOC, id: 8, name: 'Ember Keep' }]);
+    const { container } = render(<LevelDesignView />);
+    await waitFor(() => screen.getByText('Sunken Crypt'));
+    fireEvent.click(screen.getByText('Sunken Crypt'));
+    await waitFor(() => screen.getByText(/Flow Editor/));
+
+    fireEvent.click(tab(/^Streaming$/));
+    fireEvent.click(screen.getByRole('button', { name: /^F\s*Forest$/ }));
+    fireEvent.click(emptyCellAt00(container)!);
+    expect(zoneNames(container)).toContain('Forest');
+
+    fireEvent.click(screen.getByText('Ember Keep'));
+    await waitFor(() => expect(zoneNames(container)).not.toContain('Forest'));
+    expect(emptyCellAt00(container)).not.toBeNull();
+
+    fireEvent.click(screen.getByText('Sunken Crypt'));
+    await waitFor(() => expect(zoneNames(container)).toContain('Forest'));
+    expect(emptyCellAt00(container)).toBeNull();
   });
 });
