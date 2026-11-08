@@ -28,6 +28,8 @@ export interface AttackPositionsDefaults {
   readonly attackDistance: number;
   readonly numberOfPoints: number;
   readonly generateInnerRing: boolean;
+  /** Nav projection extents from the generator constructor (ProjectDown / ProjectUp). */
+  readonly projection: { readonly down: number; readonly up: number };
   readonly clamps: {
     readonly attackDistance: { readonly min: number };
     readonly numberOfPoints: { readonly min: number; readonly max: number };
@@ -38,6 +40,7 @@ export const EQS_ATTACK_POSITIONS: AttackPositionsDefaults = {
   attackDistance: 200,
   numberOfPoints: 12,
   generateInnerRing: false,
+  projection: { down: 500, up: 100 },
   clamps: {
     attackDistance: { min: 50 },
     numberOfPoints: { min: 4, max: 36 },
@@ -124,6 +127,7 @@ export const EQS_LINE_OF_SIGHT: LineOfSightDefaults = {
 /** `UEnvQueryTest_ElevationAdvantage` — high-ground scoring. */
 export interface ElevationAdvantageDefaults {
   readonly maxElevationBonus: number;
+  readonly penalizeLowGround: boolean;
   readonly clamps: {
     readonly maxElevationBonus: ClampRange;
   };
@@ -131,6 +135,7 @@ export interface ElevationAdvantageDefaults {
 
 export const EQS_ELEVATION_ADVANTAGE: ElevationAdvantageDefaults = {
   maxElevationBonus: 300,
+  penalizeLowGround: false,
   clamps: {
     maxElevationBonus: { min: 50 },
   },

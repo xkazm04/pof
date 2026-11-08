@@ -8,6 +8,7 @@ import {
   DEFAULT_ATTACK_DISTANCE, DEFAULT_NUMBER_OF_POINTS, DEFAULT_INNER_RING,
   MAX_DISTANCE, SVG_CENTER, MAX_DRAW_RADIUS,
 } from './constants';
+import { ringPoints } from '@/components/ui/svg/polar-layout';
 import { AttackRingSvg } from './AttackRingSvg';
 import { AttackRingControls } from './AttackRingControls';
 
@@ -29,34 +30,12 @@ export function AttackRingVisualizer() {
   const outerR = attackDist * scale;
   const innerR = (attackDist * 0.5) * scale;
 
-  const outerPoints = useMemo(() => {
-    const pts: { x: number; y: number; angle: number }[] = [];
-    const step = (2 * Math.PI) / numPoints;
-    for (let i = 0; i < numPoints; i++) {
-      const angle = step * i;
-      pts.push({
-        x: SVG_CENTER + Math.cos(angle) * outerR,
-        y: SVG_CENTER + Math.sin(angle) * outerR,
-        angle: (angle * 180) / Math.PI,
-      });
-    }
-    return pts;
-  }, [numPoints, outerR]);
+  const outerPoints = useMemo(() => ringPoints(numPoints, outerR, SVG_CENTER), [numPoints, outerR]);
 
-  const innerPoints = useMemo(() => {
-    if (!innerRing) return [];
-    const pts: { x: number; y: number; angle: number }[] = [];
-    const step = (2 * Math.PI) / numPoints;
-    for (let i = 0; i < numPoints; i++) {
-      const angle = step * i;
-      pts.push({
-        x: SVG_CENTER + Math.cos(angle) * innerR,
-        y: SVG_CENTER + Math.sin(angle) * innerR,
-        angle: (angle * 180) / Math.PI,
-      });
-    }
-    return pts;
-  }, [numPoints, innerR, innerRing]);
+  const innerPoints = useMemo(
+    () => (innerRing ? ringPoints(numPoints, innerR, SVG_CENTER) : []),
+    [numPoints, innerR, innerRing],
+  );
 
   const totalPoints = numPoints * (innerRing ? 2 : 1);
 

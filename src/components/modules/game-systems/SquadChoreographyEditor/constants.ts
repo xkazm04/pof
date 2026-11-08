@@ -3,7 +3,7 @@ import {
 } from 'lucide-react';
 import {
   MODULE_COLORS, ACCENT_VIOLET, ACCENT_CYAN, ACCENT_EMERALD,
-  ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  STATUS_WARNING, STATUS_ERROR,
 } from '@/lib/chart-colors';
 import type { SquadRole } from '@/types/squad-tactics';
 import type { SubTab } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -41,13 +41,3 @@ export const SUB_TABS: SubTab[] = [
   { id: 'codegen', label: 'UE5 Code' },
 ];
 
-/* ── Pipeline step colors ─────────────────────────────────────────────────── */
-
-export const STEP_KIND_COLORS: Record<string, string> = {
-  context: ACCENT_CYAN,
-  generator: ACCENT_VIOLET,
-  'test-score': ACCENT_EMERALD,
-  'test-filter': ACCENT_ORANGE,
-  director: ACCENT,
-  result: STATUS_SUCCESS,
-};

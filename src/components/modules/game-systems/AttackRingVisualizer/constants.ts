@@ -16,8 +16,8 @@ export const MIN_DISTANCE = EQS_ATTACK_POSITIONS.clamps.attackDistance.min;
 export const MAX_DISTANCE = 500;
 
 // Nav projection from constructor
-export const PROJECT_DOWN = 500;
-export const PROJECT_UP = 100;
+export const PROJECT_DOWN = EQS_ATTACK_POSITIONS.projection.down;
+export const PROJECT_UP = EQS_ATTACK_POSITIONS.projection.up;
 
 // SVG layout
 export const { size: SVG_SIZE, center: SVG_CENTER, padding: SVG_PADDING, radius: MAX_DRAW_RADIUS } = polarSvgLayout(340, 50);

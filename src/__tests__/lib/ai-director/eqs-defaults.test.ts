@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   EQS_ATTACK_POSITIONS,
   EQS_PATROL_POINTS,
@@ -17,6 +19,7 @@ describe('EQS default values mirror the C++ UPROPERTY defaults', () => {
     expect(EQS_ATTACK_POSITIONS.attackDistance).toBe(200);
     expect(EQS_ATTACK_POSITIONS.numberOfPoints).toBe(12);
     expect(EQS_ATTACK_POSITIONS.generateInnerRing).toBe(false);
+    expect(EQS_ATTACK_POSITIONS.projection).toEqual({ down: 500, up: 100 });
     expect(EQS_ATTACK_POSITIONS.clamps.numberOfPoints).toEqual({ min: 4, max: 36 });
     expect(EQS_ATTACK_POSITIONS.clamps.attackDistance).toEqual({ min: 50 });
   });
@@ -43,6 +46,7 @@ describe('EQS default values mirror the C++ UPROPERTY defaults', () => {
 
   it('UEnvQueryTest_ElevationAdvantage', () => {
     expect(EQS_ELEVATION_ADVANTAGE.maxElevationBonus).toBe(300);
+    expect(EQS_ELEVATION_ADVANTAGE.penalizeLowGround).toBe(false);
   });
 });
 
@@ -77,3 +81,19 @@ describe('eqsClampMeta', () => {
     expect(eqsClampMeta(EQS_PATROL_POINTS.clamps.minRadius)).toBe('ClampMin = 0');
   });
 });
+
+describe('views read EQS defaults instead of hand literals', () => {
+  const root = join(__dirname, '../../../components/modules/game-systems');
+  const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const read = (rel: string) => strip(readFileSync(join(root, rel), 'utf8'));
+
+  it('no literal PenalizeLowGround default in the pipeline diagram or inventory', () => {
+    expect(read('EQSPipelineDiagram/constants.ts')).not.toMatch(/PenalizeLowGround'[^}]*value:\s*'(true|false)'/);
+    expect(read('EQSComponentInventory/eqsComponents.ts')).not.toMatch(/bPenalizeLowGround'[\s\S]{0,80}defaultValue:\s*'(true|false)'/);
+  });
+
+  it('no literal nav projection numbers in the attack ring constants', () => {
+    expect(read('AttackRingVisualizer/constants.ts')).not.toMatch(/PROJECT_(DOWN|UP)\s*=\s*\d/);
+  });
+});
+
