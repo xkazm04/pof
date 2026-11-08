@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { OPACITY_20, OPACITY_37, withOpacity } from '@/lib/chart-colors';
 import { RARITY_COLORS } from './data';
@@ -90,6 +90,13 @@ export function AffixCraftingWorkbench({ moduleId }: { moduleId: SubModuleId }) 
 
   const rarityColor = RARITY_COLORS[wb.selectedBase.rarity];
 
+  // The C++ preview is only built while the Export panel is open.
+  const { showExport, selectedBase, craftedAffixes, itemLevel } = wb;
+  const exportCode = useMemo(
+    () => (showExport ? generateExportCode(selectedBase, craftedAffixes, itemLevel) : ''),
+    [showExport, selectedBase, craftedAffixes, itemLevel],
+  );
+
   return (
     <div className="space-y-4">
       <WorkbenchHeader viewMode={wb.viewMode} setViewMode={wb.setViewMode}
@@ -170,7 +177,7 @@ export function AffixCraftingWorkbench({ moduleId }: { moduleId: SubModuleId }) 
             rarity={wb.selectedBase.rarity} />
 
           <AffixExportPanel visible={wb.showExport}
-            exportCode={generateExportCode(wb.selectedBase, wb.craftedAffixes, wb.itemLevel)}
+            exportCode={exportCode}
             onCopy={wb.handleCopy} onDownload={wb.handleExportFile}
             copied={wb.copiedExport} accentColor={ACCENT} />
         </motion.div>
