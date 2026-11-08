@@ -129,6 +129,17 @@ export async function POST(req: NextRequest) {
     if (!catalogId || !entityId || !name) {
       return apiError('catalogId, entityId and name are required', 400);
     }
+    // The cast above is a claim, not a check: a numeric id or a `tags: "undead"` string was
+    // persisted verbatim and every reader that maps the arrays then threw on the row.
+    if (typeof catalogId !== 'string' || typeof entityId !== 'string' || typeof name !== 'string') {
+      return apiError('catalogId, entityId and name must be strings', 400);
+    }
+    for (const key of ['tags', 'categoryPath'] as const) {
+      const v: unknown = body[key];
+      if (v !== undefined && (!Array.isArray(v) || !v.every((s) => typeof s === 'string'))) {
+        return apiError(`${key} must be an array of strings`, 400);
+      }
+    }
     const source = (body.source ?? 'user') as CatalogEntitySource;
     if (!SOURCES.includes(source)) {
       return apiError(`Unknown source "${body.source}" — expected one of ${SOURCES.join(', ')}`, 400);
