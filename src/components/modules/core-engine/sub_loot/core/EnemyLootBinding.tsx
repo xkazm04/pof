@@ -11,6 +11,8 @@ import { ACCENT, RARITY_TIERS } from '../_shared/data';
 import { useLootTuningStore } from '../_shared/lootTuningStore';
 import { simulateKills } from '../_shared/math';
 import { generateEnemyLootCpp } from '../_shared/codegen';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { BlueprintPanel } from '../_shared/design';
 
 /** The TUNED roster (useLootTuningStore): simulated drops and the C++ export follow the tuner; a card click focuses it. */
@@ -27,10 +29,11 @@ export function EnemyLootBindingSection() {
     [enemyLootBindings, simKillCount],
   );
 
-  const handleCopyLootCpp = useCallback(() => {
-    navigator.clipboard.writeText(generateEnemyLootCpp(enemyLootBindings));
+  const handleCopyLootCpp = useCallback(async () => {
+    // Claim "Copied" only when the clipboard write actually succeeded.
+    if (!(await copyToClipboard(generateEnemyLootCpp(enemyLootBindings)))) return;
     setCopiedLootCpp(true);
-    setTimeout(() => setCopiedLootCpp(false), 2000);
+    setTimeout(() => setCopiedLootCpp(false), UI_TIMEOUTS.copyFeedback);
   }, [enemyLootBindings]);
 
   return (
