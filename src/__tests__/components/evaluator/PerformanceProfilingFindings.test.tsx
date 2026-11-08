@@ -49,3 +49,13 @@ describe('FindingsSection copy affordance (ui-controls/micro-interaction-contrac
     expect(copyButton(container)?.textContent?.trim()).toBe('Copied!');
   });
 });
+
+describe('FindingCard disclosure state (pair: ActorTickTable / MemoryChart toggles carry aria-expanded)', () => {
+  it('exposes its open state on the header button', () => {
+    const { container } = render(<FindingsSection findings={[finding]} />);
+    const header = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes(finding.title))!;
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(header);
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+  });
+});

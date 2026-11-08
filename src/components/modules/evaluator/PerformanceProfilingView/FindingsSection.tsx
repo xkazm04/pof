@@ -53,8 +53,10 @@ function FindingCard({ finding }: { finding: PerformanceFinding }) {
   return (
     <div className={`rounded-lg border ${style.bg} ${style.border} overflow-hidden`}>
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-white/5 transition-colors"
+        aria-expanded={expanded}
+        className="focus-ring w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-white/5 transition-colors"
       >
         {expanded ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />}
         <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${style.bg} ${style.text} border ${style.border}`}>
