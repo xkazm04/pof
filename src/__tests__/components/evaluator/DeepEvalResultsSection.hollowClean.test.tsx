@@ -51,6 +51,13 @@ describe('ResultsSection - zero findings is not a clean pass unless something wa
     expect(screen.getByTestId('pof-deep-eval-clean').textContent).toContain('2 of 3');
   });
 
+  it('the summary bar does not count failed modules as evaluated', () => {
+    renderSection(result(['arpg-combat', 'arpg-loot', 'arpg-character'], ['arpg-loot']));
+    const bar = screen.getByTestId('pof-deep-eval-module-count').textContent ?? '';
+    expect(bar).toContain('2 of 3 modules evaluated');
+    expect(bar).toContain('1 failed');
+  });
+
   it('every module completed clean: the clean panel shows', () => {
     renderSection(result(['arpg-combat'], []));
     expect(screen.getByText('No Issues Found')).toBeTruthy();

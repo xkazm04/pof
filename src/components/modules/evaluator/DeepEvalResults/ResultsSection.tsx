@@ -119,8 +119,11 @@ export function ResultsSection({
               })}
           </div>
 
-          <span className="text-2xs text-text-muted ml-auto">
-            {result.modulesEvaluated.length} modules / {result.passesRun.length} passes / {formatDuration(result.duration)}
+          <span data-testid="pof-deep-eval-module-count" className="text-2xs text-text-muted ml-auto">
+            {completedCount === result.modulesEvaluated.length
+              ? `${completedCount} modules`
+              : `${completedCount} of ${result.modulesEvaluated.length} modules evaluated (${result.modulesEvaluated.length - completedCount} failed)`}
+            {' '}/ {result.passesRun.length} passes / {formatDuration(result.duration)}
           </span>
         </div>
       </SurfaceCard>
