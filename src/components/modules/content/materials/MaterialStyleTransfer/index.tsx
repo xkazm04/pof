@@ -62,7 +62,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           <div>
             <h3 className="text-xs font-semibold text-text">Style Transfer</h3>
             <p className="text-2xs text-text-muted">
-              Upload a reference screenshot to generate matching UE5 materials
+              Describe a look to infer UE5 material properties — an attached screenshot is kept for side-by-side reference, not analyzed
             </p>
           </div>
         </div>
@@ -121,7 +121,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
             {/* Analysis preview (compare mode) */}
             {compareMode && analysis && (
               <div className="bg-surface-deep flex flex-col items-center justify-center p-4 min-h-[12rem]">
-                <div className="text-2xs text-text-muted mb-2 font-medium">Analyzed Properties</div>
+                <div className="text-2xs text-text-muted mb-2 font-medium">Inferred from your description</div>
                 <AnalysisMiniPreview analysis={effectiveAnalysis!} />
               </div>
             )}
@@ -213,7 +213,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           {isAnalyzing ? (
             <>
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              Analyzing visual properties...
+              Reading your description...
             </>
           ) : (
             <>
