@@ -53,6 +53,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', type: 'Weapon' as ItemData['type'], rarity: 'Common', description: '' });
   const [selectedItem, setSelectedItem] = useState<ItemData | null>(null);
+  const [openedVia, setOpenedVia] = useState<'keyboard' | 'pointer'>('pointer');
 
   const { execute: executeCli, isRunning: isCliRunning } = useModuleCLI({ moduleId, sessionKey: 'item-gen', label: 'Item Generator', accentColor: ACCENT });
   // Synchronous re-entrancy latch. `isCliRunning` is zustand-derived and lags one
@@ -176,6 +177,13 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     if (next !== focusedIndex) { setFocusedIndex(next); cardRefs.current[next]?.focus(); }
   }, [focusedIndex, pageEntries.length, columnCount]);
 
+  // Close returns focus to the card the drawer was opened from (else it falls to <body>).
+  const closeDrawer = useCallback(() => {
+    const idx = pageEntries.findIndex(e => e.data.id === selectedItem?.id);
+    setSelectedItem(null);
+    if (idx >= 0) cardRefs.current[idx]?.focus();
+  }, [pageEntries, selectedItem]);
+
   const handleCreateItem = useCallback(() => {
     if (submittingRef.current || isCliRunning) return;
     if (!newItem.name.trim()) return;
@@ -251,13 +259,14 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
           onGridKeyDown={handleGridKeyDown}
           hasActiveFilters={hasActiveFilters}
           onClearFilters={clearFilters}
+          onOpenVia={setOpenedVia}
         />
 
         {/* Pagination */}
         <CatalogPagination currentPage={page} totalPages={totalPages} setCurrentPage={setCurrentPage} />
 
         {/* Item Detail Drawer */}
-        <ItemDetailDrawer item={selectedItem} onClose={() => setSelectedItem(null)} />
+        <ItemDetailDrawer item={selectedItem} onClose={closeDrawer} scrollIntoView={openedVia === 'keyboard'} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
