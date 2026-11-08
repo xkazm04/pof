@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { LabInput } from '../controls';
 import type { LibraryAsset, AssetCategory } from '@/types/asset-library';
 import type { LabTheme } from '../../theme';
@@ -96,6 +97,8 @@ export function StepLibraryPicker({ t, referencedIds, onPick, onUnpick }: {
           </div>
 
           {error && <InlineErrorRetry dense message={`Couldn’t read the asset library: ${error}`} onRetry={() => void load(q, category)} />}
+
+          {assets === null && !error && <LoadingRow variant="inline" label="Reading the asset library…" color={t.muted} />}
 
           {assets?.length === 0 && (
             <span data-testid="step-library-empty" className={t.fontMono} style={{ fontSize: 13, color: t.muted, lineHeight: 1.5 }}>

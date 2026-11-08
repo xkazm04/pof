@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { tryApiFetch, apiFetch } from '@/lib/api-utils';
 import { StatusTag } from '@/components/ui/StatusTag';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { readProduceDirection } from '@/lib/catalog/produceDirection';
 import type { ArtifactRevision } from '@/lib/pipeline-artifacts-db';
@@ -137,11 +138,15 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
               onRetry={() => void restore(restoreFailure.rev)}
             />
           )}
-          {notice && (
-            <span data-testid="step-history-notice" className={t.fontMono} style={{ fontSize: 13, color: t.warn }}>
-              {notice}
-            </span>
-          )}
+          {revisions === null && !error && <LoadingRow variant="inline" label="Loading previous versions…" color={t.muted} />}
+          {/* Persistent region: a restore's outcome mounting inside it is announced. */}
+          <div role="status" aria-live="polite" data-testid="step-history-live">
+            {notice && (
+              <span data-testid="step-history-notice" className={t.fontMono} style={{ fontSize: 13, color: t.warn }}>
+                {notice}
+              </span>
+            )}
+          </div>
           {revisions?.length === 0 && (
             <span data-testid="step-history-empty" className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>
               No previous versions — this step has only ever been produced once.
@@ -185,6 +190,9 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
                 </button>
                 {comparing === r.id && compareError && (
                   <InlineErrorRetry dense message={`Couldn’t compare this version: ${compareError}`} onRetry={() => void runDryRun(r)} />
+                )}
+                {comparing === r.id && !dry && !compareError && (
+                  <LoadingRow variant="inline" label="Comparing with the current output…" color={t.muted} />
                 )}
                 {comparing === r.id && dry && (
                   <RevisionCompare

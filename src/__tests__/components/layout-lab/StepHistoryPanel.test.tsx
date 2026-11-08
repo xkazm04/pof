@@ -202,3 +202,26 @@ describe('<StepHistoryPanel /> restore failure', () => {
     expect(posts).toBe(2);
   });
 });
+
+describe('<StepHistoryPanel /> in-flight and outcome states', () => {
+  it('says it is loading, and keeps a live region mounted before any restore', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    expect(screen.getByText(/loading previous versions/i)).toBeTruthy();
+    expect(screen.getByTestId('step-history-live').getAttribute('role')).toBe('status');
+  });
+
+  it('says a compare is in flight while the dry run is out', async () => {
+    let held = false;
+    vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') { held = true; return new Promise(() => {}); }
+      return Promise.resolve({ ok: true, json: async () => ({ success: true, data: [rev(1)] }) });
+    }) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-compare'));
+    expect(held).toBe(true);
+    expect(await screen.findByText(/comparing with the current output/i)).toBeTruthy();
+  });
+});

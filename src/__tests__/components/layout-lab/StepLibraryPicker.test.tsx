@@ -133,3 +133,12 @@ describe('<StepLibraryPicker /> out-of-order responses', () => {
     expect(ids).toEqual(['newest']);
   });
 });
+
+describe('<StepLibraryPicker /> first load', () => {
+  it('says it is reading the library until the first response', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})) as unknown as typeof fetch);
+    renderPicker();
+    fireEvent.click(screen.getByTestId('step-library-toggle'));
+    expect(screen.getByText(/reading the asset library/i)).toBeTruthy();
+  });
+});
