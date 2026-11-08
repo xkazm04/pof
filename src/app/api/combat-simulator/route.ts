@@ -9,6 +9,7 @@ import {
   DEFAULT_CONFIG,
 } from '@/lib/combat/definitions';
 import type { CombatScenario, TuningOverrides, CombatSimConfig } from '@/types/combat-simulator';
+import { ok, err, type Result } from '@/types/result';
 
 /**
  * Coerce an untrusted numeric field to a finite integer within [min, max].
@@ -20,6 +21,25 @@ function clampInt(value: unknown, fallback: number, min: number, max: number): n
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(Math.max(Math.round(n), min), max);
+}
+
+/**
+ * The caller's tuning over DEFAULT_TUNING, one known multiplier at a time. It used to
+ * be spread unchecked, so `playerHealthMul: "abc"` ran the engine on NaN health and
+ * answered 200 with a fabricated 0%-survival verdict. Absent/null keeps the default,
+ * a non-finite value is refused naming the key, unknown keys never reach the engine.
+ */
+function resolveTuning(raw: unknown): Result<TuningOverrides, string> {
+  if (raw === undefined || raw === null) return ok({ ...DEFAULT_TUNING });
+  if (typeof raw !== 'object' || Array.isArray(raw)) return err('tuning must be a JSON object');
+  const tuning: TuningOverrides = { ...DEFAULT_TUNING };
+  for (const key of Object.keys(DEFAULT_TUNING) as (keyof TuningOverrides)[]) {
+    const value = (raw as Record<string, unknown>)[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return err(`tuning.${key} must be a finite number`);
+    tuning[key] = value;
+  }
+  return ok(tuning);
 }
 
 export async function GET() {
@@ -47,7 +67,9 @@ export async function POST(req: NextRequest) {
 
     if (action === 'simulate') {
       const scenario = body.scenario as CombatScenario;
-      const tuning: TuningOverrides = { ...DEFAULT_TUNING, ...(body.tuning ?? {}) };
+      const tuningResult = resolveTuning(body.tuning);
+      if (!tuningResult.ok) return apiError(tuningResult.error, 400);
+      const tuning = tuningResult.data;
       const config: CombatSimConfig = {
         iterations: clampInt(body.config?.iterations, 1000, 1, 5000),
         seed: clampInt(body.config?.seed, Math.floor(Math.random() * 999999), 0, 0xffffffff),
