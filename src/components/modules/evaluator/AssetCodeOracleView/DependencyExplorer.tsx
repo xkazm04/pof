@@ -60,6 +60,7 @@ export function DependencyExplorer({
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
+              aria-pressed={typeFilter === t}
               className={`px-2 py-0.5 rounded text-2xs font-medium transition-colors border ${
                 typeFilter === t
                   ? 'bg-surface-hover text-text border-border-bright'
@@ -80,6 +81,7 @@ export function DependencyExplorer({
                 key={node.id}
                 title={node.id}
                 onClick={() => setSelectedNode(isSelected ? null : node.id)}
+                aria-pressed={isSelected}
                 className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-left transition-colors ${
                   isSelected ? 'text-text' : 'hover:bg-surface-hover text-text-muted-hover'
                 }`}

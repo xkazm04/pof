@@ -15,6 +15,7 @@ export function FilterChip({
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors border ${
         active
           ? 'bg-surface-hover text-text border-border-bright'
