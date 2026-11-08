@@ -7,8 +7,10 @@ export function FilterChip({ label, count, active, color, onClick }: {
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all"
+      aria-pressed={active}
+      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all focus-ring"
       style={{
         backgroundColor: active ? color + '18' : 'transparent',
         color: active ? color : 'var(--text-muted)',
