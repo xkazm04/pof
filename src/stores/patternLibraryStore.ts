@@ -61,7 +61,8 @@ interface PatternLibraryState {
   authorPattern: (input: PatternAuthorInput) => Promise<ImplementationPattern | null>;
   verifyPattern: (id: string, verified: boolean, verifiedBy?: string) => Promise<void>;
   pinPattern: (id: string, pinned: boolean) => Promise<void>;
-  updatePattern: (id: string, patch: PatternMetaPatch) => Promise<void>;
+  /** Resolves true when the save landed, false when it failed (the failure is also written to `error`). */
+  updatePattern: (id: string, patch: PatternMetaPatch) => Promise<boolean>;
 
   setSearchQuery: (q: string) => void;
   setModuleFilter: (m: SubModuleId | null) => void;
@@ -242,8 +243,10 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
         set({
           patterns: get().patterns.map((p) => (p.id === id ? pattern : p)),
         });
+        return true;
       } catch (err) {
         set({ error: err instanceof Error ? err.message : 'Failed to update pattern' });
+        return false;
       }
     },
 

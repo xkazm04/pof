@@ -11,13 +11,17 @@ export function PatternEditor({ pattern, onDone }: { pattern: ImplementationPatt
   const [description, setDescription] = useState(pattern.description);
   const [pitfallsText, setPitfallsText] = useState(pattern.pitfalls.join('\n'));
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     const pitfalls = pitfallsText.split('\n').map((s) => s.trim()).filter(Boolean);
-    await updatePattern(pattern.id, { description, pitfalls });
+    setSaveFailed(false);
+    const saved = await updatePattern(pattern.id, { description, pitfalls });
     setSaving(false);
-    onDone();
+    // A failed save keeps the editor open so the operator's text is not lost.
+    if (saved) onDone();
+    else setSaveFailed(true);
   }, [pattern.id, description, pitfallsText, updatePattern, onDone]);
 
   return (
@@ -40,6 +44,11 @@ export function PatternEditor({ pattern, onDone }: { pattern: ImplementationPatt
           className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-blue-500/40 resize-y"
         />
       </div>
+      {saveFailed && (
+        <p role="alert" className="text-2xs text-red-400">
+          Save failed - your edit is kept here. Try again.
+        </p>
+      )}
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
