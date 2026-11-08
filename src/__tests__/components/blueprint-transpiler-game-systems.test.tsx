@@ -276,3 +276,36 @@ describe('ChangeCard - the conflict level is a glyph with a name, not a hue-only
     expect(again.container.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toBe('Compatible Changes');
   });
 });
+
+describe('QuestGeneratorPanel - metric tiles follow CATEGORY_LABELS', () => {
+  const realCreate = URL.createObjectURL;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    URL.createObjectURL = realCreate;
+  });
+
+  it('renders one tile per CATEGORY_LABELS key, including a newly added category', async () => {
+    const { CATEGORY_LABELS } = await import('@/components/modules/game-systems/DialogueView/constants');
+    const labels = CATEGORY_LABELS as Record<string, { label: string; color: string }>;
+    labels.zzprobe = { label: 'ZzProbe', color: labels.main.color };
+    try {
+      const result = {
+        generatedAt: '2026-11-08T00:00:00.000Z',
+        worldScan: { actors: [], enemyClasses: [], npcClasses: [], interactableClasses: [], itemClasses: [] },
+        levelDocId: null, levelDocName: null, quests: [], coherenceNotes: [],
+      };
+      vi.stubGlobal('fetch', vi.fn(async (_u: string, init?: RequestInit) => new Response(
+        JSON.stringify({ success: true, data: init?.method === 'POST' ? { result } : { docs: [] } }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )));
+      render(<QuestGeneratorPanel />);
+      fireEvent.click(screen.getByText('Generate Quests'));
+      await screen.findByText('ZzProbe');
+      for (const k of Object.keys(CATEGORY_LABELS)) {
+        expect(screen.getAllByText(CATEGORY_LABELS[k as keyof typeof CATEGORY_LABELS].label).length).toBeGreaterThan(0);
+      }
+    } finally {
+      delete labels.zzprobe;
+    }
+  });
+});

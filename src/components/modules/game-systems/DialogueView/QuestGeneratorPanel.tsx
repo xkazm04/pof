@@ -206,7 +206,7 @@ export function QuestGeneratorPanel() {
               visible: { transition: { staggerChildren: 0.06 } },
             }}
           >
-            {(['main', 'side', 'bounty', 'exploration', 'fetch'] as QuestCategory[]).map(c => {
+            {(Object.keys(CATEGORY_LABELS) as QuestCategory[]).map(c => {
               const count = quests.filter(q => q.category === c).length;
               const cfg = CATEGORY_LABELS[c];
               return (
