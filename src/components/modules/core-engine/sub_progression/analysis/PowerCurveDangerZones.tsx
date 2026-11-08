@@ -54,6 +54,10 @@ export function PowerCurveDangerZones({
         </div>
       </div>
 
+      {playerPower === PLAYER_POWER && enemyDifficulty === ENEMY_DIFFICULTY && (
+        <p className="text-xs font-mono text-text-muted mb-2">Sample figures: this chart does not follow the curve parameters.</p>
+      )}
+
       {!plottable ? (
         <ChartEmptyState message="No power-curve data to plot" />
       ) : (

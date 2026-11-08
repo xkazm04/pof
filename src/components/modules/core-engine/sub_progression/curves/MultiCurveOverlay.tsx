@@ -50,6 +50,8 @@ export const MultiCurveOverlay = memo(function MultiCurveOverlay({ baseXp, curve
         </div>
       </div>
 
+      <p className="text-xs font-mono text-text-muted mb-2">Only XP Required follows the sliders; HP, Mana, Damage and Enemy HP are sample series.</p>
+
       <NormalizedLineChart
         height="h-[260px]"
         yLabels={[multiCurveMax.toLocaleString(), Math.floor(multiCurveMax / 2).toLocaleString(), '0']}
