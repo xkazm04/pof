@@ -85,6 +85,9 @@ export function EconomyCodeGenPanel() {
       <div className="flex items-center gap-2 px-4 py-3">
         <button
           onClick={() => codeGenResult ? setExpanded(!expanded) : handleGenerate()}
+          // Only a disclosure once there is code to reveal; before that it is a
+          // plain "generate" action and must not claim a collapsed region.
+          aria-expanded={codeGenResult ? expanded : undefined}
           className="flex items-center gap-2 flex-1 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
         >
           {codeGenResult && (

@@ -30,6 +30,7 @@ export function AlertsSection({ alerts }: { alerts: InflationAlert[] }) {
     <SurfaceCard className="overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="w-full flex items-center gap-2 px-4 py-3 hover:bg-surface-hover/50 transition-colors"
       >
         {expanded ? <ChevronDown className="w-4 h-4 text-text-muted" /> : <ChevronRight className="w-4 h-4 text-text-muted" />}
