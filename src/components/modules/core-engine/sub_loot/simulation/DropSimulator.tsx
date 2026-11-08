@@ -37,6 +37,8 @@ interface RollRun {
   counts: number[];
   binding: Pick<EnemyLootBinding, 'dropChance' | 'rarityWeights'>;
   perEnemy: boolean;
+  /** The enemy the roll was computed for (the picker may have moved since). */
+  archetypeName: string | null;
 }
 
 export function DropSimulator() {
@@ -57,7 +59,7 @@ export function DropSimulator() {
   const rollDrops = useCallback((n: number) => {
     const binding = { dropChance: activeBinding.dropChance, rarityWeights: [...activeBinding.rarityWeights] };
     const raw = runBatch(binding, n, (Date.now() ^ (n * 0x9e3779b1)) >>> 0);
-    setRoll({ n, counts: RARITY_TIERS.map((_, i) => raw[i] ?? 0), binding, perEnemy: selectedBinding != null });
+    setRoll({ n, counts: RARITY_TIERS.map((_, i) => raw[i] ?? 0), binding, perEnemy: selectedBinding != null, archetypeName: selectedBinding?.archetypeName ?? null });
   }, [activeBinding, selectedBinding]);
 
   const rollCount = roll?.n ?? null;
@@ -153,7 +155,8 @@ export function DropSimulator() {
             })}
           </div>
           <div className="flex items-center gap-2 text-2xs text-text-muted">
-            <span>/ {rollCount} kills</span>
+            <span>Rolled for {roll?.archetypeName ?? 'all enemies'}</span>
+            <span>&middot; {rollCount} kills</span>
             {roll?.perEnemy && <span>&middot; {totalDropped} drops ({((totalDropped / rollCount) * 100).toFixed(1)}% drop rate)</span>}
           </div>
         </div>

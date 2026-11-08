@@ -8,6 +8,7 @@ import { mcStats } from './monte-carlo-utils';
 import { exactEV } from '../_shared/bindingTuner';
 import { SMART_LOOT_DATA } from '../_shared/data-binding';
 import type { EnemyLootBinding } from '../_shared/data-binding';
+import { LOOT_TIERS, lootTierOf, type LootTier } from '@/lib/loot/economy';
 
 export type Rng = () => number;
 export type EconomyProfile = 'casual' | 'hardcore';
@@ -134,6 +135,27 @@ export function deriveEconomy(
   };
 }
 
+/**
+ * Where the roster's drops come from: each tier's share of the summed drop chance. A
+ * binding's tier is fixed by its UNTUNED baseline chance (a tune can cross a tier
+ * line; the group must not move with it), so tuning a Minion to 0 empties the Minion share.
+ */
+export function deriveDropSources(
+  bindings: readonly EnemyLootBinding[],
+  baseline: readonly EnemyLootBinding[],
+): Array<{ source: LootTier; pct: number }> {
+  const tierById = new Map(baseline.map((b) => [b.archetypeId, lootTierOf(b.dropChance)]));
+  const sums = new Map<LootTier, number>(LOOT_TIERS.map((t) => [t, 0]));
+  let total = 0;
+  for (const b of bindings) {
+    const tier = tierById.get(b.archetypeId) ?? lootTierOf(b.dropChance);
+    const c = Math.max(0, b.dropChance);
+    sums.set(tier, (sums.get(tier) ?? 0) + c);
+    total += c;
+  }
+  return LOOT_TIERS.map((source) => ({ source, pct: total > 0 ? ((sums.get(source) ?? 0) / total) * 100 : 0 }));
+}
+
 /** Per-tier summary of a Monte Carlo tally (tier name -> one count per run). */
 export function mcSummary(tally: Record<string, number[]>): Record<string, ReturnType<typeof mcStats>> {
   const out: Record<string, ReturnType<typeof mcStats>> = {};
@@ -141,9 +163,16 @@ export function mcSummary(tally: Record<string, number[]>): Record<string, Retur
   return out;
 }
 
+/** A slot with a gear-score gap at or above this is 'high-gap': the lift figure and the Gap badge share it. */
+export const SMART_LOOT_HIGH_GAP = 10;
+
+export function isHighGearGap(gearScoreGap: number, minGap = SMART_LOOT_HIGH_GAP): boolean {
+  return gearScoreGap >= minGap;
+}
+
 /** Share uplift of drops going to high gear-gap slots under smart loot vs raw. */
-export function smartLootLift(minGap = 10): { liftPct: number; slots: number } {
-  const hi = SMART_LOOT_DATA.filter((s) => s.gearScoreGap >= minGap);
+export function smartLootLift(minGap = SMART_LOOT_HIGH_GAP): { liftPct: number; slots: number } {
+  const hi = SMART_LOOT_DATA.filter((s) => isHighGearGap(s.gearScoreGap, minGap));
   const raw = hi.reduce((s, x) => s + x.rawPct, 0);
   const smart = hi.reduce((s, x) => s + x.smartPct, 0);
   return { liftPct: raw > 0 ? Math.round(((smart - raw) / raw) * 100) : 0, slots: hi.length };

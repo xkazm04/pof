@@ -1,4 +1,4 @@
-import { ACCENT_ORANGE, STATUS_MUTED, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING } from '@/lib/chart-colors';
+import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { GaugeMetric, DiffEntry, HeatmapCell } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
@@ -86,13 +86,21 @@ export interface TreemapRect {
   affixes: string[];
 }
 
-export const TREEMAP_DATA: TreemapRect[] = [
-  { name: 'Common', probability: 50, color: RARITY_COLOR_MAP.Common, affixes: ['Sturdy', 'Worn', 'Basic', 'Plain'] },
-  { name: 'Uncommon', probability: 25, color: RARITY_COLOR_MAP.Uncommon, affixes: ['Keen', 'Swift', 'Reinforced'] },
-  { name: 'Rare', probability: 15, color: RARITY_COLOR_MAP.Rare, affixes: ['Blazing', 'Frozen', 'Vampiric'] },
-  { name: 'Epic', probability: 8, color: RARITY_COLOR_MAP.Epic, affixes: ['Celestial', 'Void-touched'] },
-  { name: 'Legendary', probability: 2, color: RARITY_COLOR_MAP.Legendary, affixes: ['Godslayer'] },
-];
+const TREEMAP_AFFIXES: Record<string, string[]> = {
+  Common: ['Sturdy', 'Worn', 'Basic', 'Plain'],
+  Uncommon: ['Keen', 'Swift', 'Reinforced'],
+  Rare: ['Blazing', 'Frozen', 'Vampiric'],
+  Epic: ['Celestial', 'Void-touched'],
+  Legendary: ['Godslayer'],
+};
+
+/** Probability per tier is derived from RARITY_TIERS (the one authority); only the affix names live here. */
+export const TREEMAP_DATA: TreemapRect[] = RARITY_TIERS.map((t) => ({
+  name: t.name,
+  probability: (t.weight / TOTAL_WEIGHT) * 100,
+  color: t.color,
+  affixes: TREEMAP_AFFIXES[t.name] ?? [],
+}));
 
 /* -- 7.3 Loot Table Diff data --------------------------------------------- */
 
@@ -108,13 +116,6 @@ export const LOOT_DIFF_ENTRIES: DiffEntry[] = [
 
 export const DROPS_PER_HOUR_GAUGE: GaugeMetric = { label: 'Items/Hour', current: 45, target: 60, unit: '/hr' };
 export const GOLD_PER_HOUR_GAUGE: GaugeMetric = { label: 'Gold/Hour', current: 2300, target: 3000, unit: 'g' };
-
-export const DROP_SOURCE_BREAKDOWN = [
-  { source: 'Grunt', pct: 40, color: STATUS_MUTED },
-  { source: 'Caster', pct: 30, color: STATUS_INFO },
-  { source: 'Boss', pct: 20, color: ACCENT_VIOLET },
-  { source: 'Chest', pct: 10, color: STATUS_WARNING },
-];
 
 /* -- 7.5 Affix data ------------------------------------------------------- */
 

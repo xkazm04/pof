@@ -20,11 +20,16 @@ export function MonteCarloSim() {
   const [mcResults, setMcResults] = useState<{ tally: Record<string, number[]>; total: number } | null>(null);
   const [histoRarity, setHistoRarity] = useState('Rare');
   const [seed, setSeed] = useState<number | null>(null);
+  /** Typed seed to replay; blank = a fresh clock seed per run. */
+  const [seedText, setSeedText] = useState('');
   const rarityGold = useLootTuningStore((s) => s.rarityGold);
 
   const runMonteCarlo = useCallback((n: number) => {
     setMcRollCount(n);
-    const baseSeed = (Date.now() ^ (n * 0x9e3779b1)) >>> 0;
+    const typed = seedText.trim() === '' ? NaN : Number(seedText);
+    const baseSeed = Number.isInteger(typed) && typed >= 0 && typed <= 0xffffffff
+      ? typed
+      : (Date.now() ^ (n * 0x9e3779b1)) >>> 0;
     setSeed(baseSeed);
     const tally: Record<string, number[]> = {};
     for (const t of RARITY_TIERS) tally[t.name] = [];
@@ -33,7 +38,7 @@ export function MonteCarloSim() {
       RARITY_TIERS.forEach((t, i) => tally[t.name].push(counts[i]));
     }
     setMcResults({ tally, total: n });
-  }, []);
+  }, [seedText]);
 
   const summary = useMemo(() => (mcResults ? mcSummary(mcResults.tally) : null), [mcResults]);
   const evPerKill = RARITY_TIERS.reduce((s, t) => s + (t.weight / TOTAL_WEIGHT) * (rarityGold[t.name] ?? 0), 0);
@@ -58,6 +63,21 @@ export function MonteCarloSim() {
           accent={ACCENT_VIOLET}
           ariaLabel="Monte Carlo sample size"
         />
+      </div>
+      <div className="mb-3 flex items-center gap-2">
+        <label htmlFor="mc-seed" className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Seed</label>
+        <input
+          id="mc-seed" type="text" inputMode="numeric" value={seedText}
+          onChange={(e) => setSeedText(e.target.value.replace(/\D/g, ''))}
+          placeholder="random"
+          className="w-28 text-2xs font-mono px-1.5 py-0.5 rounded border border-border/40 bg-surface-deep text-text focus-ring"
+        />
+        <button
+          type="button" disabled={seed === null} onClick={() => seed !== null && setSeedText(String(seed))}
+          className="text-2xs font-mono px-1.5 py-0.5 rounded border border-border/40 text-text-muted cursor-pointer disabled:opacity-40 disabled:cursor-default focus-ring"
+        >
+          Use last seed
+        </button>
       </div>
       {mcResults ? (
         <div className="space-y-3" aria-live="polite">
