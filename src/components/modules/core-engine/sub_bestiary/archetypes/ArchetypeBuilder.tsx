@@ -7,6 +7,7 @@ import { ACCENT_PURPLE_BOLD, ACCENT_EMERALD, ACCENT_RED, STATUS_SUCCESS, STATUS_
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ABILITY_POOL, BT_PRESETS, ELITE_MODIFIERS, applyModifiers } from '../_shared/data';
+import { isModifierExcluded, toggleModifier } from '@/lib/bestiary/modifier-exclusion';
 
 export function ArchetypeBuilder() {
   const [builderName, setBuilderName] = useState('Custom Enemy');
@@ -18,12 +19,7 @@ export function ArchetypeBuilder() {
   const btId = useId();
 
   const toggleBuilderModifier = useCallback((modId: string) => {
-    setBuilderModifiers(prev => {
-      const mod = ELITE_MODIFIERS.find(m => m.id === modId);
-      if (prev.includes(modId)) return prev.filter(id => id !== modId);
-      const excluded = mod?.excludes ?? [];
-      return [...prev.filter(id => !excluded.includes(id)), modId];
-    });
+    setBuilderModifiers(prev => toggleModifier(prev, modId, ELITE_MODIFIERS));
   }, []);
 
   return (
@@ -78,7 +74,7 @@ export function ArchetypeBuilder() {
             <div className="flex flex-wrap gap-1.5">
               {ELITE_MODIFIERS.map(mod => {
                 const isActive = builderModifiers.includes(mod.id);
-                const isExcluded = !isActive && mod.excludes?.some(ex => builderModifiers.includes(ex));
+                const isExcluded = isModifierExcluded(mod.id, builderModifiers, ELITE_MODIFIERS);
                 return (
                   <button key={mod.id} onClick={() => !isExcluded && toggleBuilderModifier(mod.id)}
                     disabled={isExcluded}
