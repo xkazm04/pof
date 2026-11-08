@@ -68,3 +68,31 @@ describe('malformed bodies', () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 });
+
+describe('start fields reaching the UBT argv', () => {
+  it.each([
+    ['platform', 'x; rm'],
+    ['platform', 7],
+    ['configuration', 'Nope'],
+    ['targetType', '-Clean'],
+    ['additionalArgs', 'abc'],
+    ['additionalArgs', ['-ok', 5]],
+    ['moduleId', 5],
+  ])('refuses %s = %j', async (field, value) => {
+    const res = await POST(post({ ...start, [field]: value }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain(field);
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts the declared values and still defaults the omitted ones', async () => {
+    const res = await POST(post({ ...start, platform: 'Linux', configuration: 'Shipping', targetType: 'Game', additionalArgs: ['-NoHotReload'], moduleId: 'arpg-combat' }));
+    expect(res.status).toBe(200);
+    expect(enqueueMock.mock.calls[0][0]).toMatchObject({ platform: 'Linux', configuration: 'Shipping', targetType: 'Game', additionalArgs: ['-NoHotReload'] });
+
+    enqueueMock.mockClear();
+    await POST(post(start));
+    expect(enqueueMock.mock.calls[0][0]).toMatchObject({ platform: 'Win64', configuration: 'Development', targetType: 'Editor' });
+  });
+});

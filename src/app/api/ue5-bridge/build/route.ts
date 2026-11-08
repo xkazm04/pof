@@ -44,6 +44,34 @@ interface RebuildAction {
 
 type BuildAction = StartAction | AbortAction | RebuildAction | { action: string };
 
+const PLATFORMS: readonly BuildTargetPlatform[] = ['Win64', 'Linux', 'Mac'];
+const CONFIGURATIONS: readonly BuildConfiguration[] = ['Debug', 'DebugGame', 'Development', 'Shipping', 'Test'];
+const TARGET_TYPES: readonly BuildTargetType[] = ['Editor', 'Game', 'Server', 'Client'];
+
+const isOneOf = (allowed: readonly string[], v: unknown) => typeof v === 'string' && allowed.includes(v);
+
+/**
+ * The optional fields, checked here because they reach the UBT argv as given: the casts below
+ * trust them, and a bare string in `additionalArgs` used to spread into one argument per character.
+ */
+function refuseStartFields(body: StartAction): string | null {
+  if (body.platform !== undefined && !isOneOf(PLATFORMS, body.platform)) {
+    return `platform must be one of ${PLATFORMS.join(' | ')}`;
+  }
+  if (body.configuration !== undefined && !isOneOf(CONFIGURATIONS, body.configuration)) {
+    return `configuration must be one of ${CONFIGURATIONS.join(' | ')}`;
+  }
+  if (body.targetType !== undefined && !isOneOf(TARGET_TYPES, body.targetType)) {
+    return `targetType must be one of ${TARGET_TYPES.join(' | ')}`;
+  }
+  const args: unknown = body.additionalArgs;
+  if (args !== undefined && !(Array.isArray(args) && args.every((a) => typeof a === 'string'))) {
+    return 'additionalArgs must be an array of strings';
+  }
+  if (body.moduleId !== undefined && typeof body.moduleId !== 'string') return 'moduleId must be a string';
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const denied = requireOperator(req);
   if (denied) return denied;
@@ -75,6 +103,9 @@ export async function POST(req: NextRequest) {
         if (refusal) return apiError(refusal, 400);
 
         const startBody = body as StartAction;
+        const fieldRefusal = refuseStartFields(startBody);
+        if (fieldRefusal) return apiError(fieldRefusal, 400);
+
         const request: BuildRequest = {
           projectPath,
           targetName,
