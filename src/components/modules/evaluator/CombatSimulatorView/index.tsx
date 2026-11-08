@@ -117,7 +117,9 @@ export function CombatSimulatorView() {
 
   // The one gate for "a run can start": the button's disabled state and the handler's
   // guard both read it, so a click can never be accepted by the UI and dropped by the handler.
-  const canRun = !!tuning && !!defaultConfig && !!gear;
+  // An empty loadout is refused: the engine's choosePlayerAbility returns null, so the player never
+  // acts and the report would read a misconfiguration as a balance verdict.
+  const canRun = !!tuning && !!defaultConfig && !!gear && playerAbils.length > 0;
 
   const handleRun = useCallback(async () => {
     if (!canRun || !tuning || !defaultConfig || !gear) return;
@@ -222,6 +224,7 @@ export function CombatSimulatorView() {
                 {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                 {isSimulating
                   ? `Simulating ${activeIterations}… ${Math.round(simProgress * 100)}%`
+                  : playerAbils.length === 0 ? 'Select an ability to run'
                   : baselineResult ? `Run Candidate (${iterations})` : `Run ${iterations} Fights`}
               </button>
             </div>
