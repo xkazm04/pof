@@ -21900,14 +21900,20 @@
       "subject": "agent-cli-transport",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:52:19.250Z",
-      "techniques": [],
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:44:36.468Z",
+      "techniques": [
+        {
+          "technique": "availability-probe",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/SpendDashboard.tsx:7 Only reads stored spend data; never probes or launches a binary."
+        }
+      ],
       "withdrawn": {
-        "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
+        "worker": "f4e584b2-8b27-4139-91ce-2a2d050a7fd3",
         "state": "not-applicable",
-        "at": "2026-11-07T03:53:40.647949+00:00",
-        "reason": "reviewer (sonnet): The anchor SpendDashboard.tsx:26 is a data-hook call in a file that is not among the context's files, and it does not show that this context lacks a CLI spawn. The context's own dashboard (SessionAnalyticsDashboard/index.tsx) only calls useSessionDashboard, and my grep of the context files found no "
+        "at": "2026-11-08T04:45:39.418693+00:00",
+        "reason": "reviewer (sonnet): The anchor SpendDashboard.tsx:7 is not one of the context's files (SessionAnalyticsDashboard/* and WeeklyDigestView/*), and its line 7 is only a hook import, so it doesn't show that the context never spawns an agent CLI. My grep of the two context directories found no spawn, exec, fetch, claude or p"
       }
     },
     "053712f7-2f1c-480e-823a-008c73ffb6ae/agent-cli-transport": {
