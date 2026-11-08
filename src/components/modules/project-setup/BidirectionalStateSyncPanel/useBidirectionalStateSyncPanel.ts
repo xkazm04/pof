@@ -142,6 +142,12 @@ export function useBidirectionalStateSyncPanel() {
     [allConflicts, dismissed, writes],
   );
 
+  // The row chips read this view, so a dismissed write stops reading "conflict" there too.
+  const rowWrites = useMemo<Ledger>(
+    () => new Map([...writes].filter(([key, w]) => dismissed.get(key) !== w.seq)),
+    [writes, dismissed],
+  );
+
   const resolveConflict = useCallback((key: string, choice: ConflictChoice) => {
     const c = conflicts.find((x) => x.key === key);
     if (!c) return;
@@ -220,6 +226,7 @@ export function useBidirectionalStateSyncPanel() {
     handleCopyFromSnapshot,
     conflicts,
     writes,
+    rowWrites,
     resolveConflict,
     outboundCount,
     inboundCount,

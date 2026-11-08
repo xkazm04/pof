@@ -128,3 +128,25 @@ describe('watched property editor keeps the value type', () => {
     expect(push(5, '7')).toHaveBeenCalledWith('/Game/A', 'P', 7);
   });
 });
+
+describe('Take UE5 clears the row chip as well as the conflict list', () => {
+  const KEY = writeKey('/Game/A', 'Health');
+  const health = (ws: FakeWebSocket, value: number) =>
+    ws.push({ type: 'property.update', payload: { watchId: 'w1', objectPath: '/Game/A', propertyName: 'Health', value } });
+
+  it('shows conflict until dismissed, then no chip', () => {
+    ue5LiveState.connect('127.0.0.1', 30041);
+    const ws = lastSocket();
+    ws.fireOpen();
+    const { result } = renderHook(() => useBidirectionalStateSyncPanel());
+
+    act(() => { health(ws, 50); });
+    act(() => { result.current.handleWatchedPush('/Game/A', 'Health', 100); });
+    act(() => { health(ws, 80); });
+    expect(outcomeFor(result.current.rowWrites, '/Game/A', 'Health')).toBe('conflict');
+
+    act(() => { result.current.resolveConflict(KEY, 'accept-ue5'); });
+    expect(result.current.conflicts).toEqual([]);
+    expect(outcomeFor(result.current.rowWrites, '/Game/A', 'Health')).toBeNull();
+  });
+});

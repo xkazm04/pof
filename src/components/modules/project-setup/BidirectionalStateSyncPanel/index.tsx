@@ -63,7 +63,7 @@ export function BidirectionalStateSyncPanel() {
             setShowPropertyWrite={s.setShowPropertyWrite}
             watchEntries={s.watchEntries}
             handleWatchedPush={s.handleWatchedPush}
-            writes={s.writes}
+            writes={s.rowWrites}
             propEdit={s.propEdit}
             setPropEdit={s.setPropEdit}
             handleDirectPropertyPush={s.handleDirectPropertyPush}
