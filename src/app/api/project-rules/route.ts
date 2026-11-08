@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     if (action) return apiError(`Unknown action "${action}"`, 400);
     // One check shared with the editor: schema, registered profile, and a scope that reaches a
     // prompt (`global` or a registered catalog) — an unknown scope used to be stored with 200.
-    const parsed = validateRuleDraft(await req.json(), allCatalogPipelines());
+    const parsed = validateRuleDraft(await req.json().catch(() => undefined), allCatalogPipelines());
     if (!parsed.ok) return apiError(parsed.error, 400);
     const rule: ProjectRule = {
       id: parsed.data.id,

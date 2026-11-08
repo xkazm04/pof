@@ -65,7 +65,10 @@ export async function GET() {
 /** POST — save, touch, or remove a recent project */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { action } = body;
 
     const db = getDb();

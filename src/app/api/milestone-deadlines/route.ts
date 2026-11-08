@@ -27,7 +27,10 @@ export async function GET() {
 /** PUT — upsert a single milestone deadline */
 export async function PUT(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { milestoneId, targetDate, label } = body as {
       milestoneId: string;
       targetDate: string | null;

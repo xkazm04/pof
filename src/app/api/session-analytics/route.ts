@@ -57,7 +57,10 @@ export async function GET(req: NextRequest) {
 // Body: { moduleId, sessionKey, prompt, hadProjectContext, success, durationMs, startedAt, completedAt }
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
 
     if (!body.moduleId || !body.sessionKey || body.prompt === undefined) {
       return apiError('moduleId, sessionKey, prompt required', 400);

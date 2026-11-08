@@ -13,7 +13,11 @@ import type { SubModuleId } from '@/types/modules';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as ErrorMemoryRequest;
+    const parsed: unknown = await req.json().catch(() => undefined);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
+    const body = parsed as ErrorMemoryRequest;
     const { action } = body;
 
     switch (action) {
