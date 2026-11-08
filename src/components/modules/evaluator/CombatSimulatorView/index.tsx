@@ -122,7 +122,7 @@ export function CombatSimulatorView() {
   const handleRun = useCallback(async () => {
     if (!canRun || !tuning || !defaultConfig || !gear) return;
     const scenario: CombatScenario = {
-      name: `Lvl ${playerLevel} vs ${enemySetup.map((e) => `${e.count}x ${e.archetypeId}`).join(', ')}`,
+      name: `Lvl ${playerLevel} vs ${enemySetup.map((e) => `${e.count}x ${enemies.find((a) => a.id === e.archetypeId)?.name ?? e.archetypeId}`).join(', ')}`,
       playerLevel,
       playerGear: gear,
       playerAbilities: playerAbils,
@@ -135,7 +135,7 @@ export function CombatSimulatorView() {
     const config: CombatSimConfig = { ...defaultConfig, iterations, seed };
     setActiveIterations(iterations);
     await runSimulation(scenario, tuning, config);
-  }, [canRun, tuning, defaultConfig, gear, playerLevel, playerAbils, enemySetup, iterations, baselineResult, runSimulation]);
+  }, [canRun, tuning, defaultConfig, gear, playerLevel, playerAbils, enemySetup, enemies, iterations, baselineResult, runSimulation]);
 
   const handleTuningChange = useCallback((key: keyof TuningOverrides, value: number) => {
     if (!tuning) return;
