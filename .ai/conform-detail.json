@@ -21575,52 +21575,53 @@
       "context": "game-design-studio-api",
       "subject": "game-economy-tuning",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:25:28.394Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:23:09.000Z",
+      "worker": "de8a4144-74cf-4a15-b772-d52780e21129",
       "techniques": [
         {
           "technique": "tornado-sensitivity-sweeps",
           "verdict": "deviation",
-          "evidence": "src/lib/economy/sensitivity-sweep.ts:69 One ±range for every input and only baseAmount is swept (frequencyPerHour and levelScaling are not). No range basis is recorded and SweepResult never says it is magnitude-only. The outcomes are right, though: gini, netFlow and criticalAlerts."
+          "evidence": "src/lib/economy/sensitivity-sweep.ts:37 Only baseAmount is swept, never levelScaling or frequencyPerHour, and the result does not say it covers one field of three. Ranges are uniform (`opts.range ?? 0.5`) with no per-input provenance. In its favour: three outcomes including criticalAlerts, a seeded deterministic run, and range/baseline returned with the result."
         },
         {
           "technique": "faucet-sink-balance-band",
-          "verdict": "conformant",
-          "evidence": "src/lib/economy/node-audit.ts:169 Imbalance is divided by the larger of inflow and outflow, as the technique asks. The verdict carries its tolerance and basis, and it reports not-measured, unclassified or unspecified instead of a pass. Entries carry base, scaling, frequency and level window. Gap: where each frequency came from (telemetry, playtest or unestimated) is not recorded."
+          "verdict": "deviation",
+          "evidence": "src/types/economy-simulator.ts:59 The frequency field is a required plain number. It cannot hold 'unestimated' and records no provenance (telemetry, playtest or estimate), so a missing estimate can only be a placeholder. The band machinery itself is sound: evaluateBalanceBand uses the symmetric max(in,out) denominator, reads its tolerance from canon, has unspecified/unclassified/not-measured verdicts and is pointed at the shipped loot-driven default. But inflation is also flagged by a separate 1.2x growth heuristic with threshold 0 (simulation-engine.ts:591), a second authority beside the band."
         },
         {
           "technique": "economy-philosophy-multipliers",
           "verdict": "conformant",
-          "evidence": "src/lib/economy/simulation-engine.ts:36 Each stance is an explicit three-axis vector (acquisition, consumption, generosity) applied to every faucet, every sink and every drop weight."
-        },
-        {
-          "technique": "source-drain-converter-trader-vocabulary",
-          "verdict": "conformant",
-          "evidence": "src/lib/economy/node-audit.ts:60 Every node is named by its kind. Anything that can't be named reports as unclassified and makes the band verdict unaudited instead of being absorbed. The vendor sale is modelled as a converter with an input leg."
-        },
-        {
-          "technique": "feedback-loop-topology-and-polarity",
-          "verdict": "conformant",
-          "evidence": "src/lib/economy/definitions.ts:237 Loops are declared with polarity, latency and path, and their gain is honestly marked 'uncharacterised'. The missing reinforcing loop is recorded as a finding."
+          "evidence": "src/lib/economy/simulation-engine.ts:36 The stance is a three-axis multiplier vector over neutral base flows. Caveat: the same PHILOSOPHY_MODS table is duplicated in src/lib/economy/codegen.ts:31-34, a second copy that can drift."
         },
         {
           "technique": "wealth-concentration-and-price-imbalance-alerts",
           "verdict": "conformant",
-          "evidence": "src/lib/economy/simulation-engine.ts:621 Gini warns above 0.6 and goes critical above 0.8, matching the technique. Price-imbalance checks cover the potion triviality floor (1% of income) and legendary affordability."
+          "evidence": "src/lib/economy/simulation-engine.ts:621 Gini is computed over a 100-agent population with 0.6 warning and 0.8 critical bands. The triviality floor exists but is hardcoded to one item id at :639 (`item.id === 'health-potion'`) at info severity, not generalised to every priced choice."
+        },
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "conformant",
+          "evidence": "src/types/economy-simulator.ts:20 Five node kinds, a required input leg on converters, and node-audit reporting unclassified/unfunded nodes that force a non-pass verdict."
+        },
+        {
+          "technique": "feedback-loop-topology-and-polarity",
+          "verdict": "conformant",
+          "evidence": "src/lib/economy/definitions.ts:242 DECLARED_LOOPS carries polarity, latency and path for each loop, records unestimated gain as 'uncharacterised', and records the absence of a reinforcing loop as a finding."
+        },
+        {
+          "technique": "structural-economy-simulation-before-numbers",
+          "verdict": "deviation",
+          "evidence": "src/lib/economy/simulation-engine.ts:119 The only walk is the stochastic agent run with per-agent variance. No unit-rate, randomness-removed structural walk exists anywhere in src (grep found none), although the economy has converters and declared loops. The starved-node and ledger checks are runtime findings inside the stochastic run."
         },
         {
           "technique": "progression-curve-shape-tests",
           "verdict": "conformant",
-          "evidence": "src/lib/economy/simulation-engine.ts:719 The XP curve is tested for family on every simulation (geometric check, ratio CoV with tolerance 0.15) and the check keeps firing on the shipped polynomial."
+          "evidence": "src/lib/balance/canon-conformance.ts:168 A family test (ratio coefficient of variation against a geometric curve) runs on the shipped XP curve via simulation-engine.ts:719. The shipped curve, 100*level^1.8 mislabelled 'Exponential' at definitions.ts:31, still violates it with no recorded decision or exception."
         }
       ],
-      "withdrawn": {
-        "worker": "c04ff748-acc7-4a62-af2b-1eeea8d0c10d",
-        "state": "deviation",
-        "at": "2026-11-07T03:26:31.409615+00:00",
-        "reason": "reviewer (sonnet): The sweep route and the economy library are real and the claims hold, but this context's files are only the ability-spec and feature-matrix routes, so the verdict is about the economy-simulator context. An earlier reviewer note in .ai/conform-detail.json made the same call for goal-seek."
-      }
+      "registryProposal": "applications/node--source-drain-converter-trader-vocabulary.md is stale: it says the type is `'faucet' | 'sink'` only, but src/types/economy-simulator.ts now declares five node kinds, converter input legs and a node-audit, so the application should be re-verified."
     },
     "cf5703ec-61df-45c3-9e35-b590480c7e76/game-economy-tuning": {
       "context": "progression-curves-builds",
@@ -22831,6 +22832,47 @@
           "evidence": "src/__tests__/components/project-setup/live-state-sync-mount.test.tsx:128 module-system.md:220 makes a negative claim: mounting LiveStateSyncPanel opens no socket. This test pins it, and the doc names the test."
         }
       ]
+    },
+    "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/game-economy-tuning": {
+      "context": "hud-damage-and-navigation",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:23:09.000Z",
+      "worker": "de8a4144-74cf-4a15-b772-d52780e21129",
+      "techniques": []
+    },
+    "e589fc28-aa8c-4cf7-805f-819d1b92d568/game-economy-tuning": {
+      "context": "loot-metrics-designer",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:23:09.000Z",
+      "techniques": [
+        {
+          "technique": "rarity-inflation-and-affix-saturation-alerts",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/DistributionsPanel.tsx:42 The procedural drop simulator is present (runDropSimulation), so the precondition holds, but none of the five measurables is a thresholded alert. Partial credit: lootMetricsView.ts:66-67 shows the p95 legendary dry streak with and without pity (bad-luck protection), and readings carry a live/tuned/fixture basis."
+        }
+      ],
+      "withdrawn": {
+        "worker": "de8a4144-74cf-4a15-b772-d52780e21129",
+        "state": "deviation",
+        "at": "2026-11-08T01:24:51.514087+00:00",
+        "reason": "reviewer (sonnet): The claim that the context computes no top-rarity share, rarity-inflation ratio, power-plateau or upgrade-per-level alert is not backed by the cited line. DistributionsPanel.tsx:42 only prints the frequency percentage. The grep I ran over sub_loot and lib/loot-designer found no such measurables, whi"
+      }
+    },
+    "206da1bc-b199-4a21-801f-98213e5c14d5/game-economy-tuning": {
+      "context": "character-movement-playground",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:23:09.000Z",
+      "worker": "de8a4144-74cf-4a15-b772-d52780e21129",
+      "techniques": []
     }
   }
 }

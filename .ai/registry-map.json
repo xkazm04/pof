@@ -9865,7 +9865,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt.ts:48 The context tunes movement-feel curves (acceleration, dodge, camera). A grep of the movement, playground and ai-feel directories found no faucet, sink, economy, currency or gold; the only 'drain' hit is this per-second stamina feel parameter, which is a capacity, not an economic magnitude.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -14348,7 +14352,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/economy-simulator/sweep/route.ts:16 The sweep API takes one uniform ±50% range for every input and the engine behind it overrides only baseAmount, so the tornado ranks the model's partial derivatives over magnitudes. It never reaches the frequency estimates, and no input carries a range with recorded provenance.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "docs-sync",
@@ -15908,7 +15916,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/types.ts:7 The context tunes floating-text physics, menu flow graphs and a low-health pulse. A case-insensitive grep of the whole src/components/modules/content/ui-hud directory found no faucet, sink, economy, currency, gold, drain or gini, so the subject's precondition (a resource economy) does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "on-device-verification-harness",
