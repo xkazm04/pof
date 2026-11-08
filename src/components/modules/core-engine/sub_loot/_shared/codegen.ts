@@ -64,14 +64,17 @@ export function parseUE5LootTable(
   const entries = rawEntries.map((entry, i) => {
     const minRarity = resolveRarityName(entry.MinRarity);
     const maxRarity = resolveRarityName(entry.MaxRarity);
+    // UE5 rolls RandRange(Min, Max): normalise an inverted range so it never round-trips.
+    const qa = finiteNonNeg(entry.MinQuantity, 1);
+    const qb = finiteNonNeg(entry.MaxQuantity, 1);
     return {
       id: `ue5_${i}_${Date.now()}`,
       name: resolveItemName(entry.Item),
       weight: finiteNonNeg(entry.DropWeight, 1),
       rarity: minRarity,
       color: RARITY_COLOR_MAP[minRarity] ?? STATUS_MUTED,
-      minQuantity: finiteNonNeg(entry.MinQuantity, 1),
-      maxQuantity: finiteNonNeg(entry.MaxQuantity, 1),
+      minQuantity: Math.min(qa, qb),
+      maxQuantity: Math.max(qa, qb),
       minRarity,
       maxRarity,
       // Carry the real loot source through import instead of hardcoding 'enemy'.
