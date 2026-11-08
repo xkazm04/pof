@@ -109,9 +109,11 @@ export function LiveStateSyncPanel() {
   const PreSnapshotIcon = preSnapshot.icon;
 
   const handleAddWatch = useCallback((req: PropertyWatchRequest) => {
-    watchProperty(req);
+    // A second subscription on one key would only duplicate the row and the plugin's polling.
+    const exists = watchEntries.some(([, w]) => w.objectPath === req.objectPath && w.propertyName === req.propertyName);
+    if (!exists) watchProperty(req);
     setShowWatches(true);
-  }, [watchProperty]);
+  }, [watchProperty, watchEntries]);
 
   const handleWatchActor = useCallback((actor: SelectedActor) => {
     const draft = watchDraftFromActor(actor);

@@ -268,3 +268,45 @@ describe('sync log filter state', () => {
     expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('false');
   });
 });
+
+describe('adding a watch that already exists', () => {
+  function liveWithWatch() {
+    ue5LiveState.connect('127.0.0.1', 30041);
+    const ws = lastSocket();
+    act(() => { ws.fireOpen(); });
+    render(<LiveStateSyncPanel />);
+    act(() => {
+      ws.push({
+        type: 'state.snapshot',
+        payload: {
+          timestamp: 1, editorState: 'Editing', openLevel: '/L', selectedActors: [], dirtyPackages: [],
+          viewport: { cameraLocation: { x: 0, y: 0, z: 0 }, cameraRotation: { pitch: 0, yaw: 0, roll: 0 }, fov: 90, viewMode: 'Lit' },
+        },
+      });
+      ws.push({ type: 'property.update', payload: { watchId: 'w1', objectPath: '/Game/A', propertyName: 'Health', value: 1 } });
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Property Watches/ }));
+    ws.sent.length = 0;
+    return ws;
+  }
+
+  function add(objectPath: string, propertyName: string) {
+    fireEvent.change(screen.getByLabelText('Object Path'), { target: { value: objectPath } });
+    fireEvent.change(screen.getByLabelText('Property'), { target: { value: propertyName } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add property watch' }));
+  }
+
+  const subscribes = (ws: FakeWebSocket) => ws.sent.filter((f) => f.includes('subscribe.property'));
+
+  it('does not open a second subscription for the same property', () => {
+    const ws = liveWithWatch();
+    add('/Game/A', 'Health');
+    expect(subscribes(ws)).toEqual([]);
+  });
+
+  it('control: a different property subscribes', () => {
+    const ws = liveWithWatch();
+    add('/Game/A', 'Mana');
+    expect(subscribes(ws)).toHaveLength(1);
+  });
+});
