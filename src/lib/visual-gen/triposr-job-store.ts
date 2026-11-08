@@ -46,6 +46,17 @@ const g = globalThis as unknown as { pofTriposrJobs?: Map<string, TriposrJob> };
 const jobs = g.pofTriposrJobs ?? new Map<string, TriposrJob>();
 if (!g.pofTriposrJobs) g.pofTriposrJobs = jobs;
 
+/** Finished jobs kept for status polls; the oldest settled job is dropped past this. */
+const MAX_RETAINED_JOBS = 200;
+
+/** Drop the oldest SETTLED jobs until the store is back inside the cap. Running jobs are never evicted. */
+function evictSettledJobs(): void {
+  for (const [id, j] of jobs) {
+    if (jobs.size <= MAX_RETAINED_JOBS) break;
+    if (j.status !== 'running') jobs.delete(id);
+  }
+}
+
 type Runner = (spec: TriposrSpec) => Promise<TriposrResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
 
@@ -64,6 +75,7 @@ export function startTriposrJob(
   const gate = localCritiqueDeps(spec.assetClass, spec.targetExtentM);
   const job: TriposrJob = { id, status: 'running', spec, gradedAs: gate.gradedAs, startedAt: Date.now() };
   jobs.set(id, job);
+  evictSettledJobs();
   runner(spec)
     .then(async (result) => {
       job.result = result;

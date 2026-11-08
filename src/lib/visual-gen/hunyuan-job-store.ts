@@ -47,6 +47,17 @@ const g = globalThis as unknown as { pofHunyuanJobs?: Map<string, HunyuanJob> };
 const jobs = g.pofHunyuanJobs ?? new Map<string, HunyuanJob>();
 if (!g.pofHunyuanJobs) g.pofHunyuanJobs = jobs;
 
+/** Finished jobs kept for status polls; the oldest settled job is dropped past this. */
+const MAX_RETAINED_JOBS = 200;
+
+/** Drop the oldest SETTLED jobs until the store is back inside the cap. Running jobs are never evicted. */
+function evictSettledJobs(): void {
+  for (const [id, j] of jobs) {
+    if (jobs.size <= MAX_RETAINED_JOBS) break;
+    if (j.status !== 'running') jobs.delete(id);
+  }
+}
+
 type Runner = (spec: HunyuanSpec) => Promise<HunyuanResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
 
@@ -65,6 +76,7 @@ export function startHunyuanJob(
   const gate = localCritiqueDeps(spec.assetClass, spec.targetExtentM);
   const job: HunyuanJob = { id, status: 'running', spec, gradedAs: gate.gradedAs, startedAt: Date.now() };
   jobs.set(id, job);
+  evictSettledJobs();
   runner(spec)
     .then(async (result) => {
       job.result = result;

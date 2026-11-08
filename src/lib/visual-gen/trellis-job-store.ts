@@ -83,6 +83,17 @@ const g = globalThis as unknown as { pofTrellisJobs?: Map<string, TrellisJob> };
 const jobs = g.pofTrellisJobs ?? new Map<string, TrellisJob>();
 if (!g.pofTrellisJobs) g.pofTrellisJobs = jobs;
 
+/** Finished jobs kept for status polls; the oldest settled job is dropped past this. */
+const MAX_RETAINED_JOBS = 200;
+
+/** Drop the oldest SETTLED jobs until the store is back inside the cap. Running jobs are never evicted. */
+function evictSettledJobs(): void {
+  for (const [id, j] of jobs) {
+    if (jobs.size <= MAX_RETAINED_JOBS) break;
+    if (j.status !== 'running') jobs.delete(id);
+  }
+}
+
 type Runner = (spec: TrellisSpec) => Promise<TrellisResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
 
@@ -104,6 +115,7 @@ export function startTrellisJob(
     id, status: 'running', spec, gradedAs: gate.gradedAs, requestedFaceLimit: faceLimit, startedAt: Date.now(),
   };
   jobs.set(id, job);
+  evictSettledJobs();
   runner({ ...spec, decimationTarget: faceLimit })
     .then(async (result) => {
       job.result = result;
