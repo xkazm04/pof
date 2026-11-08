@@ -41,7 +41,7 @@ import { EvaluatorCoachmark } from '../EvaluatorCoachmark';
 import { EVALUATOR_TAB_INFO } from '@/lib/evaluator/tab-glossary';
 import { logger } from '@/lib/logger';
 import { type TabId } from './types';
-import { TabDivider, ScrollableTabBar, TabButton } from './TabControls';
+import { TabDivider, ScrollableTabBar, TabButton, EVALUATOR_TABPANEL_ID, evaluatorTabDomId } from './TabControls';
 
 export function EvaluatorModule() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -141,7 +141,13 @@ export function EvaluatorModule() {
       </div>
 
       {/* Tab content */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5">
+      <div
+        ref={scrollRef}
+        id={EVALUATOR_TABPANEL_ID}
+        role="tabpanel"
+        aria-labelledby={evaluatorTabDomId(activeTab)}
+        className="flex-1 overflow-y-auto px-6 py-5"
+      >
         {activeTab === 'overview' && (
           <UnifiedSummaryView onNavigateTab={switchTab} />
         )}
