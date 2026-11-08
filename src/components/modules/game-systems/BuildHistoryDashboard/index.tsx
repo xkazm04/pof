@@ -22,6 +22,7 @@ import { PlatformBreakdown } from './PlatformBreakdown';
 import { HistoryTab } from './HistoryTab';
 import { describeBuildScope } from './buildScope';
 import { BuildScopeBanner } from './BuildScopeBanner';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 
 // ---------- Dashboard ----------
 
@@ -35,6 +36,9 @@ export function BuildHistoryDashboard() {
   const [version, setVersion] = useState('0.1.0');
   const [nextVersion, setNextVersion] = useState('0.1.1');
   const [loading, setLoading] = useState(true);
+  // A read that never landed is not an empty history: without this the tab rendered
+  // "No builds recorded yet" over a failed fetch (failure-not-empty-success).
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -138,8 +142,10 @@ export function BuildHistoryDashboard() {
       setNextVersion(data.nextVersion ?? '0.1.1');
       setScope(data.scope ?? null);
       setBudgets(data.budgets ?? null);
+      setLoadError(null);
     } catch (e) {
       console.error('Failed to fetch build history:', e);
+      setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -238,6 +244,10 @@ export function BuildHistoryDashboard() {
         )}
       </AnimatePresence>
 
+      {loadError && (
+        <InlineErrorRetry message={`Build history could not be read: ${loadError}`} onRetry={fetchAll} />
+      )}
+
       {/* What this project's scope could NOT see — silent only when it hid nothing. */}
       <BuildScopeBanner desc={scopeDesc} />
 
@@ -278,6 +288,7 @@ export function BuildHistoryDashboard() {
           builds={builds}
           handleDelete={handleDelete}
           scope={scope}
+          loadFailed={loadError != null}
         />
       )}
 
