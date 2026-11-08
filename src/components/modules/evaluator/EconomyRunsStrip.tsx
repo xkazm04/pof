@@ -1,18 +1,20 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Bookmark, BookmarkCheck, Trash2, Save, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import { driftDirection } from '@/lib/balance/baseline';
 import { MOTION } from '@/lib/constants';
+import { formatGold } from './EconomySimulatorView/helpers';
 
-function formatNumber(n: number): string {
-  if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return Math.abs(n) < 10 ? n.toFixed(2) : Math.round(n).toString();
+/** Gold-scale values share formatGold's bands; |n| < 10 keeps 2 decimals so Gini drift stays readable. */
+export function formatNumber(n: number): string {
+  return Math.abs(n) < 10 ? n.toFixed(2) : formatGold(n);
 }
 
 /** Saved-runs chips + save/baseline/delete controls. Wired to economySimulatorStore. */
@@ -21,6 +23,7 @@ export function EconomyRunsStrip() {
   const baselineRun = useEconomySimulatorStore((s) => s.baselineRun);
   const result = useEconomySimulatorStore((s) => s.result);
   const isRunsLoading = useEconomySimulatorStore((s) => s.isRunsLoading);
+  const runsError = useEconomySimulatorStore((s) => s.runsError);
 
   const listRuns = useEconomySimulatorStore((s) => s.listRuns);
   const saveCurrentRun = useEconomySimulatorStore((s) => s.saveCurrentRun);
@@ -33,6 +36,8 @@ export function EconomyRunsStrip() {
   // Deleting a saved run is irreversible and there is no undo — confirm first.
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const nameInputId = useId();
+  // The last runs action, so the inline Retry repeats exactly what failed.
+  const lastAction = useRef<() => void>(() => listRuns());
 
   useEffect(() => {
     listRuns();
@@ -42,8 +47,14 @@ export function EconomyRunsStrip() {
 
   async function handleSave() {
     if (!canSave) return;
+    const runName = name.trim();
+    lastAction.current = () => { void handleSaveNamed(runName); };
+    await handleSaveNamed(runName);
+  }
+
+  async function handleSaveNamed(runName: string) {
     setSaving(true);
-    const run = await saveCurrentRun(name.trim());
+    const run = await saveCurrentRun(runName);
     setSaving(false);
     if (run) setName('');
   }
@@ -86,6 +97,16 @@ export function EconomyRunsStrip() {
         </div>
       </div>
 
+      {runsError && (
+        <InlineErrorRetry
+          dense
+          className="mb-2"
+          message={runsError}
+          onRetry={() => lastAction.current()}
+          onDismiss={() => useEconomySimulatorStore.setState({ runsError: null })}
+        />
+      )}
+
       <div className="flex flex-wrap gap-1.5">
         {isRunsLoading && savedRuns.length === 0 && (
           <span className="text-2xs text-text-muted">Loading…</span>
@@ -105,7 +126,7 @@ export function EconomyRunsStrip() {
               }`}
             >
               <button
-                onClick={() => loadRun(run.id)}
+                onClick={() => { lastAction.current = () => { void loadRun(run.id); }; void loadRun(run.id); }}
                 title="Load this run (re-simulates with stored config)"
                 aria-label={`Load run ${run.name}`}
                 className="font-medium hover:underline focus-ring rounded"
@@ -116,7 +137,7 @@ export function EconomyRunsStrip() {
               <span className="text-text-muted/80" title="Average gold">{formatNumber(run.metrics.avgGold)}g</span>
               <span className="text-text-muted/80" title="Gini coefficient (wealth inequality)">G{run.metrics.gini.toFixed(2)}</span>
               <button
-                onClick={() => setBaselineRun(isBaseline ? null : run.id)}
+                onClick={() => { const next = isBaseline ? null : run.id; lastAction.current = () => { void setBaselineRun(next); }; void setBaselineRun(next); }}
                 title={isBaseline ? 'Clear baseline' : 'Mark as baseline'}
                 aria-label={isBaseline ? `Clear ${run.name} as baseline` : `Mark ${run.name} as baseline`}
                 aria-pressed={isBaseline}
@@ -148,10 +169,12 @@ export function EconomyRunsStrip() {
         onClose={() => setPendingDelete(null)}
         onConfirm={async () => {
           if (!pendingDelete) return;
-          // deleteRun resolves false (never throws) and parks the reason on the store's `error`;
+          const target = pendingDelete.id;
+          lastAction.current = () => { void deleteRun(target); };
+          // deleteRun resolves false (never throws) and parks the reason on the store's `runsError`;
           // turn that into a rejection so the dialog stays open with the reason and a Retry.
           if (!(await deleteRun(pendingDelete.id))) {
-            throw new Error(useEconomySimulatorStore.getState().error ?? 'Could not delete that run.');
+            throw new Error(useEconomySimulatorStore.getState().runsError ?? 'Could not delete that run.');
           }
         }}
         title="Delete this saved run?"

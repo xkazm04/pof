@@ -54,3 +54,14 @@ describe('GoalSeekPanel', () => {
     expect(container.textContent).toMatch(/Enter a numeric target/);
   });
 });
+
+describe('GoalSeekPanel Gini range', () => {
+  it.each(['1.5', '-0.2'])('refuses a Gini target of %s without calling the server', async (value) => {
+    const { getByText, getByLabelText, container } = render(<GoalSeekPanel config={CONFIG} />);
+    fireEvent.click(getByText('Gini'));
+    fireEvent.change(getByLabelText(/Target/), { target: { value } });
+    await act(async () => { fireEvent.click(getByText('Auto-balance')); });
+    expect(apiFetchMock).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('Gini targets are 0-1');
+  });
+});

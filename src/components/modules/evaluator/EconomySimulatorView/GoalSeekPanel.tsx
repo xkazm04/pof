@@ -38,6 +38,8 @@ export function GoalSeekPanel({ config }: { config: SimulationConfig }) {
     // Number('') is 0, so a cleared field would silently solve for a 0 target.
     const targetNum = target.trim() === '' ? NaN : Number(target);
     if (!Number.isFinite(targetNum)) { setErr('Enter a numeric target'); return; }
+    // A Gini coefficient lies in [0, 1]: refuse before the server bisects for an impossible target.
+    if (output === 'gini' && (targetNum < 0 || targetNum > 1)) { setErr('Gini targets are 0-1'); return; }
     if (!effectiveFlowId) { setErr('No flow selected'); return; }
     setBusy(true); setErr(null);
     try {

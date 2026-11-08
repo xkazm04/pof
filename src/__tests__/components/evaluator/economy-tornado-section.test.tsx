@@ -57,3 +57,12 @@ describe('TornadoSection', () => {
   });
 });
 
+
+describe('TornadoSection empty sweep', () => {
+  it('labels a zero-entry sweep instead of rendering an empty body', async () => {
+    apiFetchMock.mockResolvedValue({ output: 'gini', range: 0.5, baseline: 0.4, entries: [] });
+    const { getByText, container } = render(<TornadoSection config={CONFIG} />);
+    await act(async () => { fireEvent.click(getByText('Run sweep')); });
+    expect(container.textContent).toContain('No faucet/sink parameters to sweep');
+  });
+});
