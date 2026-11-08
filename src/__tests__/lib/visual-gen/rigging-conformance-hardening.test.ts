@@ -264,3 +264,18 @@ describe('rig gate: WEIGHTS_1 / JOINTS_1', () => {
     expect(scoreRig(facts).failures).toEqual([]);
   });
 });
+
+describe('rig gate: a mesh bound to a second skin is named, not silently dropped', () => {
+  it('counts the ungraded mesh and warns with its number', () => {
+    const facts = parseGlbRig(skinnedGlb([[good], [unweighted]], [0, 1]));
+    expect(facts.ungradedMeshes).toBe(1);
+    const verdict = scoreRig(facts);
+    expect(verdict.warnings.some((w) => /1 mesh\(es\).*skin/i.test(w))).toBe(true);
+  });
+
+  it('stays silent for a single-skin file', () => {
+    const facts = parseGlbRig(skinnedGlb([[good], [good]], [0, 0]));
+    expect(facts.ungradedMeshes).toBe(0);
+    expect(scoreRig(facts).warnings.some((w) => /skin/i.test(w) && /mesh/i.test(w))).toBe(false);
+  });
+});

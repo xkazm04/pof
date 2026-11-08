@@ -102,6 +102,13 @@ export interface RigFacts {
   morphTargetCount?: number;
   /** Names from `meshes[].extras.targetNames`, deduped. Empty means declared-but-unnamed. */
   morphTargetNames?: string[];
+  /**
+   * Meshes a node binds to a skin other than `skins[0]`. They are NOT graded (the facts are
+   * single-skin: `jointCount` and `jointNames` come from `skins[0]`), so the count is carried
+   * for {@link scoreRig} to name them rather than let the verdict read as covering the file.
+   * `undefined` means NOT READ.
+   */
+  ungradedMeshes?: number;
 }
 
 export interface RigVerdict {
@@ -211,6 +218,11 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     const bound = boundSkin.get(index);
     return bound === undefined || bound === 0 ? (mesh.primitives ?? []) : [];
   });
+  const ungradedMeshes = (json.meshes ?? []).filter((_, index) => {
+    const bound = boundSkin.get(index);
+    return bound !== undefined && bound !== 0;
+  }).length;
+  empty.ungradedMeshes = ungradedMeshes;
   if (primitives.length === 0) return empty;
 
   const readAccessor = (index: number | undefined): number[][] | null => {
@@ -314,6 +326,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     weightSumMean: sumTotal / n,
     morphTargetCount,
     morphTargetNames,
+    ungradedMeshes,
   };
 }
 
@@ -377,6 +390,13 @@ export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
   if (facts.nonFiniteWeights > 0) failures.push(`${facts.nonFiniteWeights} non-finite weight(s)`);
   if ((facts.outOfRangeJointRefs ?? 0) > 0) {
     failures.push(`${facts.outOfRangeJointRefs} influence(s) name a joint index outside the skin — those vertices bind to a bone that does not exist`);
+  }
+
+  if ((facts.ungradedMeshes ?? 0) > 0) {
+    warnings.push(
+      `${facts.ungradedMeshes} mesh(es) bound to a skin other than the first were not graded — ` +
+        'this verdict covers the first skin only',
+    );
   }
 
   const orphans = facts.jointCount - facts.referencedJoints;
