@@ -39,7 +39,7 @@ export function CloudSyncSection() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <GlowStat
             label="Last Sync"
-            value={new Date(CLOUD_SYNC.lastSync).toLocaleTimeString()}
+            value={new Date(CLOUD_SYNC.lastSync).toLocaleString()}
             color={ACCENT}
             delay={0}
           />
