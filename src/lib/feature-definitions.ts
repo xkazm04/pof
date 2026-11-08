@@ -1,6 +1,6 @@
 import type { SubModuleId, PartialModuleMap } from '@/types/modules';
 import { isFeatureDone } from '@/lib/feature-done';
-import { getModuleChecklist } from '@/lib/module-registry';
+import { getModuleChecklist, getModuleLabel } from '@/lib/module-registry';
 import { countChecklist } from '@/lib/checklist-progress';
 
 // ─── Module-level prerequisite graph ──────────────────────────────────────────
@@ -128,7 +128,7 @@ export function getRecommendedNextModules(
       ? `Ready — builds on this module`
       : `Ready — all ${prereqs.length} prerequisites met`;
 
-    results.push({ moduleId: depId, label: depId, reason });
+    results.push({ moduleId: depId, label: getModuleLabel(depId), reason });
   }
 
   // Sort: most prerequisites satisfied first
@@ -163,7 +163,7 @@ export function getUnmetPrerequisites(
       pct = Math.round((completed / total) * 100);
     }
     if (pct < 50) {
-      unmet.push({ moduleId: prereqId, label: prereqId, progress: pct, completed, total });
+      unmet.push({ moduleId: prereqId, label: getModuleLabel(prereqId), progress: pct, completed, total });
     }
   }
   return unmet;

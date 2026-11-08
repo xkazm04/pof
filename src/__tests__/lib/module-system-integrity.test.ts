@@ -287,3 +287,27 @@ describe('recommended-next progress ignores stale checklist keys', () => {
     expect(gas).toMatchObject({ completed: 0, progress: 0 });
   });
 });
+
+describe('recommended-next results carry the registry label', () => {
+  it('labels unmet prerequisites with the module label, not the raw id', () => {
+    const unmet = getUnmetPrerequisites('arpg-combat', {}, {});
+    for (const p of unmet) {
+      expect(p.label).toBe(SUB_MODULES.find((m) => m.id === p.moduleId)?.label);
+    }
+    expect(unmet.length).toBeGreaterThan(0);
+  });
+
+  it('labels recommended modules with the module label, not the raw id', () => {
+    const progress = {
+      'arpg-character': Object.fromEntries(
+        (SUB_MODULES.find((m) => m.id === 'arpg-character')?.checklist ?? []).map((c) => [c.id, true]),
+      ),
+    };
+    const sizes = Object.fromEntries(SUB_MODULES.map((m) => [m.id, m.checklist?.length ?? 0]));
+    const recs = getRecommendedNextModules('arpg-character', progress, sizes);
+    expect(recs.length).toBeGreaterThan(0);
+    for (const r of recs) {
+      expect(r.label).toBe(SUB_MODULES.find((m) => m.id === r.moduleId)?.label);
+    }
+  });
+});
