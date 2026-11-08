@@ -11,6 +11,7 @@ import { BlueprintPanel } from '../../unique-tabs/_design';
 import type { ItemData } from '../_shared/data';
 import { RARITY_COLORS, ITEM_SETS } from '../_shared/data';
 import { TradingCardTooltip } from './TradingCardTooltip';
+import { itemPower } from './itemComparison';
 
 /* ── Pre-compute set membership ──────────────────────────────────────── */
 const ITEM_SET_MAP = new Map<string, { setName: string; color: string }>();
@@ -18,11 +19,6 @@ for (const set of ITEM_SETS) {
   for (const piece of set.pieces) {
     ITEM_SET_MAP.set(piece.name, { setName: set.name, color: set.color });
   }
-}
-
-/* ── Power score ─────────────────────────────────────────────────────── */
-function computePower(item: ItemData): number {
-  return item.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0) + (item.affixes?.length ?? 0) * 10;
 }
 
 /* ── Slot icon map ───────────────────────────────────────────────────── */
@@ -111,7 +107,7 @@ function TradingCard({ item, tabIndex, onFocus: onFocusProp, onActivate }, ref) 
             <div className="flex flex-col items-center px-2 py-1 rounded-md border text-xs font-mono font-bold"
               style={{ borderColor: withOpacity(color, OPACITY_30), backgroundColor: withOpacity(color, OPACITY_12), color }}>
               <span className="text-xs opacity-60 uppercase">PWR</span>
-              <span>{computePower(item)}</span>
+              <span>{itemPower(item)}</span>
             </div>
           </div>
         </div>

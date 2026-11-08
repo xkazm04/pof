@@ -20,6 +20,7 @@ import { CatalogFiltersBar, type SortBy } from './CatalogFiltersBar';
 import { AddItemForm, type NewItemState } from './AddItemForm';
 import { CatalogItemGrid } from './CatalogItemGrid';
 import { buildCreateItemPrompt } from './createItemPrompt';
+import { itemPower } from './itemComparison';
 import { getAppOrigin } from '@/lib/constants';
 
 /* ── Main CatalogGearTab ───────────────────────────────────────────────── */
@@ -98,11 +99,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
       if (sortBy === 'name') return ad.name.localeCompare(bd.name);
       if (sortBy === 'type') return ad.type.localeCompare(bd.type);
       if (sortBy === 'rarity') return (RARITY_ORDER[bd.rarity] ?? 0) - (RARITY_ORDER[ad.rarity] ?? 0);
-      if (sortBy === 'power') {
-        const pa = ad.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
-        const pb = bd.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
-        return pb - pa;
-      }
+      if (sortBy === 'power') return itemPower(bd) - itemPower(ad); // same score as the PWR badge
       return 0;
     });
   }, [entries, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy]);
