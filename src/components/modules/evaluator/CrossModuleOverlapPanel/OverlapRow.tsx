@@ -50,100 +50,103 @@ export function OverlapRow({ overlap, twin, reviewKeys, reviewBusy, onReview, is
   const toggleLabel = `${isExpanded ? 'Collapse' : 'Expand'} overlap between ${overlap.featureA} (${moduleLabel(overlap.moduleA)}) and ${overlap.featureB} (${moduleLabel(overlap.moduleB)}) — ${simPct}% ${cfg.label}${twinLabel}`;
 
   return (
-    <div className={`group rounded-lg overflow-hidden flex items-stretch transition-colors hover:bg-surface-hover ${isExpanded ? 'bg-[#111130]' : ''}`}>
-      <button
-        onClick={onToggle}
-        aria-expanded={isExpanded}
-        aria-label={toggleLabel}
-        className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-border-bright focus-visible:ring-inset"
-      >
-        {/* Reason dot */}
-        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+    <div className={`group rounded-lg overflow-hidden transition-colors hover:bg-surface-hover ${isExpanded ? 'bg-[#111130]' : ''}`}>
+      {/* Control row: toggle, review and copy share one line; details open BELOW it. */}
+      <div className="flex items-stretch">
+        <button
+          onClick={onToggle}
+          aria-expanded={isExpanded}
+          aria-label={toggleLabel}
+          className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-border-bright focus-visible:ring-inset"
+        >
+          {/* Reason dot */}
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
 
-        {/* Module A → Feature A */}
-        <span className="text-xs text-text font-medium truncate min-w-0" style={{ maxWidth: '28%' }}>
-          <span className="text-text-muted">{moduleLabel(overlap.moduleA)}</span>
-          <span className="text-text-muted mx-1">/</span>
-          {twin && <TwinDot status={twin.statusA} />}
-          {overlap.featureA}
-        </span>
+          {/* Module A → Feature A */}
+          <span className="text-xs text-text font-medium truncate min-w-0" style={{ maxWidth: '28%' }}>
+            <span className="text-text-muted">{moduleLabel(overlap.moduleA)}</span>
+            <span className="text-text-muted mx-1">/</span>
+            {twin && <TwinDot status={twin.statusA} />}
+            {overlap.featureA}
+          </span>
 
-        {/* Arrow */}
-        <span className="flex-shrink-0 text-text-muted">
-          <ArrowRight className="w-3 h-3" />
-        </span>
+          {/* Arrow */}
+          <span className="flex-shrink-0 text-text-muted">
+            <ArrowRight className="w-3 h-3" />
+          </span>
 
-        {/* Module B → Feature B */}
-        <span className="text-xs text-text font-medium truncate min-w-0" style={{ maxWidth: '28%' }}>
-          <span className="text-text-muted">{moduleLabel(overlap.moduleB)}</span>
-          <span className="text-text-muted mx-1">/</span>
-          {twin && <TwinDot status={twin.statusB} />}
-          {overlap.featureB}
-        </span>
+          {/* Module B → Feature B */}
+          <span className="text-xs text-text font-medium truncate min-w-0" style={{ maxWidth: '28%' }}>
+            <span className="text-text-muted">{moduleLabel(overlap.moduleB)}</span>
+            <span className="text-text-muted mx-1">/</span>
+            {twin && <TwinDot status={twin.statusB} />}
+            {overlap.featureB}
+          </span>
 
-        {/* Spacer */}
-        <span className="flex-1" />
+          {/* Spacer */}
+          <span className="flex-1" />
 
-        {/* Twin status badge */}
-        {kind && (
+          {/* Twin status badge */}
+          {kind && (
+            <span
+              className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
+              style={{ backgroundColor: `${kind.color}18`, color: kind.color }}
+            >
+              {kind.label}
+            </span>
+          )}
+
+          {/* Similarity badge */}
           <span
             className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-            style={{ backgroundColor: `${kind.color}18`, color: kind.color }}
+            style={{ backgroundColor: `${simColor}18`, color: simColor }}
           >
-            {kind.label}
+            {simPct}%
           </span>
-        )}
 
-        {/* Similarity badge */}
-        <span
-          className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-          style={{ backgroundColor: `${simColor}18`, color: simColor }}
-        >
-          {simPct}%
-        </span>
-
-        {/* Reason badge */}
-        <span
-          className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-          style={{ backgroundColor: `${cfg.color}18`, color: cfg.color }}
-        >
-          {cfg.label}
-        </span>
-
-        {/* Expand */}
-        {isExpanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
-          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
-        }
-      </button>
-
-      {/* Review the lagging (or unreviewed) twin - explicit click only */}
-      {reviewKeys.map((key) => {
-        const { moduleId, featureName } = splitTwinKey(key);
-        const label = moduleLabel(moduleId);
-        return (
-          <button
-            key={key}
-            onClick={() => onReview(key)}
-            disabled={reviewBusy}
-            title={`Review ${featureName} in ${label}`}
-            className="px-2 my-1 mr-1 rounded text-2xs font-medium text-text-muted hover:text-text hover:bg-border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-border-bright flex-shrink-0 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+          {/* Reason badge */}
+          <span
+            className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
+            style={{ backgroundColor: `${cfg.color}18`, color: cfg.color }}
           >
-            <ScanSearch className="w-3 h-3" />
-            Review in {label}
-          </button>
-        );
-      })}
+            {cfg.label}
+          </span>
 
-      {/* Copy button — sibling of toggle button to avoid nested interactive controls */}
-      <button
-        onClick={onCopy}
-        aria-label={isCopied ? 'Copied overlap details to clipboard' : 'Copy overlap details to clipboard'}
-        title={isCopied ? 'Copied!' : 'Copy overlap details'}
-        className="px-2 my-1 mr-1 rounded text-text-muted hover:text-text hover:bg-border transition-all opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 focus-visible:opacity-100 focus-visible:scale-100 outline-none focus-visible:ring-2 focus-visible:ring-border-bright flex-shrink-0 flex items-center"
-      >
-        {isCopied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-3 h-3" />}
-      </button>
+          {/* Expand */}
+          {isExpanded
+            ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
+            : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
+          }
+        </button>
+
+        {/* Review the lagging (or unreviewed) twin - explicit click only */}
+        {reviewKeys.map((key) => {
+          const { moduleId, featureName } = splitTwinKey(key);
+          const label = moduleLabel(moduleId);
+          return (
+            <button
+              key={key}
+              onClick={() => onReview(key)}
+              disabled={reviewBusy}
+              title={`Review ${featureName} in ${label}`}
+              className="px-2 my-1 mr-1 rounded text-2xs font-medium text-text-muted hover:text-text hover:bg-border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-border-bright flex-shrink-0 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ScanSearch className="w-3 h-3" />
+              Review in {label}
+            </button>
+          );
+        })}
+
+        {/* Copy button — sibling of toggle button to avoid nested interactive controls */}
+        <button
+          onClick={onCopy}
+          aria-label={isCopied ? 'Copied overlap details to clipboard' : 'Copy overlap details to clipboard'}
+          title={isCopied ? 'Copied!' : 'Copy overlap details'}
+          className="px-2 my-1 mr-1 rounded text-text-muted hover:text-text hover:bg-border transition-all opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 focus-visible:opacity-100 focus-visible:scale-100 outline-none focus-visible:ring-2 focus-visible:ring-border-bright flex-shrink-0 flex items-center"
+        >
+          {isCopied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-3 h-3" />}
+        </button>
+      </div>
 
       {/* Expanded details */}
       {isExpanded && (
