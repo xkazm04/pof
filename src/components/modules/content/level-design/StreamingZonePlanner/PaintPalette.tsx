@@ -1,5 +1,5 @@
 import { X, Eraser, Link2 } from 'lucide-react';
-import { STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_ERROR, STATUS_WARNING, withOpacity, OPACITY_20, OPACITY_5 } from '@/lib/chart-colors';
 import { ZONE_TYPES } from './constants';
 import type { ZoneType, StreamingMode, StreamingOp } from './types';
 
@@ -14,7 +14,7 @@ export function PaintPalette({ mode, selectedZoneId, dispatch }: PaintPalettePro
   const paintType = mode.kind === 'paint' ? mode.zoneType : mode.kind === 'erase' ? 'erase' : null;
   const linkingFrom = mode.kind === 'link' ? mode.from : null;
   return (
-    <div className="flex items-center gap-2 flex-wrap bg-[#03030a] p-3 rounded-2xl border border-violet-900/40 shadow-[inset_0_0_40px_rgba(167,139,250,0.05)]">
+    <div className="flex items-center gap-2 flex-wrap bg-[var(--schematic-surface)] p-3 rounded-2xl border border-violet-900/40 shadow-[inset_0_0_40px_rgba(167,139,250,0.05)]">
       <span className="text-xs font-mono text-violet-400/80 font-bold mx-2">Paint Mode</span>
       {(Object.entries(ZONE_TYPES) as [ZoneType, typeof ZONE_TYPES[ZoneType]][]).map(([type, cfg]) => {
         const active = paintType === type;
@@ -61,7 +61,8 @@ export function PaintPalette({ mode, selectedZoneId, dispatch }: PaintPalettePro
           <div className="w-px h-5 bg-border mx-1" />
           <button
             onClick={() => dispatch({ type: 'startLink', from: selectedZoneId })}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border text-[#fbbf24] border-[#fbbf2430] bg-[#fbbf2408]"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border"
+            style={{ color: STATUS_WARNING, borderColor: withOpacity(STATUS_WARNING, OPACITY_20), backgroundColor: withOpacity(STATUS_WARNING, OPACITY_5) }}
           >
             <Link2 className="w-3 h-3" />
             Link
@@ -73,7 +74,8 @@ export function PaintPalette({ mode, selectedZoneId, dispatch }: PaintPalettePro
           <div className="w-px h-5 bg-border mx-1" />
           <button
             onClick={() => dispatch({ type: 'cancelMode' })}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border text-[#f87171] border-[#f8717130] bg-[#f8717108]"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border"
+            style={{ color: STATUS_ERROR, borderColor: withOpacity(STATUS_ERROR, OPACITY_20), backgroundColor: withOpacity(STATUS_ERROR, OPACITY_5) }}
           >
             <X className="w-3 h-3" />
             Cancel Link

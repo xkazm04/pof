@@ -13,7 +13,7 @@ interface TransitionListProps {
 
 export function TransitionList({ transitions, zones, deleteTransition, updateTransition }: TransitionListProps) {
   return (
-    <div className="bg-[#03030a] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4 flex-1 overflow-y-auto">
+    <div className="bg-[var(--schematic-surface)] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4 flex-1 overflow-y-auto">
       <div className="text-xs uppercase font-mono tracking-widest text-violet-400 mb-3 font-bold border-b border-violet-900/30 pb-2">
         Zone Pipelines ({transitions.length})
       </div>
