@@ -56,6 +56,8 @@ export class PromptBuilder {
   private _bestPractices: string | null = null;
   private _outputSchema: string | null = null;
   private _successCriteria: string | null = null;
+  /** The criteria `_successCriteria` was rendered from, so an append never re-parses it. */
+  private _successCriteriaItems: string[] = [];
 
   /**
    * Set the project context section using the shared header builder.
@@ -201,6 +203,7 @@ export class PromptBuilder {
    */
   withSuccessCriteria(criteria: string[]): this {
     if (criteria.length === 0) return this;
+    this._successCriteriaItems = [...criteria];
     this._successCriteria =
       '## Success Criteria\n' +
       criteria.map((c, i) => `${i + 1}. ${c}`).join('\n');
@@ -218,10 +221,10 @@ export class PromptBuilder {
    */
   addSuccessCriteria(criteria: string[]): this {
     if (criteria.length === 0) return this;
-    const existing = this._successCriteria
-      ? this._successCriteria.split('\n').slice(1).map((l) => l.replace(/^\d+\.\s*/, ''))
-      : [];
-    return this.withSuccessCriteria([...existing, ...criteria]);
+    // Append to the held ITEMS. Re-parsing the rendered section split a multi-line
+    // criterion into several numbered ones. A raw/foreign section (none set through
+    // withSuccessCriteria) has no items, so appending starts the list.
+    return this.withSuccessCriteria([...this._successCriteriaItems, ...criteria]);
   }
 
   /**
