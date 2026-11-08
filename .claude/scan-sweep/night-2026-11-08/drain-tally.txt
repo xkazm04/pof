@@ -22,3 +22,15 @@ cli-terminal-output {"better":3,"superseded":1}
 catalog-acceptance {"better":8}
 level-flow-editor {"better":7}
 world-module {"better":1}
+lab-shell-and-navigation {"better":4}
+ue5-bridge-client {"demoted":1,"better":3}
+cook-packaging-pipeline {"better":4,"demoted":1}
+cli-terminal-shell {"better":5}
+item-catalog-pipeline {"unmeasurable":3,"better":5}
+inventory-catalog {"better":8,"unmeasurable":1}
+game-world-content-api {"better":4}
+project-setup-core {"better":4,"demoted":3}
+debug-performance {"better":7}
+code-quality-evaluation {"better":7}
+game-director-system {"better":4,"demoted":1,"fp":1}
+procedural-level-generation {"better":9,"demoted":1}
