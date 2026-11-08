@@ -205,4 +205,35 @@ describe('view-gate fields', () => {
   });
 });
 
+describe('mesh-split fields', () => {
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['name', 7],
+    ['dir', 7],
+    ['minFaceShare', -0.1],
+    ['minFaceShare', 1.5],
+    ['minFaceShare', 'x'],
+    ['minCoverage', 1.5],
+    ['minCoverage', 'x'],
+    ['maxParts', 0],
+    ['maxParts', 1.5],
+    ['maxParts', 999],
+    ['center', 'yes'],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)}`, async () => {
+      const res = await split(json({ name: 'crate.glb', dir: 'meshes', [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  it('still runs for valid tuning values', async () => {
+    seams.split.mockResolvedValue({ ok: false, parts: [], error: 'mocked', durationMs: 1 });
+    const res = await split(json({ name: 'crate.glb', dir: 'meshes', minFaceShare: 0.01, minCoverage: 0.5, maxParts: 8, center: false }));
+    expect(res.status).toBe(200);
+    expect(seams.split).toHaveBeenCalledTimes(1);
+  });
+});
+
 // FINDINGS-APPEND

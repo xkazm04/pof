@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
-import { runMeshSplit } from '@/lib/visual-gen/mesh-split';
+import { DEFAULT_MAX_PARTS, runMeshSplit } from '@/lib/visual-gen/mesh-split';
 import { safeAssetDir, safeAssetName, assetUrl } from '@/lib/visual-gen/generated-assets';
 
 /** The one dir a split may write into. Must be a member of `ASSET_DIRS`. */
@@ -31,6 +31,23 @@ const SPLIT_OUTPUT_DIR = 'mesh-split';
  * — the parts above the speck threshold covered 23% of the faces, and the coverage floor
  * is what turns that into "run mesh-finish on it instead" rather than 24 junk assets.
  */
+const isShare = (v: unknown): boolean => typeof v === 'number' && v >= 0 && v <= 1;
+
+/** The refusal for the first field that is the wrong shape, or null. Pure. */
+function invalidField(body: Record<string, unknown>): string | null {
+  const { name, dir, minFaceShare, minCoverage, maxParts, center } = body;
+  if (name !== undefined && typeof name !== 'string') return 'name must be a string';
+  if (dir !== undefined && typeof dir !== 'string') return 'dir must be a string';
+  if (minFaceShare !== undefined && !isShare(minFaceShare)) return 'minFaceShare must be a share from 0 to 1';
+  if (minCoverage !== undefined && !isShare(minCoverage)) return 'minCoverage must be a share from 0 to 1';
+  // Above the default a shattered mesh writes hundreds of files: "a defect, not 300 props".
+  if (maxParts !== undefined && !(Number.isInteger(maxParts) && (maxParts as number) >= 1 && (maxParts as number) <= DEFAULT_MAX_PARTS)) {
+    return `maxParts must be an integer from 1 to ${DEFAULT_MAX_PARTS}`;
+  }
+  if (center !== undefined && typeof center !== 'boolean') return 'center must be a boolean';
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
@@ -38,6 +55,8 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const invalid = invalidField(parsed);
+    if (invalid) return apiError(invalid, 400);
     const body = parsed as {
       name?: string; dir?: string;
       minFaceShare?: number; maxParts?: number; minCoverage?: number; center?: boolean;
