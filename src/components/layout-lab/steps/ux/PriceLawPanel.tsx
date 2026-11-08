@@ -62,10 +62,13 @@ export function PriceLawPanel({ t, r, seeded, onSeed }: PriceLawPanelProps) {
             ⚠ This cell stores no itemsPriceLaw block, so nothing here can be derived from the law.
           </span>
         )}
-        <span data-testid="price-law-agreement" style={{ ...line, color: bad ? t.bad : t.text }}>
+        {/* Zero checked figures is not agreement: a tick over an empty set certified nothing. */}
+        <span data-testid="price-law-agreement" style={{ ...line, color: bad ? t.bad : checked ? t.text : t.muted }}>
           {bad
             ? `✕ ${bad} of ${checked} stored figures contradict the law: ${r.contradictions.map((x) => x.term).join(', ')}.`
-            : `✓ All ${checked} stored figures the law can check agree with it.`}
+            : checked
+              ? `✓ All ${checked} stored figures the law can check agree with it.`
+              : 'No stored figure on this cell can be checked against the law.'}
         </span>
         <span data-testid="price-law-bite" style={{ ...line, color: t.muted }}>
           {r.biteBand
