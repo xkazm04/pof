@@ -56,9 +56,9 @@ export async function PUT(req: NextRequest) {
          VALUES (?, ?, ?, datetime('now'))
          ON CONFLICT(milestone_id) DO UPDATE SET
            target_date = excluded.target_date,
-           label = COALESCE(excluded.label, milestone_deadlines.label),
+           label = COALESCE(?, milestone_deadlines.label),
            updated_at = datetime('now')`
-      ).run(milestoneId, targetDate, label ?? '');
+      ).run(milestoneId, targetDate, label ?? '', label ?? null);
     }
 
     return apiSuccess({ ok: true });
