@@ -52,6 +52,16 @@ describe('POST /api/judge-verdicts — admission', () => {
     expect(listVerdicts('items').find((v) => v.entityId === 'band')).toBeUndefined();
   });
 
+  it('refuses a current-rubric PASS with no dimensions (absent or {}), admits it once itemised', async () => {
+    for (const dimensions of [undefined, {}]) {
+      const r = await judge({ ...VERDICT, entityId: 'bare', dimensions });
+      expect(r.status).toBe(400);
+      expect(r.json.error).toContain('must itemise its dimensions');
+    }
+    expect(listVerdicts('items').find((v) => v.entityId === 'bare')).toBeUndefined();
+    expect((await judge({ ...VERDICT, entityId: 'itemised', dimensions: { clarity: 95 } })).status).toBe(200);
+  });
+
   it('[honest floor] admits a FAIL at a pass-band score', async () => {
     expect((await judge({ ...VERDICT, entityId: 'strict', verdict: 'fail', score: 95 })).status).toBe(200);
   });
