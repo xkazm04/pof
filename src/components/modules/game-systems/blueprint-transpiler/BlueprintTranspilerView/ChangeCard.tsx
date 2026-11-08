@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { TermChip } from '@/components/ui/TermChip';
 import type { SemanticChange } from '@/types/blueprint';
@@ -11,17 +11,17 @@ import { ACCENT, CONFLICT_STYLES } from './constants';
 
 export function ChangeCard({ change }: { change: SemanticChange }) {
   const [expanded, setExpanded] = useState(false);
+  const panelId = useId();
   const conflictStyle = CONFLICT_STYLES[change.conflictLevel];
 
   const t = CHANGE_TYPE_META[change.type] ?? CHANGE_TYPE_META.modify;
 
   return (
-    <div
-      className="rounded-lg border border-border bg-surface px-3 py-2 cursor-pointer hover:border-border-bright transition-colors"
-      onClick={() => setExpanded(!expanded)}
-    >
+    <div className="rounded-lg border border-border bg-surface px-3 py-2 hover:border-border-bright transition-colors">
+      {/* The toggle and the glossary chips are SIBLINGS: TermChip renders its
+          own <button>, so wrapping the row in one click target nested
+          controls and left the toggle mouse-only (same fix as QuestCard). */}
       <div className="flex items-center gap-2">
-        {expanded ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
         <TermChip
           term={t.code}
           underline={false}
@@ -29,15 +29,28 @@ export function ChangeCard({ change }: { change: SemanticChange }) {
           style={{ color: t.color, backgroundColor: `${t.color}15` }}
         />
         <TermChip term={change.scope} className="uppercase text-text-muted" />
-        <span className="text-xs font-medium text-text">{change.name}</span>
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className="flex items-center gap-1.5 flex-1 min-w-0 text-left rounded focus-ring"
+        >
+          {expanded
+            ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden />
+            : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden />}
+          <span className="text-xs font-medium text-text truncate">{change.name}</span>
+        </button>
         <span
-          className="ml-auto w-2 h-2 rounded-full"
+          className="w-2 h-2 rounded-full flex-shrink-0"
           style={{ backgroundColor: conflictStyle.color }}
+          title={conflictStyle.label}
+          aria-hidden
         />
       </div>
 
       {expanded && (
-        <div className="mt-2 ml-5 space-y-1.5">
+        <div id={panelId} className="mt-2 ml-5 space-y-1.5">
           <p className="text-2xs text-text-muted">{change.description}</p>
           {change.blueprintSide && (
             <div className="flex items-start gap-2">
