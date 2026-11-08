@@ -126,6 +126,17 @@ export const CONDEMNING_PROVENANCE: ReadonlySet<VerdictProvenance> = new Set<Ver
 /** Does a verdict at this provenance condemn a shape-pass? */
 const CONDEMNS = CONDEMNING_PROVENANCE;
 
+/**
+ * The ONE choice of which condemning fail to REPORT when a step holds several: the confirmed
+ * (`current`) binding first, then the unverifiable (`unknown`). Attribution only - whichever is
+ * picked, the step is condemned. Shared by `bridgeJudgeVerdict` and `/status`'s `deriveCell` so the
+ * lab banner and the map cannot name different verdicts for one step.
+ */
+export function pickCondemningFail<T extends { v: JudgeVerdict; p: VerdictProvenance }>(classified: readonly T[]): T | undefined {
+  const fails = classified.filter((c) => c.v.verdict === 'fail' && CONDEMNS.has(c.p));
+  return fails.find((c) => c.p === 'current') ?? fails[0];
+}
+
 function attribute(v: JudgeVerdict, provenance: VerdictProvenance, note: string): JudgeAttribution {
   return {
     provenance, verdict: v.verdict, score: v.score, judge: v.judge,
@@ -155,7 +166,7 @@ export function bridgeJudgeVerdict(
   if (!fails.length) return result;
 
   const classified = fails.map((v) => ({ v, p: verdictProvenance(v, content) }));
-  const binding = classified.find((c) => CONDEMNS.has(c.p));
+  const binding = pickCondemningFail(classified);
 
   // Only a shape-PASS is down-graded: a gate deferral (L3/L4) and an already
   // failing/pending result are left exactly as the checker found them.

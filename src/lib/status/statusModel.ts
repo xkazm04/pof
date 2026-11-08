@@ -29,7 +29,7 @@ import {
   judgedContentOf,
   judgedContentFromHash,
   unverifiedReason,
-  CONDEMNING_PROVENANCE,
+  pickCondemningFail,
   type JudgedContent,
 } from '@/lib/catalog/acceptance/judgeBridge';
 import type { JudgeAttribution, VerdictProvenance } from '@/lib/catalog/acceptance/types';
@@ -601,7 +601,7 @@ export function deriveCell(
   // CONDEMNS on `current` (binding confirmed) or `unknown` (nobody can confirm OR refute —
   // a recorded fail is evidence, and dropping it would be the optimistic lie this layer
   // exists to prevent). A `stale` / `superseded` fail does not condemn.
-  const condemningFail = classified.find((c) => c.v.verdict === 'fail' && CONDEMNING_PROVENANCE.has(c.p));
+  const condemningFail = pickCondemningFail(classified);
   // ELEVATION is deliberately stricter than condemnation: only a CONFIRMED binding proves
   // quality, so a verdict whose provenance cannot be determined degrades to not-proven,
   // never to proven. (`current` also implies the current rubric — see verdictProvenance.)
