@@ -183,7 +183,8 @@ export const AUTHOR_IDLE: AuthorState = { phase: 'idle' };
 /**
  * The author flow. The CLI finishing is the executor's own claim, never the verdict: success
  * leaves the test `authored-unverified`; ONLY a `runWaitingTest` 'settled' outcome for this
- * test, after authoring, reaches `verified` (carrying the settle counts, pass or fail).
+ * test, after authoring, reaches `verified` (carrying the settle counts, pass or fail). A
+ * later settle replaces those counts, so a re-run never shows the previous verdict.
  */
 export function authorReducer(state: AuthorState, ev: AuthorEvent): AuthorState {
   switch (ev.type) {
@@ -201,7 +202,7 @@ export function authorReducer(state: AuthorState, ev: AuthorEvent): AuthorState 
         ? { ...targetOf(state), phase: 'authored-unverified' }
         : { ...targetOf(state), phase: 'author-failed', reason: ev.reason ?? 'the CLI run ended without success — see its terminal' };
     case 'run-outcome':
-      if (state.phase !== 'authored-unverified' || ev.testName !== state.testName) return state;
+      if ((state.phase !== 'authored-unverified' && state.phase !== 'verified') || ev.testName !== state.testName) return state;
       return ev.outcome.kind === 'settled' ? { ...targetOf(state), phase: 'verified', settle: ev.outcome.outcome } : state;
   }
 }
