@@ -197,6 +197,9 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
 
   /* ---- Run full pipeline ----------------------------------------- */
   runFullPipeline: async (configOverride, projectPath) => {
+    // The view's Retry after a failed defaults load calls this with no config yet —
+    // load the defaults first instead of returning silently (a dead Retry button).
+    if (!configOverride && !get().config) await get().fetchDefaults();
     const config = configOverride ?? get().config;
     if (!config) return;
 
