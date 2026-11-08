@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { Layers, ArrowRight, Play, CheckCircle2, Circle } from 'lucide-react';
 import type { SearchResult } from '@/lib/search-index';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { stripHighlightMarkers } from '@/lib/search-markers';
 import { TYPE_META } from './constants';
 import { highlightMarkers } from './helpers';
 import type { SearchIntents } from './searchIntents';
@@ -37,7 +38,7 @@ export const SearchResultRow = memo(function SearchResultRow({
 }) {
   const meta = TYPE_META[intents.kind] ?? TYPE_META.feature;
   const Icon = meta.icon;
-  const plainTitle = result.title.replace(/[→←]/g, '');
+  const plainTitle = stripHighlightMarkers(result.title);
 
   return (
     <div

@@ -1,4 +1,5 @@
 import type { SearchResult } from '@/lib/search-index';
+import { stripHighlightMarkers } from '@/lib/search-markers';
 
 // ── Palette recents ──────────────────────────────────────────────────────────
 // The last places the user opened from the palette, per project. Storage is a
@@ -37,7 +38,7 @@ export function recordRecent(projectPath: string | null, result: SearchResult): 
     moduleId: result.moduleId,
     moduleLabel: result.moduleLabel,
     // FTS5 highlight markers are only meaningful in the live hit.
-    title: result.title.replace(/[→←]/g, ''),
+    title: stripHighlightMarkers(result.title),
     snippet: '',
     rank: 0,
   };
