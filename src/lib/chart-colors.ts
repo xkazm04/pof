@@ -171,14 +171,34 @@ export const GLOW_LG = '0 0 16px';
 
 // ── General opacity helper ────────────────────────────────────────────────
 
+const HEX_6 = /^#[0-9a-f]{6}$/i;
+const HEX_3 = /^#[0-9a-f]{3}$/i;
+const ALPHA_SUFFIX = /^[0-9a-f]{2}$/i;
+
 /**
- * Combine a hex color with an OPACITY_* suffix constant.
+ * Apply a two-digit hex alpha suffix to any CSS color. A suffix only extends
+ * `#rrggbb`, so `#rrggbb` keeps the plain concatenation and every other form
+ * (`var(--x)`, `rgb()`, a named color, `#rrggbbaa`) goes through `color-mix`,
+ * since gluing the suffix on would be invalid CSS the browser silently drops.
+ */
+function applyAlpha(color: string, suffix: string): string {
+  if (!color) return 'transparent';
+  if (HEX_6.test(color) || !ALPHA_SUFFIX.test(suffix)) return `${color}${suffix}`;
+  if (HEX_3.test(color)) return `#${[...color.slice(1)].map((c) => c + c).join('')}${suffix}`;
+  const percent = Math.round((parseInt(suffix, 16) / 255) * 1000) / 10;
+  return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+}
+
+/**
+ * Combine a color with an OPACITY_* suffix constant. A hex input stays a hex
+ * string; a CSS variable or other color form becomes a `color-mix()`, so the
+ * result is valid CSS for any input (not usable as a canvas fill when it is a var).
  *
- * @example withOpacity(STATUS_SUCCESS, OPACITY_8)  // '#4ade8014'
- * @example withOpacity(accent, OPACITY_20)          // '${accent}33'
+ * @example withOpacity(STATUS_SUCCESS, OPACITY_8)    // '#4ade8014'
+ * @example withOpacity('var(--x)', OPACITY_20)       // 'color-mix(in srgb, var(--x) 20%, transparent)'
  */
 export function withOpacity(color: string, opacity: string): string {
-  return `${color}${opacity}`;
+  return applyAlpha(color, opacity);
 }
 
 // ── Semantic opacity helpers ───────────────────────────────────────────────
@@ -200,7 +220,7 @@ const INTENSITY_SUFFIX: Record<number, string> = {
  * @example statusBg(STATUS_SUCCESS, 0.20) // '#4ade8033' — stronger success bg
  */
 export function statusBg(color: string, intensity: OpacityIntensity = 0.08): string {
-  return `${color}${INTENSITY_SUFFIX[intensity] ?? OPACITY_8}`;
+  return applyAlpha(color, INTENSITY_SUFFIX[intensity] ?? OPACITY_8);
 }
 
 /**
@@ -208,7 +228,7 @@ export function statusBg(color: string, intensity: OpacityIntensity = 0.08): str
  * Default is 20% — a visible but not heavy border.
  */
 export function statusBorder(color: string, intensity: OpacityIntensity = 0.20): string {
-  return `${color}${INTENSITY_SUFFIX[intensity] ?? OPACITY_20}`;
+  return applyAlpha(color, INTENSITY_SUFFIX[intensity] ?? OPACITY_20);
 }
 
 // ── Status glow helpers ────────────────────────────────────────────────────
