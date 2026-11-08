@@ -59,12 +59,20 @@ interface PassRow {
   findings_json: string;
 }
 
-/** Every recorded pass of a scan, in the order they finished. */
-export function readPassLedger(scanId: string): PassOutcome[] {
+/**
+ * Every recorded pass of a scan, in the order they finished. With `projectId`, only the
+ * rows recorded for that project: a resume must never replay one project's findings
+ * into another's scan (the same rule as the client baseline's `baselineFor`).
+ */
+export function readPassLedger(scanId: string, projectId?: string): PassOutcome[] {
   ensureTable();
-  const rows = getDb()
-    .prepare('SELECT module_id, pass, status, error, findings_json FROM deep_eval_passes WHERE scan_id = ? ORDER BY id')
-    .all(scanId) as PassRow[];
+  const rows = (projectId === undefined
+    ? getDb()
+      .prepare('SELECT module_id, pass, status, error, findings_json FROM deep_eval_passes WHERE scan_id = ? ORDER BY id')
+      .all(scanId)
+    : getDb()
+      .prepare('SELECT module_id, pass, status, error, findings_json FROM deep_eval_passes WHERE scan_id = ? AND project_id = ? ORDER BY id')
+      .all(scanId, projectId)) as PassRow[];
   const out: PassOutcome[] = [];
   for (const r of rows) {
     // A pass outside the vocabulary can never match a cell of this run: not read.

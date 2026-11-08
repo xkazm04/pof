@@ -97,7 +97,7 @@ export function startDeepEvalJob(
 
   const scanId = opts.scanId ?? `deep-${Date.now()}`;
   const moduleIds = opts.moduleIds ?? getEvaluableModuleIds();
-  const resumeFrom = opts.scanId ? readPassLedger(scanId) : [];
+  const resumeFrom = opts.scanId ? readPassLedger(scanId, projectPath) : [];
   const controller = new AbortController();
   const executePass = opts.executePass ?? cliExecutor(
     resolveDispatchModelChoice({ model: opts.model, effort: opts.effort, taskClass: 'judge-content' }),

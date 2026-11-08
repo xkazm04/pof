@@ -77,3 +77,22 @@ describe('readPassLedger — reads back only what it can replay', () => {
     expect(executePass).toHaveBeenCalledTimes(4);
   });
 });
+
+describe('resume is scoped to the project the ledger rows came from', () => {
+  it('a scanId recorded under another project replays nothing into this one', async () => {
+    recordPassOutcome('L4', 'C:/proj-a', { moduleId: 'audio', pass: 'structure', status: 'done', findings: [finding('structure')], error: null });
+    expect(readPassLedger('L4', 'C:/proj-b')).toEqual([]);
+    expect(readPassLedger('L4', 'C:/proj-a')).toHaveLength(1);
+
+    const executePass: PassExecutor = vi.fn(async () => '[]');
+    const started = startDeepEvalJob({
+      scanId: 'L4', projectPath: 'C:/proj-b', moduleIds: ['audio'], executePass,
+      projectContext: { projectName: 'PoF', projectPath: 'C:/proj-b', ueVersion: '5.5' },
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    const result = await started.data.done;
+    expect(executePass).toHaveBeenCalledTimes(4);
+    expect(result.findings.totalFindings).toBe(0);
+  });
+});
