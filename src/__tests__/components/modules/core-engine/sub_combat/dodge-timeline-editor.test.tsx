@@ -103,7 +103,7 @@ describe('DodgeTimelineEditor playback', () => {
 });
 
 describe('DodgeTimelineEditor Optimize (local)', () => {
-  it.skip('applies the heuristic result to the editor params', () => {
+  it('applies the heuristic result to the editor params', () => {
     const { container } = render(<DodgeTimelineEditor />);
     // Defaults: 0.3s i-frames @60fps = 18f.
     expect(frameRow(container, 'Active I-Frames')).toContain('18f');

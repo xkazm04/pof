@@ -35,9 +35,11 @@ export function computeDodgeHeuristic(params: DodgeParams): DodgeParams {
   };
 }
 
-export function HeaderToolbar({ cliStore, params, showFrameData, setShowFrameData, showParams, setShowParams, showHitEditor, setShowHitEditor }: {
+export function HeaderToolbar({ cliStore, params, onApplyParams, showFrameData, setShowFrameData, showParams, setShowParams, showHitEditor, setShowHitEditor }: {
   cliStore: HeuristicStore;
   params: DodgeParams;
+  /** Receives the heuristic result so the editor actually adopts it. */
+  onApplyParams: (p: DodgeParams) => void;
   showFrameData: boolean; setShowFrameData: (v: boolean) => void;
   showParams: boolean; setShowParams: (v: boolean) => void;
   showHitEditor: boolean; setShowHitEditor: (v: boolean) => void;
@@ -46,7 +48,7 @@ export function HeaderToolbar({ cliStore, params, showFrameData, setShowFrameDat
     <div className="flex items-center gap-2 mb-2.5">
       <SectionHeader icon={Crosshair} label="Interactive Dodge Timeline" color={ACCENT_CYAN} />
       <div className="ml-auto flex items-center gap-1">
-        <OptimizeButton cliStore={cliStore} params={params} />
+        <OptimizeButton cliStore={cliStore} params={params} onApply={onApplyParams} />
         <ToggleBtn active={showFrameData} onToggle={() => setShowFrameData(!showFrameData)} color={STATUS_WARNING} icon={Table2} title="Toggle frame data table" />
         <ToggleBtn active={showParams} onToggle={() => setShowParams(!showParams)} color={ACCENT_CYAN} icon={Settings2} title="Toggle parameter editor" />
         <ToggleBtn active={showHitEditor} onToggle={() => setShowHitEditor(!showHitEditor)} color={STATUS_ERROR} icon={AlertTriangle} title="Toggle hit marker editor" />
@@ -67,7 +69,7 @@ function ToggleBtn({ active, onToggle, color, icon: Icon, title }: {
   );
 }
 
-function OptimizeButton({ cliStore, params }: { cliStore: HeuristicStore; params: DodgeParams }) {
+function OptimizeButton({ cliStore, params, onApply }: { cliStore: HeuristicStore; params: DodgeParams; onApply: (p: DodgeParams) => void }) {
   return (
     <button
       onClick={() => {
@@ -81,6 +83,9 @@ function OptimizeButton({ cliStore, params }: { cliStore: HeuristicStore; params
           detail: 'i-frame window +15% (capped at 80% of dodge duration), cooldown −10%',
         });
         cliStore.finishOptimization(result);
+        // Consume the pending result here: nothing else in the app applies it.
+        const applied = cliStore.applyPendingResult();
+        if (applied) onApply(applied);
       }}
       disabled={cliStore.isOptimizing}
       title="Local heuristic — no AI/CLI run. Instantly widens the i-frame window +15% (capped) and trims cooldown −10%."

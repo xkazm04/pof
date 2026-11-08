@@ -53,11 +53,6 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
 
   const cliStore = useCharacterHeuristicStore() as HeuristicStore;
 
-  useEffect(() => {
-    const pending = cliStore.pendingResult;
-    if (pending) { /* Applied via the sidebar "Apply" button */ }
-  }, [cliStore.pendingResult]);
-
   /* Haptic detection */
   useHapticDetection(playhead, hitMarkers, params, prevPlayheadRef, triggeredHitsRef, hapticTimerRef, setHapticEffect);
 
@@ -158,7 +153,7 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
       {/* Header + Controls */}
       <BlueprintPanel color={ACCENT_CYAN} className="p-3">
         <HeaderToolbar
-          cliStore={cliStore} params={params}
+          cliStore={cliStore} params={params} onApplyParams={setParams}
           showFrameData={showFrameData} setShowFrameData={setShowFrameData}
           showParams={showParams} setShowParams={setShowParams}
           showHitEditor={showHitEditor} setShowHitEditor={setShowHitEditor}
