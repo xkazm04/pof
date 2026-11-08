@@ -159,7 +159,7 @@ export function DamageNumberPalette() {
               </div>
               <div className="flex items-center gap-2 p-2 rounded-md bg-black/30 border border-border/40">
                 <div className="text-xs font-bold" style={{ color: toCSS(ELEMENT_COLORS[4].rgba) }}>Heal</div>
-                <code className="text-2xs font-mono text-text-muted w-24 shrink-0">{'"+ %.0f"'}</code>
+                <code className="text-2xs font-mono text-text-muted w-24 shrink-0">{'"+%.0f"'}</code>
                 <span className="ml-auto text-xs font-bold" style={{ color: toCSS(ELEMENT_COLORS[4].rgba) }}>+156</span>
               </div>
             </div>

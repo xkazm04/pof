@@ -67,9 +67,10 @@ export function spawnParticle(
     }
   }
 
+  // DamageNumberWidget.cpp InitDamageNumber: "+%.0f" heal, "CRIT! %.0f" crit, "%.0f" normal
   const displayText = isHeal
     ? `+${amount}`
-    : isCrit ? `${amount}!` : `${amount}`;
+    : isCrit ? `CRIT! ${amount}` : `${amount}`;
 
   return {
     id: nextParticleId++,
