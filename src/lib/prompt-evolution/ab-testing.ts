@@ -3,6 +3,7 @@ import type { SubModuleId } from '@/types/modules';
 import { type Result, ok, err } from '@/types/result';
 import {
   MIN_TRIALS_PER_VARIANT,
+  MIN_JUDGED_VERDICTS_PER_VARIANT,
   readFitness,
   zScoreOf,
   confidenceFromZ,
@@ -150,7 +151,9 @@ export function evaluateTestWithBasis(
     test: {
       ...test,
       status: 'concluded',
-      winnerId: decideWinner(test, reading),
+      // Ceiling reached below the weakest band is "no difference detected at this
+      // sample size" - recorded as such, never as a crowned coin flip.
+      winnerId: confidence >= 0.8 ? decideWinner(test, reading) : null,
       confidence,
       concludedAt: new Date().toISOString(),
     },
@@ -187,6 +190,19 @@ export function forceConclude(test: ABTest, judged?: JudgeScores): Result<ABTest
     return err(
       `Not enough trials to pick a winner — each variant needs ${MIN_TRIALS_PER_VARIANT} ` +
         `(${shortfall.join(', ')}). Dispatch this checklist item a few more times.`,
+    );
+  }
+
+  // Where this item is judged (either arm has verdicts), the floor is on JUDGED
+  // verdicts too: unjudged serves must not satisfy it and let a winner be crowned
+  // on self-reported completion flags. An item no judge has scored keeps the
+  // serve floor alone, so it is not locked out.
+  const judgedA = judged?.[test.variantAId]?.verdicts ?? 0;
+  const judgedB = judged?.[test.variantBId]?.verdicts ?? 0;
+  if ((judgedA > 0 || judgedB > 0) && (judgedA < MIN_JUDGED_VERDICTS_PER_VARIANT || judgedB < MIN_JUDGED_VERDICTS_PER_VARIANT)) {
+    return err(
+      `Not enough judge verdicts to pick a winner — each variant needs ${MIN_JUDGED_VERDICTS_PER_VARIANT} ` +
+        `(A has ${judgedA}, B has ${judgedB}). Wait for the judges to score more of this item's runs.`,
     );
   }
 

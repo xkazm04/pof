@@ -64,6 +64,28 @@ describe('explainTestVerdict', () => {
     expect(v.why).toMatch(/more times/i);
   });
 
+  it('does not name a leader while either arm is below the 3-run floor (1 vs 1)', () => {
+    const v = explainTestVerdict(
+      makeTest({ variantATrials: 1, variantASuccesses: 1, variantBTrials: 1, variantBSuccesses: 0 }),
+    );
+    expect(v.winnerSlot).toBeNull();
+    expect(v.headline).toBe('Too early to call');
+  });
+
+  it('does not name a leader at 3 vs 1', () => {
+    const v = explainTestVerdict(
+      makeTest({ variantATrials: 3, variantASuccesses: 3, variantBTrials: 1, variantBSuccesses: 0 }),
+    );
+    expect(v.headline).toBe('Too early to call');
+  });
+
+  it('names a running leader once both arms clear the floor (3 vs 3)', () => {
+    const v = explainTestVerdict(
+      makeTest({ variantATrials: 3, variantASuccesses: 3, variantBTrials: 3, variantBSuccesses: 0 }),
+    );
+    expect(v.headline).toBe('Wording A is ahead');
+  });
+
   it('declares the concluded winner with concrete counts (8 of 10)', () => {
     const v = explainTestVerdict(
       makeTest({
@@ -76,12 +98,47 @@ describe('explainTestVerdict', () => {
     );
     expect(v.winnerSlot).toBe('B');
     expect(v.concluded).toBe(true);
-    expect(v.headline).toBe('Wording B wins');
+    // 8/10 vs 5/10 is z~1.4: the weak band, so the headline says leads, not wins.
+    expect(v.headline).toBe('Wording B leads');
     expect(v.detail).toContain('8 of 10');
     expect(v.detail).toContain('80%');
     expect(v.detail).toContain('50%');
     expect(v.why).toMatch(/more often/i);
     expect(v.confidenceNote).toMatch(/95%/);
+  });
+
+  it('headlines wins only on a moderate or strong band', () => {
+    const v = explainTestVerdict(
+      makeTest({
+        variantATrials: 10, variantASuccesses: 2,
+        variantBTrials: 10, variantBSuccesses: 9,
+        status: 'concluded', winnerId: 'vb', confidence: 0.95,
+      }),
+    );
+    expect(v.headline).toBe('Wording B wins');
+  });
+
+  it('headlines band none as no clear difference with the picked arm named', () => {
+    const v = explainTestVerdict(
+      makeTest({
+        variantATrials: 3, variantASuccesses: 2,
+        variantBTrials: 3, variantBSuccesses: 2,
+        status: 'concluded', winnerId: 'vb', confidence: 0.6,
+      }),
+    );
+    expect(v.headline).toBe('No clear difference (picked Wording B)');
+  });
+
+  it('a ceiling conclusion with no winner reads as no clear difference', () => {
+    const v = explainTestVerdict(
+      makeTest({
+        variantATrials: 20, variantASuccesses: 10,
+        variantBTrials: 20, variantBSuccesses: 11,
+        status: 'concluded', winnerId: null, confidence: 0.2,
+      }),
+    );
+    expect(v.winnerSlot).toBeNull();
+    expect(v.headline).toBe('No clear difference');
   });
 
   it('explains a tie-broken-by-speed win on the duration data', () => {

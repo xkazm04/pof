@@ -76,8 +76,24 @@ export function explainTestVerdict(
   }
   const concluded = test.status === 'concluded' && Boolean(test.winnerId);
 
+  // A test that ran to its trial ceiling with no detected difference is concluded
+  // with no winner (ab-testing.ts); say that instead of calling it too early.
+  if (test.status === 'concluded' && !test.winnerId) {
+    return {
+      winnerSlot: null,
+      concluded: false,
+      headline: 'No clear difference',
+      detail: `After ${totalTrials} runs, ${nameA} and ${nameB} did not differ enough to tell apart.`,
+      why: 'Neither wording was clearly better at this number of runs.',
+      confidenceNote: plainConfidence(0),
+    };
+  }
+
   // Inconclusive: still running with no clear lead, or no trials at all.
-  if (!concluded && (totalTrials < 2 || verdict.tie)) {
+  // The per-arm floor is the verdict's own shortfall, so a leader is never claimed
+  // while the card beside it still says the test needs more runs.
+  const belowFloor = verdict.shortfall.A > 0 || verdict.shortfall.B > 0;
+  if (!concluded && (totalTrials < 2 || belowFloor || verdict.tie)) {
     const detail = totalTrials === 0
       ? 'No runs recorded yet.'
       : judged
@@ -110,7 +126,15 @@ export function explainTestVerdict(
     ? avgMs(test.variantBTotalDurationMs, test.variantBTrials)
     : avgMs(test.variantATotalDurationMs, test.variantATrials);
 
-  const headline = concluded ? `${winnerName} wins` : `${winnerName} is ahead`;
+  // The headline carries the strength of the result: a small sample is never
+  // reported with the language of a large one.
+  const headline = !concluded
+    ? `${winnerName} is ahead`
+    : verdict.band === 'none'
+      ? `No clear difference (picked ${winnerName})`
+      : verdict.band === 'weak'
+        ? `${winnerName} leads`
+        : `${winnerName} wins`;
 
   // A recorded winner the current evidence now clearly disfavours (e.g. crowned
   // on a self-report before the judges scored both arms) is stated as such —

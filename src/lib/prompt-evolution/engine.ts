@@ -27,7 +27,7 @@ import {
   pickVariant,
   type JudgeScores,
 } from './ab-testing';
-import { toTestView } from './verdict';
+import { toTestView, readTestVerdict, MIN_TRIALS_PER_VARIANT } from './verdict';
 import { getPromptVariantFitness } from './judge-fitness';
 import { logger } from '@/lib/logger';
 import { type Result, ok, err } from '@/types/result';
@@ -491,6 +491,9 @@ export function getBestVariant(
 
 // ── Suggestions ─────────────────────────────────────────────────────────────
 
+/** Stored confidence at or above this is a z-test band (weak and up); below it is not a confidence. */
+const ADOPT_CONFIDENCE_FLOOR = 0.8;
+
 export function generateSuggestions(
   moduleId: SubModuleId,
   sessions: SessionRecord[],
@@ -549,7 +552,10 @@ export function generateSuggestions(
         type: 'adopt-winner',
         moduleId,
         checklistItemId: test.checklistItemId,
-        message: `A/B test concluded: "${winner.label}" won with ${Math.round(test.confidence * 100)}% confidence`,
+        // Below 0.8 the stored number is a decide-now volume score, not a confidence.
+        message: test.confidence >= ADOPT_CONFIDENCE_FLOOR
+          ? `A/B test concluded: "${winner.label}" won with ${Math.round(test.confidence * 100)}% confidence`
+          : `A/B test concluded: "${winner.label}" was picked below the weakest confidence band - treat it as an early lead, not a proven win`,
         variantId: winner.id,
         confidence: test.confidence,
       });
@@ -564,6 +570,7 @@ export function generateSuggestions(
 export function getEvolutionStats(): EvolutionStats {
   const allVariants = getAllVariants();
   const allTests = getAllTests();
+  const judged = judgeScoresByVariant();
   const active = allTests.filter((t) => t.status === 'running');
   const concluded = allTests.filter((t) => t.status === 'concluded');
 
@@ -600,20 +607,28 @@ export function getEvolutionStats(): EvolutionStats {
     const modActiveTests = activeByModule.get(mid) ?? [];
     const modConcluded = concludedByModule.get(mid) ?? [];
 
-    // Compute best/default success rates from concluded tests
-    let bestRate = 0;
-    let defaultRate = 0;
+    // Winner-versus-loser per test, on the verdict basis, for tests that cleared the
+    // trial floor and recorded a winner. A max taken across different tests (the old
+    // arithmetic) let one 3-vs-3 test read as +100%.
+    let winnerRateSum = 0;
+    let loserRateSum = 0;
+    let counted = 0;
     for (const test of modConcluded) {
-      const rateA = test.variantATrials > 0 ? test.variantASuccesses / test.variantATrials : 0;
-      const rateB = test.variantBTrials > 0 ? test.variantBSuccesses / test.variantBTrials : 0;
-      bestRate = Math.max(bestRate, rateA, rateB);
-      defaultRate = Math.max(defaultRate, Math.min(rateA, rateB));
+      if (!test.winnerId) continue;
+      const v = readTestVerdict(test, judged);
+      if (v.trialsA < MIN_TRIALS_PER_VARIANT || v.trialsB < MIN_TRIALS_PER_VARIANT) continue;
+      const aWon = test.winnerId === test.variantAId;
+      winnerRateSum += aWon ? v.rateA : v.rateB;
+      loserRateSum += aWon ? v.rateB : v.rateA;
+      counted++;
     }
+    const bestRate = counted > 0 ? winnerRateSum / counted : 0;
+    const defaultRate = counted > 0 ? loserRateSum / counted : 0;
 
     const improvement = bestRate - defaultRate;
-    if (modConcluded.length > 0) {
-      totalImprovement += improvement;
-      improvementCount++;
+    if (counted > 0) {
+      totalImprovement += improvement * counted;
+      improvementCount += counted;
     }
 
     moduleBreakdown.push({
