@@ -15,7 +15,7 @@ import '@/lib/catalog/pipelines/registry.generated';
  * (`/pof/python/run`) and re-grades the artifact with the module's own return.
  *
  * The editor must be RUNNING with the PoF bridge (default http://localhost:30040); with it
- * closed every step reports `bridge-error` and NOTHING is written — "we could not ask" is
+ * closed the first step of each entity reports `bridge-error` (its later steps `upstream-failed`, not dispatched) and NOTHING is written — "we could not ask" is
  * not "the step failed". This is the opposite prerequisite to `/drain`, which spawns its own
  * headless editor and therefore needs the editor CLOSED.
  *
