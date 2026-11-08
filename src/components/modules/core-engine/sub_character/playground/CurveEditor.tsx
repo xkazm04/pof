@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { OPACITY_6, OPACITY_10, OPACITY_80, OVERLAY_WHITE,
+import { OPACITY_6, OPACITY_10, OPACITY_80, OVERLAY_WHITE, OVERLAY_BLACK,
   withOpacity, OPACITY_50,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
@@ -135,7 +134,7 @@ export function CurveEditor({
           transform={`rotate(-90, 8, ${PAD.top + PLOT_H / 2})`}>{yLabel}</text>
 
         {/* Area fill */}
-        <path d={areaD} fill={`${color}${OPACITY_10}`} />
+        <path d={areaD} fill={withOpacity(color, OPACITY_10)} />
 
         {/* Curve */}
         <path d={pathD} fill="none" stroke={color} strokeWidth="2.5"
@@ -168,7 +167,7 @@ export function CurveEditor({
               {isActive && (
                 <g>
                   <rect x={sp.x - 28} y={sp.y - 24} width={56} height={16} rx={4}
-                    fill={`#000000${OPACITY_80}`} stroke={color} strokeWidth="0.5" />
+                    fill={withOpacity(OVERLAY_BLACK, OPACITY_80)} stroke={color} strokeWidth="0.5" />
                   <text x={sp.x} y={sp.y - 13} textAnchor="middle"
                     fill={color} className="text-[8px] font-mono font-bold" style={{ fontSize: 8 }}>
                     {pt.x.toFixed(2)}, {pt.y.toFixed(2)}
