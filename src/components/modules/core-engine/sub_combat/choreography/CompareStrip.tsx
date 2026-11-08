@@ -90,11 +90,15 @@ export function CompareStrip({ baseline, current, onPin, onRevert, onClear }: {
   current: ChoreographySimResult;
   onPin: () => void; onRevert: () => void; onClear: () => void;
 }) {
-  const diff = useMemo(() => {
-    if (!baseline) return null;
-    const base = simulateEncounter(baseline.enemies, baseline.waves, baseline.tuning, baseline.playerLevel, FEEDBACK_CHANNEL_COLORS);
-    return diffEncounterRuns(base, current);
-  }, [baseline, current]);
+  // The baseline's sim is keyed on the baseline alone: re-running it on every
+  // tuning pass (each new `current`) doubled the sim cost of every edit.
+  const baseRun = useMemo(
+    () => (baseline
+      ? simulateEncounter(baseline.enemies, baseline.waves, baseline.tuning, baseline.playerLevel, FEEDBACK_CHANNEL_COLORS)
+      : null),
+    [baseline],
+  );
+  const diff = useMemo(() => (baseRun ? diffEncounterRuns(baseRun, current) : null), [baseRun, current]);
 
   return (
     <BlueprintPanel className="p-3 space-y-2" color={ACCENT_CYAN}>
