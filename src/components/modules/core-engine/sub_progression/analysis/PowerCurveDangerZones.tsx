@@ -71,7 +71,8 @@ export function PowerCurveDangerZones({
             if (i >= playerPower.length - 1) return null;
             const x1 = normalizedIndex(i, playerPower.length) * 100;
             const x2 = normalizedIndex(i + 1, playerPower.length) * 100;
-            const ratio = safeDivide(playerPower[i], enemyDifficulty[i]);
+            // A band has two samples; the harder one sets it, so the last sample is not lost.
+            const ratio = Math.min(safeDivide(playerPower[i], enemyDifficulty[i]), safeDivide(playerPower[i + 1], enemyDifficulty[i + 1]));
             const zoneColor = (ratio > 1.3 ? STATUS_TOKENS.ok : ratio > 0.77 ? STATUS_TOKENS.warn : STATUS_TOKENS.bad).color;
             return (
               <rect key={i} x={x1} y={0} width={x2 - x1} height={100} fill={zoneColor} opacity={0.08} />
