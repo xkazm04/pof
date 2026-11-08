@@ -95,7 +95,7 @@ export function JudgeVerdictsView() {
               </>
             )}
             <span className="text-text-muted">·</span>
-            <span className="text-text-muted">avg <span className="tabular-nums" style={{ color: qualityColor(totals.avgScore) }}>{totals.avgScore}</span></span>
+            <span className="text-text-muted">avg <span className="tabular-nums" style={totals.avgScore === null ? undefined : { color: qualityColor(totals.avgScore) }}>{totals.avgScore ?? '—'}</span></span>
           </div>
           {totals.standing < totals.total && (
             <p data-testid="verdict-not-counted">
@@ -125,7 +125,7 @@ function CatalogGroup({ group, onSelect }: { group: CatalogVerdictGroup; onSelec
         <div className="flex items-center gap-2 text-2xs text-text-muted">
           <span>{group.standing} standing{group.standing < group.total ? ` of ${group.total}` : ''}</span>
           {group.failCount > 0 && <StatusTag level="bad" word={`${group.failCount} FAIL`} iconClassName="w-2.5 h-2.5" />}
-          <span className="tabular-nums" style={{ color: qualityColor(group.avgScore) }}>avg {group.avgScore}</span>
+          <span className="tabular-nums" style={group.avgScore === null ? undefined : { color: qualityColor(group.avgScore) }}>avg {group.avgScore ?? '—'}</span>
         </div>
       </header>
       <ul className="divide-y divide-border">

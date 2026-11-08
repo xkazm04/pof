@@ -31,10 +31,11 @@ export interface VerdictStats {
   total: number;
   /** How many of them still speak for the content on record. */
   standing: number;
-  /** pass / fail / average over the STANDING subset only. */
+  /** pass / fail / average over the STANDING subset only. `avgScore` is null when nothing is
+   *  standing: an average of zero verdicts is not a score of 0. */
   passCount: number;
   failCount: number;
-  avgScore: number;
+  avgScore: number | null;
   /** Why the rest do not count — reported, never hidden. */
   supersededCount: number;
   staleCount: number;
@@ -73,7 +74,7 @@ export function verdictTotals(verdicts: ViewVerdict[]): VerdictStats {
     standing: standing.length,
     passCount,
     failCount: standing.length - passCount,
-    avgScore: standing.length ? Math.round(standing.reduce((s, v) => s + v.score, 0) / standing.length) : 0,
+    avgScore: standing.length ? Math.round(standing.reduce((s, v) => s + v.score, 0) / standing.length) : null,
     supersededCount: verdicts.filter((v) => v.provenance === 'superseded').length,
     staleCount: verdicts.filter((v) => v.provenance === 'stale').length,
   };
@@ -94,6 +95,8 @@ export function rollupVerdictsByCatalog(verdicts: ViewVerdict[]): CatalogVerdict
     groups.push({ catalogId, verdicts: [...vs].sort(sortVerdicts), ...verdictTotals(vs) });
   }
 
-  groups.sort((a, b) => (b.failCount - a.failCount) || (a.avgScore - b.avgScore) || a.catalogId.localeCompare(b.catalogId));
+  // A catalog with no standing verdicts has no average and sorts after every graded one.
+  const avgKey = (g: CatalogVerdictGroup) => g.avgScore ?? Number.MAX_SAFE_INTEGER;
+  groups.sort((a, b) => (b.failCount - a.failCount) || (avgKey(a) - avgKey(b)) || a.catalogId.localeCompare(b.catalogId));
   return groups;
 }
