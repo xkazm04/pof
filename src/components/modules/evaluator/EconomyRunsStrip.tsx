@@ -10,10 +10,11 @@ import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import { driftDirection } from '@/lib/balance/baseline';
 import { MOTION } from '@/lib/constants';
+import { formatGold } from './EconomySimulatorView/helpers';
 
-function formatNumber(n: number): string {
-  if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return Math.abs(n) < 10 ? n.toFixed(2) : Math.round(n).toString();
+/** Gold-scale values share formatGold's bands; |n| < 10 keeps 2 decimals so Gini drift stays readable. */
+export function formatNumber(n: number): string {
+  return Math.abs(n) < 10 ? n.toFixed(2) : formatGold(n);
 }
 
 /** Saved-runs chips + save/baseline/delete controls. Wired to economySimulatorStore. */
