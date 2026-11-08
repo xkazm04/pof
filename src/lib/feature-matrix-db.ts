@@ -555,17 +555,6 @@ export function updateFeatureStatus(
   return { updated: true, previousStatus, statusChanged, reviewedAt, source, foreignOwner: null };
 }
 
-/** Delete a module's rows WITHIN the active project's scope (see {@link projectScopeSql}).
- *  An unscoped call clears only the unattributed legacy rows — it can never reach
- *  another project's matrix. */
-export function clearModuleFeatures(moduleId: SubModuleId, projectId?: string): void {
-  ensureTables();
-  const scope = projectScopeSql(normalizeProjectId(projectId));
-  getDb()
-    .prepare(`DELETE FROM feature_matrix WHERE module_id = ? AND ${scope.sql}`)
-    .run(moduleId, ...scope.params);
-}
-
 // ─── Aggregate queries for project-wide dashboard ─────────────────────────────
 
 export interface ModuleAggregate {

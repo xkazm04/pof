@@ -22,7 +22,8 @@ vi.hoisted(() => {
 });
 
 import { PATCH } from '@/app/api/feature-matrix/route';
-import { upsertFeatures, clearModuleFeatures } from '@/lib/feature-matrix-db';
+import { upsertFeatures } from '@/lib/feature-matrix-db';
+import { clearFeatureMatrixExact } from '@/__tests__/helpers/clearFeatureMatrix';
 import { runComplianceAudit } from '@/lib/gdd-compliance';
 import { evidenceAge } from '@/types/gdd-compliance';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
@@ -67,7 +68,7 @@ async function patchFix(featureName: string) {
 }
 
 beforeEach(() => {
-  clearModuleFeatures(MODULE);
+  clearFeatureMatrixExact(MODULE);
 });
 
 describe('evidence age after a CLI fix', () => {

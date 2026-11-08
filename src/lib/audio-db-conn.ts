@@ -13,7 +13,9 @@ import type Database from 'better-sqlite3';
 import { getDb } from '@/lib/db';
 import { createAudioAssetDb } from '@/lib/audio-asset-db';
 
-let ready = false;
+// Keyed on the live handle (like catalog-db / pipeline-db / cli-spend-db) so a swapped
+// connection re-runs the DDL.
+let readyDb: Database.Database | null = null;
 
 /** One row per recorded UE import of an audio set (written by the import CLI callback). */
 function createAudioImportRuns(db: Database.Database): void {
@@ -34,10 +36,10 @@ function createAudioImportRuns(db: Database.Database): void {
 
 export function getAudioDb(): Database.Database {
   const db = getDb();
-  if (!ready) {
+  if (readyDb !== db) {
     createAudioAssetDb(db);
     createAudioImportRuns(db);
-    ready = true;
+    readyDb = db;
   }
   return db;
 }
