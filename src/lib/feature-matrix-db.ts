@@ -205,14 +205,18 @@ interface RawRow {
   source: string | null;
 }
 
+/** `file_paths` as the `string[]` its type promises. Same degrade-don't-throw contract as
+ *  catalog-db's `ue_assets`: non-string elements are dropped (not every write path validates
+ *  elements), and a corrupt or non-array blob reads as [] with a warning, never silently. */
 function safeParseJsonArray(value: string | null | undefined, rowId: number): string[] {
   try {
-    const parsed = JSON.parse(value || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(value || '[]');
+    if (Array.isArray(parsed)) return parsed.filter((p): p is string => typeof p === 'string');
   } catch {
-    logger.warn(`[feature-matrix-db] Corrupt file_paths JSON in row ${rowId}, falling back to []`);
-    return [];
+    /* fall through to the logged fallback */
   }
+  logger.warn(`[feature-matrix-db] Corrupt file_paths JSON in row ${rowId}, falling back to []`);
+  return [];
 }
 
 function toFeatureRow(raw: RawRow): FeatureRow {
