@@ -45,7 +45,7 @@ const zoneNames = (c: HTMLElement) => Array.from(c.querySelectorAll('svg text'))
 describe('StreamingZonePlanner under a parent-held reducer', () => {
   it('a painted zone survives unmount + remount with the same store', () => {
     const { container, rerender } = render(<Host show />);
-    fireEvent.click(screen.getByRole('button', { name: /Forest/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Fs*Forest$/ }));
     const cell = emptyCellAt00(container);
     expect(cell).not.toBeNull();
     fireEvent.click(cell!);
@@ -90,7 +90,7 @@ describe('the level-design view keeps the streaming plan across tabs', () => {
     await waitFor(() => screen.getByText(/Flow Editor/));
 
     fireEvent.click(tab(/^Streaming$/));
-    fireEvent.click(screen.getByRole('button', { name: /Forest/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Fs*Forest$/ }));
     fireEvent.click(emptyCellAt00(container)!);
     expect(zoneNames(container)).toContain('Forest');
 

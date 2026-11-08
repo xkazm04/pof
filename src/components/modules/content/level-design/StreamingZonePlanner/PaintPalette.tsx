@@ -21,6 +21,8 @@ export function PaintPalette({ mode, selectedZoneId, dispatch }: PaintPalettePro
         return (
           <button
             key={type}
+            type="button"
+            aria-pressed={active}
             onClick={() => dispatch(active ? { type: 'cancelMode' } : { type: 'setPaint', zoneType: type })}
             className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors border"
             style={{
@@ -41,6 +43,8 @@ export function PaintPalette({ mode, selectedZoneId, dispatch }: PaintPalettePro
       })}
       <div className="w-px h-6 bg-violet-900/40 mx-2" />
       <button
+        type="button"
+        aria-pressed={paintType === 'erase'}
         onClick={() => dispatch(paintType === 'erase' ? { type: 'cancelMode' } : { type: 'setErase' })}
         className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors border"
         style={{

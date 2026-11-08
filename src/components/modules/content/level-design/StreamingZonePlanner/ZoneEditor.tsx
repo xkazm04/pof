@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ZONE_TYPES, PRIORITY_COLORS } from './constants';
@@ -15,6 +16,7 @@ export function ZoneEditor({
   onClose: () => void;
 }) {
   const cfg = ZONE_TYPES[zone.type];
+  const id = useId();
 
   return (
     <SurfaceCard level={2} className="p-4 space-y-3">
@@ -28,7 +30,7 @@ export function ZoneEditor({
           </span>
           <span className="text-xs font-semibold text-text">Edit Zone</span>
         </div>
-        <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
+        <button type="button" aria-label="Close zone editor" onClick={onClose} className="text-text-muted hover:text-text transition-colors">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -36,8 +38,9 @@ export function ZoneEditor({
       <div className="grid grid-cols-2 gap-3">
         {/* Name */}
         <div className="space-y-1">
-          <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">Name</label>
+          <label htmlFor={`${id}-name`} className="text-2xs uppercase tracking-wider text-text-muted font-semibold">Name</label>
           <input
+            id={`${id}-name`}
             type="text"
             value={zone.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
@@ -47,9 +50,10 @@ export function ZoneEditor({
 
         {/* Type */}
         <div className="space-y-1">
-          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
+          <label htmlFor={`${id}-type`} className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
           <div className="relative">
             <select
+              id={`${id}-type`}
               value={zone.type}
               onChange={(e) => onUpdate({ type: e.target.value as ZoneType })}
               className="w-full px-3 py-2 bg-black/40 border border-violet-900/40 rounded-lg text-xs font-mono text-violet-100 outline-none focus:border-violet-500 appearance-none transition-colors"
@@ -72,6 +76,8 @@ export function ZoneEditor({
               return (
                 <button
                   key={p}
+                  type="button"
+                  aria-pressed={active}
                   onClick={() => onUpdate({ loadPriority: p, alwaysLoaded: p === 'always' })}
                   className="flex-1 py-1.5 rounded-lg text-xs uppercase font-mono font-bold transition-all border shadow-sm"
                   style={{
@@ -90,9 +96,10 @@ export function ZoneEditor({
 
         {/* Preload radius */}
         <div className="space-y-1 col-span-2 pt-2 border-t border-violet-900/30">
-          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD RADIUS (CELLS)</label>
+          <label htmlFor={`${id}-radius`} className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD RADIUS (CELLS)</label>
           <div className="flex items-center gap-3">
             <input
+              id={`${id}-radius`}
               type="range"
               value={zone.preloadRadius}
               onChange={(e) => onUpdate({ preloadRadius: Math.max(0, Math.min(4, Number(e.target.value) || 0)) })}

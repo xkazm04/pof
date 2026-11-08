@@ -4,6 +4,8 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import { ZoneEditor } from '@/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor';
+import { TransitionList } from '@/components/modules/content/level-design/StreamingZonePlanner/TransitionList';
+import { PaintPalette } from '@/components/modules/content/level-design/StreamingZonePlanner/PaintPalette';
 import type { StreamingZone } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
 
 afterEach(cleanup);
@@ -26,5 +28,32 @@ describe('ZoneEditor preload radius', () => {
     render(<ZoneEditor zone={ZONE} onUpdate={() => {}} onClose={() => {}} />);
     expect(screen.queryByText(/SECS/i)).toBeNull();
     expect(screen.getByText(/PRELOAD RADIUS \(CELLS\)/)).toBeTruthy();
+  });
+});
+
+describe('accessible names', () => {
+  it('every ZoneEditor control can be found by name and states its selection', () => {
+    render(<ZoneEditor zone={ZONE} onUpdate={() => {}} onClose={() => {}} />);
+    expect(screen.getByRole('textbox', { name: /^name$/i })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: /zone type/i })).toBeTruthy();
+    expect(screen.getByRole('slider', { name: /preload radius/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /close zone editor/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'always' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'low' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('TransitionList names its remove button and style select after the link', () => {
+    const zones = [ZONE, { ...ZONE, id: 'y', name: 'Forest', gridX: 3 }];
+    const transitions = [{ id: 't', fromId: 'z', toId: 'y', style: 'seamless' as const, triggerType: 'proximity' as const, condition: '' }];
+    render(<TransitionList transitions={transitions} zones={zones} deleteTransition={() => {}} updateTransition={() => {}} />);
+    expect(screen.getByRole('button', { name: /remove transition town to forest/i })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: /style of town to forest/i })).toBeTruthy();
+  });
+
+  it('PaintPalette states which tool is active', () => {
+    render(<PaintPalette mode={{ kind: 'paint', zoneType: 'town' }} selectedZoneId={null} dispatch={() => {}} />);
+    expect(screen.getByRole('button', { name: /Town$/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: /Forest$/ }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: /Erase/ }).getAttribute('aria-pressed')).toBe('false');
   });
 });

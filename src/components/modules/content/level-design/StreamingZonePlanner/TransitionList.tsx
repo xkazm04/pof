@@ -33,6 +33,8 @@ export function TransitionList({ transitions, zones, deleteTransition, updateTra
                   <span className="text-violet-200 capitalize font-bold">{to.name}</span>
                 </div>
                 <button
+                  type="button"
+                  aria-label={`Remove transition ${from.name} to ${to.name}`}
                   onClick={() => deleteTransition(tr.id)}
                   className="text-text-muted hover:text-red-400 transition-colors p-1 bg-surface rounded hover:bg-surface-hover"
                 >
@@ -42,6 +44,7 @@ export function TransitionList({ transitions, zones, deleteTransition, updateTra
 
               <div className="flex items-center gap-2">
                 <select
+                  aria-label={`Style of ${from.name} to ${to.name}`}
                   value={tr.style}
                   onChange={(e) => updateTransition(tr.id, { style: e.target.value as TransitionStyle })}
                   className="flex-1 text-xs bg-black/40 border border-violet-900/40 rounded px-1.5 py-1 text-violet-200 outline-none uppercase font-mono tracking-wide"
