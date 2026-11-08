@@ -13,19 +13,6 @@ import { TransitionList } from './TransitionList';
 import { PreflightPanel } from './PreflightPanel';
 import type { StreamingZonePlannerConfig, StreamingPlanStore } from './types';
 
-export type {
-  ZoneType,
-  LoadPriority,
-  TransitionStyle,
-  StreamingZone,
-  ZoneTransition,
-  StreamingZonePlannerConfig,
-  StreamingMode,
-  StreamingOp,
-  StreamingPlanState,
-  StreamingPlanStore,
-} from './types';
-
 // ── Props ──
 
 interface StreamingZonePlannerProps {
