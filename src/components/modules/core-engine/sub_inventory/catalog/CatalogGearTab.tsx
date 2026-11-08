@@ -19,7 +19,7 @@ import type { ItemEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 import { CatalogFiltersBar, type SortBy } from './CatalogFiltersBar';
 import { AddItemForm, type NewItemState } from './AddItemForm';
 import { CatalogItemGrid } from './CatalogItemGrid';
-import { buildCreateItemPrompt } from './createItemPrompt';
+import { buildCreateItemPrompt, itemSlug } from './createItemPrompt';
 import { itemPower } from './itemComparison';
 import { getAppOrigin } from '@/lib/constants';
 
@@ -180,14 +180,15 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     if (submittingRef.current || isCliRunning) return;
     if (!newItem.name.trim()) return;
     submittingRef.current = true;
-    const slug = newItem.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    // One slug names the entity id, the icon file and the CLI target, so same-named items never share a file.
+    const slug = itemSlug(newItem.name, Date.now().toString(36));
 
     // zen-perf R3: the new item enters the rendered grid immediately because the
     // store is now the single source of truth — build an ItemData, wrap it via the
     // same seed converter, and add it to the catalog store. The CLI image-gen below
     // then fills in its artwork at public/items/<slug>.webp.
     const newData: ItemData = {
-      id: `user-${slug}-${Date.now().toString(36)}`,
+      id: `user-${slug}`,
       name: newItem.name.trim(),
       type: newItem.type,
       subtype: newItem.type,
