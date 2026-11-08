@@ -79,7 +79,7 @@ export function RunLogView({ t, steps, phase, summary }: Props) {
               </span>
               <span style={{ fontSize: 13, color: t.text, flex: 1 }}>{r.step}</span>
               {r.reason && (
-                <span className={t.fontMono} style={{ fontSize: 11, color: t.muted, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span className={t.fontMono} style={{ fontSize: 11, color: t.muted, flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
                   {r.reason}
                 </span>
               )}
