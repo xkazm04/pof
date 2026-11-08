@@ -14,6 +14,7 @@ vi.mock('@/hooks/useModuleCLI', () => ({
 }));
 import { CameraProfileComparison } from '@/components/modules/core-engine/sub_character/overview/CameraProfileComparison';
 import { HitboxWireframeViewer } from '@/components/modules/core-engine/sub_character/overview/HitboxWireframeViewer';
+import { KeyboardVisualization } from '@/components/modules/core-engine/sub_character/input/KeyboardVisualization';
 import { InputTab } from '@/components/modules/core-engine/sub_character/input/InputTab';
 import { ClassHierarchy } from '@/components/modules/core-engine/sub_character/overview/ClassHierarchy';
 import { PropertyInspector } from '@/components/modules/core-engine/sub_character/overview/PropertyInspector';
@@ -70,6 +71,16 @@ describe('Features-tab metrics read the persisted feel stack', () => {
       expect(container.textContent).toContain(`${preset.profile.dodge.distance / 100}m`);
       unmount();
     }
+  });
+});
+
+describe('Keyboard map keycaps carry their name on a role that permits it', () => {
+  it('every keycap aria-label sits on role="img" (aria-label is prohibited on a generic div)', () => {
+    const { container } = render(<KeyboardVisualization />);
+    const named = [...container.querySelectorAll('[aria-label]')].filter((el) => /^[^:]+: /.test(el.getAttribute('aria-label') ?? ''));
+    expect(named.length).toBeGreaterThan(30);
+    const prohibited = named.filter((el) => el.tagName === 'DIV' && !el.getAttribute('role'));
+    expect(prohibited).toHaveLength(0);
   });
 });
 
