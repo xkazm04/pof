@@ -10,7 +10,9 @@ export function setupOneShotToastHandler(): () => void {
   unsubs.push(
     eventBus.on('oneshot.completed', ({ payload }) => {
       const { passed, failed, skipped, deferred, catalogId, entityId, jobName } = payload;
-      toast.success(
+      // `completed` fires for every run that is not ALL failures — a partial run is a warning,
+      // never a green success check over failed steps.
+      (failed > 0 ? toast.warning : toast.success)(
         `${jobName}: ${passed} passed · ${failed} failed · ${skipped} skipped · ${deferred} deferred`,
         {
           duration: 8000,
