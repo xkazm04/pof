@@ -21,7 +21,7 @@ export function DodgeTrajectorySection() {
           <div className="grid grid-cols-2 gap-2">
             <GlowStat label="Avg Distance" value="250" unit="cm" color={ACCENT_CYAN} delay={0} />
             <GlowStat label="Avg Duration" value="0.3" unit="s" color={ACCENT_EMERALD} delay={0.06} />
-            <GlowStat label="Trajectories" value="5" unit="" color={ACCENT_VIOLET} delay={0.12} />
+            <GlowStat label="Trajectories" value={DODGE_TRAJECTORIES.length} unit="" color={ACCENT_VIOLET} delay={0.12} />
             <GlowStat label="I-Frames" value="0.15" unit="s" color={ACCENT_ORANGE} delay={0.18} />
           </div>
 
