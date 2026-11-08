@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { MODULE_HISTORY_CAP, MODULE_SCAN_FINDINGS_CAP } from '@/lib/constants';
 import {
   registerModuleStore,
   scheduleAutoSave,
@@ -16,6 +17,33 @@ import {
   mergeLedgers,
   type CompletionLedger,
 } from '@/lib/roadmap/completion-ledger';
+import { resolveProgressKey } from '@/lib/checklist-progress-keys';
+
+/**
+ * True when the progress-key declaration (`resolveProgressKey`, the same one
+ * `POST /api/checklist/complete` enforces) accepts `itemId` for `moduleId`:
+ * a registry checklist item, a declared auxiliary surface key, or a recorded migration.
+ */
+function isRegistryItem(moduleId: SubModuleId, itemId: string): boolean {
+  return resolveProgressKey(moduleId, itemId).kind !== 'unknown';
+}
+
+/**
+ * Drop module/item keys the registry does not declare. The project-progress POST
+ * unions `true`s and can never undo them, so a stale key written once lives forever.
+ */
+export function pruneUnknownChecklistKeys(
+  progress: Record<string, Record<string, boolean>>,
+): Record<string, Record<string, boolean>> {
+  const out: Record<string, Record<string, boolean>> = {};
+  for (const [moduleId, items] of Object.entries(progress)) {
+    const kept = Object.fromEntries(
+      Object.entries(items ?? {}).filter(([id]) => isRegistryItem(moduleId as SubModuleId, id)),
+    );
+    if (Object.keys(kept).length > 0) out[moduleId] = kept;
+  }
+  return out;
+}
 
 /** Semantic verification status for a checklist item */
 export type VerificationStatus = 'full' | 'partial' | 'stub' | 'missing';
@@ -156,8 +184,8 @@ export const useModuleStore = create<ModuleState>()(
         set((state) => {
           const existing = state.moduleHistory[entry.moduleId] || [];
           const updated = [...existing, entry];
-          // Cap at 200 entries per module — keep most recent, matching scanResults pattern
-          const capped = updated.length > 200 ? updated.slice(-200) : updated;
+          // Cap at MODULE_HISTORY_CAP entries per module — keep most recent, matching scanResults pattern
+          const capped = updated.length > MODULE_HISTORY_CAP ? updated.slice(-MODULE_HISTORY_CAP) : updated;
           return {
             moduleHistory: {
               ...state.moduleHistory,
@@ -182,6 +210,10 @@ export const useModuleStore = create<ModuleState>()(
       },
 
       toggleChecklistItem: (subModuleId, itemId) => {
+        if (!isRegistryItem(subModuleId, itemId)) {
+          logger.warn(`moduleStore.toggleChecklistItem refused unknown item "${itemId}" for "${subModuleId}"`);
+          return;
+        }
         set((state) => {
           const moduleProgress = state.checklistProgress[subModuleId] ?? {};
           const checked = !moduleProgress[itemId];
@@ -204,6 +236,10 @@ export const useModuleStore = create<ModuleState>()(
       setChecklistItem: (subModuleId, itemId, checked) => {
         // Disk checks and the file watcher re-assert ticks; a no-op must not POST.
         if (get().checklistProgress[subModuleId]?.[itemId] === checked) return;
+        if (!isRegistryItem(subModuleId, itemId)) {
+          logger.warn(`moduleStore.setChecklistItem refused unknown item "${itemId}" for "${subModuleId}"`);
+          return;
+        }
         set((state) => {
           const moduleProgress = state.checklistProgress[subModuleId] ?? {};
           return {
@@ -251,8 +287,8 @@ export const useModuleStore = create<ModuleState>()(
           // Skip update when no novel findings — avoids creating a new array reference
           if (novel.length === 0) return state;
           const merged = [...existing, ...novel];
-          // Cap at 100 findings per module — keep most recent
-          const capped = merged.length > 100 ? merged.slice(-100) : merged;
+          // Cap at MODULE_SCAN_FINDINGS_CAP findings per module — keep most recent
+          const capped = merged.length > MODULE_SCAN_FINDINGS_CAP ? merged.slice(-MODULE_SCAN_FINDINGS_CAP) : merged;
           return {
             scanResults: {
               ...state.scanResults,
@@ -349,7 +385,7 @@ export const useModuleStore = create<ModuleState>()(
           // A newer load (or clearProgress) took over while this one was in flight.
           if (get().progressLoadPath !== projectPath) return;
 
-          const checklistProgress = data.checklistProgress ?? {};
+          const checklistProgress = pruneUnknownChecklistKeys(data.checklistProgress ?? {});
           // The ledger is held by the project_progress row (a project switch clears
           // the store, so a browser-only copy was erased on every switch). The
           // server's stamps are adopted; local stamps may only date THIS project's

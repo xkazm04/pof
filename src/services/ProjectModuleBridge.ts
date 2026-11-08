@@ -11,6 +11,7 @@
  * Neither store imports the other; both import only this bridge.
  */
 
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { createTimerLifecycle, type Lifecycle } from '@/lib/lifecycle';
 
 // ─── Store accessor types (avoid importing the actual stores) ────────────────
@@ -91,7 +92,7 @@ export const autoSaveLifecycle: Lifecycle<void> = createTimerLifecycle(() => {
   if (projectPath) {
     moduleStore.getState().saveProgress(projectPath);
   }
-}, 2000);
+}, UI_TIMEOUTS.progressAutoSave);
 
 /** Schedule a debounced save. Called by moduleStore after every checklist mutation. */
 export function scheduleAutoSave(): void {

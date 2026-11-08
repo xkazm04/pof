@@ -7,6 +7,7 @@ import { getDb } from './db';
 import { ensureLevelDesignTable } from './level-design-db';
 import { SUB_MODULE_MAP, CATEGORIES, getSubModulesForCategory } from './module-registry';
 import { countChecklist, countAllChecklists } from './checklist-progress';
+import { isFeatureDone } from '@/lib/feature-done';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
 import { formatBytes, formatDuration } from '@/lib/format';
@@ -175,7 +176,7 @@ export function synthesizeGDD(
     totalFeatures += row.cnt;
     // `improved` is a done status — the compliance engine credits it as implemented
     // (DONE_STATUSES), so the GDD headline must too or the two disagree on one row.
-    if (row.status === 'implemented' || row.status === 'improved') implementedFeatures += row.cnt;
+    if (isFeatureDone(row.status)) implementedFeatures += row.cnt;
   }
 
   // 2. Checklist progress — registry-based tally (single source of truth,

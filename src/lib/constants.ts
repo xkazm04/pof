@@ -217,6 +217,8 @@ export const UI_TIMEOUTS = {
   testPollInterval: 2_000,
   /** Longest a single PoF Bridge test is awaited before the runner gives up (useTestRunner). */
   testPollTimeout: 120_000,
+  /** Debounce before the module checklist/progress auto-save POSTs to SQLite (ProjectModuleBridge). */
+  progressAutoSave: 2_000,
 } as const;
 
 /**
@@ -225,3 +227,9 @@ export const UI_TIMEOUTS = {
  * outside UI_TIMEOUTS.
  */
 export const BUILD_PARSE_CACHE_MAX = 200;
+
+/** Max task-history entries kept per module in moduleStore (most recent win). A memory cap, not a timing value. */
+export const MODULE_HISTORY_CAP = 200;
+
+/** Max scan findings kept per module in moduleStore (most recent win). */
+export const MODULE_SCAN_FINDINGS_CAP = 100;

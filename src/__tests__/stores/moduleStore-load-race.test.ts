@@ -35,20 +35,20 @@ describe('loadProgress ordering', () => {
     const a = store().loadProgress('/proj/A');
     const b = store().loadProgress('/proj/B');
 
-    calls[1].resolve(progress('from-b'));
+    calls[1].resolve(progress('acb-1'));
     await b;
-    calls[0].resolve(progress('from-a'));
+    calls[0].resolve(progress('acb-2'));
     await a;
 
     expect(store().progressProjectPath).toBe('/proj/B');
-    expect(store().checklistProgress['arpg-combat']).toEqual({ 'from-b': true });
+    expect(store().checklistProgress['arpg-combat']).toEqual({ 'acb-1': true });
   });
 
   it('a response arriving after clearProgress does not refill the store', async () => {
     const calls = deferredFetch();
     const a = store().loadProgress('/proj/A');
     store().clearProgress();
-    calls[0].resolve(progress('from-a'));
+    calls[0].resolve(progress('acb-2'));
     await a;
 
     expect(store().progressProjectPath).toBeNull();
@@ -60,7 +60,7 @@ describe('loadProgress ordering', () => {
     const calls = deferredFetch();
     const a = store().loadProgress('/proj/A');
     const b = store().loadProgress('/proj/B');
-    calls[1].resolve(progress('from-b'));
+    calls[1].resolve(progress('acb-1'));
     await b;
     calls[0].reject(new Error('boom'));
     await a;
@@ -73,10 +73,10 @@ describe('loadProgress ordering', () => {
     const calls = deferredFetch();
     const a = store().loadProgress('/proj/A');
     const b = store().loadProgress('/proj/B');
-    calls[0].resolve(progress('from-a'));
+    calls[0].resolve(progress('acb-2'));
     await a;
     expect(store().isLoadingProgress).toBe(true);
-    calls[1].resolve(progress('from-b'));
+    calls[1].resolve(progress('acb-1'));
     await b;
     expect(store().isLoadingProgress).toBe(false);
   });

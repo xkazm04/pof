@@ -15,51 +15,51 @@ describe('useModuleStore', () => {
 
   describe('setChecklistItem', () => {
     it('sets an item to checked', () => {
-      useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', true);
+      useModuleStore.getState().setChecklistItem('arpg-combat', 'acb-1', true);
       const progress = useModuleStore.getState().checklistProgress;
-      expect(progress['arpg-combat']?.['hit-detection']).toBe(true);
+      expect(progress['arpg-combat']?.['acb-1']).toBe(true);
     });
 
     it('sets an item to unchecked', () => {
-      useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', true);
-      useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', false);
+      useModuleStore.getState().setChecklistItem('arpg-combat', 'acb-1', true);
+      useModuleStore.getState().setChecklistItem('arpg-combat', 'acb-1', false);
       const progress = useModuleStore.getState().checklistProgress;
-      expect(progress['arpg-combat']?.['hit-detection']).toBe(false);
+      expect(progress['arpg-combat']?.['acb-1']).toBe(false);
     });
 
     it('returns same state when value already matches', () => {
-      useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', true);
+      useModuleStore.getState().setChecklistItem('arpg-combat', 'acb-1', true);
       const before = useModuleStore.getState();
-      useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', true);
+      useModuleStore.getState().setChecklistItem('arpg-combat', 'acb-1', true);
       const after = useModuleStore.getState();
       expect(before.checklistProgress).toBe(after.checklistProgress);
     });
 
     it('does not affect other modules', () => {
-      useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', true);
-      useModuleStore.getState().setChecklistItem('arpg-inventory', 'grid-layout', true);
+      useModuleStore.getState().setChecklistItem('arpg-combat', 'acb-1', true);
+      useModuleStore.getState().setChecklistItem('arpg-inventory', 'ai-1', true);
       const progress = useModuleStore.getState().checklistProgress;
-      expect(progress['arpg-combat']?.['hit-detection']).toBe(true);
-      expect(progress['arpg-inventory']?.['grid-layout']).toBe(true);
+      expect(progress['arpg-combat']?.['acb-1']).toBe(true);
+      expect(progress['arpg-inventory']?.['ai-1']).toBe(true);
     });
   });
 
   describe('toggleChecklistItem', () => {
     it('toggles unchecked to checked', () => {
-      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'hit-detection');
-      expect(useModuleStore.getState().checklistProgress['arpg-combat']?.['hit-detection']).toBe(true);
+      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'acb-1');
+      expect(useModuleStore.getState().checklistProgress['arpg-combat']?.['acb-1']).toBe(true);
     });
 
     it('toggles checked to unchecked', () => {
-      useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', true);
-      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'hit-detection');
-      expect(useModuleStore.getState().checklistProgress['arpg-combat']?.['hit-detection']).toBe(false);
+      useModuleStore.getState().setChecklistItem('arpg-combat', 'acb-1', true);
+      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'acb-1');
+      expect(useModuleStore.getState().checklistProgress['arpg-combat']?.['acb-1']).toBe(false);
     });
 
     it('double toggle returns to original state', () => {
-      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'hit-detection');
-      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'hit-detection');
-      expect(useModuleStore.getState().checklistProgress['arpg-combat']?.['hit-detection']).toBe(false);
+      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'acb-1');
+      useModuleStore.getState().toggleChecklistItem('arpg-combat', 'acb-1');
+      expect(useModuleStore.getState().checklistProgress['arpg-combat']?.['acb-1']).toBe(false);
     });
   });
 
