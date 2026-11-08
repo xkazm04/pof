@@ -72,6 +72,8 @@ function warnRecentFailure(action: string, err: unknown): void {
 let latestScanTicket = 0;
 /** The scan currently running; a second caller awaits it instead of returning early. */
 let inFlightScan: Promise<void> | null = null;
+/** Ticket of the newest switchProject; an older switch never sets the identity. */
+let latestSwitchTicket = 0;
 
 export const useProjectStore = create<ProjectState>()(
   persist(
@@ -247,6 +249,7 @@ export const useProjectStore = create<ProjectState>()(
         const { recentProjects, projectPath, isSetupComplete } = get();
         const target = recentProjects.find((p) => p.id === projectId);
         if (!target) return;
+        const ticket = ++latestSwitchTicket;
 
         // Record the outgoing project in the recent list (reads its progress
         // synchronously), then hand the outgoing teardown to the flip owner:
@@ -273,11 +276,14 @@ export const useProjectStore = create<ProjectState>()(
               }),
             }
           );
+          if (ticket !== latestSwitchTicket) return;
           if (projects) set({ recentProjects: projects });
         } catch (err) {
           // Continue switching even if touch fails
           warnRecentFailure('switchProject touch', err);
         }
+        // A newer click owns the identity: the last project clicked is the one opened.
+        if (ticket !== latestSwitchTicket) return;
 
         // Restore the target project's state
         set({
