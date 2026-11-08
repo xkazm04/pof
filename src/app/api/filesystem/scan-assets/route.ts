@@ -67,7 +67,9 @@ async function directoryExists(dirPath: string): Promise<boolean> {
  */
 function inferAssetType(relativePath: string, fileName: string): AssetType {
   const nameUpper = fileName.toUpperCase();
-  const pathUpper = relativePath.toUpperCase();
+  // Leading slash: a folder directly under Content/ has none of its own, and the
+  // folder checks below match on `/NAME/`.
+  const pathUpper = `/${relativePath.toUpperCase()}`;
 
   // Extension-based first
   if (relativePath.endsWith('.umap')) return 'map';
