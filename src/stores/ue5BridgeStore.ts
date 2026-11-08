@@ -8,7 +8,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import type {
   UE5ConnectionState,
   UE5ConnectionStatus,
@@ -61,9 +61,26 @@ const DEFAULT_CONNECTION_STATE: UE5ConnectionState = {
   reconnectAttempts: 0,
 };
 
+/**
+ * localStorage minus the writes that would store what is already there. persist writes the
+ * partialized settings after EVERY set, and the live-state firehose sets on every WS message;
+ * the settings almost never change, so without this each frame is a synchronous storage write.
+ * Reading `localStorage` inside the factory keeps persist's server-side bail-out working.
+ */
+function writeOnlyChanges(): StateStorage {
+  const storage = localStorage;
+  return {
+    getItem: (name) => storage.getItem(name),
+    setItem: (name, value) => {
+      if (storage.getItem(name) !== value) storage.setItem(name, value);
+    },
+    removeItem: (name) => storage.removeItem(name),
+  };
+}
+
 export const useUE5BridgeStore = create<UE5BridgeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Persisted defaults
       host: '127.0.0.1',
       httpPort: 30010,
@@ -91,7 +108,8 @@ export const useUE5BridgeStore = create<UE5BridgeState>()(
       // (and rebuilding the propertyWatches object via Object.fromEntries) on
       // each message re-renders every subscriber unnecessarily. We diff against
       // current state and skip no-op writes — observable values are identical.
-      setLiveState: (liveState: LiveEditorState) => set((prev) => {
+      setLiveState: (liveState: LiveEditorState) => {
+        const prev = get();
         const patch: Partial<UE5BridgeState> = {};
 
         if (prev.wsStatus !== liveState.wsStatus) patch.wsStatus = liveState.wsStatus;
@@ -116,12 +134,14 @@ export const useUE5BridgeStore = create<UE5BridgeState>()(
         }
         if (watchesChanged) patch.propertyWatches = Object.fromEntries(incoming);
 
-        return patch;
-      }),
+        // `set({})` still notifies every listener and costs a persist write, so nothing
+        // changed means nothing is called.
+        if (Object.keys(patch).length > 0) set(patch);
+      },
     }),
     {
       name: 'pof-ue5-bridge',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(writeOnlyChanges),
       partialize: (state) => ({
         host: state.host,
         httpPort: state.httpPort,
