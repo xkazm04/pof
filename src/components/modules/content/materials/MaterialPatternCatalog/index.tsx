@@ -53,7 +53,8 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
       logger.warn('Blender preview failed', e);
       setBlenderResult({ patternId: pattern.id, message: e instanceof Error ? e.message : 'Preview failed', isError: true });
     } finally {
-      setBlenderPreviewing(null);
+      // Clear only our own marker: a later preview started meanwhile is still in flight.
+      setBlenderPreviewing((cur) => (cur === pattern.id ? null : cur));
     }
   }, []);
 
