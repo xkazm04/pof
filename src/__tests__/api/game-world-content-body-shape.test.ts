@@ -36,3 +36,10 @@ describe('/api/audio-gen body shape', () => {
     await expect400(await audioGen.PATCH(req('/api/audio-gen', 'PATCH', raw)));
   });
 });
+
+describe('/api/audio/import-result body shape', () => {
+  it.each(['null', '"set"'])('POST refuses non-object JSON %s', async (raw) => {
+    const { POST } = await import('@/app/api/audio/import-result/route');
+    await expect400(await POST(req('/api/audio/import-result', 'POST', raw)));
+  });
+});
