@@ -3,15 +3,9 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiError } from '@/lib/api-utils';
 import { decodeRouteName } from '@/app/api/visual-gen/_lib/decodeName';
+import { IMAGE_MIME } from '@/app/api/visual-gen/_lib/generatedFiles';
 import { GENERATED_IMAGE_DIR, safeGeneratedImageName } from '@/lib/visual-gen/image-providers';
 import { GENERATED_FILE_CACHE_CONTROL, etagMatches, fileEtag } from '@/lib/visual-gen/generated-assets';
-
-const MIME: Record<string, string> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-};
 
 /**
  * GET /api/visual-gen/image/:name
@@ -46,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ name
     if (!st.isFile()) return apiError('image not found', 404);
     const etag = fileEtag(st.size, st.mtimeMs);
     const headers: Record<string, string> = {
-      'Content-Type': MIME[ext] ?? 'application/octet-stream',
+      'Content-Type': IMAGE_MIME[ext] ?? 'application/octet-stream',
       'Cache-Control': GENERATED_FILE_CACHE_CONTROL,
       ETag: etag,
       'Last-Modified': new Date(st.mtimeMs).toUTCString(),
