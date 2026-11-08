@@ -134,7 +134,17 @@ export function startDeepEvalJob(
     snap.error = snap.progress.error;
     snap.finishedAt = Date.now();
     return result;
+  }, (e: unknown) => {
+    // A rejected run must still settle the job: left `running`, the project would refuse
+    // every later start (409) until the process restarted.
+    if (snap.status === 'running') snap.status = 'error';
+    snap.error = e instanceof Error ? e.message : String(e);
+    snap.finishedAt = Date.now();
+    logger.error('deep-eval: run rejected', e);
+    throw e;
   });
+  // The route only `void`s `done`; this branch keeps a rejection from going unhandled.
+  done.catch(() => undefined);
 
   jobs.set(projectPath, { snap, controller, done });
   return ok({ scanId, done });
@@ -156,7 +166,7 @@ export async function cancelDeepEvalJob(projectPath: string): Promise<DeepEvalJo
   if (job.snap.status === 'running') {
     job.snap.status = 'cancelled';
     job.controller.abort();
-    await job.done;
+    await job.done.catch(() => undefined);
   }
   return job.snap;
 }
