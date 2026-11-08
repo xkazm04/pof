@@ -4,7 +4,7 @@ import { requireOperator } from '@/lib/api-auth';
 import { getService } from '@/lib/blender-mcp/service';
 import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { ledger } from '@/lib/blender-mcp/generation-ledger';
-import { isGenerationProvider } from '@/app/api/blender-mcp/_lib/provider';
+import { isGenerationProvider, PROVIDER_REFUSAL_ERROR } from '@/app/api/blender-mcp/_lib/provider';
 
 // POST /api/blender-mcp/generate/import — { jobId, provider }
 // Writes into the live Blender scene, so it sits behind the operator guard.
@@ -20,7 +20,7 @@ export const POST = withRoute(async (req: NextRequest) => {
     return apiError('jobId and provider are required', 400);
   if (typeof jobId !== 'string') return apiError('jobId must be a string', 400);
   if (!isGenerationProvider(provider))
-    return apiError('provider must be hyper3d or hunyuan3d', 400);
+    return apiError(PROVIDER_REFUSAL_ERROR, 400);
 
   // Idempotent: ONE import into the Blender scene per job. A repeat (a second tab, or a
   // resumed poll reaching `completed` again) is answered from the ledger with the object

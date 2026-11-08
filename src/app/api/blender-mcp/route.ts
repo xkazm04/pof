@@ -3,24 +3,8 @@ import { apiSuccess, apiError, respondFromResult, withRoute } from '@/lib/api-ut
 import { requireOperator } from '@/lib/api-auth';
 import { getService } from '@/lib/blender-mcp/service';
 import { mapResult } from '@/types/result';
+import { connectTargetError } from '@/lib/blender-mcp/connect-target';
 import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
-
-const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
-
-/**
- * The bridge is a raw TCP client to a local Blender addon. A caller-chosen host
- * would turn connect into a probe of any address, so only loopback hosts and a
- * valid port are accepted; absent values fall back to the service defaults.
- */
-function connectTargetError(host: unknown, port: unknown): string | null {
-  if (host !== undefined && (typeof host !== 'string' || !LOOPBACK_HOSTS.has(host.toLowerCase()))) {
-    return 'host must be a loopback address (localhost, 127.0.0.1 or ::1)';
-  }
-  if (port !== undefined && !(Number.isInteger(port) && (port as number) >= 1 && (port as number) <= 65535)) {
-    return 'port must be an integer between 1 and 65535';
-  }
-  return null;
-}
 
 // POST /api/blender-mcp — { action: 'connect' | 'disconnect' | 'status' }
 export const POST = withRoute(async (req: NextRequest) => {

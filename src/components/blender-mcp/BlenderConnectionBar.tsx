@@ -11,6 +11,7 @@ import {
   LifeBuoy,
 } from 'lucide-react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { connectTargetError } from '@/lib/blender-mcp/connect-target';
 import { classifyConnectionError } from '@/lib/blender-mcp/diagnostics';
 import {
   PILL_BY_STATE,
@@ -44,6 +45,7 @@ export function BlenderConnectionBar() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editHost, setEditHost] = useState(host);
   const [editPort, setEditPort] = useState(String(port));
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   // The edit fields are seeded from the store's default host/port on first
   // render — which happens BEFORE zustand's persist middleware rehydrates the
@@ -88,7 +90,15 @@ export function BlenderConnectionBar() {
   };
 
   const handleSaveSettings = () => {
-    setSettings(editHost, Number(editPort), autoConnect);
+    // Same rule the route enforces: a refused target is never persisted.
+    const portNumber = editPort.trim() === '' ? NaN : Number(editPort);
+    const targetError = connectTargetError(editHost, portNumber);
+    if (targetError) {
+      setSettingsError(targetError);
+      return;
+    }
+    setSettingsError(null);
+    setSettings(editHost, portNumber, autoConnect);
     setShowSettings(false);
   };
 
@@ -236,7 +246,10 @@ export function BlenderConnectionBar() {
                   id="blender-mcp-host"
                   type="text"
                   value={editHost}
-                  onChange={(e) => setEditHost(e.target.value)}
+                  onChange={(e) => {
+                    setEditHost(e.target.value);
+                    setSettingsError(null);
+                  }}
                   placeholder="127.0.0.1"
                   aria-label="Blender MCP host"
                   aria-describedby="blender-mcp-settings-hint"
@@ -252,7 +265,10 @@ export function BlenderConnectionBar() {
                   max={65535}
                   inputMode="numeric"
                   value={editPort}
-                  onChange={(e) => setEditPort(e.target.value)}
+                  onChange={(e) => {
+                    setEditPort(e.target.value);
+                    setSettingsError(null);
+                  }}
                   placeholder="9876"
                   aria-label="Blender MCP port"
                   aria-describedby="blender-mcp-settings-hint"
@@ -268,6 +284,11 @@ export function BlenderConnectionBar() {
                   Save
                 </button>
               </div>
+              {settingsError && (
+                <p role="alert" id="blender-mcp-settings-error" className="text-xs text-red-400">
+                  {settingsError}
+                </p>
+              )}
               <p
                 id="blender-mcp-settings-hint"
                 className="text-2xs text-text-muted leading-snug"
