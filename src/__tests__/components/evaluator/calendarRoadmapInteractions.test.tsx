@@ -32,6 +32,7 @@ vi.mock('@/stores/evaluatorStore', () => ({
   useEvaluatorStore: (sel: (s: unknown) => unknown) => sel({ scanHistory: [], lastScan: null }),
 }));
 
+import { __resetMilestoneDeadlineCache } from '@/hooks/useMilestoneDeadlines';
 import { CalendarRoadmapView } from '@/components/modules/evaluator/CalendarRoadmapView';
 
 const DEADLINE = new Date(Date.now() + 5 * WEEK).toISOString();
@@ -65,7 +66,7 @@ const cardDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
-beforeEach(() => { state.error = null; });
+beforeEach(() => { state.error = null; __resetMilestoneDeadlineCache(); });
 
 describe('dragging a deadline', () => {
   it('reads the pointer once when the timeline is scrolled sideways', async () => {

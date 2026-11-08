@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { MilestoneDeadlineMap } from '@/lib/nba-deadline';
+import { ok, err, type Result } from '@/types/result';
 
 export type MilestoneDeadlineState = 'loading' | 'ready' | 'failed';
 
@@ -42,6 +43,33 @@ const listeners = new Set<() => void>();
 
 function notify() {
   for (const l of listeners) l();
+}
+
+/**
+ * A deadline was written (the calendar roadmap is the one writer): drop the
+ * cache and re-read for every mounted card, so the next-best-action ranks
+ * against the deadline just set instead of the mount-time read.
+ */
+export function invalidateMilestoneDeadlines() {
+  cache = {};
+  notify();
+  if (listeners.size > 0) void load();
+}
+
+/**
+ * The shared read for non-hook callers (the roadmap editor): the same cache and
+ * the same single in-flight request the NBA cards use, so there is one read path.
+ */
+export async function readMilestoneDeadlines(): Promise<Result<MilestoneDeadlineMap, string>> {
+  // An editor opening again is a retry: a cached failure must not stick to it.
+  if (cache.error) cache = {};
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await load();
+    if (cache.data) return ok(cache.data);
+    if (cache.error) return err(cache.error);
+    // Invalidated while the read was in flight: read again.
+  }
+  return err('Deadlines could not be read');
 }
 
 /** Exposed for tests — the cache is process-wide by design. */
