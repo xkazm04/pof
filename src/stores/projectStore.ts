@@ -33,6 +33,8 @@ interface ProjectState {
 
   /** Dynamically scanned project state (classes, plugins, deps) */
   dynamicContext: DynamicProjectContext | null;
+  /** The project path `dynamicContext` was scanned for; the scan cache only serves that path. */
+  scannedPath: string;
   /** Whether a scan is currently in progress */
   isScanning: boolean;
   /** Error message from the last scan attempt */
@@ -88,6 +90,7 @@ export const useProjectStore = create<ProjectState>()(
       setupStep: 0,
 
       dynamicContext: null,
+      scannedPath: '',
       isScanning: false,
       scanError: null,
 
@@ -125,6 +128,7 @@ export const useProjectStore = create<ProjectState>()(
           isNewProject: true,
           setupStep: 0,
           dynamicContext: null,
+          scannedPath: '',
           isScanning: false,
           scanError: null,
         });
@@ -144,11 +148,11 @@ export const useProjectStore = create<ProjectState>()(
           return queuedForcedScan;
         }
         const run = (async () => {
-        const { projectPath, projectName, isScanning, dynamicContext } = get();
+        const { projectPath, projectName, isScanning, dynamicContext, scannedPath } = get();
         if (!projectPath || !projectName || isScanning) return;
 
         // Return cached if still fresh (a forced re-check skips the cache)
-        if (!opts?.force && dynamicContext?.scannedAt) {
+        if (!opts?.force && dynamicContext?.scannedAt && scannedPath === projectPath) {
           const age = Date.now() - new Date(dynamicContext.scannedAt).getTime();
           if (age < SCAN_CACHE_MS) return;
         }
@@ -187,6 +191,7 @@ export const useProjectStore = create<ProjectState>()(
           set({
             isScanning: false,
             scanError: null,
+            scannedPath: projectPath,
             dynamicContext: {
               scannedAt: data.scannedAt,
               projectType: data.projectType ?? 'ue5',
@@ -305,6 +310,7 @@ export const useProjectStore = create<ProjectState>()(
           isNewProject: false,
           setupStep: 0,
           dynamicContext: null, // Will re-scan
+          scannedPath: '',
           isScanning: false,
           scanError: null,
         });
@@ -343,6 +349,7 @@ export const useProjectStore = create<ProjectState>()(
         isNewProject: state.isNewProject,
         setupStep: state.setupStep,
         dynamicContext: state.dynamicContext,
+        scannedPath: state.scannedPath,
       }),
     }
   )
