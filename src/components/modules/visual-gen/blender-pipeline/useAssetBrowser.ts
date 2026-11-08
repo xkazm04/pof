@@ -30,6 +30,10 @@ export interface UseAssetBrowser {
   setQuery: (q: string) => void;
   category: string | null;
   setCategory: (c: string | null) => void;
+  /** Set the category and, once a search has run, re-run it so the grid matches the chip. */
+  selectCategory: (c: string | null) => void;
+  /** Category the shown results were fetched with (null = All). */
+  searchedCategory: string | null;
   resolution: PolyHavenResolution;
   setResolution: (r: PolyHavenResolution) => void;
   // Search state
@@ -38,7 +42,7 @@ export interface UseAssetBrowser {
   hasSearched: boolean;
   searchError: string | null;
   searchWarning: string | null;
-  search: () => Promise<void>;
+  search: (opts?: { category?: string | null }) => Promise<void>;
   // Import state
   importingKey: string | null;
   importedKeys: ReadonlySet<string>;
@@ -67,12 +71,14 @@ export function useAssetBrowser(): UseAssetBrowser {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchWarning, setSearchWarning] = useState<string | null>(null);
+  const [searchedCategory, setSearchedCategory] = useState<string | null>(null);
 
   const [importingKey, setImportingKey] = useState<string | null>(null);
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [importError, setImportError] = useState<string | null>(null);
 
-  const search = useCallback(async () => {
+  const search = useCallback(async (opts?: { category?: string | null }) => {
+    const cat = opts && 'category' in opts ? (opts.category ?? null) : category;
     setIsSearching(true);
     setSearchError(null);
     setSearchWarning(null);
@@ -81,13 +87,18 @@ export function useAssetBrowser(): UseAssetBrowser {
     const q = query.trim();
     const poly = new URLSearchParams({ source: 'polyhaven' });
     if (q) poly.set('query', q);
-    if (category) poly.set('category', category);
+    if (cat) poly.set('category', cat);
     const sketch = new URLSearchParams({ source: 'sketchfab' });
     if (q) sketch.set('query', q);
 
+    // Sketchfab has no PolyHaven category facet: while one is active, query PolyHaven only
+    // so no unfiltered Sketchfab rows sit under a pressed chip.
+    const emptyAssets: Result<AssetSearchResponse, string> = ok({ assets: [] });
     const [polyRes, sketchRes] = await Promise.all([
       tryApiFetch<AssetSearchResponse>(`/api/blender-mcp/assets?${poly}`),
-      tryApiFetch<AssetSearchResponse>(`/api/blender-mcp/assets?${sketch}`),
+      cat
+        ? Promise.resolve(emptyAssets)
+        : tryApiFetch<AssetSearchResponse>(`/api/blender-mcp/assets?${sketch}`),
     ]);
 
     const outcome = mergeAssetResults(
@@ -97,9 +108,18 @@ export function useAssetBrowser(): UseAssetBrowser {
     setResults(outcome.assets);
     setSearchError(outcome.error);
     setSearchWarning(outcome.warning);
+    setSearchedCategory(cat);
     setHasSearched(true);
     setIsSearching(false);
   }, [query, category]);
+
+  const selectCategory = useCallback(
+    (c: string | null) => {
+      setCategory(c);
+      if (hasSearched) void search({ category: c });
+    },
+    [hasSearched, search],
+  );
 
   const importAsset = useCallback(
     async (asset: AssetResult) => {
@@ -145,6 +165,8 @@ export function useAssetBrowser(): UseAssetBrowser {
     setQuery,
     category,
     setCategory,
+    selectCategory,
+    searchedCategory,
     resolution,
     setResolution,
     results,

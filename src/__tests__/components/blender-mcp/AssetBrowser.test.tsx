@@ -137,6 +137,37 @@ describe('AssetBrowser — search', () => {
   });
 });
 
+describe('AssetBrowser — category chips', () => {
+  it('re-runs the search with the category when a chip is clicked after a search, PolyHaven only', async () => {
+    const fetchMock = mockAssetFetch();
+    render(<AssetBrowser />);
+    fireEvent.change(screen.getByTestId('asset-browser-search-input'), { target: { value: 'rock' } });
+    fireEvent.click(screen.getByTestId('asset-browser-search-button'));
+    await waitFor(() => expect(screen.getByTestId('asset-card-sketchfab:crate_99')).toBeTruthy());
+    const before = fetchMock.mock.calls.length;
+
+    fireEvent.click(screen.getByTestId('asset-cat-rock'));
+
+    await waitFor(() => {
+      const urls = fetchMock.mock.calls.slice(before).map((c) => String(c[0]));
+      expect(urls.filter((u) => u.includes('source=polyhaven') && u.includes('category=rock'))).toHaveLength(1);
+    });
+    const urls = fetchMock.mock.calls.slice(before).map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes('source=sketchfab'))).toBe(false);
+    await waitFor(() => expect(screen.getByTestId('asset-facet-note')).toBeTruthy());
+    expect(screen.queryByTestId('asset-card-sketchfab:crate_99')).toBeNull();
+  });
+
+  it('does not fetch on a chip click before any search has run', () => {
+    const fetchMock = mockAssetFetch();
+    render(<AssetBrowser />);
+    const before = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/assets?')).length;
+    fireEvent.click(screen.getByTestId('asset-cat-rock'));
+    const after = fetchMock.mock.calls.filter((c) => String(c[0]).includes('/assets?')).length;
+    expect(after).toBe(before);
+  });
+});
+
 describe('AssetBrowser — import', () => {
   it('imports an asset via the download endpoint with the selected resolution', async () => {
     const fetchMock = mockAssetFetch();

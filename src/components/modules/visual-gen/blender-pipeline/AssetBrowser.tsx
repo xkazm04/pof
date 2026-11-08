@@ -76,7 +76,7 @@ export function AssetBrowser() {
           <Chip
             label="All"
             active={b.category === null}
-            onClick={() => b.setCategory(null)}
+            onClick={() => b.selectCategory(null)}
             testId="asset-cat-all"
           />
           {POLYHAVEN_CATEGORIES.map((cat) => (
@@ -84,7 +84,7 @@ export function AssetBrowser() {
               key={cat}
               label={cat}
               active={b.category === cat}
-              onClick={() => b.setCategory(b.category === cat ? null : cat)}
+              onClick={() => b.selectCategory(b.category === cat ? null : cat)}
               testId={`asset-cat-${cat}`}
             />
           ))}
@@ -118,6 +118,12 @@ export function AssetBrowser() {
             ))}
           </div>
         </div>
+
+        {b.hasSearched && b.searchedCategory !== null && (
+          <p className="text-2xs text-text-muted" data-testid="asset-facet-note">
+            Sketchfab has no category facet, so only PolyHaven results are shown while a category is active.
+          </p>
+        )}
 
         {!connected && (
           <p className={`text-xs ${WARNING_TEXT}`}>
