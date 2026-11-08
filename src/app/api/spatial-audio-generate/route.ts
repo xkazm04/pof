@@ -15,8 +15,19 @@ const EMPTY_SCENE: SceneDraft = { zones: [], emitters: [] };
  * room is kept unless its id is listed in `overwrite`.
  */
 export async function POST(req: NextRequest) {
+  // A malformed or non-object body is the caller's fault: 400, not the catch-all 500 below.
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
+    const parsed: unknown = await req.json();
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return apiError('Body must be a JSON object', 400);
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return apiError('Body must be valid JSON', 400);
+  }
+
+  try {
     const { action } = body;
 
     switch (action) {
