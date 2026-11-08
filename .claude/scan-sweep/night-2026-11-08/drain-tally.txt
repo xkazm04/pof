@@ -69,3 +69,9 @@ shared-utility-hooks {"demoted":1,"better":8}
 visual-gen-contact-sheet-ue5-export {"superseded":1,"better":8,"demoted":1}
 blueprint-transpiler-game-systems {"partially_superseded":1,"better":7,"superseded":1,"unmeasurable":1}
 module-topology-graph {"better":10}
+build-packaging {"better":8,"demoted":2}
+inventory-genome-economy {"better":9,"superseded":1}
+blender-pipeline {"better":8}
+loot-affix-core {"better":8}
+pipeline-step-components {"better":6,"demoted":1,"not-better":1}
+visual-gen-rigging-conformance {"better":7,"unmeasurable":1}
