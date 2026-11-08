@@ -17,6 +17,12 @@ import { DNAStrand } from './DNAStrand';
 import { TraitSlider } from './TraitSlider';
 import { DistributionBar } from './DistributionBar';
 
+/** Typed integer clamped to [lo, hi]; null for a cleared / non-numeric field (ignore it). */
+function parseClampedInt(raw: string, lo: number, hi: number): number | null {
+  const v = parseInt(raw, 10);
+  return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null;
+}
+
 /* ── Editor Tab ────────────────────────────────────────────────────────── */
 
 interface EditorTabProps {
@@ -141,10 +147,14 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
                 id={rateId}
                 type="number" min={0} max={100} step={1}
                 value={Math.round(selected.mutation.mutationRate * 100)}
-                onChange={(e) => updateGenome(selected.id, (g) => ({
-                  ...g,
-                  mutation: { ...g.mutation, mutationRate: parseInt(e.target.value) / 100 },
-                }))}
+                onChange={(e) => {
+                  const pct = parseClampedInt(e.target.value, 0, 100);
+                  if (pct === null) return;
+                  updateGenome(selected.id, (g) => ({
+                    ...g,
+                    mutation: { ...g.mutation, mutationRate: pct / 100 },
+                  }));
+                }}
                 className="w-full text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
               />
             </div>
@@ -154,10 +164,14 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
                 id={maxId}
                 type="number" min={0} max={6} step={1}
                 value={selected.mutation.maxMutations}
-                onChange={(e) => updateGenome(selected.id, (g) => ({
-                  ...g,
-                  mutation: { ...g.mutation, maxMutations: parseInt(e.target.value) },
-                }))}
+                onChange={(e) => {
+                  const n = parseClampedInt(e.target.value, 0, 6);
+                  if (n === null) return;
+                  updateGenome(selected.id, (g) => ({
+                    ...g,
+                    mutation: { ...g.mutation, maxMutations: n },
+                  }));
+                }}
                 className="w-full text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
               />
             </div>
