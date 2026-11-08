@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { CheckCircle2, XCircle, Loader2, Save, AlertTriangle, RefreshCw } from 'lucide-react';
 import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { Modal } from '@/components/ui/Modal';
@@ -19,6 +20,29 @@ import {
 } from '@/lib/blueprint-transpiler/overwrite-review';
 
 // ─── Write to Project (dry-run diff → confirm) ──────────────────────────────
+
+/** One status banner: tinted fill + border in the tone's STATUS_* colour, an icon, the message, an optional action. */
+function StatusBanner({ tone, icon: Icon, testId, action, children }: {
+  tone: 'error' | 'warning';
+  icon: LucideIcon;
+  testId?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  const color = tone === 'error' ? STATUS_ERROR : STATUS_WARNING;
+  return (
+    <div
+      data-testid={testId}
+      className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-2xs"
+      style={{ backgroundColor: `${color}${OPACITY_10}`, border: `1px solid ${color}${OPACITY_30}`, color }}
+    >
+      <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+      <span className="flex-1">{children}</span>
+      {action}
+    </div>
+  );
+}
+
 
 // Everything the open plan was diffed against, frozen at dry-run time. Confirm
 // sends THIS snapshot — never the live props — so what is written to disk is
@@ -131,6 +155,17 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
   const [receipt, setReceipt] = useState<WriteReceipt | null>(null);
   const [compile, setCompile] = useState<CompileVerdict>({ kind: 'none' });
   const [err, setErr] = useState<string | null>(null);
+  // A receipt and compile verdict describe the code that was written. A new
+  // transpile result (another class, or the same class re-generated) must not
+  // keep showing them beside code they say nothing about. Adjusting state
+  // during render (keyed on the result) avoids an effect round-trip.
+  const resultKey = JSON.stringify([className, header, source]);
+  const [receiptKey, setReceiptKey] = useState(resultKey);
+  if (receiptKey !== resultKey) {
+    setReceiptKey(resultKey);
+    setReceipt(null);
+    setCompile({ kind: 'none' });
+  }
 
   // The Module input lives INSIDE the dry-run modal — a changed module makes
   // the displayed diff stale (it covers paths that will no longer be written).
@@ -251,7 +286,7 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
         </span>
       )}
       {err && (
-        <span className="text-2xs text-red-400 flex items-center gap-1">
+        <span className="text-2xs flex items-center gap-1" style={{ color: STATUS_ERROR }}>
           <XCircle className="w-3 h-3" /> {err}
         </span>
       )}
@@ -280,83 +315,45 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
             </div>
 
             {!plan.project.isUeProject && (
-              <div
-                data-testid="not-a-ue-project"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-2xs"
-                style={{
-                  backgroundColor: `${STATUS_ERROR}${OPACITY_10}`,
-                  border: `1px solid ${STATUS_ERROR}${OPACITY_30}`,
-                  color: STATUS_ERROR,
-                }}
-              >
-                <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="flex-1">
-                  No <code className="font-mono">.uproject</code> in {projectPath} — this is not a UE project, and the
-                  write will be refused rather than manufacture a Source/ tree inside it.
-                </span>
-              </div>
+              <StatusBanner tone="error" icon={XCircle} testId="not-a-ue-project">
+                No <code className="font-mono">.uproject</code> in {projectPath} — this is not a UE project, and the
+                write will be refused rather than manufacture a Source/ tree inside it.
+              </StatusBanner>
             )}
 
             {plan.project.isUeProject && !plan.project.moduleInBuild && (
-              <div
-                data-testid="module-not-in-build"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-2xs"
-                style={{
-                  backgroundColor: `${STATUS_WARNING}${OPACITY_10}`,
-                  border: `1px solid ${STATUS_WARNING}${OPACITY_30}`,
-                  color: STATUS_WARNING,
-                }}
-              >
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="flex-1">
-                  <code className="font-mono">{plan.project.buildCsRelPath}</code> does not exist, so
-                  <strong> this module is not part of the build</strong> — the files will land on disk but no
-                  compiler will ever read them.
-                </span>
-              </div>
+              <StatusBanner tone="warning" icon={AlertTriangle} testId="module-not-in-build">
+                <code className="font-mono">{plan.project.buildCsRelPath}</code> does not exist, so
+                <strong> this module is not part of the build</strong> — the files will land on disk but no
+                compiler will ever read them.
+              </StatusBanner>
             )}
 
             {macroMismatch && (
-              <div
-                data-testid="api-macro-mismatch"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-2xs"
-                style={{
-                  backgroundColor: `${STATUS_WARNING}${OPACITY_10}`,
-                  border: `1px solid ${STATUS_WARNING}${OPACITY_30}`,
-                  color: STATUS_WARNING,
-                }}
-              >
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="flex-1">
-                  The header does not declare <code className="font-mono">{apiMacroFor(moduleName)}</code>, so this class
-                  would be exported from a module it does not live in — re-transpile before writing.
-                </span>
-              </div>
+              <StatusBanner tone="warning" icon={AlertTriangle} testId="api-macro-mismatch">
+                The header does not declare <code className="font-mono">{apiMacroFor(moduleName)}</code>, so this class
+                would be exported from a module it does not live in — re-transpile before writing.
+              </StatusBanner>
             )}
 
             {codeStale && (
-              <div
-                className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3 text-2xs"
-                style={{
-                  backgroundColor: `${STATUS_WARNING}${OPACITY_10}`,
-                  border: `1px solid ${STATUS_WARNING}${OPACITY_30}`,
-                  color: STATUS_WARNING,
-                }}
+              <StatusBanner
+                tone="warning"
+                icon={AlertTriangle}
+                action={(
+                  <button
+                    onClick={dryRun}
+                    disabled={busy}
+                    className="flex items-center gap-1 px-2 py-1 rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
+                    style={{ backgroundColor: `${STATUS_WARNING}${OPACITY_15}`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}${OPACITY_30}` }}
+                  >
+                    {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                    Refresh diff
+                  </button>
+                )}
               >
-                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="flex-1">
-                  The transpiled code changed since this diff was computed — what&apos;s shown below is no longer what would be written.
-                </span>
-                <button
-                  onClick={dryRun}
-                  disabled={busy}
-                  className="flex items-center gap-1 px-2 py-1 rounded font-medium transition-colors disabled:opacity-40 flex-shrink-0"
-                  style={{ backgroundColor: `${STATUS_WARNING}${OPACITY_15}`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}${OPACITY_30}` }}
-                >
-                  {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                  Refresh diff
-                </button>
-              </div>
+                The transpiled code changed since this diff was computed — what&apos;s shown below is no longer what would be written.
+              </StatusBanner>
             )}
 
             {review && (

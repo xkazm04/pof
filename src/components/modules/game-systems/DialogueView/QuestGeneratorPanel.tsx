@@ -8,12 +8,13 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { apiFetch } from '@/lib/api-utils';
+import { downloadBlob } from '@/lib/download';
 import { useProjectStore } from '@/stores/projectStore';
 import type {
   QuestGenerationResult,
   QuestCategory,
 } from '@/types/quest-generation';
-import { withOpacity, OPACITY_80 } from '@/lib/chart-colors';
+import { withOpacity, OPACITY_80, OPACITY_5, OPACITY_30, STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 import { EMPTY_QUESTS, EMPTY_NOTES, ACCENT, CATEGORY_LABELS } from './constants';
 import { WorldScanSummary } from './WorldScanSummary';
 import { QuestCard } from './QuestCard';
@@ -95,16 +96,7 @@ export function QuestGeneratorPanel() {
   const downloadJson = useCallback(() => {
     if (!batchJson || !result) return;
     const stamp = result.generatedAt.replace(/[:.]/g, '-');
-    // Same transient-anchor shape as CodeViewer's triggerDownload — the anchor
-    // must be in the document before click() for Firefox to honour it.
-    const url = URL.createObjectURL(new Blob([batchJson], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `quests-${stamp}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([batchJson], { type: 'application/json' }), `quests-${stamp}.json`);
   }, [batchJson, result]);
 
   return (
@@ -149,7 +141,10 @@ export function QuestGeneratorPanel() {
       </SurfaceCard>
 
       {error && (
-        <div className="rounded border border-red-400/30 bg-red-400/5 px-3 py-2 text-xs text-red-400">{error}</div>
+        <div
+          className="rounded px-3 py-2 text-xs"
+          style={{ color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}${OPACITY_30}`, backgroundColor: `${STATUS_ERROR}${OPACITY_5}` }}
+        >{error}</div>
       )}
 
       {!result && !loading && (
@@ -211,7 +206,7 @@ export function QuestGeneratorPanel() {
               visible: { transition: { staggerChildren: 0.06 } },
             }}
           >
-            {(['main', 'side', 'bounty', 'exploration', 'fetch'] as QuestCategory[]).map(c => {
+            {(Object.keys(CATEGORY_LABELS) as QuestCategory[]).map(c => {
               const count = quests.filter(q => q.category === c).length;
               const cfg = CATEGORY_LABELS[c];
               return (
@@ -237,7 +232,7 @@ export function QuestGeneratorPanel() {
           {notes.length > 0 && (
             <SurfaceCard level={2} className="px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1.5">
-                <AlertTriangle className="w-3 h-3 text-yellow-400" />
+                <AlertTriangle className="w-3 h-3" style={{ color: STATUS_WARNING }} />
                 <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Coherence Check</span>
               </div>
               <div className="space-y-0.5">

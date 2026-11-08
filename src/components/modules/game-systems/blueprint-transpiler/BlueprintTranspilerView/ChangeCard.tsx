@@ -14,6 +14,7 @@ export function ChangeCard({ change }: { change: SemanticChange }) {
   const [expanded, setExpanded] = useState(false);
   const panelId = useId();
   const conflictStyle = CONFLICT_STYLES[change.conflictLevel];
+  const ConflictIcon = conflictStyle.icon;
 
   const t = CHANGE_TYPE_META[change.type] ?? CHANGE_TYPE_META.modify;
 
@@ -42,12 +43,15 @@ export function ChangeCard({ change }: { change: SemanticChange }) {
             : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden />}
           <span className="text-xs font-medium text-text truncate">{change.name}</span>
         </button>
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: conflictStyle.color }}
-          title={conflictStyle.label}
-          aria-hidden
-        />
+        {/* Glyph + accessible name, not a hue-only dot (WCAG 1.4.1). */}
+        <ConflictIcon
+          className="w-3.5 h-3.5 flex-shrink-0"
+          style={{ color: conflictStyle.color }}
+          role="img"
+          aria-label={conflictStyle.label}
+        >
+          <title>{conflictStyle.label}</title>
+        </ConflictIcon>
       </div>
 
       {expanded && (

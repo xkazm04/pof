@@ -13,7 +13,7 @@ import {
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { CopyButton } from '@/components/ui/CopyButton';
 import {
-  MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO,
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO, STATUS_ERROR, STATUS_WARNING,
   OPACITY_20, OPACITY_30, statusBg, statusBorder,
 } from '@/lib/chart-colors';
 
@@ -111,13 +111,13 @@ export function ReplicationScaffoldPanel() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-status-red-subtle border border-status-red-strong text-xs text-red-400">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-status-red-subtle border border-status-red-strong text-xs" style={{ color: STATUS_ERROR }}>
           <XCircle className="w-3.5 h-3.5" /> {error}
         </div>
       )}
 
       {scanStale && replication && (
-        <div data-testid="replication-stale" className="px-3 py-2 rounded-md border border-border text-2xs text-amber-400">
+        <div data-testid="replication-stale" className="px-3 py-2 rounded-md border border-border text-2xs" style={{ color: STATUS_WARNING }}>
           The Blueprint JSON changed since this scan - the fields below describe the previous version. Scan again.
         </div>
       )}
