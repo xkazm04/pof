@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { checkLocalPath, checkModuleName } from '@/app/api/filesystem/_lib/pathGuard';
 import type { ProjectType } from '@/lib/prompt-context';
@@ -531,6 +532,9 @@ async function scanWebAppProject(
 // ── Route handler ──
 
 export async function POST(request: NextRequest) {
+  // Reads the local disk: no cross-site page, and no caller without the token when one is set.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = await readJsonObject(request);
     if (!body) return apiError(MALFORMED_BODY_ERROR, 400);

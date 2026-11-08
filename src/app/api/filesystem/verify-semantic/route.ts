@@ -16,6 +16,7 @@ import { NextRequest } from 'next/server';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { parseHeader, checkExpectations, type SemanticResult } from '@/lib/cpp-semantic-parser';
 import { getExpectationsFor, getExpectationsForItem } from '@/lib/checklist-expectations';
@@ -39,6 +40,9 @@ interface ItemVerification {
 }
 
 export async function POST(request: NextRequest) {
+  // Reads the local disk: no cross-site page, and no caller without the token when one is set.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
