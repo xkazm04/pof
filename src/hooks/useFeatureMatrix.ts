@@ -253,20 +253,9 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
 
   const discardAutoVerify = useCallback(() => holdPlan(null), [holdPlan]);
 
-  // Auto-seed on first load if no data exists
-  useEffect(() => {
-    let cancelled = false;
-
-    async function init() {
-      await fetchData();
-    }
-
-    init().then(() => {
-      if (cancelled) return;
-    });
-
-    return () => { cancelled = true; };
-  }, [fetchData]);
+  // Load on mount and whenever the module or project changes. Stale responses are
+  // dropped inside fetchData by its request id; the seed decision is the effect below.
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   // After loading, if features is empty and we haven't seeded this module yet, auto-seed.
   // Only after a SUCCESSFUL empty fetch — a failed GET also leaves features at []
