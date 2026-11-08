@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { gateInputImage, parseVisionImage } from '@/lib/visual-gen/input-gate';
 
 /**
@@ -23,8 +24,12 @@ export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
   try {
-    const body = (await request.json()) as { imageDataUrl?: string; subject?: string };
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as { imageDataUrl?: string; subject?: string };
     if (!body.imageDataUrl) return apiError('Missing required field: imageDataUrl', 400);
+    if (typeof body.imageDataUrl !== 'string') return apiError('imageDataUrl must be a string', 400);
+    if (body.subject != null && typeof body.subject !== 'string') return apiError('subject must be a string', 400);
     const image = parseVisionImage(body.imageDataUrl);
     if (!image) return apiError('imageDataUrl must be a base64 image data URL', 400);
 

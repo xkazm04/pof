@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { renderIconFromMesh } from '@/lib/visual-gen/icon-from-mesh';
 
 /**
@@ -22,11 +23,32 @@ import { renderIconFromMesh } from '@/lib/visual-gen/icon-from-mesh';
  * `GET /api/visual-gen/icons` with `renderedFrom` set — the claim "this icon depicts the
  * shipped asset" is checkable rather than asserted.
  */
+/** Sanity bounds on a rendered icon; the default is 512. */
+const RESOLUTION_MIN = 64;
+const RESOLUTION_MAX = 2048;
+
+/** The first wrongly shaped field as a refusal, or null when the body may start a render. */
+function bodyShapeRefusal(body: Record<string, unknown>): string | null {
+  for (const field of ['meshPath', 'catalogId', 'step', 'entityId']) {
+    if (body[field] != null && typeof body[field] !== 'string') return `${field} must be a string`;
+  }
+  if (body.heroYaw != null && !Number.isFinite(body.heroYaw)) return 'heroYaw must be a number of degrees';
+  const r = body.resolution;
+  if (r != null && !(Number.isInteger(r) && (r as number) >= RESOLUTION_MIN && (r as number) <= RESOLUTION_MAX)) {
+    return `resolution must be a whole number from ${RESOLUTION_MIN} to ${RESOLUTION_MAX}`;
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const shapeRefusal = bodyShapeRefusal(parsed);
+    if (shapeRefusal) return apiError(shapeRefusal, 400);
+    const body = parsed as {
       meshPath?: string;
       catalogId?: string;
       step?: string;
