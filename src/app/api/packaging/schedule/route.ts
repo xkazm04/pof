@@ -43,7 +43,7 @@ function sanitizeSchedulePatch(body: Record<string, unknown>): Partial<BuildSche
     patch.time = body.time;
   }
   if ('days' in body) {
-    if (!Array.isArray(body.days) || body.days.some((d) => typeof d !== 'number' || d < 0 || d > 6)) return null;
+    if (!Array.isArray(body.days) || body.days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) return null;
     patch.days = body.days as number[];
   }
   if ('profileId' in body) {
