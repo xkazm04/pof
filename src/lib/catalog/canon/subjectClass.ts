@@ -28,4 +28,5 @@ export function subjectClassOf(catalogId: string | null | undefined): SubjectCla
   return catalogId ? CLASS_BY_CATALOG[catalogId] : undefined;
 }
 
-export const SUBJECT_CLASSES: readonly SubjectClass[] = ['creature', 'environment', 'item'];
+/** The catalogs given a subject class — pinned to registered pipelines by `subjectClass.test.ts`. */
+export const SUBJECT_CLASS_CATALOGS: readonly string[] = Object.keys(CLASS_BY_CATALOG);
