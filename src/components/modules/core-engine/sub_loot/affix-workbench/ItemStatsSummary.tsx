@@ -32,6 +32,8 @@ export function ItemStatsSummary({
   const lockLabel = prefixLocked && suffixLocked ? 'Both'
     : prefixLocked ? 'Prefix' : suffixLocked ? 'Suffix' : 'None';
   const hasLocks = prefixLocked || suffixLocked;
+  // Colour the count by the WORST active synergy, not whichever rule is listed first.
+  const worstSynergy = (['broken', 'strong', 'good'] as const).find((sev) => activeSynergies.some((s) => s.severity === sev));
 
   const rows: { label: string; value: string | number; color: string; icon?: React.ReactNode }[] = [
     {
@@ -45,7 +47,7 @@ export function ItemStatsSummary({
     {
       label: 'Synergies',
       value: activeSynergies.length,
-      color: activeSynergies.length > 0 ? SYNERGY_COLORS[activeSynergies[0].severity] : 'var(--text-muted)',
+      color: worstSynergy ? SYNERGY_COLORS[worstSynergy] : 'var(--text-muted)',
     },
   ];
 
