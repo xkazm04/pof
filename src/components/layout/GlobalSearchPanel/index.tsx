@@ -5,6 +5,7 @@ import {
   Search, X, RefreshCw, Loader2,
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { TYPE_META } from './constants';
 import { SearchResultRow } from './SearchResultRow';
@@ -36,6 +37,8 @@ export function GlobalSearchPanel() {
     backdropMotion,
     panelMotion,
   } = useGlobalSearchPanel();
+  // The palette focuses its own input on open; the trap only contains Tab and restores the opener.
+  const panelRef = useFocusTrap<HTMLDivElement>(open, { autoFocus: false });
 
   return (
     <AnimatePresence>
@@ -52,6 +55,8 @@ export function GlobalSearchPanel() {
           {/* Panel */}
           <motion.div
             key="search-panel"
+            ref={panelRef}
+            tabIndex={-1}
             {...panelMotion}
             role="dialog"
             aria-modal="true"

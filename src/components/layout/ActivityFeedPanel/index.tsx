@@ -12,6 +12,7 @@ import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { useModuleActions } from '@/hooks/useModuleActions';
 import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { useEscapeLayer } from '@/hooks/useHotkey';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import type { ActivityEvent } from '@/stores/activityFeedStore';
@@ -49,6 +50,8 @@ export function ActivityFeedPanel() {
   // In overlay mode, Escape dismisses the drawer (parity with the search palette / lab drawers) —
   // a LIFO layer, so it only closes when it is the topmost open layer.
   useEscapeLayer('activity-feed', isOpen && overlay, () => setOpen(false));
+  // Overlay drawer is aria-modal: contain Tab, move focus in on open, restore the opener on close.
+  const drawerRef = useFocusTrap<HTMLElement>(isOpen && overlay);
 
   const unreadCount = useMemo(() => countUnread(events), [events]);
   // tick and isOpen are clock inputs: buildSections reads Date.now(), so a memo on
@@ -182,6 +185,8 @@ export function ActivityFeedPanel() {
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
           <motion.aside
+            ref={drawerRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label="Activity feed"
