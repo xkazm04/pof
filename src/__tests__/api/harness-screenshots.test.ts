@@ -66,6 +66,21 @@ describe('GET /api/harness/screenshots', () => {
   });
 });
 
+describe('GET /api/harness/screenshots corrupt result.json', () => {
+  it('marks an unparseable result.json corrupt instead of reporting an empty iteration', async () => {
+    fs.mkdirSync(path.join(tmp, 'screenshots', '2'));
+    fs.writeFileSync(path.join(tmp, 'screenshots', '2', 'result.json'), '{"passed": tru');
+    fs.mkdirSync(path.join(tmp, 'screenshots', '1'));
+    fs.writeFileSync(path.join(tmp, 'screenshots', '1', 'result.json'), JSON.stringify({ modules: [] }));
+    const body = await (await listGET(listReq(tmp))).json();
+    const [bad, ok] = body.data.iterations;
+    expect(bad.iteration).toBe(2);
+    expect(bad.corrupt).toBe(true);
+    expect(bad.modules).toEqual([]);
+    expect(ok.corrupt).toBeUndefined();
+  });
+});
+
 describe('GET /api/harness/screenshot', () => {
   it('serves a PNG buffer for a valid iter+slug', async () => {
     const dir = path.join(tmp, 'screenshots', '5');
