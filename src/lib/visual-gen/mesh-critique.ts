@@ -33,7 +33,17 @@ export function parseCritiqueMetrics(stdout: string): { ok: boolean; metrics?: M
   if (error) return { ok: false, error };
   const verts = get('VERTS');
   if (!get('DONE') || verts === undefined) return { ok: false, error: 'no critique markers in output' };
+  // A NaN clears every `<` and `>` in scoreMesh, so an unreadable count would grade as a clean
+  // mesh. The counts the verdict turns on must be numbers; an unreadable one means no metrics.
+  for (const key of ['VERTS', 'FACES', 'COMPONENTS']) {
+    if (!Number.isFinite(Number(get(key) ?? NaN))) return { ok: false, error: `unreadable ${key} marker in critique output` };
+  }
+  const degenerate = get('DEGENERATE_FACES');
+  if (degenerate !== undefined && !Number.isFinite(Number(degenerate))) {
+    return { ok: false, error: 'unreadable DEGENERATE_FACES marker in critique output' };
+  }
   const bbox = (get('BBOX') ?? '0,0,0').split(',').map(Number);
+  if (bbox.length !== 3 || !bbox.every(Number.isFinite)) return { ok: false, error: 'unreadable BBOX marker in critique output' };
   const vol = get('VOLUME');
   const compFaces = get('COMPONENT_FACES');
   return {
