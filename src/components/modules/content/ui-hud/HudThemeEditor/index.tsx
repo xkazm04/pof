@@ -16,7 +16,10 @@ import { LivePreviewScene } from './LivePreviewScene';
 import { ParameterEditor } from './ParameterEditor';
 import { ExportPanel } from './ExportPanel';
 import { ApplyToProjectBar } from './ApplyToProjectBar';
+import type { CopyState } from './ExportPanel';
 import { useHudDesignStore } from '@/stores/hudDesignStore';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { useProjectStore } from '@/stores/projectStore';
 import type { HudTheme, RGBA } from './types';
 
@@ -28,7 +31,7 @@ export function HudThemeEditor() {
   const theme = useHudDesignStore((s) => s.byProject[projectPath]?.themeDraft ?? DEFAULT_THEME);
   const setThemeDraft = useHudDesignStore((s) => s.setThemeDraft);
   const [playing, setPlaying] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
   const [activeSection, setActiveSection] = useState<'health' | 'damage' | 'enemy'>('health');
 
   const time = useAnimationLoop(playing);
@@ -50,9 +53,10 @@ export function HudThemeEditor() {
   const exportConfig = useMemo(() => generateUE5Config(theme), [theme]);
 
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(exportConfig);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Shared helper: a rejected write (no secure context / focus) reports failure, never throws.
+    const ok = await copyToClipboard(exportConfig);
+    setCopyState(ok ? 'copied' : 'failed');
+    setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
   }, [exportConfig]);
 
   const handleDownload = useCallback(() => {
@@ -133,7 +137,7 @@ export function HudThemeEditor() {
         <ExportPanel
           theme={theme}
           exportConfig={exportConfig}
-          copied={copied}
+          copyState={copyState}
           handleCopy={handleCopy}
           handleDownload={handleDownload}
           onImport={handleImport}

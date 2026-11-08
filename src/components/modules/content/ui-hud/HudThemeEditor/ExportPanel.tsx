@@ -8,6 +8,8 @@ import { exportStats } from './themeSchema';
 import { parseUE5Config, type HudImportResult } from './helpers';
 import type { HudTheme } from './types';
 
+export type CopyState = 'idle' | 'copied' | 'failed';
+
 const btn = 'focus-ring flex items-center gap-1 px-2 py-1 text-2xs font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors';
 
 /** What the last import did — every unapplied line is named, never dropped silently. */
@@ -75,14 +77,14 @@ function ImportBox({ theme, onImport, onClose }: {
 export function ExportPanel({
   theme,
   exportConfig,
-  copied,
+  copyState,
   handleCopy,
   handleDownload,
   onImport,
 }: {
   theme: HudTheme;
   exportConfig: string;
-  copied: boolean;
+  copyState: CopyState;
   handleCopy: () => void;
   handleDownload: () => void;
   onImport: (theme: HudTheme) => void;
@@ -107,12 +109,14 @@ export function ExportPanel({
             <span className="text-text-muted">Paste .h</span>
           </button>
           <button type="button" onClick={handleCopy} className={btn} title="Copy to clipboard">
-            {copied ? (
+            {copyState === 'copied' ? (
               <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
             ) : (
-              <Copy className="w-3 h-3 text-text-muted" />
+              <Copy className="w-3 h-3 text-text-muted" style={copyState === 'failed' ? { color: STATUS_ERROR } : undefined} />
             )}
-            <span className="text-text-muted">{copied ? 'Copied' : 'Copy'}</span>
+            <span className="text-text-muted" role="status">
+              {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
+            </span>
           </button>
           <button type="button" onClick={handleDownload} className={btn} title="Download .h file">
             <Download className="w-3 h-3 text-text-muted" />
