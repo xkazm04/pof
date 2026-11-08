@@ -164,11 +164,12 @@ export function dpsConsistent(
 ): Checker {
   return (data) => {
     const dmg = (data[damageField] ?? {}) as Record<string, unknown>;
-    const num = (k: string): number => Number(dmg[k] ?? (data as Record<string, unknown>)[k]);
+    // Strict (`readNumber`): a blank or a boolean is unset (NaN here), never 0 — blanks used to reconcile 0 = 0.
+    const num = (k: string): number => readNumber(dmg[k] ?? (data as Record<string, unknown>)[k]) ?? NaN;
     const min = num('damageMin');
     const max = num('damageMax');
     const aps = num('attackSpeed');
-    const dps = Number(data[dpsField]);
+    const dps = readNumber(data[dpsField]) ?? NaN;
     if (![min, max, aps, dps].every((n) => Number.isFinite(n))) {
       const missing: string[] = ['damageMin', 'damageMax', 'attackSpeed'].filter((k) => !Number.isFinite(num(k)));
       if (!Number.isFinite(dps)) missing.push('baseDPS');
