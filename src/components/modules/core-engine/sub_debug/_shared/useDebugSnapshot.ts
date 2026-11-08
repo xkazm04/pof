@@ -50,11 +50,18 @@ export function useDebugSnapshot(): DebugSnapshotState {
   const baseId = usePerformanceProfilingStore((s) =>
     isCapture(s.sessionList[0]?.source) ? s.sessionList.slice(1).find((r) => isCapture(r.source))?.id : undefined);
   const [listed, setListed] = useState(false);
+  // The store swallows a failed list into `error` and leaves the list empty:
+  // a failed list is 'unavailable', never 'no-capture'.
+  const [listError, setListError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
     let live = true;
-    void usePerformanceProfilingStore.getState().listSessions().then(() => { if (live) setListed(true); });
+    void usePerformanceProfilingStore.getState().listSessions().then(() => {
+      if (!live) return;
+      setListError(usePerformanceProfilingStore.getState().error);
+      setListed(true);
+    });
     return () => { live = false; };
   }, []);
 
@@ -96,7 +103,10 @@ export function useDebugSnapshot(): DebugSnapshotState {
     return () => { live = false; };
   }, [newestId, baseId]); // keyed on ids: a re-listed row for the same session is not a new capture
 
-  if (listed && !newest) return { snapshot: SAMPLE_SNAPSHOT, provenance: SAMPLE_PROVENANCE, listed, latest: NO_CAPTURE };
+  if (listed && !newest) {
+    const latest: LatestTriage = listError ? { kind: 'unavailable', reason: listError } : NO_CAPTURE;
+    return { snapshot: SAMPLE_SNAPSHOT, provenance: SAMPLE_PROVENANCE, listed, latest };
+  }
   // A deleted newest session falls back to the sample without a reset effect.
   if (loaded && newest && loaded.id === newest.id) {
     return { snapshot: loaded.snapshot, provenance: loaded.provenance, listed, latest: loaded.latest };
