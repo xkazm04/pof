@@ -75,3 +75,9 @@ blender-pipeline {"better":8}
 loot-affix-core {"better":8}
 pipeline-step-components {"better":6,"demoted":1,"not-better":1}
 visual-gen-rigging-conformance {"better":7,"unmeasurable":1}
+core-engine-genre-tabs {"better":7}
+quality-evaluation-api {"demoted":2,"better":5}
+ue5-build-bridge {"superseded":1,"demoted":2,"better":3,"not-better":1}
+judge-craft-quality {"superseded":1,"better":6}
+blender-mcp-bridge {"better":6}
+loot-simulation {"better":6}
