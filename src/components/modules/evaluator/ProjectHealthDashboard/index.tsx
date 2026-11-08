@@ -210,7 +210,7 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
       )}
 
       {/* ── All Recommendations (when no module selected) ── */}
-      {!selectedModule && lastScan && lastScan.recommendations.length > 0 && (
+      {!selectedDetail && lastScan && lastScan.recommendations.length > 0 && (
         <TopRecommendations lastScan={lastScan} handleFix={handleFix} fixCli={fixCli} />
       )}
 
