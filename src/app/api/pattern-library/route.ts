@@ -108,8 +108,19 @@ export async function GET(req: NextRequest) {
  *   { action: 'update', id, patch: PatternMetaPatch }      → Patch editable fields
  */
 export async function POST(req: NextRequest) {
+  // A malformed or non-object body is a 400, not the catch-all 500 below.
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
+    const parsed: unknown = await req.json();
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return apiError('Body must be a JSON object', 400);
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return apiError('Body must be valid JSON', 400);
+  }
+
+  try {
     const { action } = body;
 
     if (action === 'extract') {
@@ -130,7 +141,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'delete') {
       const { id } = body;
-      if (!id) return apiError('id is required', 400);
+      if (typeof id !== 'string' || !id) return apiError('id is required', 400);
       const deleted = deletePattern(id);
       return apiSuccess({ deleted });
     }
@@ -165,7 +176,7 @@ export async function POST(req: NextRequest) {
     if (action === 'update') {
       const { id, patch } = body as { id?: string; patch?: PatternMetaPatch };
       if (!id) return apiError('id is required', 400);
-      if (!patch || typeof patch !== 'object') return apiError('patch is required', 400);
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return apiError('patch must be an object', 400);
       const pattern = updatePatternMeta(id, patch);
       if (!pattern) return apiError('Pattern not found', 404);
       return apiSuccess({ pattern });

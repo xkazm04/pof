@@ -106,3 +106,14 @@ describe('/api/animations/mixamo-result body shape', () => {
     expect((await res.json()).data.importedCount).toBe(stored);
   });
 });
+
+describe('/api/pattern-library body shape', () => {
+  it.each(['{"action":', 'null'])('POST refuses malformed or non-object JSON %s', async (raw) => {
+    const { POST } = await import('@/app/api/pattern-library/route');
+    await expect400(await POST(req('/api/pattern-library', 'POST', raw)));
+  });
+  it('POST update refuses an array patch', async () => {
+    const { POST } = await import('@/app/api/pattern-library/route');
+    await expect400(await POST(req('/api/pattern-library', 'POST', JSON.stringify({ action: 'update', id: 'p1', patch: ['title'] }))));
+  });
+});
