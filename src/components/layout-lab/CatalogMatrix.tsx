@@ -266,6 +266,9 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
                       return (
                         <td key={s} style={stepTd}>
                           <span data-cell={`${r.id}::${s}`} data-status="not-applicable"
+                            // A generic <span> may not carry aria-label (AT ignores it); role=img
+                            // makes the "·" an announced, named glyph like the button cells.
+                            role="img"
                             aria-label={`${r.name} · ${s}: not part of this entity's pipeline`}
                             title={`${r.name} · ${s}: not part of this entity's pipeline (canon profile)`}
                             style={{ color: t.muted }}>·</span>
