@@ -3,21 +3,12 @@
 import { create } from 'zustand';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { hashChecklist, type ChecklistProgress } from '@/lib/checklist-hash';
 import type { SubModuleId } from '@/types/modules';
 import type { ComplianceReport, ReconciliationSuggestion } from '@/types/gdd-compliance';
 
 const EMPTY_MODULES: ComplianceReport['modules'] = [];
 const EMPTY_SUGGESTIONS: ReconciliationSuggestion[] = [];
-
-type ChecklistProgress = Record<string, Record<string, boolean>>;
-
-/** Canonical hash of the checked items, stable across key-order differences. */
-function hashChecklist(cp: ChecklistProgress): string {
-  return Object.keys(cp)
-    .sort()
-    .map((m) => `${m}:${Object.keys(cp[m]).filter((k) => cp[m][k]).sort().join(',')}`)
-    .join('|');
-}
 
 /**
  * Flip one gap's resolved flag on a copy of the report and recompute the open-gap

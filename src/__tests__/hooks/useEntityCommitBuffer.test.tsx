@@ -290,3 +290,36 @@ describe('useEntityCommitBuffer — peek', () => {
     expect(peek()?.note).toBe('frame-2');
   });
 });
+
+describe('useEntityCommitBuffer — record switch with a pending debounce', () => {
+  it('writes the edit staged on A against A\'s base when the entity changes before the pause ends', async () => {
+    const commit = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender } = renderBuffer({ commit, base: DOC, entityId: 'a', debounceMs: 20 });
+
+    act(() => { result.current.stageDebounced({ note: 'typed' }); });
+    rerender({ commit, base: OTHER, entityId: 'b', debounceMs: 20 });
+    await act(async () => { await new Promise((r) => setTimeout(r, 80)); });
+
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(commit.mock.calls[0][0]).toEqual({ note: 'typed' });
+    expect(commit.mock.calls[0][1]).toBe(DOC);
+    // The orphan write never touches the open record's saving state.
+    expect(result.current.isSaving).toBe(false);
+    expect(result.current.saveError).toBeNull();
+    expect(result.current.isDirty).toBe(false);
+  });
+
+  it('writes A\'s pending edit when B is edited first', async () => {
+    const commit = vi.fn().mockResolvedValue(undefined);
+    const { result, rerender } = renderBuffer({ commit, base: DOC, entityId: 'a', debounceMs: 20 });
+
+    act(() => { result.current.stageDebounced({ note: 'typed' }); });
+    rerender({ commit, base: OTHER, entityId: 'b', debounceMs: 20 });
+    act(() => { result.current.stage({ name: 'B-edit' }); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(commit.mock.calls[0][1]).toBe(DOC);
+    expect(result.current.doc?.name).toBe('B-edit');
+  });
+});

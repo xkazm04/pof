@@ -6,9 +6,8 @@ import { useIsMounted } from '@/hooks/useIsMounted';
 import { useModuleStore } from '@/stores/moduleStore';
 import { logger } from '@/lib/logger';
 import { normalizeProjectId } from '@/lib/project-id';
+import { hashChecklist, type ChecklistProgress } from '@/lib/checklist-hash';
 import type { GDDDocument } from '@/lib/gdd-synthesizer';
-
-type ChecklistProgress = Record<string, Record<string, boolean>>;
 
 interface UseGameDesignDocResult {
   gdd: GDDDocument | null;
@@ -26,18 +25,6 @@ interface UseGameDesignDocResult {
   exportMarkdown: (doc: GDDDocument) => Promise<string | null>;
   /** Formats the document instance the caller is holding — never re-synthesizes. */
   exportPitch: (doc: GDDDocument) => Promise<string | null>;
-}
-
-/**
- * Canonical hash of the checked items, stable across key-order differences.
- * (Mirrors `hashChecklist` in `@/stores/gddComplianceStore` — the same staleness
- * idiom, re-implemented here because that one is store-private.)
- */
-function hashChecklist(cp: ChecklistProgress): string {
-  return Object.keys(cp)
-    .sort()
-    .map((m) => `${m}:${Object.keys(cp[m]).filter((k) => cp[m][k]).sort().join(',')}`)
-    .join('|');
 }
 
 function readChecklist(): ChecklistProgress {

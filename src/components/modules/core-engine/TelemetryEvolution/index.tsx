@@ -7,6 +7,7 @@ import { motionSafe } from '@/lib/motion';
 import { useGenreEvolution } from '@/hooks/useGenreEvolution';
 import { useProjectStore } from '@/stores/projectStore';
 import { logger } from '@/lib/logger';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { GenreDnaTimeline } from '@/components/modules/core-engine/GenreDnaTimeline';
 import { ACCENT } from './constants';
 import { EmptyState } from './EmptyState';
@@ -16,7 +17,7 @@ import { AcceptedGenres } from './AcceptedGenres';
 import { ScanHistory } from './ScanHistory';
 
 export function TelemetryEvolution() {
-  const { stats, history, loading, scanning, scanError, scanProject, resolveSuggestion } = useGenreEvolution();
+  const { stats, history, loading, loadError, scanning, scanError, refresh, scanProject, resolveSuggestion } = useGenreEvolution();
   // Two field selectors, not the whole store: a bare useProjectStore() re-rendered this
   // panel on every unrelated project-store write (scan flags, setup step, recents).
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -146,8 +147,15 @@ export function TelemetryEvolution() {
         </p>
       )}
 
+      {/* A failed read is a failure, never the "0 scans" empty state. */}
+      {loadError && (
+        <div data-testid="genre-load-error">
+          <InlineErrorRetry message={`Could not load scan data: ${loadError}`} onRetry={() => { void refresh(); }} />
+        </div>
+      )}
+
       {/* Empty state */}
-      {patterns.length === 0 && suggestions.length === 0 && accepted.length === 0 && (
+      {!loadError && patterns.length === 0 && suggestions.length === 0 && accepted.length === 0 && (
         <EmptyState onScan={handleScan} scanning={scanning} hasProject={!!projectPath} scanCount={stats?.totalScans ?? 0} />
       )}
 

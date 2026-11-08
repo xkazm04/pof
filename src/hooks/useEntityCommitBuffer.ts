@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { useIsMounted } from '@/hooks/useIsMounted';
+import { logger } from '@/lib/logger';
 
 /**
  * How an edit made in an editor should reach the server.
@@ -23,7 +24,9 @@ export type EditCommitMode = 'commit' | 'stage' | 'debounce';
  */
 export type EntityKey = string | number | null;
 
-type Entry<TPatch> = { id: EntityKey; patch: TPatch } | null;
+/** `base` is the server copy the patch was staged against, kept so a record
+ *  switch can still write the edit against the record it belongs to. */
+type Entry<TPatch, TDoc = unknown> = { id: EntityKey; patch: TPatch; base: TDoc } | null;
 
 export interface EntityCommitBufferOptions<TDoc, TPatch> {
   /** The server's copy of the record (`null` when none is open). */
@@ -129,12 +132,12 @@ export function useEntityCommitBuffer<TDoc, TPatch>({
 }: EntityCommitBufferOptions<TDoc, TPatch>): EntityCommitBuffer<TDoc, TPatch> {
   const isMounted = useIsMounted();
 
-  const [entry, setEntry] = useState<Entry<TPatch>>(null);
+  const [entry, setEntry] = useState<Entry<TPatch, TDoc>>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Mirror of `entry` readable from timers/handlers without re-subscribing.
-  const entryRef = useRef<Entry<TPatch>>(null);
+  const entryRef = useRef<Entry<TPatch, TDoc>>(null);
   // Bumped by every stage; lets a completed commit tell "nothing changed while I
   // was in flight" (clear the buffer) from "a newer edit landed" (keep it).
   const stageSeqRef = useRef(0);
@@ -159,7 +162,7 @@ export function useEntityCommitBuffer<TDoc, TPatch>({
     return e && e.id === id ? e.patch : null;
   }, []);
 
-  const writeEntry = useCallback((next: Entry<TPatch>) => {
+  const writeEntry = useCallback((next: Entry<TPatch, TDoc>) => {
     entryRef.current = next;
     stageSeqRef.current++;
     if (isMounted()) setEntry(next);
@@ -172,10 +175,31 @@ export function useEntityCommitBuffer<TDoc, TPatch>({
     }
   }, []);
 
+  // An edit staged on record A that is still buffered when the hook is bound to
+  // record B is written against A's own base. It deliberately leaves
+  // isSaving/saveError alone: they describe the open record, which is B.
+  const writeOrphan = useCallback(async (orphan: NonNullable<Entry<TPatch, TDoc>>) => {
+    if (isEmpty?.(orphan.patch)) {
+      if (entryRef.current === orphan) writeEntry(null);
+      return;
+    }
+    try {
+      await write(orphan.patch, orphan.base);
+      if (isMounted() && entryRef.current === orphan) writeEntry(null);
+    } catch (err) {
+      logger.error('useEntityCommitBuffer: could not save an edit left on a closed record', err);
+    }
+  }, [isEmpty, write, isMounted, writeEntry]);
+
   const stage = useCallback((patch: TPatch) => {
     if (base === null) return;
-    writeEntry({ id: entityId, patch: fold(patchFor(entityId), patch) });
-  }, [base, entityId, fold, patchFor, writeEntry]);
+    const prior = entryRef.current;
+    if (prior && prior.id !== entityId) {
+      clearTimer();
+      void writeOrphan(prior);
+    }
+    writeEntry({ id: entityId, patch: fold(patchFor(entityId), patch), base });
+  }, [base, entityId, fold, patchFor, writeEntry, writeOrphan, clearTimer]);
 
   const commitNow = useCallback(async (extra?: TPatch) => {
     clearTimer();
@@ -187,7 +211,7 @@ export function useEntityCommitBuffer<TDoc, TPatch>({
     if (isEmpty?.(merged)) return;
 
     const finalPatch = finalize ? finalize(merged, base) : merged;
-    writeEntry({ id: entityId, patch: finalPatch });
+    writeEntry({ id: entityId, patch: finalPatch, base });
     const stageAtCommit = stageSeqRef.current;
     const mine = ++commitSeqRef.current;
 
@@ -222,14 +246,20 @@ export function useEntityCommitBuffer<TDoc, TPatch>({
   // Timers fire long after the render that scheduled them — always call the
   // freshest commit so the write targets the currently open record.
   const commitRef = useRef(commitNow);
-  useEffect(() => { commitRef.current = commitNow; });
+  const orphanRef = useRef(writeOrphan);
+  useEffect(() => {
+    commitRef.current = commitNow;
+    orphanRef.current = writeOrphan;
+  });
 
   const stageDebounced = useCallback((patch: TPatch) => {
     stage(patch);
     clearTimer();
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
-      void commitRef.current();
+      const pending = entryRef.current;
+      if (pending && pending.id !== entityIdRef.current) void orphanRef.current(pending);
+      else void commitRef.current();
     }, debounceMs);
   }, [stage, clearTimer, debounceMs]);
 
