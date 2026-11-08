@@ -11,6 +11,8 @@ import type { CanonDrift } from '@/lib/catalog/canon/canonSync';
 interface CanonState {
   rules: ProjectRule[];
   hydrated: boolean;
+  /** Why the last hydrate could not read the DB rules (the cache is then the offline seed); null after a good read. */
+  hydrateError: string | null;
   hydrate: () => Promise<void>;
   /** POSTs, and commits locally ONLY when the server stored it — lab prompts read these rules, so an
    *  optimistic write would cite a law the dispatch (which reads the DB) never carries. A refusal is
@@ -46,10 +48,12 @@ export const useCanonStore = create<CanonState>((set, get) => {
     // Every profile's shipped rules, so an ingested entity's canon is available offline too.
     rules: allShippedRules(CANON_SEED),
     hydrated: false,
+    hydrateError: null,
     hydrate: async () => {
       const r = await tryApiFetch<ProjectRule[]>('/api/project-rules');
-      if (r.ok && r.data.length) set({ rules: r.data, hydrated: true });
-      else set({ hydrated: true });
+      if (!r.ok) set({ hydrated: true, hydrateError: r.error });
+      else if (r.data.length) set({ rules: r.data, hydrated: true, hydrateError: null });
+      else set({ hydrated: true, hydrateError: null });
     },
     upsert: async (rule) => {
       const r = await tryApiFetch<ProjectRule>('/api/project-rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rule) });
