@@ -81,3 +81,7 @@ ue5-build-bridge {"superseded":1,"demoted":2,"better":3,"not-better":1}
 judge-craft-quality {"superseded":1,"better":6}
 blender-mcp-bridge {"better":6}
 loot-simulation {"better":6}
+combat-simulator {"better":6}
+game-ui-hud {"better":4,"demoted":1}
+catalog-pipelines {"better":5}
+module-evaluator {"demoted":1,"better":4}
