@@ -12,6 +12,18 @@ import re
 import sys
 
 
+# The prompt asks for 0-10: anything else is no verdict, never a number to pass along.
+SCORE_RE = re.compile(r"\s*(\d+(?:\.\d+)?)\s*(?:(?:/|out of)\s*10)?\s*\.?\s*")
+
+
+def parse_score(raw):
+    m = SCORE_RE.fullmatch(raw or "")
+    if not m:
+        return None
+    value = float(m.group(1))
+    return value if 0 <= value <= 10 else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--render", required=True, help="render of the generated mesh")
@@ -69,10 +81,19 @@ def main() -> int:
         gen = proc.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
         print(f"POF_VLM_INFER_S={time.time() - ti:.1f}")
         print("POF_VLM_RAW=" + gen.replace("\n", " ").strip())
+        fields = {}
         for key in ("SCORE", "DEFECTS", "VERDICT"):
             m = re.search(key + r"=([^;]+)", gen)
             if m:
-                print(f"POF_VLM_{key}=" + m.group(1).strip())
+                fields[key] = m.group(1).strip()
+        for key in ("DEFECTS", "VERDICT"):
+            if key in fields:
+                print(f"POF_VLM_{key}=" + fields[key])
+        score = parse_score(fields.get("SCORE"))
+        if score is None:
+            print("POF_VLM_ERROR=no 0-10 score in the reply")
+            return 1
+        print(f"POF_VLM_SCORE={score:g}")
         print("POF_VLM_DONE=ok")
         return 0
     except Exception as e:  # noqa: BLE001

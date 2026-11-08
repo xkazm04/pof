@@ -12,6 +12,18 @@ import re
 import sys
 
 
+# The prompt asks for 0-10: anything else is no verdict, never a number to pass along.
+SCORE_RE = re.compile(r"\s*(\d+(?:\.\d+)?)\s*(?:(?:/|out of)\s*10)?\s*\.?\s*")
+
+
+def parse_score(raw):
+    m = SCORE_RE.fullmatch(raw or "")
+    if not m:
+        return None
+    value = float(m.group(1))
+    return value if 0 <= value <= 10 else None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
@@ -60,10 +72,10 @@ def main() -> int:
                 m = re.search(key + r"=([^;]+)", gen)
                 if m:
                     rec[key.lower()] = m.group(1).strip()
-            try:
-                rec["score"] = int(re.search(r"\d+", rec.get("score", "")).group())
-            except Exception:  # noqa: BLE001
-                rec["score"] = None
+            score = parse_score(rec.get("score"))
+            rec["score"] = int(score) if score is not None else None
+            if score is None:
+                rec["error"] = "no 0-10 score in the reply"
             print("POF_VLM_ITEM=" + json.dumps(rec))
             sys.stdout.flush()
 
