@@ -231,3 +231,21 @@ describe('the shared search box means the same thing on Strings and Translations
     expect(document.body.textContent).toContain('2 translations shown');
   });
 });
+
+describe('the Strings "Missing Translations" preset lists strings that lack a translation', () => {
+  it('shows a translatable string missing a target locale, not an already-LOCTEXT string', () => {
+    const complete = BASE_STR;
+    const partial = { ...BASE_STR, id: 'str-2', sourceText: 'Inventory', locKey: 'Inventory' };
+    const localized = { ...BASE_STR, id: 'str-3', sourceText: 'Quit', locKey: 'Quit', currentUsage: 'loctext' as const };
+    seedView(
+      [complete, partial, localized],
+      [entryFor('str-1', 'de'), entryFor('str-1', 'fr'), entryFor('str-2', 'de')],
+    );
+    render(<LocalizationPipelineView />);
+    fireEvent.click(screen.getByRole('tab', { name: /strings/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^missing translations$/i }));
+    expect(document.body.textContent).toContain('1 strings shown');
+    expect(document.body.textContent).toContain('"Inventory"');
+    expect(document.body.textContent).not.toContain('"Quit"');
+  });
+});
