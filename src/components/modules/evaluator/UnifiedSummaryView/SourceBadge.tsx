@@ -22,7 +22,7 @@ export function SourceBadge({
     >
       <Icon
         className="w-3 h-3"
-        style={{ color: active ? 'var(--text)' : '#3a3a5a' }}
+        style={{ color: active ? 'var(--text)' : 'var(--text-subtle)' }}
       />
     </div>
   );
