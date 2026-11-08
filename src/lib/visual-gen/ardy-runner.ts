@@ -279,7 +279,9 @@ export async function runArdy(spec: ArdySpec, deps: ArdyDeps = {}): Promise<Ardy
   // "No save line" from a process that did not exit cleanly is really the process's story
   // (timeout, crash, could not start); a traceback's own Error line still wins.
   const clean = outcome.code === 0 && !outcome.timedOut && !outcome.spawnError;
-  const parsedError = parsed.error === ARDY_NO_SAVE && !clean
+  // "Saving the npz output to" is printed BEFORE the write, so the line alone proves nothing
+  // about a process that then died: the file on disk may be partial, or a previous run's.
+  const parsedError = (parsed.ok || parsed.error === ARDY_NO_SAVE) && !clean
     ? processFailureReason(outcome, { tool: 'ARDY generate.py', timeoutMs })
     : parsed.error;
 
@@ -288,7 +290,7 @@ export async function runArdy(spec: ArdySpec, deps: ArdyDeps = {}): Promise<Ardy
   // for a file written in the wrong place, which is exactly how the cwd bug hid.
   const reported = parsed.npzPath;
   const abs = reported && !isAbsolute(reported) ? join(resolved.root, reported) : reported;
-  const npzPath = abs && fileExists(abs) ? abs : undefined;
+  const npzPath = clean && abs && fileExists(abs) ? abs : undefined;
 
   return {
     ok: parsed.ok && !!npzPath,
