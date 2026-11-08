@@ -15,6 +15,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { recordVisualVerification } from '@/lib/visual-verification-db';
 import { eventBus } from '@/lib/event-bus';
+import { logger } from '@/lib/logger';
 import { recognize } from '@/lib/vision/router';
 import { EFFORT_ORDER, type VisionEffort } from '@/lib/vision/types';
 import { CHECK_PROMPTS, type CheckMode } from '@/lib/vision/check-prompts';
@@ -190,16 +191,24 @@ export async function POST(request: NextRequest) {
 
   const norm = normaliseVerdict(mode, raw);
 
-  recordVisualVerification({
-    moduleId,
-    itemId,
-    projectPath: projectPath ?? null,
-    screenshotPath,
-    verdict: norm.verdict,
-    anyEmpty: norm.anyEmpty,
-    elements: norm.elements,
-    notes: norm.notes,
-  });
+  // The judgement is already paid for: a storage failure must not discard it, and must not
+  // pretend it was kept either.
+  let recordError: string | undefined;
+  try {
+    recordVisualVerification({
+      moduleId,
+      itemId,
+      projectPath: projectPath ?? null,
+      screenshotPath,
+      verdict: norm.verdict,
+      anyEmpty: norm.anyEmpty,
+      elements: norm.elements,
+      notes: norm.notes,
+    });
+  } catch (e) {
+    recordError = e instanceof Error ? e.message : 'unknown';
+    logger.warn(`[verify/visual] verdict not recorded for ${moduleId}/${itemId}: ${recordError}`);
+  }
 
   eventBus.emit(
     'eval.visual',
@@ -219,6 +228,7 @@ export async function POST(request: NextRequest) {
   // evidence, and an effort silently downgraded is a bill the caller thinks they paid.
   return apiSuccess({
     ...raw,
+    ...(recordError ? { recorded: false, recordError } : {}),
     provenance: {
       provider: routed.provider,
       model: routed.model,

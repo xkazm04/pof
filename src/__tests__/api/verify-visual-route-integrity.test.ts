@@ -93,3 +93,17 @@ describe('what the model answered', () => {
   });
 
 });
+
+describe('a verdict the store could not record', () => {
+  it('a verdict the store refused still reaches the caller and says it was not recorded', async () => {
+    answers('{"verdict":"pass"}');
+    mockRecord.mockImplementationOnce(() => { throw new Error('SQLITE_BUSY'); });
+    const res = await call(valid);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.verdict).toBe('pass');
+    expect(body.data.recorded).toBe(false);
+    expect(body.data.recordError).toContain('SQLITE_BUSY');
+    expect(mockEmit).toHaveBeenCalled();
+  });
+});
