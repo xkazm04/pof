@@ -2571,7 +2571,6 @@
         "src/lib/catalog/seed-spellbook.ts",
         "src/lib/catalog/seed-state-graph.ts",
         "src/lib/catalog/seed-zone-map.ts",
-        "src/stores/pipelineStore.ts",
         "src/app/api/pipeline-artifacts/route.ts",
         "src/app/api/pipeline-artifacts/drain/route.ts",
         "src/app/api/catalog/route.ts",
@@ -4487,7 +4486,6 @@
         "src/hooks/useDesignDocument.ts",
         "src/hooks/useGenreEvolution.ts",
         "src/hooks/useActivityFeedBridge.ts",
-        "src/hooks/useEntityTrackHelp.ts",
         "src/hooks/useEntityCommitBuffer.ts"
       ],
       "group": "Game Design Studio",
