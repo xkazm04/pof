@@ -1,14 +1,26 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { resolvePofPort } from '@/lib/pof-bridge/constants';
 import { proxyToPofBridge, pofProxyError } from '@/lib/pof-bridge/proxy';
 import type { PofHotPatchRequest, PofHotPatchResult, PofCompileStatus, PofPatchPhase } from '@/types/pof-bridge';
 
 export async function POST(request: Request) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   const port = resolvePofPort(new URL(request.url).searchParams);
-  const body = await request.json() as PofHotPatchRequest;
+  const raw = await readJsonObject(request);
+  if (!raw) return apiError(MALFORMED_BODY_ERROR, 400);
+  const body = raw as unknown as PofHotPatchRequest;
 
   if (!body.filePath || !body.fileContent) {
     return apiError('filePath and fileContent are required', 400);
+  }
+  if (typeof body.filePath !== 'string' || typeof body.fileContent !== 'string') {
+    return apiError('filePath and fileContent must be strings', 400);
+  }
+  if (body.filePath.split(/[\\/]/).includes('..')) {
+    return apiError('filePath must not contain traversal (..)', 400);
   }
 
   // Hot-patch can take a while: file write + compile + verification.
