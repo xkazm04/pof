@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useId, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
@@ -129,6 +129,7 @@ export function CollapsibleSection({
 /* ── SegmentedControl ────────────────────────────────────────────────────── */
 
 export function SegmentedControl({ options, activeId, onChange, accent }: SegmentedControlProps) {
+  const pillId = `segmentedControlBg-${useId()}`;
   return (
     <div className="flex bg-surface-deep p-1 rounded-lg border border-border/40 overflow-x-auto custom-scrollbar w-fit">
       {options.map((opt) => {
@@ -144,7 +145,7 @@ export function SegmentedControl({ options, activeId, onChange, accent }: Segmen
           >
             {isActive && (
               <motion.div
-                layoutId="segmentedControlBg"
+                layoutId={pillId}
                 className="absolute inset-0 rounded-md"
                 style={{ backgroundColor: accent, opacity: 0.2 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}

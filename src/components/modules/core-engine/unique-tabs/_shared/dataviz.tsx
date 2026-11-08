@@ -32,6 +32,7 @@ export function TimelineStrip({ events, accent, maxVisible = 50, height = 100 }:
   }
 
   const visible = events.slice(0, maxVisible);
+  const hidden = events.length - visible.length;
   const minT = Math.min(...visible.map((e) => e.timestamp));
   const maxT = Math.max(...visible.map((e) => e.timestamp + (e.duration ?? 0)));
   const range = maxT - minT || 1;
@@ -62,6 +63,11 @@ export function TimelineStrip({ events, accent, maxVisible = 50, height = 100 }:
           </div>
         );
       })}
+      {hidden > 0 && (
+        <div className="absolute top-0 right-0 text-xs font-mono text-text-muted" data-testid="timeline-more">
+          +{hidden} more
+        </div>
+      )}
     </div>
   );
 }
