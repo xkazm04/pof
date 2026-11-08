@@ -98,6 +98,7 @@ export function ActivityFeedPanel() {
           )}
           <button
             onClick={() => setOpen(false)}
+            aria-label="Close activity feed"
             className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors focus-ring"
           >
             <X className="w-3.5 h-3.5" />

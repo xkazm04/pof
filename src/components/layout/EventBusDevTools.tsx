@@ -136,6 +136,7 @@ export function EventBusDevTools() {
             </button>
             <button
               onClick={() => setOpen(false)}
+              aria-label="Close event bus"
               className="p-1 rounded text-text-muted hover:text-text hover:bg-border transition-colors"
             >
               <X className="w-3.5 h-3.5" />

@@ -69,6 +69,7 @@ export function ProjectDropdown({
               <span className="text-xs font-medium text-text-muted">Switch Project</span>
               <button
                 onClick={() => setShowSwitcher(false)}
+                aria-label="Close project switcher"
                 className="p-0.5 text-text-muted hover:text-text hover:bg-surface-hover rounded"
               >
                 <X className="w-3 h-3" />
@@ -124,10 +125,11 @@ export function ProjectDropdown({
           <>
             {renaming ? (
               <div className="p-2 border-b border-border">
-                <label className="text-xs text-text-muted mb-1 block">Project Name</label>
+                <label htmlFor="topbar-rename-project" className="text-xs text-text-muted mb-1 block">Project Name</label>
                 <div className="flex items-center gap-1">
                   <input
                     ref={renameInputRef}
+                    id="topbar-rename-project"
                     type="text"
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
@@ -141,6 +143,7 @@ export function ProjectDropdown({
                   <button
                     onClick={handleRenameConfirm}
                     disabled={!renameValue.trim()}
+                    aria-label="Save project name"
                     className="p-1 hover:bg-accent-medium rounded"
                     style={{ color: MODULE_COLORS.setup }}
                   >
@@ -148,6 +151,7 @@ export function ProjectDropdown({
                   </button>
                   <button
                     onClick={() => setRenaming(false)}
+                    aria-label="Cancel rename"
                     className="p-1 text-text-muted hover:bg-border rounded"
                   >
                     <X className="w-3.5 h-3.5" />
