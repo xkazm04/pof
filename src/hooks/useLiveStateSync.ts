@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
+import { useSuspendableSelector } from '@/hooks/useSuspend';
 import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import type {
@@ -47,9 +48,12 @@ export function useLiveStateSync(): UseLiveStateSyncResult {
   const host = useUE5BridgeStore((s) => s.host);
   const wsPort = useUE5BridgeStore((s) => s.wsPort);
   const wsStatus = useUE5BridgeStore((s) => s.wsStatus);
-  const liveSnapshot = useUE5BridgeStore((s) => s.liveSnapshot);
-  const propertyWatches = useUE5BridgeStore((s) => s.propertyWatches);
-  const wsFrameRate = useUE5BridgeStore((s) => s.wsFrameRate);
+  // The three frame slices change on every WS message and are only displayed, so a hidden
+  // pane skips them. Host, port and the socket bridge below stay live: connect must use
+  // current settings, and the store has to be fresh for the render that resumes.
+  const liveSnapshot = useSuspendableSelector(useUE5BridgeStore, (s) => s.liveSnapshot);
+  const propertyWatches = useSuspendableSelector(useUE5BridgeStore, (s) => s.propertyWatches);
+  const wsFrameRate = useSuspendableSelector(useUE5BridgeStore, (s) => s.wsFrameRate);
   const setLiveState = useUE5BridgeStore((s) => s.setLiveState);
 
   const setLiveStateRef = useRef(setLiveState);

@@ -189,12 +189,39 @@ When `suspended` becomes `true`, the cleanup function fires. When `suspended` be
 Drop-in for Zustand's `useStore(selector)` that freezes while suspended:
 
 ```ts
-const progress = useSuspendableSelector(useModuleStore, (s) => s.checklistProgress);
+const snapshot = useSuspendableSelector(useUE5BridgeStore, (s) => s.liveSnapshot);
 ```
 
-While suspended, the store subscription is replaced with a no-op (no re-renders). On resume, `frozenRef` is cleared and `getSnapshot` reads fresh state from the store. Internally uses `useSyncExternalStore` (line 79) for tear-free reads.
+While suspended, the store subscription is replaced with a no-op (no re-renders) and `getSnapshot` answers from the frozen value, including a selected `undefined`. The render that resumes the module reads the store again. It is built on `useSyncExternalStore` for tear-free reads, and has the same rule as a Zustand selector: return a stable reference or a primitive.
+
+**Use it when all of these hold:**
+
+- the component sits under a `ModuleRenderer` pane (outside one, `SuspendContext` is `false` and the hook adds nothing);
+- the slice is written at a high rate: a WebSocket frame, a poll tick, a stream;
+- the value is only displayed.
+
+Current adopters are the frame slices of `useLiveStateSync` (`liveSnapshot`, `propertyWatches`, `wsFrameRate`) and the forge `jobs` array in `GenerationQueue` and `UeImportPanel`. In `src/__tests__/hooks/suspend-adoption.test.tsx`, 60 updates to a hidden pane went from 60 commits to 0 (61 to 0 for `GenerationQueue`, which also takes a job added while hidden).
+
+**Keep plain `useStore` for:**
+
+- once-per-action slices, and selectors of a primitive that rarely changes: Zustand already skips the re-render when the selected value is unchanged, so freezing saves nothing;
+- anything a handler or effect sends somewhere (host, port, auth token, an id). A frozen read must never reach a write path, which is why `useLiveStateSync` keeps `host` and `wsPort` live;
+- action selectors. A frozen action still works, because actions read current state, but actions never change, so there is nothing to freeze;
+- the code that feeds the store. The socket bridge in `useLiveStateSync` stays subscribed while hidden, or resume would show old data.
+
+While suspended, a selector that closes over a changed prop still returns the frozen value until resume.
 
 ---
+
+## Workflow dispatch: launches derived from DAG state
+
+`TaskDAGOrchestrator` stays pure: it only decides which nodes are ready. `WorkflowDispatcher` (`src/components/modules/evaluator/WorkflowOrchestratorView/WorkflowDispatcher.tsx`) turns them into CLI sessions. It is mounted once in `AppShell` beside `PreflightGuardDialog`, outside the module LRU, so a run outlives the Evaluator pane. Only the legacy shell can start a workflow; if the shell unmounts (a shell switch), the dispatcher cancels the run rather than leave it with nobody to launch its next node.
+
+- **Level-triggered, no queue.** `selectNodesToRun(execution, MAX_CONCURRENT_WORKFLOW_NODES)` (`src/lib/workflow-dispatch.ts`, pure) is re-derived on every render from `activeExecution`: running nodes first (kept while paused, so their completion is still heard), then queued nodes up to the cap. Each selected node holds one `WorkflowNodeRunner`, keyed by execution, node and retry count. The cap is 1: nodes are paid agent runs editing one shared tree.
+- **Launch.** A runner launches only a `queued` node of the live run. It creates the tab, calls `markNodeRunning`, then `useModuleCLI.execute(buildNodeTask(node))`. `execute`'s optional `ExecuteControl` reports a declined spend guard (`onDeclined`) and drops a launch cancelled during the async prepare (`shouldDispatch`).
+- **Outcome.** `onComplete` feeds `markNodeCompleted`, passing only on a clean exit with no unconfirmed result callback. Reports are bound to the execution id, so a cancelled run's late completion cannot complete a same-named node of the next run.
+- **The terminal is pinned.** A terminal only mounts through `ModuleRenderer`'s session LRU, which needs the user to be on the session's module. `workflowPinnedSessionIds` adds running-node tabs (and workflow sessions still running after a cancel) to the mounted set, hidden unless viewed; without it the prompt would have no listener.
+- **Reload.** `activeExecution` is never rehydrated and a live row is demoted to Interrupted, so nothing re-dispatches paid work. Cancel stops scheduling; an already-running session keeps running until it ends or is aborted in its tab.
 
 ## Unsaved canvas state across an LRU eviction (session drafts)
 

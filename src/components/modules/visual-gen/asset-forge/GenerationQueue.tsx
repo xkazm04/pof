@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { useSuspendableEffect, useSuspendableSelector } from '@/hooks/useSuspend';
 import { Clock, CheckCircle, AlertCircle, HelpCircle, Loader2, Trash2, X, Download, RotateCcw, ExternalLink, Link2, PackageCheck } from 'lucide-react';
 import { MeterBar } from '@/components/ui/MeterBar';
 import { StatusTag } from '@/components/ui/StatusTag';
@@ -286,7 +286,8 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
 }
 
 export function GenerationQueue() {
-  const jobs = useForgeStore((s) => s.jobs);
+  // Every poll tick of every job replaces this array; a hidden pane need not render it.
+  const jobs = useSuspendableSelector(useForgeStore, (s) => s.jobs);
   const clearCompleted = useForgeStore((s) => s.clearCompleted);
   // Background status polls run in store actions, so they deliberately survive
   // leaving this module (a paid multi-minute generation must not be abandoned).
