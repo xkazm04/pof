@@ -10,6 +10,9 @@ import { useBidirectionalStateSyncPanel } from '@/components/modules/project-set
 import { PropertyEditorRow } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/PropertyEditorRow';
 import { outcomeFor } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/conflictResolution';
 import { diffSyncState, type SyncView } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/syncEvents';
+import { ConflictSection } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/ConflictSection';
+import { OfflineState } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/OfflineState';
+import { LiveStateSyncPanel } from '@/components/modules/project-setup/LiveStateSyncPanel';
 import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
 import { writeKey } from '@/lib/ue5-bridge/sync-ledger';
 
@@ -207,5 +210,16 @@ describe('blank values are not writes', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '  ' } });
     fireEvent.click(screen.getByTitle('Push to UE5'));
     expect(onPush).not.toHaveBeenCalled();
+  });
+});
+
+describe('sync log header markup', () => {
+  it('nests no button inside the section toggle', () => {
+    const { ws, container } = renderLivePanel();
+    act(() => {
+      ws.push({ type: 'property.update', payload: { watchId: 'w1', objectPath: '/Game/A', propertyName: 'Health', value: 1 } });
+    });
+    expect(screen.getByRole('button', { name: 'Clear sync log' })).not.toBeNull();
+    expect(container.querySelector('button button')).toBeNull();
   });
 });
