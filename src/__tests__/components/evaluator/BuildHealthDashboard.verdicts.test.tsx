@@ -1,6 +1,7 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, cleanup, act, fireEvent, waitFor } from '@testing-library/react';
 import { BuildHealthDashboard } from '@/components/modules/evaluator/BuildHealthDashboard';
+import { useProjectStore } from '@/stores/projectStore';
 import type { BuildHealthReport } from '@/lib/ue5-bridge/build-health';
 
 afterEach(cleanup);
@@ -36,6 +37,34 @@ function totalBuildsSub(container: HTMLElement): string {
   while (card && !(card.textContent ?? '').includes('Total Builds')) card = card.parentElement;
   return card?.textContent ?? '';
 }
+
+describe('BuildHealthDashboard: a refetch never hides rendered rows (table: fetch keeps rows)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('keeps the populated dashboard on screen while Refresh is in flight', async () => {
+    useProjectStore.setState({ projectPath: 'C:\\Proj', projectName: 'Did', ueVersion: '5.8.0' });
+    const populated = report({ success: 3, failed: 1, aborted: 0 });
+    let release: (() => void) | null = null;
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      calls += 1;
+      if (calls > 1) await new Promise<void>((r) => { release = r; });
+      return { ok: true, json: async () => ({ success: true, data: populated }) };
+    }));
+
+    const { container, findByLabelText } = render(<BuildHealthDashboard />);
+    const refresh = await findByLabelText('Refresh build health');
+    expect(container.querySelector('[data-stat="total-builds"]')).not.toBeNull();
+
+    await act(async () => { fireEvent.click(refresh); });
+    // Second fetch is pending: the KPI row must still be rendered.
+    expect(calls).toBe(2);
+    expect(container.querySelector('[data-stat="total-builds"]')).not.toBeNull();
+
+    await act(async () => { release?.(); });
+    await waitFor(() => expect(container.querySelector('[data-stat="total-builds"]')).not.toBeNull());
+  });
+});
 
 describe('BuildHealthDashboard: Total Builds verdict (quality-gates: no verdict reads as compliance)', () => {
   it('does not say "all passing" when builds were aborted', () => {

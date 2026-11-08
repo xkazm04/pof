@@ -73,7 +73,9 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
     fetchReport();
   }, [initialReport, fetchReport]);
 
-  if (loading) {
+  // Only the first load owns the full-panel spinner; a refetch keeps the rendered
+  // rows and spins the Refresh icon instead.
+  if (loading && !report) {
     return (
       <div className="flex items-center justify-center py-12">
         <Activity className="w-5 h-5 animate-spin text-text-muted" />
