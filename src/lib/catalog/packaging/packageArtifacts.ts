@@ -60,6 +60,29 @@ export interface PackagingFsDeps {
   now: () => string;
   /** Resolved UE project root for declaration disk-checks; null = declarations unchecked. */
   ueRoot: () => string | null;
+  /** Absolute path of the app's `generated/` dir. An ABSOLUTE reference is staged only under this or the UE root. */
+  generatedRoot?: string;
+}
+
+const norm = (p: string): string => p.replace(/\\/g, '/');
+
+/** Package dirs are built from catalog/entity ids; refuse anything that is not a plain slug. */
+export const isSafePackageId = (id: string): boolean => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id) && !id.includes('..');
+
+const under = (path: string, root: string | null | undefined): boolean => {
+  if (!root) return false;
+  const r = norm(root).replace(/\/+$/, '').toLowerCase();
+  return norm(path).toLowerCase().startsWith(`${r}/`);
+};
+
+/** Why a file reference may not be packaged, or null when it sits under a project root. */
+export function refusedRoot(ref: string, deps: Pick<PackagingFsDeps, 'ueRoot' | 'generatedRoot'>): string | null {
+  const n = norm(ref);
+  if (n.split('/').includes('..')) return 'referenced path escapes the project (.. segment)';
+  const absolute = /^[A-Za-z]:\//.test(n) || n.startsWith('/');
+  if (!absolute) return n.startsWith('generated/') ? null : 'referenced path is not under generated/';
+  if (under(n, deps.generatedRoot) || under(n, deps.ueRoot())) return null;
+  return 'referenced path is outside generated/ and the bound UE root';
 }
 
 function builtin<T>(id: string): T {
@@ -81,6 +104,9 @@ export function buildPackage(
   siblings: SiblingArtifact[],
   deps: PackagingFsDeps,
 ): PackageManifest {
+  if (!isSafePackageId(catalogId) || !isSafePackageId(entityId)) {
+    throw new Error(`refusing to package: unsafe catalog/entity id ("${catalogId}"/"${entityId}")`);
+  }
   const inputs = collectPackageInputs(siblings);
   const pkgDir = `${deps.packagesRoot}/${catalogId}/${entityId}`;
   deps.mkdir(pkgDir);
@@ -97,6 +123,11 @@ export function buildPackage(
   }
 
   for (const ref of inputs.files) {
+    const refused = refusedRoot(ref.path, deps);
+    if (refused) {
+      missing.push({ path: ref.path, sourceStep: ref.sourceStep, reason: refused });
+      continue;
+    }
     if (!deps.exists(ref.path)) {
       missing.push({ path: ref.path, sourceStep: ref.sourceStep, reason: 'referenced file not found on disk' });
       continue;
@@ -168,5 +199,6 @@ export function defaultPackagingFsDeps(): PackagingFsDeps {
     now: () => new Date().toISOString(),
     // Same resolution as the L2 static checkers (POF_UE_ROOT or the default checkout).
     ueRoot: resolveUeRoot,
+    generatedRoot: path.join(cwd, 'generated'),
   };
 }
