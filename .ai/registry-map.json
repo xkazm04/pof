@@ -6458,7 +6458,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/metrics/index.tsx:14 The metrics here are React charts of game-design data; a case-insensitive search of sub_bestiary for judge, verdict, rubric, benchmark, scenario, golden and llm found no hits, so nothing runs a model against scenarios and the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "module-design",
@@ -15544,7 +15548,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/harness/orchestrator.ts:1671 The agent under measurement gets a shell and file writes by default, with skipPermissions on, in the same tree the gates run in and where the harness keeps its state, and no write-surface enumeration or holdout was found, so a 'verified' pass cannot assert what the candidate could have edited.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "prompt-assembly",

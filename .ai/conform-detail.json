@@ -23886,6 +23886,52 @@
           "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:33 What was not observed is deferred at the level that would observe it rather than passed. Caveat: gradeSelectedCandidate does not consult autoSelected, so an auto-picked real asset still passes the L1 selection gate, and only the ProvenanceStrip discloses that."
         }
       ]
+    },
+    "a6e26c61-c43a-4155-871a-2fe81c3dd8c1/eval-harness": {
+      "context": "bestiary-encounters-metrics",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:49:46.947Z",
+      "worker": "d9842a72-ee11-4a90-a225-b936720757bf",
+      "techniques": []
+    },
+    "419ea285-f8b3-4f3c-b012-c75db90d3778/eval-harness": {
+      "context": "harness-autonomy",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:49:46.947Z",
+      "worker": "d9842a72-ee11-4a90-a225-b936720757bf",
+      "techniques": [
+        {
+          "technique": "candidate-write-access",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/orchestrator.ts:1667 By default the harness state sits inside the candidate's writable project; gate commands such as vitest run over test files in that same tree. A search of src/lib/harness, src/components/harness, src/app/api/harness and tools/pof-mcp/src for holdout or tamper guards found none."
+        },
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/run-diff.ts:151 The run comparison reports one unconditioned cost delta over runs that can fail or stop at the budget cap, with no both-succeeded view and no subset size, although per-area cost exists."
+        },
+        {
+          "technique": "comparison-modes",
+          "verdict": "deviation",
+          "evidence": "src/lib/harness/run-diff.ts:148 The delta compares stored rates with no instrument identity: the run row records neither passRateBasis, gate set nor model, and harness-runs-db derives passRate from plan.passingFeatures, which counts self-reported passes even though the stop condition defaults to the verified basis."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness/verifier.ts:119 A gate that could not run is reported as unverifiable rather than passed, keeping pass, fail and could-not-run distinct."
+        },
+        {
+          "technique": "eval-economics",
+          "verdict": "conformant",
+          "evidence": "src/lib/harness/orchestrator.ts:195 Runs have a default spend ceiling checked before more sessions fire. Only the budget control was judged; the model-pinning rule is not satisfied by buildClaudeArgs, which passes no --model flag."
+        }
+      ]
     }
   }
 }
