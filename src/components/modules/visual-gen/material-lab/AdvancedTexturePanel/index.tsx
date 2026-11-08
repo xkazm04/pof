@@ -70,7 +70,7 @@ export function AdvancedTexturePanel() {
                       className="w-full aspect-square object-cover rounded border border-white/10"
                     />
                     <div className="absolute inset-x-0 bottom-0 px-1.5 pb-1 flex items-center justify-between gap-1 bg-gradient-to-t from-black/80 via-black/40 to-transparent rounded-b">
-                      <span className="text-[10px] uppercase tracking-wide text-white/80">{label}</span>
+                      <span className="text-2xs uppercase tracking-wide text-white/80">{label}</span>
                       <motion.button
                         type="button"
                         data-testid={`${id}-send`}
@@ -91,7 +91,7 @@ export function AdvancedTexturePanel() {
               <div
                 data-testid="scenario-seam-badge"
                 title={`Wrap-around edge deltas — sides ${Math.round(pbr.seam.horizontal.delta * 100)}%, top/bottom ${Math.round(pbr.seam.vertical.delta * 100)}% (flagged above ${Math.round(pbr.seam.threshold * 100)}%)`}
-                className="flex items-center justify-between gap-2 text-[11px] text-red-400 bg-red-500/10 border border-red-500/30 rounded px-2 py-1.5"
+                className="flex items-center justify-between gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded px-2 py-1.5"
               >
                 <span className="flex items-center gap-1.5 font-medium">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
