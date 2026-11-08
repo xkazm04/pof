@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useAudioEventCatalogStore } from '@/components/modules/content/audio/audioEventCatalogStore';
+import { useAudioEventCatalogStore, selectSceneEvents } from '@/components/modules/content/audio/audioEventCatalogStore';
 import {
   DEFAULT_EVENTS, PRIORITY_CONFIG, MAX_EVENT_CONCURRENCY, clampEventConcurrency,
 } from '@/components/modules/content/audio/AudioEventCatalog/constants';
@@ -43,9 +43,8 @@ const inputCls = 'w-16 px-2 py-1 bg-surface-deep border border-border rounded te
  * Event Catalog seeds from.
  */
 export function BudgetStressPanel({ sceneId, voiceLimit }: BudgetStressPanelProps) {
-  const own = useAudioEventCatalogStore((s) => s.byScene[sceneId]);
-  const legacy = useAudioEventCatalogStore((s) => s.legacyEvents);
-  const events: AudioEvent[] = own ?? legacy ?? DEFAULT_EVENTS;
+  const stored = useAudioEventCatalogStore((s) => selectSceneEvents(s, sceneId));
+  const events: AudioEvent[] = stored ?? DEFAULT_EVENTS;
 
   const library = useAudioSetLibrary(true);
   const libraryReady = !library.isLoading && !library.error;
