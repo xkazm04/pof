@@ -71,13 +71,13 @@ export function TileError({ error, onRetry, testId }: TileErrorProps) {
       data-testid={testId}
       data-error-kind={c.kind}
       role="alert"
-      className="flex items-start gap-2 text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5"
+      className="flex items-start gap-2 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1.5"
     >
       <Icon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
       <div className="flex-1 min-w-0 space-y-1">
         <div className="font-medium">{c.headline}</div>
         {c.hint && <div className="text-red-300/80">{c.hint}</div>}
-        <div className="text-[10px] text-red-300/50 truncate" title={error}>
+        <div className="text-xs text-red-300/80 truncate" title={error}>
           {error}
         </div>
         {canRetry && (
@@ -85,7 +85,7 @@ export function TileError({ error, onRetry, testId }: TileErrorProps) {
             type="button"
             onClick={onRetry}
             data-testid={testId ? `${testId}-retry` : undefined}
-            className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-200 text-[10px] font-medium"
+            className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-red-500/15 hover:bg-red-500/25 text-red-200 text-xs font-medium"
           >
             <RefreshCw className="w-3 h-3" aria-hidden /> Retry
           </button>
