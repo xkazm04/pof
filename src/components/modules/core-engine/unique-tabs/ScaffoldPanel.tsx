@@ -17,7 +17,7 @@ function chipText(v: SectionScaffoldView): { text: string; color: string } | nul
     case 'unverifiable': return { text: 'no class to verify', color: STATUS_NEUTRAL };
     case 'unscanned': return { text: 'project not scanned', color: STATUS_NEUTRAL };
     case 'scaffolded': return { text: `${v.present.length}/${v.present.length} in project`, color: STATUS_SUCCESS };
-    case 'partial': return { text: `missing ${v.missing.join(', ')}`, color: STATUS_WARNING };
+    case 'partial': return { text: `missing ${v.missing.join(', ')}${v.reason ? ` (${v.reason})` : ''}`, color: STATUS_WARNING };
     case 'absent': return { text: v.reason ?? 'not in project', color: v.reason ? STATUS_WARNING : STATUS_NEUTRAL };
   }
 }
