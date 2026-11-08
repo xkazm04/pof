@@ -86,3 +86,22 @@ describe('TelemetryEvolution — project store subscription', () => {
     expect(hook.renders - before).toBe(0);
   });
 });
+
+describe('TelemetryEvolution — empty state after scans have run', () => {
+  beforeEach(() => { hook.renders = 0; useProjectStore.setState({ projectPath: 'C:/fake/PoF' }); });
+
+  it('says the scans found nothing, not that no scan ever ran', () => {
+    hook.stats = stats({ totalScans: 3, activeSuggestions: [] });
+    const { container } = render(<TelemetryEvolution />);
+    const text = container.textContent ?? '';
+    expect(text).not.toContain('No telemetry data yet');
+    expect(text).not.toContain('Run First Scan');
+    expect(text).toContain('No gameplay patterns detected');
+  });
+
+  it('control: with zero scans the first-scan invitation stays', () => {
+    hook.stats = stats({ totalScans: 0, lastScanAt: null, activeSuggestions: [] } as Partial<TelemetryStats>);
+    const { container } = render(<TelemetryEvolution />);
+    expect(container.textContent ?? '').toContain('Run First Scan');
+  });
+});

@@ -147,7 +147,7 @@ export function TelemetryEvolution() {
 
       {/* Empty state */}
       {patterns.length === 0 && suggestions.length === 0 && accepted.length === 0 && (
-        <EmptyState onScan={handleScan} scanning={scanning} hasProject={!!projectPath} />
+        <EmptyState onScan={handleScan} scanning={scanning} hasProject={!!projectPath} scanCount={stats?.totalScans ?? 0} />
       )}
 
       {/* Detected patterns */}

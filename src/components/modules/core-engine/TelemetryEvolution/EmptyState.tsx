@@ -4,7 +4,10 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Dna, Scan } from 'lucide-react';
 import { ACCENT } from './constants';
 
-export function EmptyState({ onScan, scanning, hasProject }: { onScan: () => void; scanning: boolean; hasProject: boolean }) {
+/** `scanCount` > 0 means scans ran and detected nothing — a different state from
+ *  "never scanned", and the copy must not invite a FIRST scan over existing history. */
+export function EmptyState({ onScan, scanning, hasProject, scanCount = 0 }: { onScan: () => void; scanning: boolean; hasProject: boolean; scanCount?: number }) {
+  const hasScanned = scanCount > 0;
   const prefersReduced = useReducedMotion();
   return (
     <motion.div
@@ -18,9 +21,13 @@ export function EmptyState({ onScan, scanning, hasProject }: { onScan: () => voi
       >
         <Dna className="w-7 h-7 text-border-bright" />
       </div>
-      <h3 className="text-sm font-medium text-text mb-1">No telemetry data yet</h3>
+      <h3 className="text-sm font-medium text-text mb-1">
+        {hasScanned ? 'No gameplay patterns detected' : 'No telemetry data yet'}
+      </h3>
       <p className="text-xs text-text-muted max-w-xs mb-4">
-        Scan your UE5 project to detect gameplay patterns and get sub-genre evolution suggestions based on your actual code.
+        {hasScanned
+          ? `${scanCount} scan${scanCount !== 1 ? 's' : ''} of this project found no gameplay patterns to suggest a sub-genre from. Re-scan after adding gameplay code.`
+          : 'Scan your UE5 project to detect gameplay patterns and get sub-genre evolution suggestions based on your actual code.'}
       </p>
       {hasProject ? (
         <button
@@ -34,7 +41,7 @@ export function EmptyState({ onScan, scanning, hasProject }: { onScan: () => voi
           }}
         >
           <Scan className="w-3.5 h-3.5" />
-          {scanning ? 'Scanning...' : 'Run First Scan'}
+          {scanning ? 'Scanning...' : hasScanned ? 'Scan Again' : 'Run First Scan'}
         </button>
       ) : (
         <p className="text-xs text-text-muted">Set up your project path first in Project Setup.</p>
