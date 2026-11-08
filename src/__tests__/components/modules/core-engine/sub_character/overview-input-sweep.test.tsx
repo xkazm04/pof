@@ -1,18 +1,20 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, cleanup, fireEvent } from '@testing-library/react';
+import { render, cleanup, fireEvent, act, waitFor } from '@testing-library/react';
 import { AbilityQuickPicker } from '@/components/modules/core-engine/sub_character/input/AbilityQuickPicker';
 import { COMBO_ABILITIES } from '@/components/modules/core-engine/sub_ability/_shared/data';
 
+import { PropertiesMetric } from '@/components/modules/core-engine/sub_character/metrics/BlueprintMetrics';
 import { OptimizerMetric, DodgeMetric } from '@/components/modules/core-engine/sub_character/metrics/MovementMetrics';
 import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
 import { resolveBindings, normalizeKeyEvent } from '@/lib/character/input-bindings';
-import { INPUT_BINDINGS } from '@/components/modules/core-engine/sub_character/_shared/data';
+import { INPUT_BINDINGS, KEY_FREQUENCY_MAP, HITBOX_ZONES } from '@/components/modules/core-engine/sub_character/_shared/data';
 vi.mock('@/hooks/useModuleCLI', () => ({
   useModuleCLI: () => ({ execute: vi.fn(), sendPrompt: vi.fn(), isRunning: false }),
 }));
 import { CameraProfileComparison } from '@/components/modules/core-engine/sub_character/overview/CameraProfileComparison';
 import { HitboxWireframeViewer } from '@/components/modules/core-engine/sub_character/overview/HitboxWireframeViewer';
+import { KeyboardVisualization } from '@/components/modules/core-engine/sub_character/input/KeyboardVisualization';
 import { InputTab } from '@/components/modules/core-engine/sub_character/input/InputTab';
 import { ClassHierarchy } from '@/components/modules/core-engine/sub_character/overview/ClassHierarchy';
 import { PropertyInspector } from '@/components/modules/core-engine/sub_character/overview/PropertyInspector';
@@ -50,6 +52,18 @@ describe('Features-tab metrics read the persisted feel stack', () => {
     }
   });
 
+  it('PropertiesMetric follows an Inspector edit (MaxWalkSpeed 320 -> 450)', () => {
+    const preset = FEEL_PRESETS[0];
+    useCharacterBlueprintStore.setState({ baseFeelPresetId: preset.id, feelLayers: [] });
+    const { container, unmount } = render(<PropertiesMetric />);
+    const read = () => container.querySelector('[data-testid="properties-metric-Spd"]')?.getAttribute('data-value');
+    const before = read();
+    expect(before).toBe(String(preset.profile.movement.maxWalkSpeed));
+    act(() => { useCharacterBlueprintStore.getState().setInspectorOverride('MaxWalkSpeed', 450); });
+    expect(read()).toBe('450');
+    unmount();
+  });
+
   it('DodgeMetric shows the resolved dodge distance (cm -> m), not a fixed 4.5m', () => {
     for (const preset of FEEL_PRESETS.slice(0, 2)) {
       useCharacterBlueprintStore.setState({ baseFeelPresetId: preset.id, feelLayers: [] });
@@ -57,6 +71,56 @@ describe('Features-tab metrics read the persisted feel stack', () => {
       expect(container.textContent).toContain(`${preset.profile.dodge.distance / 100}m`);
       unmount();
     }
+  });
+});
+
+describe('Class tree header-file tooltip is reachable by keyboard', () => {
+  it('focusing a class chip shows its header path; blur hides it', async () => {
+    const { container, queryByText, getByText } = render(<ClassHierarchy />);
+    const header = 'Engine/Source/Runtime/Engine/Classes/GameFramework/Character.h';
+    expect(queryByText(header)).toBeNull();
+    const chip = getByText('ACharacter');
+    expect(chip.getAttribute('tabindex')).toBe('0');
+    act(() => { chip.focus(); });
+    expect(queryByText(header)).not.toBeNull();
+    act(() => { chip.blur(); });
+    await waitFor(() => expect(container.textContent).not.toContain(header));
+  });
+});
+
+describe('Input table never renders an unmeasured frequency as 0%', () => {
+  it('rows without a KEY_FREQUENCY_MAP entry show an em dash, none show a fabricated 0%', () => {
+    const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
+    const cells = [...container.querySelectorAll('tbody tr td:nth-child(4)')].map((td) => td.textContent ?? '');
+    expect(cells).toHaveLength(INPUT_BINDINGS.length);
+    expect(cells.filter((t) => t.trim() === '0%')).toHaveLength(0);
+    const unmeasured = INPUT_BINDINGS.filter((b) => !KEY_FREQUENCY_MAP.has(b.defaultKey)).length;
+    expect(unmeasured).toBeGreaterThan(0);
+    expect(cells.filter((t) => t.trim() === '—')).toHaveLength(unmeasured);
+  });
+});
+
+describe('Hitbox layer toggle-off runs the exit animation', () => {
+  it('zone shapes are still mounted right after toggle-off, then leave', async () => {
+    const { container } = render(<HitboxWireframeViewer />);
+    const shapes = () => container.querySelectorAll('[stroke-dasharray="4 2"]').length;
+    const total = shapes();
+    expect(total).toBeGreaterThan(0);
+    fireEvent.click(container.querySelectorAll('button[aria-pressed]')[1]);
+    const hitboxShapes = HITBOX_ZONES.find((z) => z.type === 'Hitbox')!.shapes.length;
+    // Exit pending: nothing has been removed yet in this frame.
+    expect(shapes()).toBe(total);
+    await waitFor(() => expect(shapes()).toBe(total - hitboxShapes));
+  });
+});
+
+describe('Keyboard map keycaps carry their name on a role that permits it', () => {
+  it('every keycap aria-label sits on role="img" (aria-label is prohibited on a generic div)', () => {
+    const { container } = render(<KeyboardVisualization />);
+    const named = [...container.querySelectorAll('[aria-label]')].filter((el) => /^[^:]+: /.test(el.getAttribute('aria-label') ?? ''));
+    expect(named.length).toBeGreaterThan(30);
+    const prohibited = named.filter((el) => el.tagName === 'DIV' && !el.getAttribute('role'));
+    expect(prohibited).toHaveLength(0);
   });
 });
 

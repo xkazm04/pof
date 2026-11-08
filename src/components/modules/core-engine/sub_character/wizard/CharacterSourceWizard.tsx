@@ -69,7 +69,12 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
 
   const appOrigin = useMemo(() => getAppOrigin(), []);
 
+  // The source picker locks while a step's task is in flight: a switch would reset
+  // the rail and drop the step attribution, so the running task's result was lost.
+  const stepRunning = isRunning || steps.includes('running');
+
   const pickSource = useCallback((s: CharacterSource) => {
+    if (stepRunning) return;
     setSource((prev) => {
       // Switching to a different source invalidates any prepared/wired work: the
       // step-1 "Prepare Source" dispatch ran for the *old* source, so leaving the
@@ -83,7 +88,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
       return s;
     });
     setAssets(SOURCE_DEFAULTS[s]);
-  }, []);
+  }, [stepRunning]);
 
   const setAsset = useCallback((key: keyof SetupAssets, value: string) => {
     setAssets((prev) => ({ ...prev, [key]: value }));
@@ -152,7 +157,8 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
                 type="button"
                 onClick={() => pickSource(s.id)}
                 aria-pressed={active}
-                className="flex flex-col gap-1 p-2.5 rounded-lg text-left transition-all hover:brightness-110"
+                disabled={stepRunning}
+                className="flex flex-col gap-1 p-2.5 rounded-lg text-left transition-all hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: withOpacity(ACCENT, active ? OPACITY_20 : OPACITY_8),
                   border: `1px solid ${withOpacity(ACCENT, active ? OPACITY_50 : OPACITY_12)}`,
