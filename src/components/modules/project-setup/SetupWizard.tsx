@@ -8,6 +8,7 @@ import { slugifyForTestId } from '@/lib/test-ids';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Button } from '@/components/ui/Button';
+import { ErrorBanner } from '@/components/modules/project-setup/ErrorBanner';
 import { useNewProjectPlan } from '@/components/modules/project-setup/useNewProjectPlan';
 import type { PlanIssue } from '@/lib/project-setup/newProjectPlan';
 import { engineFit, engineFitNote, orderByEngineFit } from '@/lib/project-setup/engineFloor';
@@ -47,6 +48,22 @@ interface DetectedProject {
 const LINK_CLASSES =
   'focus-ring text-xs font-medium text-accent-core hover:text-accent-core/80 underline underline-offset-2 transition-colors';
 
+const scanFailure = (e: unknown) => (e instanceof Error ? e.message : 'The scan did not complete');
+
+/** A project scan that failed: its reason and a retry, in place of the "nothing found" row. */
+function DetectError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="py-4" data-testid="pof-setup-wizard-detect-error">
+      <ErrorBanner message={`Could not scan for projects: ${message}`} />
+      <div className="text-center mt-3">
+        <button type="button" data-testid="pof-setup-wizard-detect-retry" onClick={onRetry} className={LINK_CLASSES}>
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** First-run landing in the app's design system (surface cards, accent-setup,
  *  underline tabs). Pick a UE version, then open a detected project or start fresh. */
 export function SetupWizard() {
@@ -57,6 +74,11 @@ export function SetupWizard() {
   const [engine, setEngine] = useState<Engine>('ue5');
   const [godotProjects, setGodotProjects] = useState<DetectedGodotProject[]>([]);
   const [godotLoading, setGodotLoading] = useState(true);
+  // A failed scan is not an empty machine: the "nothing found" rows must not claim it.
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [godotError, setGodotError] = useState<string | null>(null);
+  const [projectsAttempt, setProjectsAttempt] = useState(0);
+  const [godotAttempt, setGodotAttempt] = useState(0);
 
   const setProject = useProjectStore((s) => s.setProject);
   const completeSetup = useProjectStore((s) => s.completeSetup);
@@ -69,6 +91,7 @@ export function SetupWizard() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setProjectsError(null);
       try {
         const data = await apiFetch<{ projects: DetectedProject[] }>(
           '/api/filesystem/browse',
@@ -79,19 +102,21 @@ export function SetupWizard() {
           },
         );
         if (!cancelled) setProjects(data.projects ?? []);
-      } catch {
-        // non-critical
+      } catch (e) {
+        if (!cancelled) setProjectsError(scanFailure(e));
       }
       if (!cancelled) setLoading(false);
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [projectsAttempt]);
 
   // Godot projects (a folder with project.godot) of the registered Godot games, e.g. RTAI
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      setGodotLoading(true);
+      setGodotError(null);
       try {
         const data = await apiFetch<{ projects: DetectedGodotProject[] }>(
           '/api/filesystem/browse',
@@ -102,14 +127,14 @@ export function SetupWizard() {
           },
         );
         if (!cancelled) setGodotProjects(data.projects ?? []);
-      } catch {
-        // non-critical
+      } catch (e) {
+        if (!cancelled) setGodotError(scanFailure(e));
       }
       if (!cancelled) setGodotLoading(false);
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [godotAttempt]);
 
   // Derived: the recorded engine is a floor, not a pin. Every project is listed; matches
   // first, a project built on a NEWER engine than the selected one carries a warning.
@@ -266,6 +291,8 @@ export function SetupWizard() {
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-sm">Scanning for Godot projects…</span>
               </div>
+            ) : godotError ? (
+              <DetectError message={godotError} onRetry={() => setGodotAttempt((n) => n + 1)} />
             ) : godotProjects.length > 0 ? (
               <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
                 {godotProjects.map((project) => (
@@ -304,6 +331,8 @@ export function SetupWizard() {
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-sm">Scanning for UE projects…</span>
               </div>
+            ) : projectsError ? (
+              <DetectError message={projectsError} onRetry={() => setProjectsAttempt((n) => n + 1)} />
             ) : orderedProjects.length > 0 ? (
               <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
                 {orderedProjects.map((project) => {
