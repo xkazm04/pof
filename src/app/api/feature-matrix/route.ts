@@ -6,7 +6,7 @@ import {
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { FEATURE_STATUSES, FEATURE_SOURCES } from '@/types/feature-matrix';
 import type { FeatureSource, FeatureStatus } from '@/types/feature-matrix';
-import type { SubModuleId } from '@/types/modules';
+import { SUB_MODULE_IDS, type SubModuleId } from '@/types/modules';
 
 /** Resolve the provenance a POST claims. An unrecognized (or absent) `source` must
  *  never be able to claim a stronger path than it can prove, so it falls back to the
@@ -28,6 +28,12 @@ function resolvePostSource(raw: unknown, seedOnly: boolean): FeatureSource {
  */
 function resolveProjectId(source: { get(key: string): string | null }): string {
   return normalizeProjectId(source.get('projectId') ?? source.get('projectPath'));
+}
+
+/** `moduleId` is a closed enum — the same guard `/import` applies (be772ed6). An id
+ *  outside SUB_MODULE_IDS wrote rows under a module nothing in the app reads. */
+function isKnownModuleId(raw: unknown): raw is SubModuleId {
+  return typeof raw === 'string' && (SUB_MODULE_IDS as readonly string[]).includes(raw);
 }
 
 function bodyProjectId(body: Record<string, unknown>): string {
@@ -61,6 +67,9 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   if (!moduleId || !Array.isArray(features)) {
     return apiError('moduleId and features array required', 400);
+  }
+  if (!isKnownModuleId(moduleId)) {
+    return apiError(`Unknown moduleId: ${String(moduleId)}`, 400);
   }
 
   // upsertFeatures is a FULL upsert — undefined required columns crash in the
@@ -133,6 +142,10 @@ export const PATCH = withRoute(async (request: NextRequest) => {
 
   if (!moduleId || !featureName || !status) {
     return apiError('moduleId, featureName, and status are required', 400);
+  }
+
+  if (!isKnownModuleId(moduleId)) {
+    return apiError(`Unknown moduleId: ${moduleId}`, 400);
   }
 
   if (!FEATURE_STATUSES.includes(status)) {

@@ -15,7 +15,7 @@ vi.hoisted(() => {
   process.env.POF_DB_PATH = `${dir}/pof-test-fm-post-validation-${process.pid}.db`;
 });
 
-import { POST } from '@/app/api/feature-matrix/route';
+import { POST, PATCH } from '@/app/api/feature-matrix/route';
 import { getDb } from '@/lib/db';
 import { getFeaturesByModule } from '@/lib/feature-matrix-db';
 import type { SubModuleId } from '@/types/modules';
@@ -64,6 +64,21 @@ describe('POST /api/feature-matrix — row status is a closed enum', () => {
     const { status: _omit, ...noStatus } = row();
     void _omit;
     const res = await send('POST', { moduleId: MODULE, features: [noStatus] });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST/PATCH /api/feature-matrix — moduleId is a closed enum (SUB_MODULE_IDS)', () => {
+  // The import route refuses an id outside SUB_MODULE_IDS (be772ed6); the full-upsert
+  // and status routes only checked truthiness, so an unknown id wrote rows nothing reads.
+  it('POST refuses an unknown moduleId and writes nothing', async () => {
+    const res = await send('POST', { moduleId: 'not-a-module', features: [row()] });
+    expect(res.status).toBe(400);
+    expect(getFeaturesByModule('not-a-module' as SubModuleId)).toHaveLength(0);
+  });
+
+  it('PATCH refuses an unknown moduleId with a 400, not a 404', async () => {
+    const res = await send('PATCH', { moduleId: 'not-a-module', featureName: 'Combo Chain', status: 'improved' }, PATCH);
     expect(res.status).toBe(400);
   });
 });
