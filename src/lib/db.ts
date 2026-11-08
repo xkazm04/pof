@@ -63,7 +63,14 @@ export function getDb(): Database.Database {
  * module-level `db` until it has returned cleanly.
  */
 function bootstrap(conn: Database.Database): void {
-  conn.pragma('journal_mode = WAL');
+  // The pragma is a request: SQLite answers with the mode it actually applied and keeps
+  // another one, silently, when WAL cannot be honoured (an in-memory store, some network
+  // filesystems). Read the answer — a fallback changes reader/writer blocking and which
+  // files make up the database, so it must be visible, not discovered at restore time.
+  const journalMode = String(conn.pragma('journal_mode = WAL', { simple: true })).toLowerCase();
+  if (journalMode !== 'wal') {
+    logger.warn(`[db] journal_mode requested WAL but SQLite applied "${journalMode}" for ${DB_PATH}`);
+  }
   // Enforce foreign keys for the whole shared connection (SQLite defaults them OFF, per
   // connection). Without this, declared `REFERENCES ... ON DELETE CASCADE` clauses are
   // decorative — deletes leak orphan child rows and inserts can reference nonexistent
