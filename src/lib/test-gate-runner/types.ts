@@ -80,8 +80,7 @@ export interface GateJob {
 
 /** The outcome of running a gate. `deferred` = the run proved the test is PLANNED but
  *  not registered in UE (an honest wait, not a red failure). */
-export interface GateVerdict {
-  status: 'pass' | 'fail' | 'deferred';
+interface GateVerdictBase {
   /** Human-readable; becomes the artifact's new `reason`. */
   detail: string;
   /**
@@ -98,10 +97,24 @@ export interface GateVerdict {
    * artifact's `data.evidence` so the judge fleet + /status audit can judge the verdict directly
    * instead of re-running the gate. Schema + caps: `GateEvidence` in `@/types/observation`.
    */
-  evidence?: GateEvidence;
   /** Executor-specific payload (logs, assertion results) — for debugging. */
   raw?: unknown;
 }
+
+/** `pass` / `fail` are CLAIMS about a run, so they must carry the observation that decided them
+ *  (Tiers of Truth: no verdict without ground truth). `deferred` is an honest wait and may omit it. */
+export type GateVerdict =
+  | (GateVerdictBase & {
+      status: 'deferred';
+      /** Structured, SIZE-BOUNDED proof behind this verdict (`GateEvidence` in `@/types/observation`). */
+      evidence?: GateEvidence;
+    })
+  | (GateVerdictBase & {
+      status: 'pass' | 'fail';
+      /** Structured, SIZE-BOUNDED proof behind this verdict — REQUIRED for pass/fail. `drainOne`
+       *  merges it into the artifact's `data.evidence` so the judge fleet + /status can audit it. */
+      evidence: GateEvidence;
+    });
 
 /**
  * The outcome of resolving an L4 frame for a job — richer than a bare path so the executor

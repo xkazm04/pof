@@ -42,6 +42,16 @@ describe('buildEvidenceAudit', () => {
     expect(audit.missing).toEqual([{ catalogId: 'items', entityId: 'item-2', step: 'Test Gate', status: 'pass', tier: 'L3' }]);
   });
 
+  it('routes proof-less evidence ({kind, at} only) into missing, never rows', () => {
+    const audit = buildEvidenceAudit([
+      art({ entityId: 'empty-1', step: 'Test Gate', data: { evidence: { kind: 'visual', at: '2026-07-01T00:00:00.000Z' } } }),
+      art({ entityId: 'empty-2', step: 'Test Gate', data: { evidence: { kind: 'scenario', at: '2026-07-01T00:00:00.000Z', markers: [], stats: {} } } }),
+      art({ entityId: 'real', step: 'Test Gate', data: { evidence: { kind: 'bridge', at: '2026-07-01T00:00:00.000Z', markers: ['ok'] } } }),
+    ]);
+    expect(audit.rows.map((r) => r.entityId)).toEqual(['real']);
+    expect(audit.missing.map((m) => m.entityId)).toEqual(['empty-1', 'empty-2']);
+  });
+
   it('filters by entity / step / tier', () => {
     const rows = [
       art({ entityId: 'a', step: 'Test Gate', data: { evidence: scenarioEvidence } }),

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DRAIN_REQUEST_KEYS, parseDrainRequest } from '@/lib/test-gate-runner/drainRequest';
+import { DRAIN_REQUEST_KEYS, invalidRunOptions, parseDrainRequest } from '@/lib/test-gate-runner/drainRequest';
 import { parseDrainFilter } from '@/lib/test-gate-runner/drain';
 import { PIPELINE_TOOLS } from '../../../../tools/pof-mcp/src/tools/pipeline';
 
@@ -66,5 +66,21 @@ describe('pof_drain_gates ↔ drain route schema parity', () => {
       .filter(([, v]) => !v.description)
       .map(([k]) => k);
     expect(undocumented).toEqual([]);
+  });
+});
+
+describe('numeric run options are positive integers', () => {
+  it('parseDrainRequest drops a non-positive / fractional port and limit', () => {
+    expect(parseDrainRequest({ port: -1, limit: -5 })).toEqual({ filter: {}, executor: 'bridge' });
+    expect(parseDrainRequest({ port: 0, limit: 1.5 })).toEqual({ filter: {}, executor: 'bridge' });
+  });
+
+  it('invalidRunOptions names every sent-but-invalid key, and nothing for valid/absent ones', () => {
+    expect(invalidRunOptions({ port: -1, limit: -5 })).toEqual(['port', 'limit']);
+    expect(invalidRunOptions({ limit: 0 })).toEqual(['limit']);
+    expect(invalidRunOptions({ limit: '2' })).toEqual(['limit']);
+    expect(invalidRunOptions({ port: 30041, limit: 2 })).toEqual([]);
+    expect(invalidRunOptions({ limit: null })).toEqual([]);
+    expect(invalidRunOptions({})).toEqual([]);
   });
 });

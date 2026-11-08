@@ -3,7 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { getOriginFromRequest } from '@/lib/constants';
 import { buildExecutors, collectDeferred, drainAll, parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
-import { parseDrainRequest } from '@/lib/test-gate-runner/drainRequest';
+import { invalidRunOptions, parseDrainRequest } from '@/lib/test-gate-runner/drainRequest';
 import { acquireLeases, releaseLeases, scopeFromKey, leaseKeysForFilter, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
 import { resolveUprojectPath } from '@/lib/ue5-bridge/build-pipeline';
 
@@ -23,6 +23,12 @@ export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
     const filter = parseDrainFilter((k) => sp.get(k));
+    // Same rule as POST: a scope key the caller SENT but that did not parse (`tier=l3`, `entityId=`)
+    // would preview a WIDER queue than it named, and the POST that runs it would refuse. Refuse here too.
+    const unparsed = SCOPE_KEYS.filter((k) => sp.get(k) !== null && filter[k] === undefined);
+    if (unparsed.length > 0) {
+      return apiError(`drain scope key(s) ${unparsed.join(', ')} did not parse — refusing rather than previewing a wider queue`, 400);
+    }
     return apiSuccess(collectDeferred(filter));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'drain GET failed', 500);
@@ -75,6 +81,12 @@ export async function POST(req: NextRequest) {
     const unparsed = SCOPE_KEYS.filter((k) => body[k] !== undefined && body[k] !== null && filter[k] === undefined);
     if (unparsed.length > 0) {
       return apiError(`drain scope key(s) ${unparsed.join(', ')} did not parse — refusing rather than widening the drain`, 400);
+    }
+    // A numeric run option the caller sent but that is not a positive integer would be dropped
+    // (limit -> unlimited drain, port -> default probe) under a 200: refuse, naming the key.
+    const badOptions = invalidRunOptions(rawBody);
+    if (badOptions.length > 0) {
+      return apiError(`drain option(s) ${badOptions.join(', ')} must be a positive integer`, 400);
     }
     // autoCapture without a project used to be dropped, leaving the L4 gates deferred under a 200.
     if (request.autoCapture && !request.projectPath) {
