@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { MODULE_HISTORY_CAP, MODULE_SCAN_FINDINGS_CAP } from '@/lib/constants';
 import {
   registerModuleStore,
   scheduleAutoSave,
@@ -183,8 +184,8 @@ export const useModuleStore = create<ModuleState>()(
         set((state) => {
           const existing = state.moduleHistory[entry.moduleId] || [];
           const updated = [...existing, entry];
-          // Cap at 200 entries per module — keep most recent, matching scanResults pattern
-          const capped = updated.length > 200 ? updated.slice(-200) : updated;
+          // Cap at MODULE_HISTORY_CAP entries per module — keep most recent, matching scanResults pattern
+          const capped = updated.length > MODULE_HISTORY_CAP ? updated.slice(-MODULE_HISTORY_CAP) : updated;
           return {
             moduleHistory: {
               ...state.moduleHistory,
@@ -286,8 +287,8 @@ export const useModuleStore = create<ModuleState>()(
           // Skip update when no novel findings — avoids creating a new array reference
           if (novel.length === 0) return state;
           const merged = [...existing, ...novel];
-          // Cap at 100 findings per module — keep most recent
-          const capped = merged.length > 100 ? merged.slice(-100) : merged;
+          // Cap at MODULE_SCAN_FINDINGS_CAP findings per module — keep most recent
+          const capped = merged.length > MODULE_SCAN_FINDINGS_CAP ? merged.slice(-MODULE_SCAN_FINDINGS_CAP) : merged;
           return {
             scanResults: {
               ...state.scanResults,
