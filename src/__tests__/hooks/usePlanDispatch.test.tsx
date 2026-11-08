@@ -48,7 +48,7 @@ afterEach(cleanup);
 
 describe('usePlanMatrixMap — the map builds through the gated door', () => {
   it('handleExecute(readyItem) executes one feature-fix task and never sends a hand-built prompt', () => {
-    const { result } = renderHook(() => usePlanMatrixMap());
+    const { result } = renderHook(() => usePlanMatrixMap(undefined, usePlanDispatch({ sessionKey: 'implementation-plan', label: 'Implementation Plan' }).dispatch));
     act(() => { result.current.handleExecute(readyItem); });
     expect(cli.execute).toHaveBeenCalledTimes(1);
     const task = (cli.execute.mock.calls[0] as unknown[])[0] as { type: string; featureName: string };
@@ -58,7 +58,7 @@ describe('usePlanMatrixMap — the map builds through the gated door', () => {
   });
 
   it('handleExecute(blockedItem) dispatches nothing', () => {
-    const { result } = renderHook(() => usePlanMatrixMap());
+    const { result } = renderHook(() => usePlanMatrixMap(undefined, usePlanDispatch({ sessionKey: 'implementation-plan', label: 'Implementation Plan' }).dispatch));
     act(() => { result.current.handleExecute(blockedItem); });
     expect(cli.execute).not.toHaveBeenCalled();
     expect(cli.sendPrompt).not.toHaveBeenCalled();

@@ -4,7 +4,8 @@ import {
   ZoomIn, ZoomOut, Maximize2, RotateCcw, Link2, Flame,
   Clock, Zap, Layers, CheckCircle2, Filter,
 } from 'lucide-react';
-import { getModuleLabel } from '@/lib/implementation-planner/plan-generator';
+import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
+import type { PlanDispatchResult } from '@/lib/implementation-planner/plan-dispatch';
 import { formatEffortTime } from '@/lib/implementation-planner/effort-estimator';
 import { usePlanMatrixMap } from './usePlanMatrixMap';
 import { PLAN_STATUS_COLORS } from '@/lib/chart-colors';
@@ -21,10 +22,12 @@ import { DesktopCanvasNotice } from '@/components/ui/DesktopCanvasNotice';
 interface PlanMatrixMapProps {
   /** When provided, auto-filters to this module and fades others as context */
   moduleId?: string;
+  /** The host page's ONE plan dispatch door — the map opens none of its own. */
+  dispatch: (item: PlanItem) => PlanDispatchResult;
 }
 
-export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps = {}) {
-  const pm = usePlanMatrixMap(initialModuleId);
+export function PlanMatrixMap({ moduleId: initialModuleId, dispatch }: PlanMatrixMapProps) {
+  const pm = usePlanMatrixMap(initialModuleId, dispatch);
   const {
     rootRef, containerRef, canvasHeight,
     plan, loading, error,

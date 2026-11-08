@@ -9,10 +9,15 @@ import {
 } from '@/lib/implementation-planner/layout-engine';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
-import { usePlanDispatch } from '@/hooks/usePlanDispatch';
+import type { PlanDispatchResult } from '@/lib/implementation-planner/plan-dispatch';
 import type { SubModuleId } from '@/types/modules';
 
-export function usePlanMatrixMap(initialModuleId?: string) {
+/**
+ * @param dispatch The host page's ONE plan dispatch door (`usePlanDispatch`).
+ *   The map never opens a door of its own: a second door is a second CLI
+ *   session that the host's Build session cannot see.
+ */
+export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: (item: PlanItem) => PlanDispatchResult) {
   const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
@@ -21,13 +26,6 @@ export function usePlanMatrixMap(initialModuleId?: string) {
   const { plan, loading, error } = useImplementationPlan();
   const { transform, startPan, onPointerMove, endPan, zoomToFit, zoomToCenter, reset, setTransform } = useCanvasTransform();
   const [isPanningState, setIsPanningState] = useState(false);
-
-  // The ONE plan dispatch door (gated, feature-fix task, refresh on land) —
-  // the same door as the plan table; no prompt is built here.
-  const { dispatch } = usePlanDispatch({
-    sessionKey: 'plan-matrix-map',
-    label: 'Plan Map',
-  });
 
   // --- UI State ---
   const [selectedKey, setSelectedKey] = useState<string | null>(null);

@@ -64,7 +64,7 @@ describe('PlanMatrixMap legend', () => {
   });
 
   it('states the real encoding and only the statuses a plan node can have, in the node colours', () => {
-    render(<PlanMatrixMap />);
+    render(<PlanMatrixMap dispatch={() => ({ ok: false, error: { unmet: [] } }) as never} />);
     const legend = screen.getByText('Status').parentElement!.parentElement!;
     const text = legend.textContent ?? '';
     expect(text).not.toMatch(/X = effort/);

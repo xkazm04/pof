@@ -156,7 +156,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
       )}
 
       {/* Matrix map view */}
-      {viewMode === 'map' && <PlanMatrixMap moduleId={showAllModules ? undefined : moduleId} />}
+      {viewMode === 'map' && <PlanMatrixMap moduleId={showAllModules ? undefined : moduleId} dispatch={dispatch} />}
 
       {/* Table view content below */}
       {viewMode === 'table' && plan && (
