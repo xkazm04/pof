@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, atMost, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -660,7 +660,7 @@ registerCatalogPipeline({
                 totalResidentMb: 2.4,
               },
             },
-            // top-level scalar for the withinPercent checker
+            // top-level scalar for the atMost checker
             totalDecodedMb,
           },
         };
@@ -669,7 +669,7 @@ registerCatalogPipeline({
       // ITSELF declares (budgetCapMb) — the ±33% band alone let a produce ship a
       // memoryBudget whose own hard cap it blew.
       accept: allOf(
-        withinPercent('totalDecodedMb', 'Total decoded ≤8 MB (within ±33% of 6 MB target)', 6.0, 33),
+        atMost('totalDecodedMb', 'Total decoded ≤8 MB', 8),
         budgetWithinCap('memoryBudget', 'totalDecodedMb', 'budgetCapMb', 'Decoded footprint within the declared hard cap'),
       ),
     },

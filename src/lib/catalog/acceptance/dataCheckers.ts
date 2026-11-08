@@ -129,6 +129,18 @@ export function withinPercent(field: string, label: string, target: number, pct:
   };
 }
 
+/** Numeric CEILING: passes for any value at or under `ceiling` (a budget — cheaper is never a
+ *  failure, unlike the two-sided {@link withinPercent} band). `field` may be a dot-path. */
+export function atMost(field: string, label: string, ceiling: number): Checker {
+  return (data) => {
+    const v = pickField(data, field);
+    const n = readNumber(v);
+    if (n == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" ${v == null ? 'is not set' : `is not a number (${JSON.stringify(v)?.slice(0, 40)})`} (expected a value of at most ${ceiling})` };
+    const ok = n <= ceiling;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} ≤ ${ceiling}`, ...(ok ? {} : { reason: `${n} is over the ${ceiling} ceiling` }) };
+  };
+}
+
 /**
  * Absolute-tolerance numeric band: passes when `|value − target| ≤ tol`. Unlike
  * `withinPercent` (whose ±% band flips its ordering for a negative target, making a

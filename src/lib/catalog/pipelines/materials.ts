@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, withinPercent, selected } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, atMost, selected } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -324,11 +324,10 @@ registerCatalogPipeline({
       // (perfBudget.target) — ±20% of 200 alone would pass a 240-instruction shader.
       accept: allOf(
         budgetWithinCap('perfBudget', 'instructionCount', 'target', 'Instruction count within the declared shader budget'),
-        withinPercent(
+        atMost(
           'instructionCount',
-          'Shader instruction count within ±20% of target (200)',
-          200,
-          20,
+          'Shader instruction count at most 240 (200 target + 20%)',
+          240,
         ),
       ),
     },
