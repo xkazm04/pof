@@ -23,7 +23,8 @@ export function GroupedDpsBarChart() {
 
   return (
     <div className="relative">
-      <svg width="100%" height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible" preserveAspectRatio="xMidYMid meet">
+      <svg width="100%" height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible" preserveAspectRatio="xMidYMid meet"
+        role="img" aria-label={`Weapon DPS by category: ${WEAPON_ROSTER.rows.length} weapons in ${DPS_GROUPS.length} categories, best ${WEAPON_ROSTER.best?.name ?? 'none'} at ${DPS_GLOBAL_MAX.toFixed(1)} DPS`}>
         {/* Y-axis grid */}
         {[0, 0.25, 0.5, 0.75, 1].map(pct => {
           const y = mTop + chartH * (1 - pct);
@@ -51,7 +52,9 @@ export function GroupedDpsBarChart() {
                     fill={isHov ? entry.weapon.color : withOpacity(entry.weapon.color, OPACITY_50)}
                     onMouseEnter={() => setHoveredWeapon(entry)}
                     onMouseLeave={() => setHoveredWeapon(null)}
-                    style={{ cursor: 'pointer' }} />
+                    style={{ cursor: 'pointer' }}>
+                    <title>{`${entry.name}: ${entry.dps.toFixed(1)} DPS`}</title>
+                  </rect>
                 );
               })}
               {/* Category avg line */}
