@@ -43,7 +43,10 @@ export function buildBuildVerifyPrompt({
   engines,
 }: ProjectIdentity & { engines: DetectedEngine[] }): string {
   const majorMinor = ueVersion.split('.').slice(0, 2).join('.');
-  const matchedEngine = engines.find((e) => e.path.includes(`UE_${majorMinor}`)) ?? engines[0];
+  // By reported version, not install-folder name: a custom folder has no UE_x.y, and
+  // a substring test takes UE_5.10 for 5.1.
+  const matchedEngine =
+    engines.find((e) => e.version.split('.').slice(0, 2).join('.') === majorMinor) ?? engines[0];
   const eng = (matchedEngine?.path ?? '').replace(/\\/g, '/');
   const proj = projectPath.replace(/\\/g, '/');
 
