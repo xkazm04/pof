@@ -149,3 +149,13 @@ describe('marks dated before the visible window', () => {
     expect(container.querySelector('#roadmap-plot-clip rect')?.getAttribute('x')).toBe('200');
   });
 });
+
+describe('a forecast past a deadline that has not arrived', () => {
+  it('is called late, not overdue', async () => {
+    installFetch();
+    const { container, findByTestId } = render(<CalendarRoadmapView />);
+    await findByTestId('deadline-marker-ms-1');
+    expect(container.textContent).toMatch(/predicted \d+d late/);
+    expect(container.textContent).not.toContain('overdue');
+  });
+});

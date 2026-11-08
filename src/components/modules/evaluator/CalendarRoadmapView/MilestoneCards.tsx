@@ -135,7 +135,7 @@ export function MilestoneCards({
                 {variance < 0 && <AlertTriangle className="w-3 h-3" />}
                 {variance >= 0
                   ? `${Math.abs(variance)}d buffer`
-                  : `${Math.abs(variance)}d overdue`}
+                  : `predicted ${Math.abs(variance)}d late`}
               </div>
             )}
           </div>
