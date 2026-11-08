@@ -6575,7 +6575,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/app/api/blender-mcp/execute/route.ts:17 This context's files are a loopback TCP bridge (connect, status probe, raw code pass-through), a provider-name guard, a client store and a 3D preview page. A search of src/app/api/blender-mcp, src/stores and src/app/3d found no hits for unwrap, decimat, retopolog, bake or export_scene, so no finishing operation runs in this context's code.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"
@@ -10102,7 +10106,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/_shared/data.ts:28 This context is the character module's UI for overview, input and metrics. A search of sub_character found no hits for unwrap, decimat, retopolog or smart_project, and its only 'skeleton' or 'mesh' text is wizard prose that hands Mixamo or Blender import to an external CLI, so it has no finishing step to judge.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         },
         {
           "subject": "native-shell-integration",
@@ -18776,7 +18784,11 @@
           "revision": 4,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/index.tsx:71 This context covers loot-table, affix and EV tooling over item data. A search of sub_loot found no hits for unwrap, decimat, retopolog or smart_project; its only 'bone' or 'skeleton' hits are item names ('Bone Club', 'Skeleton Key') and an enemy archetype, so no mesh is finished here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:17c31fab45fb59f0",
+          "evaluatedRevision": 4
         }
       ],
       "governance": "governed"

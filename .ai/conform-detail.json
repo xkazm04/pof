@@ -20929,16 +20929,11 @@
       "context": "character-overview-input",
       "subject": "mesh-finishing-for-engine-readiness",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-06",
-      "evaluatedTs": "2026-11-06T05:17:48.681Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "5de4c729-8c66-4c3c-bc72-b95b7b1f2906",
-        "state": "not-applicable",
-        "at": "2026-11-06T05:18:25.546936+00:00",
-        "reason": "reviewer (sonnet): The anchor index.tsx:91 is only the tab-dispatch line. The wizard claim rests on sub_character/wizard/*, which is not in this context's file list. That wizard also names mesh/skeleton wiring (\"Wire mesh + skeleton + AnimBP\") and a Blender mesh import, so the 'bone' absence claim is shaky, and the cl"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:29:13.529Z",
+      "worker": "3c323a92-32a1-40a2-b922-cb5e42c811dc",
+      "techniques": []
     },
     "206da1bc-b199-4a21-801f-98213e5c14d5/mesh-finishing-for-engine-readiness": {
       "context": "character-movement-playground",
@@ -22023,16 +22018,11 @@
       "context": "loot-affix-core",
       "subject": "mesh-finishing-for-engine-readiness",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T04:14:33.233Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "d38b6cf3-c3d2-4177-b3e9-575684e23a79",
-        "state": "not-applicable",
-        "at": "2026-11-07T04:15:17.991911+00:00",
-        "reason": "reviewer (sonnet): The anchor data.ts:24 is just the 'Core' subtab definition. It doesn't show that mesh finishing is absent, so it is an incidental anchor. The absence rests on a four-term grep (unwrap, bake, mesh, decimat) that I couldn't confirm was the right search for this subject."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:29:13.529Z",
+      "worker": "3c323a92-32a1-40a2-b922-cb5e42c811dc",
+      "techniques": []
     },
     "a5282390-b3a3-4015-90c9-7ff9f7481788/mesh-finishing-for-engine-readiness": {
       "context": "visual-gen-quality-and-animation",
@@ -23097,6 +23087,16 @@
         "at": "2026-11-08T02:19:34.640497+00:00",
         "reason": "reviewer (sonnet): The critic scripts (pof_vlm_critique.py, pof_vlm_batch.py) judge generated outputs, not reconstruction inputs. The verdict's own technique anchor says so. A deviation against input-gating for open defect text and a prose verdict is therefore about a different concern than the subject."
       }
+    },
+    "86ff083f-88a4-4882-a56b-f655ddb2a98c/mesh-finishing-for-engine-readiness": {
+      "context": "blender-3d-integration",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:29:13.529Z",
+      "worker": "3c323a92-32a1-40a2-b922-cb5e42c811dc",
+      "techniques": []
     }
   }
 }
