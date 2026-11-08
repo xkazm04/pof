@@ -75,7 +75,7 @@ export function AttackRingControls({ numPoints, setNumPoints, attackDist, setAtt
         <div className="flex justify-between text-[11px] font-mono text-text-muted mt-0.5">
           <span>{MIN_DISTANCE}</span>
           <span>ClampMin={MIN_DISTANCE}</span>
-          <span>{MAX_DISTANCE}</span>
+          <span title="Preview limit so the ring fits the viewBox; the C++ property has no ClampMax">preview max {MAX_DISTANCE}</span>
         </div>
       </div>
 
