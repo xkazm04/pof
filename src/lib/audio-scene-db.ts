@@ -2,6 +2,7 @@ import { getDb } from './db';
 import { logger } from './logger';
 import { brokenDocName } from './level-design-db';
 import { buildUpdateQuery } from './db-utils';
+import { clampConfigInt } from './economy/normalize-config';
 import type {
   AudioSceneDocument,
   AudioSceneSummary,
@@ -124,7 +125,22 @@ export function createAudioScene(payload: CreateAudioScenePayload): AudioSceneDo
   return scene;
 }
 
-export function updateAudioScene(payload: UpdateAudioScenePayload): AudioSceneDocument | null {
+/** Same ranges as the Settings tab fields; both are emitted verbatim as int32 by the codegen. */
+export const SOUND_POOL_SIZE_RANGE = { min: 1, max: 256, fallback: 32 } as const;
+export const MAX_CONCURRENT_SOUNDS_RANGE = { min: 1, max: 128, fallback: 16 } as const;
+
+/** The server is the trust boundary: a replayed or older client can still send 2.5 or 99999. */
+function clampSceneSettings(payload: UpdateAudioScenePayload): UpdateAudioScenePayload {
+  const out = { ...payload };
+  const p = SOUND_POOL_SIZE_RANGE;
+  const c = MAX_CONCURRENT_SOUNDS_RANGE;
+  if (out.soundPoolSize !== undefined) out.soundPoolSize = clampConfigInt(out.soundPoolSize, p.min, p.max, p.fallback);
+  if (out.maxConcurrentSounds !== undefined) out.maxConcurrentSounds = clampConfigInt(out.maxConcurrentSounds, c.min, c.max, c.fallback);
+  return out;
+}
+
+export function updateAudioScene(rawPayload: UpdateAudioScenePayload): AudioSceneDocument | null {
+  const payload = clampSceneSettings(rawPayload);
   ensureAudioSceneTable();
   const db = getDb();
   const existing = getAudioScene(payload.id);
