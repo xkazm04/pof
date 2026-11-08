@@ -23,6 +23,7 @@
 import { deriveCppSurface, isEditorExposed } from '@/lib/blueprint-cpp-surface';
 import { parseHeader, hasSpecifier, type ParsedFunction } from '@/lib/cpp-semantic-parser';
 import { onRepHandlerName } from '@/lib/replication-scaffolder';
+import { definedNames } from '@/lib/blueprint-transpiler/overwrite-review';
 import type {
   SemanticDiffResult,
   SemanticChange,
@@ -51,6 +52,12 @@ const NOT_COMPARED = [
   'Default values, categories and tooltips',
   'Whether the C++ compiles at all',
 ];
+
+/** Said only when the input held no definition: declarations alone prove less. */
+const NO_SOURCE_NOT_COMPARED = 'Function definitions — the input held no ClassName::Function() definition, so only declarations were read';
+
+/** Said only when a definition was present and was read. */
+const DEFINITION_DIMENSION = 'Definition presence of each declared Blueprint function (ClassName::Function)';
 
 /** Compare declared C++ types ignoring spacing, `const` and reference-ness. */
 function normalizeType(t: string): string {
@@ -330,6 +337,28 @@ export function computeSemanticDiff(
     });
   }
 
+  // Definitions. The rung is what was INSPECTED: only when the pasted text
+  // carries `ClassName::Function(...) {` definitions are they read, and a
+  // declared Blueprint function with no definition is then a change.
+  const defined = new Set(definedNames(existingCpp, surface.cppClassName));
+  const definitionsRead = defined.size > 0;
+  if (definitionsRead) {
+    for (const fn of surface.functions) {
+      if (fn.origin !== 'bp-function' || !cppFunctions.has(fn.name) || defined.has(fn.name)) continue;
+      changes.push({
+        id: `change-${changeId++}`,
+        type: 'modify',
+        scope: 'function',
+        name: fn.name,
+        description: `Function "${fn.name}" is declared but never defined in the C++ source (${surface.cppClassName}::${fn.name})`,
+        blueprintSide: `${fn.name}() — ${fn.graph.nodes.length} nodes`,
+        cppSide: renderCppSignature(cppFunctions.get(fn.name)!),
+        conflictLevel: 'compatible',
+        resolution: `Define ${surface.cppClassName}::${fn.name} in the .cpp — an undefined UFUNCTION fails to link`,
+      });
+    }
+  }
+
   // Determine overall conflict level
   const hasConflict = changes.some((c) => c.conflictLevel === 'conflict');
   const hasCompatible = changes.some((c) => c.conflictLevel === 'compatible');
@@ -340,11 +369,12 @@ export function computeSemanticDiff(
     cppSummary: `${cppFunctions.size} functions, ${cppProperties.size} properties detected`,
     overallConflict: hasConflict ? 'conflict' : hasCompatible ? 'compatible' : 'none',
     timestamp: now,
-    // Declaration-level comparison only: it can show that both sides DECLARE
-    // and DEFINE the same members with the same signatures. It cannot show
-    // structural or behavioural equivalence, and it never compiles anything.
-    fidelityRung: 'declared-and-defined',
-    comparedDimensions: COMPARED_DIMENSIONS,
-    notCompared: NOT_COMPARED,
+    // The rung is what was inspected, never above it. Header-only input was
+    // only parsed; definitions read from a present source reach
+    // declared-and-defined. Neither shows structural or behavioural
+    // equivalence, and nothing is compiled.
+    fidelityRung: definitionsRead ? 'declared-and-defined' : 'parsed',
+    comparedDimensions: definitionsRead ? [...COMPARED_DIMENSIONS, DEFINITION_DIMENSION] : COMPARED_DIMENSIONS,
+    notCompared: definitionsRead ? NOT_COMPARED : [NO_SOURCE_NOT_COMPARED, ...NOT_COMPARED],
   };
 }

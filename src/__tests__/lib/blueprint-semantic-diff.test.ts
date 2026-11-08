@@ -316,9 +316,51 @@ describe('computeSemanticDiff — signature and flag fidelity', () => {
 
   it('names the fidelity rung and the dimensions it did NOT compare', () => {
     const result = computeSemanticDiff(asset(), '', 'P');
-    expect(result.fidelityRung).toBe('declared-and-defined');
+    expect(result.fidelityRung).toBe('parsed');
     expect(result.notCompared.join(' ')).toMatch(/event graph/i);
+    expect(result.notCompared.join(' ')).toMatch(/definitions/i);
     expect(result.comparedDimensions.length).toBeGreaterThan(0);
+  });
+
+  it('claims declared-and-defined only when a definition was actually read', () => {
+    const header = [
+      'UCLASS()',
+      'class MYGAME_API APlayer : public AActor',
+      '{',
+      '  GENERATED_BODY()',
+      '  UFUNCTION(BlueprintCallable)',
+      '  void Fire();',
+      '};',
+    ].join('\n');
+    const bp = asset({ functions: [fnGraph('Fire')] });
+    const headerOnly = computeSemanticDiff(bp, header, 'P');
+    expect(headerOnly.fidelityRung).not.toBe('declared-and-defined');
+
+    const withDefinition = computeSemanticDiff(bp, `${header}\n\nvoid APlayer::Fire()\n{\n}\n`, 'P');
+    expect(withDefinition.fidelityRung).toBe('declared-and-defined');
+    expect(withDefinition.changes.filter((c) => c.name === 'Fire')).toHaveLength(0);
+  });
+
+  it('reports a declared function that a present .cpp never defines', () => {
+    const src = [
+      'UCLASS()',
+      'class MYGAME_API APlayer : public AActor',
+      '{',
+      '  GENERATED_BODY()',
+      '  UFUNCTION(BlueprintCallable)',
+      '  void Fire();',
+      '  UFUNCTION(BlueprintCallable)',
+      '  void Reload();',
+      '};',
+      'void APlayer::Fire()',
+      '{',
+      '}',
+    ].join('\n');
+    const result = computeSemanticDiff(asset({ functions: [fnGraph('Fire'), fnGraph('Reload')] }), src, 'P');
+    const change = result.changes.find((c) => c.name === 'Reload');
+    expect(change?.scope).toBe('function');
+    expect(change?.description).toMatch(/declared but never defined/i);
+    expect(result.changes.some((c) => c.name === 'Fire')).toBe(false);
   });
 });
 
