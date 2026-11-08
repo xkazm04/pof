@@ -60,7 +60,7 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
     );
   }
   if (state.kind === 'loading') {
-    return <Shell t={t}><span data-testid="changes-loading">Reading what moved…</span></Shell>;
+    return <Shell t={t} busy><span data-testid="changes-loading">Reading what moved…</span></Shell>;
   }
   if (state.kind === 'error') {
     return (
@@ -79,7 +79,7 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
 
   return (
     <Shell t={t}>
-      <span data-testid="changes-headline" style={{ color: ready.rows.length ? t.ink : t.muted }}>
+      <span data-testid="changes-headline" role="status" style={{ color: ready.rows.length ? t.ink : t.muted }}>
         {describeChanges(ready)}
       </span>
       {onOpenQueue && queue && queue.items.length > 0 && (
@@ -162,10 +162,11 @@ function blindSpotNote(truncated: number, cap: number): string {
     : base;
 }
 
-function Shell({ t, children }: { t: LabTheme; children: React.ReactNode }) {
+function Shell({ t, busy, children }: { t: LabTheme; busy?: boolean; children: React.ReactNode }) {
   return (
     <div
       data-testid="catalog-changes-digest"
+      aria-busy={busy ? true : undefined}
       className={t.fontMono}
       style={{
         display: 'flex', flexDirection: 'column', gap: 2,
