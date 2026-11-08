@@ -72,10 +72,18 @@ export async function POST(req: NextRequest) {
       if (!result || !Array.isArray(result.metrics)) {
         return apiError('result (SimulationResult) is required', 400);
       }
+      // As with generate-code, the result only carries its config: saving its metrics verbatim
+      // let a client-edited result become a saved run (or the drift baseline) whose numbers no
+      // simulation produced. Re-simulate the normalized config (seeded → a genuine run reproduces).
+      const carried = result.config as unknown;
+      if (typeof carried !== 'object' || carried === null || Array.isArray(carried)) {
+        return apiError('result.config (the simulated config) is required to save a run', 400);
+      }
+      const simulated = runSimulation(normalizeSimulationConfig(carried));
       const run = saveRun({
         name,
-        config: result.config,
-        metrics: extractRunMetrics(result),
+        config: simulated.config,
+        metrics: extractRunMetrics(simulated),
       });
       return apiSuccess({ run });
     }
