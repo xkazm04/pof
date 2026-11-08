@@ -4,6 +4,7 @@ import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 import { useLabPipelineStore, type LabStepArtifact } from './labPipelineStore';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { resolveAccept } from './labAcceptance';
+import { contentOf } from './stepRecord';
 import {
   resolveStepAcceptance,
   serverVerdictOverlay as applyServerVerdict,
@@ -49,7 +50,9 @@ export function buildLabCheckerContext(
   canonProfile?: string,
 ): CheckerContext {
   const siblings: Record<string, Record<string, unknown>> = {};
-  for (const [step, art] of Object.entries(entitySteps ?? {})) siblings[step] = art.data;
+  // Only CONTENT is a sibling (`stepRecord`): a failure marker's empty `data` is no produce, and the
+  // server context (`headless.ts`) never sees one, so listing it would grade `{}` as produced.
+  for (const [step, art] of Object.entries(entitySteps ?? {})) if (contentOf(art)) siblings[step] = art.data;
   const base: CheckerContext = {
     catalog: catalogId,
     siblings,
@@ -57,7 +60,7 @@ export function buildLabCheckerContext(
     ...(canonProfile ? { canonProfile } : {}),
   };
   if (!resolve) return base;
-  return { ...base, siblingVerdict: (step) => siblingVerdictOf(catalogId, step, entitySteps?.[step], base, resolve) };
+  return { ...base, siblingVerdict: (step) => siblingVerdictOf(catalogId, step, contentOf(entitySteps?.[step]), base, resolve) };
 }
 
 /**
