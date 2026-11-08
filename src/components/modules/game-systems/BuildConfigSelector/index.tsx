@@ -22,6 +22,7 @@ import { PLATFORM_ICONS } from './constants';
 import { ProfileEditor } from './ProfileEditor';
 import { AddPlatformButtons } from './AddPlatformButtons';
 import { PreflightGateBlock } from './PreflightGateBlock';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { packageFlow, INITIAL_PACKAGE_FLOW, type PackageFlowEvent, type PackageFlowState } from '@/lib/packaging/package-flow';
 
 // ---------- Main component ----------
@@ -29,6 +30,9 @@ import { packageFlow, INITIAL_PACKAGE_FLOW, type PackageFlowEvent, type PackageF
 export function BuildConfigSelector() {
   const [profiles, setProfiles] = useState<BuildProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  // A failed read is not "no profiles": without this the panel offered "No build
+  // profiles yet" and create buttons over profiles that may exist.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Partial<BuildProfile> | null>(null);
 
@@ -93,8 +97,10 @@ export function BuildConfigSelector() {
     try {
       const data = await apiFetch<{ profiles: BuildProfile[] }>('/api/packaging/profiles');
       setProfiles(data.profiles ?? []);
+      setLoadError(null);
     } catch (e) {
       console.error('Failed to fetch profiles:', e);
+      setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -236,6 +242,10 @@ export function BuildConfigSelector() {
         </div>
       </div>
 
+      {loadError && (
+        <InlineErrorRetry message={`Build profiles could not be read: ${loadError}`} onRetry={fetchProfiles} />
+      )}
+
       {/* Add platform buttons */}
       <AddPlatformButtons
         unusedPlatforms={unusedPlatforms}
@@ -258,7 +268,7 @@ export function BuildConfigSelector() {
       )}
 
       {/* Profile cards */}
-      {profiles.length === 0 && !loading ? (
+      {loadError && profiles.length === 0 ? null : profiles.length === 0 && !loading ? (
         <div className="text-center py-8 space-y-3">
           <Wrench className="w-6 h-6 text-text-muted mx-auto" />
           <div className="text-xs text-text-muted">No build profiles yet</div>
