@@ -1,13 +1,15 @@
 'use client';
 
 /**
- * /status shell — the Blueprint-themed page chrome hosting two tabs:
+ * /status shell — the Blueprint-themed page chrome hosting five tabs: Capability (the default
+ * landing), Category and Models, plus these two:
  *   • Pipelines  — the pipeline-centric health map (swimlanes across every catalog).
  *   • Item Focus — the entity-centric view (one entity's realization + its 1-hop
  *                  cross-pipeline dependency map).
  *
  * View state lives in the URL so it is deep-linkable and back/forward works:
- *   /status                                  → Pipelines
+ *   /status                                  → Capability
+ *   /status?tab=pipelines                    → Pipelines
  *   /status?entity=<catalogId>:<entityId>    → Item Focus on that entity
  *   /status?tab=item                         → Item Focus (empty, prompts search)
  * The URL is read via useSyncExternalStore (SSR snapshot '' → no hydration mismatch)
