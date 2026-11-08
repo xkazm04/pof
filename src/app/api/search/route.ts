@@ -1,16 +1,15 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, withRoute } from '@/lib/api-utils';
+import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { searchIndex, rebuildSearchIndex, getLastRebuildTime } from '@/lib/search-index';
 
 export const GET = withRoute(async (request: NextRequest) => {
   const q = request.nextUrl.searchParams.get('q')?.trim();
   const types = request.nextUrl.searchParams.get('types');
-  const rebuild = request.nextUrl.searchParams.get('rebuild');
 
-  // Rebuild index on demand
-  if (rebuild === '1') {
-    const result = rebuildSearchIndex();
-    return apiSuccess({ indexed: result.indexed });
+  // Rebuilding deletes and refills the index, and a GET must not mutate (api-auth.ts), so it is POST.
+  if (request.nextUrl.searchParams.has('rebuild')) {
+    return apiError('Rebuild is POST /api/search?action=rebuild', 405);
   }
 
   if (!q) {
@@ -26,3 +25,13 @@ export const GET = withRoute(async (request: NextRequest) => {
     lastRebuilt: getLastRebuildTime(),
   });
 }, 'Search failed');
+
+/** POST /api/search?action=rebuild: delete and refill the index. Operator-guarded like every write. */
+export const POST = withRoute(async (request: NextRequest) => {
+  const denied = requireOperator(request);
+  if (denied) return denied;
+  const action = request.nextUrl.searchParams.get('action');
+  if (action !== 'rebuild') return apiError(`Unknown action "${action ?? ''}"`, 400);
+  const result = rebuildSearchIndex();
+  return apiSuccess({ indexed: result.indexed });
+}, 'Search rebuild failed');

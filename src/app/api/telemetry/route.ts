@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import {
   saveSnapshot,
@@ -115,7 +116,7 @@ export async function POST(req: Request) {
 
         // Save snapshot
         const snapshot = {
-          id: `snap-${Date.now()}`,
+          id: `snap-${Date.now()}-${randomUUID().slice(0, 8)}`,
           scannedAt: new Date().toISOString(),
           projectPath,
           signals,
