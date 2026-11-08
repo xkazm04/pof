@@ -46,7 +46,8 @@ function runCommand(
       resolve({
         stdout: stdout ?? '',
         stderr: stderr ?? '',
-        exitCode: error?.code ?? (error ? 1 : 0),
+        // A spawn failure carries a string code ('ETIMEDOUT'); only a numeric code is an exit status.
+        exitCode: typeof error?.code === 'number' ? error.code : (error ? 1 : 0),
       });
     });
 
