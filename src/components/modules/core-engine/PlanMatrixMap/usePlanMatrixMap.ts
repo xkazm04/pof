@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, type WheelEvent as ReactWheelEvent } from 'react';
 import { useCanvasTransform } from '@/hooks/useCanvasTransform';
 import { useImplementationPlan } from '@/hooks/useImplementationPlan';
 import {
@@ -24,7 +24,7 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
   const dragCountRef = useRef(0);
 
   const { plan, loading, error } = useImplementationPlan();
-  const { transform, startPan, onPointerMove, endPan, zoomToFit, zoomToCenter, reset, setTransform } = useCanvasTransform();
+  const { transform, startPan, onPointerMove, endPan, onWheel, zoomToFit, zoomToCenter, reset, setTransform } = useCanvasTransform();
   const [isPanningState, setIsPanningState] = useState(false);
 
   // --- UI State ---
@@ -117,6 +117,22 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
       zoomToFit(layout.bounds, rect.width, rect.height);
     }
   }, [layout, zoomToFit]);
+
+  // Wheel zoom. React binds onWheel as a PASSIVE listener, so preventDefault
+  // there cannot stop the page scrolling under the map; bind a native
+  // non-passive listener instead (as AudioScenePainter / OrreryStage do) and
+  // route it through useCanvasTransform's one zoom-to-point. The surface only
+  // exists once a layout does, so re-bind when it appears.
+  const hasSurface = layout !== null;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // The native event carries the same fields onWheel reads (deltaY, clientX/Y,
+    // currentTarget === el during dispatch).
+    const handler = (e: WheelEvent) => onWheel(e as unknown as ReactWheelEvent);
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [hasSurface, onWheel]);
 
   // Dynamic full-height canvas based on viewport and component position
   useEffect(() => {
