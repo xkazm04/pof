@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CategoryId, SubModuleId } from '@/types/modules';
 import type { SidebarMode } from '@/types/navigation';
-import { getCategoryForSubModule } from '@/lib/module-registry';
+import { CATEGORY_MAP, SUB_MODULE_MAP, getCategoryForSubModule } from '@/lib/module-registry';
 
 // Category IDs that render as special-case modules (no sub-modules)
 const SPECIAL_CATEGORY_IDS: Set<string> = new Set(['project-setup', 'evaluator', 'game-director']);
@@ -93,6 +93,17 @@ export const useNavigationStore = create<NavigationState>()(
     {
       name: 'pof-navigation',
       storage: createJSONStorage(() => localStorage),
+      // A persisted address naming a module the registry no longer declares never
+      // reaches the shell; navigateToModule holds the same line for live navigation.
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<NavigationState>;
+        return {
+          ...current,
+          ...saved,
+          activeCategory: saved.activeCategory && CATEGORY_MAP[saved.activeCategory] ? saved.activeCategory : null,
+          activeSubModule: saved.activeSubModule && SUB_MODULE_MAP[saved.activeSubModule] ? saved.activeSubModule : null,
+        };
+      },
     }
   )
 );
