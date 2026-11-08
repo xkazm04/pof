@@ -1,6 +1,9 @@
 import { Box, ListChecks, Layers, AlertTriangle, Package, Zap } from 'lucide-react';
 import { MODULE_COLORS, STATUS_INFO, STATUS_MUTED, ACCENT_VIOLET } from '@/lib/chart-colors';
 
+/** Fired by the topbar Search button: opens global search regardless of who owns mod+k. */
+export const OPEN_GLOBAL_SEARCH_EVENT = 'pof:open-global-search';
+
 // ── Type icons ───────────────────────────────────────────────────────────────
 
 export const TYPE_META: Record<string, { icon: typeof Box; label: string; color: string }> = {

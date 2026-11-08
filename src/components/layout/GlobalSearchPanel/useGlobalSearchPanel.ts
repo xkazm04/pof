@@ -11,6 +11,7 @@ import { apiFetch } from '@/lib/api-utils';
 import type { SearchResult } from '@/lib/search-index';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { resolveSearchIntents } from './searchIntents';
+import { OPEN_GLOBAL_SEARCH_EVENT } from './constants';
 import { ALERT_ID_PREFIX, buildHome } from './paletteHome';
 import { readRecents, recordRecent } from './recentSelections';
 
@@ -71,6 +72,11 @@ export function useGlobalSearchPanel() {
   // mod+k, e.g. the ability Spellbook, outranks it) + Escape as a LIFO layer ──
   useHotkey('mod+k', () => setOpen((prev) => !prev), { allowInInput: true, id: 'shell.global-search' });
   useEscapeLayer('global-search', open, () => setOpen(false));
+  useEffect(() => {
+    const openPalette = () => setOpen(true);
+    window.addEventListener(OPEN_GLOBAL_SEARCH_EVENT, openPalette);
+    return () => window.removeEventListener(OPEN_GLOBAL_SEARCH_EVENT, openPalette);
+  }, []);
 
   // ── Focus input when opening ──
   useEffect(() => {
