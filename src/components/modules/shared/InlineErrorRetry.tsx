@@ -49,10 +49,11 @@ export function InlineErrorRetry({
     >
       <div className="flex items-center gap-1.5 min-w-0">
         <AlertTriangle className={`${dense ? 'w-3 h-3' : 'w-3.5 h-3.5'} flex-shrink-0`} />
-        <span className="truncate">{message}</span>
+        <span className="truncate" title={message}>{message}</span>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onRetry(); }}
           className="focus-ring flex items-center gap-1 px-1.5 py-0.5 rounded font-medium hover:opacity-80 transition-opacity"
           style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_15}` }}
@@ -61,6 +62,7 @@ export function InlineErrorRetry({
         </button>
         {onDismiss && (
           <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); onDismiss(); }}
             aria-label={dismissLabel}
             className="focus-ring p-0.5 rounded text-text-muted hover:text-text transition-colors"
