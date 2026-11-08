@@ -8,6 +8,7 @@ import type { PromptKind } from '@/lib/knowledge/types';
 import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
 import type { SubModuleId } from '@/types/modules';
 import '@/lib/catalog/pipelines/registry.generated'; // side-effect: register all pipelines (React-free, server-safe — same as headless.ts)
+import { CATALOG_MODULE } from '@/lib/catalog/catalog-module';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { catalogContractRequirements, catalogCriteriaLines } from '@/lib/catalog/contractPrompt';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -35,30 +36,21 @@ function disciplineFor(catalogId: string): DeliverableClass {
 }
 
 /**
- * Maps each catalog to the PoF module whose knowledge domains its generation
- * prompts should carry — so `buildProjectContextHeader` scopes UE gotchas +
- * known-asset paths + knowledge tips to that domain (via `MODULE_GOTCHA_DOMAINS`
- * / `knownAssetDomainsForModule`) instead of hauling the conservative superset.
- * A catalog ABSENT here falls back to the full gotcha superset for the kind (an
- * unknown module never silently drops a relevant pitfall). Currency has no
- * domain-scoped module, so it is intentionally omitted.
+ * A recipe's prompts scope UE gotchas + known-asset paths + knowledge tips to the catalog's
+ * owning module (`CATALOG_MODULE`, the single source — never a second hand list), via
+ * `MODULE_GOTCHA_DOMAINS` / `knownAssetDomainsForModule`, instead of hauling the conservative
+ * superset. A catalog ABSENT from the map, or listed in `SUPERSET_RECIPES`, falls back to the full
+ * gotcha superset for the kind (an unknown module never silently drops a relevant pitfall).
+ *
+ * `currencies` is deliberately excluded: its owning module is `arpg-inventory` (so session
+ * labelling is correct), but its recipe has always carried the superset, and scoping it would
+ * change that prompt's header. Remove it from this set to scope it (a reviewed prompt change).
  */
-const RECIPE_MODULE: Record<string, SubModuleId> = {
-  spellbook: 'arpg-gas',
-  items: 'arpg-inventory',
-  'loot-tables': 'arpg-loot',
-  bestiary: 'arpg-enemy-ai',
-  'combat-map': 'arpg-combat',
-  'screen-flow': 'arpg-ui',
-  'zone-map': 'arpg-world',
-  'state-graph': 'arpg-animation',
-  materials: 'materials',
-  characters: 'arpg-character',
-};
+const SUPERSET_RECIPES: ReadonlySet<string> = new Set(['currencies']);
 
 /** The module a recipe's prompts scope knowledge to, or undefined (→ superset). */
-function moduleForRecipe(catalogId: string): SubModuleId | undefined {
-  return RECIPE_MODULE[catalogId];
+export function moduleForRecipe(catalogId: string): SubModuleId | undefined {
+  return SUPERSET_RECIPES.has(catalogId) ? undefined : CATALOG_MODULE[catalogId];
 }
 
 /**
