@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import type { LabTheme } from './theme';
 
 /** Header button that opens/closes a collapsed-shell drawer (narrow viewports). */
@@ -28,14 +28,41 @@ export function DrawerToggle({ t, label, glyph, open, controls, onClick }: {
   );
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /**
  * Left slide-over drawer used to surface the catalog tree / pipeline columns when
  * the shell is too narrow to keep them inline. Backdrop click or Escape closes it.
+ *
+ * It declares `aria-modal`, so it keeps that promise itself (the shared `ui/Modal` is a
+ * centred dialog, not a slide-over): focus moves in on open, Tab / Shift+Tab wrap inside the
+ * panel, and focus returns to whatever opened it on close or unmount.
  */
 export function LabDrawer({ t, open, onClose, id, title, width, children }: {
   t: LabTheme; open: boolean; onClose: () => void; id: string; title: string; width: number; children: ReactNode;
 }) {
   const reduce = useReducedMotion();
+  const panelRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+    (first ?? panelRef.current)?.focus();
+    return () => { if (opener && opener.isConnected) opener.focus(); };
+  }, [open]);
+
+  const trapTab = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== 'Tab' || !panelRef.current) return;
+    const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || !panelRef.current.contains(active))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (active === last || !panelRef.current.contains(active))) { e.preventDefault(); first.focus(); }
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -52,6 +79,9 @@ export function LabDrawer({ t, open, onClose, id, title, width, children }: {
           />
           <motion.aside
             key={`${id}-panel`}
+            ref={panelRef}
+            tabIndex={-1}
+            onKeyDown={trapTab}
             id={id}
             role="dialog"
             aria-modal="true"
