@@ -93,7 +93,9 @@ export function ScanTab({ moduleId }: ScanTabProps) {
             return (
               <button
                 key={pass}
+                type="button"
                 onClick={() => togglePass(pass)}
+                aria-pressed={isActive}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all"
                 style={isActive
                   ? { backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}40` }
