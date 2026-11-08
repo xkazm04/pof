@@ -17,7 +17,8 @@ vi.mock('@/lib/pipeline-artifacts-db', () => ({
 }));
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() } }));
 
-import { collectDeferred, drainOne, drainAll } from '@/lib/test-gate-runner/drain';
+import { collectDeferred, drainOne, drainAll, applyVerdict } from '@/lib/test-gate-runner/drain';
+import { readEvidence } from '@/lib/test-gate-runner/evidenceAudit';
 import type { GateExecutor, GateJob, GateVerdict } from '@/lib/test-gate-runner/types';
 
 function seed(a: Partial<PipelineArtifact> & { catalogId: string; entityId: string; step: string }) {
@@ -99,6 +100,18 @@ describe('drainOne — evidence', () => {
     await drainOne({ catalogId: 'items', entityId: 'i2', step: 'g', tier: 'L3', testName: 'T' }, fakeExec({ tier: 'L3', runFn: async () => ({ status: 'pass', detail: 'ok' }) }));
     const row = store.get(key('items', 'i2', 'g'))!;
     expect(row.data).toEqual({ genHistory: { batches: [] } }); // no `evidence` key added
+  });
+
+  it('drops the PREVIOUS evidence when the new verdict carries none (never pairs a verdict with another run proof)', async () => {
+    const old = { kind: 'scenario' as const, at: '2026-07-01T00:00:00Z', stats: { distance: 412 } };
+    seed({ catalogId: 'items', entityId: 'i3', step: 'g', tier: 'L3', status: 'pass', data: { foo: 1, evidence: old }, reason: 'old' });
+    const job: GateJob = { catalogId: 'items', entityId: 'i3', step: 'g', tier: 'L3', testName: 'T' };
+    applyVerdict(job, { status: 'fail', detail: 'no proof this time' });
+    const row = store.get(key('items', 'i3', 'g'))!;
+    expect(row.status).toBe('fail');
+    expect(readEvidence(row)).toBeNull();
+    expect(row.data.evidence).toBeUndefined();
+    expect(row.data.foo).toBe(1); // everything else preserved
   });
 
   it('overlapping drainOne calls on the same row lose no evidence and preserve prior data', async () => {
