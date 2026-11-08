@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { isFeatureDone } from '@/lib/feature-done';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -18,7 +19,7 @@ import { STATUS_COLORS } from './constants';
 
 export function StatusDot({ status }: { status: FeatureStatus }) {
   const sc = STATUS_COLORS[status];
-  const isActive = status === 'implemented' || status === 'improved';
+  const isActive = isFeatureDone(status);
   const prefersReduced = useReducedMotion();
   return (
     <span className="flex items-center gap-1.5">

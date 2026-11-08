@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
+import { isFeatureDone } from '@/lib/feature-done';
 import { MODULE_FEATURE_DEFINITIONS, type FeatureDefinition } from '@/lib/feature-definitions';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
@@ -36,7 +37,7 @@ export function useTabFeatures(moduleId: SubModuleId): UseTabFeaturesResult {
     let implemented = 0, partial = 0, missing = 0;
     for (const d of defs) {
       const status = featureMap.get(d.featureName)?.status ?? 'unknown';
-      if (status === 'implemented' || status === 'improved') implemented++;
+      if (isFeatureDone(status)) implemented++;
       else if (status === 'partial') partial++;
       else if (status === 'missing') missing++;
     }
