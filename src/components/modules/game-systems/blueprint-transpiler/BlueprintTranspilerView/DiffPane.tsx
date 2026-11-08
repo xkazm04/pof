@@ -49,6 +49,7 @@ export function DiffPane({
           </div>
           <textarea
             className="flex-1 min-h-[140px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+            aria-label="Blueprint JSON to compare"
             placeholder="Paste Blueprint JSON..."
             value={blueprintJson}
             onChange={(e) => setBlueprintJson(e.target.value)}
@@ -64,6 +65,7 @@ export function DiffPane({
           </div>
           <textarea
             className="flex-1 min-h-[140px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+            aria-label="Existing C++ to compare"
             placeholder="Paste existing C++ header/source to compare..."
             value={existingCpp}
             onChange={(e) => setExistingCpp(e.target.value)}

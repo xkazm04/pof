@@ -9,6 +9,8 @@ import { POST } from '@/app/api/blueprint-transpiler/route';
 import { resetBlueprintTranspilerSessions } from '@/hooks/useBlueprintTranspiler';
 import { ReplicationScaffoldPanel } from '@/components/modules/game-systems/multiplayer/ReplicationScaffoldPanel';
 import { useProjectStore } from '@/stores/projectStore';
+import { TranspilePane } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/TranspilePane';
+import { DiffPane } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/DiffPane';
 import { ChangeCard } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/ChangeCard';
 import type { SemanticChange } from '@/types/blueprint';
 
@@ -76,5 +78,29 @@ describe('ReplicationScaffoldPanel - copy goes through the shared CopyButton', (
     } finally {
       process.off('unhandledRejection', onUnhandled);
     }
+  });
+});
+
+describe('the Blueprint / C++ input boxes have accessible names (not placeholder-only)', () => {
+  it('names every textarea across the transpile, diff and replication surfaces', () => {
+    const noop = () => {};
+    const { container } = render(
+      <>
+        <TranspilePane
+          blueprintJson="" setBlueprintJson={noop} onTranspile={noop} onLoadSample={noop}
+          isLoading={false} error={null} asset={null} summary={null} result={null}
+          showCode="header" setShowCode={noop} moduleName="P" onModuleChange={noop} projectPath=""
+        />
+        <DiffPane
+          blueprintJson="" setBlueprintJson={noop} existingCpp="" setExistingCpp={noop}
+          onDiff={noop} onLoadSample={noop} isLoading={false} error={null} result={null}
+        />
+        <ReplicationScaffoldPanel />
+      </>,
+    );
+    const boxes = Array.from(container.querySelectorAll('textarea'));
+    expect(boxes).toHaveLength(4);
+    const named = boxes.filter((b) => (b.getAttribute('aria-label') ?? '').trim().length > 0);
+    expect(named).toHaveLength(4);
   });
 });

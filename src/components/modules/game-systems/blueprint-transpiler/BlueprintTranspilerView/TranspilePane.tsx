@@ -80,6 +80,7 @@ export function TranspilePane({
         </div>
         <textarea
           className="flex-1 min-h-[160px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+          aria-label="Blueprint JSON to transpile"
           placeholder="Paste Blueprint JSON here (from UE5 commandlet export or copy graph)..."
           value={blueprintJson}
           onChange={(e) => setBlueprintJson(e.target.value)}

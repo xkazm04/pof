@@ -90,6 +90,7 @@ export function ReplicationScaffoldPanel() {
         </div>
         <textarea
           className="w-full h-40 p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+          aria-label="Blueprint JSON to scan for replication"
           placeholder="Paste Blueprint JSON (from UE5 commandlet export or copy graph)..."
           value={blueprintJson}
           onChange={(e) => setBlueprintJson(e.target.value)}
