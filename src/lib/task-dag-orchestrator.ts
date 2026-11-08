@@ -190,6 +190,8 @@ export class TaskDAGOrchestrator {
     if (this.execution.status !== 'running') return;
 
     const readyNodes = this.findReadyNodes();
+    // findReadyNodes marks skipped nodes; count them before the terminal snapshot below.
+    this.recomputeCounters();
 
     if (readyNodes.length === 0) {
       // Check if we're done (no running, no retrying, no queued)
