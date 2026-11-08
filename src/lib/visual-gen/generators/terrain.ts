@@ -133,6 +133,14 @@ export function resolveTerrainBasis(config: TerrainConfig): Result<TerrainBasis,
     );
   }
 
+  const steps = config.size - 1;
+  if (!Number.isInteger(config.size) || steps < 1 || (steps & (steps - 1)) !== 0) {
+    return err(
+      `size must be a power of two plus one (2^n + 1, e.g. 65, 129, 257), got ${config.size} — ` +
+        'Diamond-Square halves the step each pass and any other size is walked off the grid',
+    );
+  }
+
   const sampleSpan = config.maxHeight - config.minHeight;
   if (!Number.isFinite(sampleSpan) || sampleSpan <= 0) {
     return err(
