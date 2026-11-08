@@ -345,9 +345,11 @@ export function craftForCell(
 /**
  * Rungs still to climb for one cell — the rollup unit. A STALE gauge counts its full
  * ceiling distance (the content on record has never been gauged, so the whole climb is
- * unproven); at-ceiling counts 0 by construction.
+ * unproven); a PARTLY gauged cell (`coverage`) counts the same; at-ceiling counts 0 by construction.
  */
-export function cellDistanceToRoof(c: CellCraft): number {
-  if (c.craft.state === 'stale') return distanceToRoof('A0', c.ceiling);
+export function cellDistanceToRoof(c: CellCraft & { coverage?: object }): number {
+  // A partly gauged cell (`coverage` set: some entities unmeasured) speaks for only part of
+  // the step, so — like a stale one — it credits no climb: the roll-up counts what was measured.
+  if (c.craft.state === 'stale' || c.coverage) return distanceToRoof('A0', c.ceiling);
   return distanceToRoof(c.craft.level, c.ceiling);
 }

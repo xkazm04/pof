@@ -161,6 +161,20 @@ describe('craftOf content binding — staleness follows the content, not the wri
   });
 });
 
+describe('cellDistanceToRoof - partial coverage', () => {
+  const H = stepContentHash({ brief: 'a sword that remembers every wielder' });
+  it('a partly gauged cell credits no climb: it counts the full ceiling distance', () => {
+    const cell = craftForCell(
+      'items',
+      'Concept Brief',
+      [{ catalogId: 'items', entityId: 'e1', step: 'Concept Brief', aLevel: 'A2', lensVersion: 1, contentHash: H, artifactUpdatedAt: '2026-09-01 10:00:00' }],
+      new Map([['e1', { hash: H, updatedAt: '2026-09-03 08:00:00' }]]),
+    )!;
+    expect(cellDistanceToRoof({ ...cell, coverage: { gauged: 1, total: 3 } })).toBe(distanceToRoof('A0', cell.ceiling));
+    expect(cellDistanceToRoof(cell)).toBe(distanceToRoof('A2', cell.ceiling));
+  });
+});
+
 describe('distanceToRoof', () => {
   it('A0 counts the full climb; at-ceiling is 0; never negative', () => {
     expect(distanceToRoof('A0', 'A4')).toBe(4);
