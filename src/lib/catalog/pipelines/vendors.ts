@@ -361,7 +361,7 @@ registerCatalogPipeline({
                 'Within ±20% of target 30 (band 24–36) per canon vendor-laws + proj-balance. ' +
                 'Buyback at 50% is a net gold sink: vendor pays 50% and re-lists at 143% (no re-stock). ' +
                 'Repair fee (0.15g/durability point) is an additional gold sink per §10d. ' +
-                'TODO: replace the analytic buyer-mix with a pof_economy_simulate run when the sim gate lands.',
+                'The margin is this analytic buyer-mix derivation, not a simulated result; the pof_economy_simulate pof-mcp tool can run the full economy sim.',
             },
             // top-level field for withinPercent checker
             marginPct,
