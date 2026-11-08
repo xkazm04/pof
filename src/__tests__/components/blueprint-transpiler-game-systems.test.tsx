@@ -235,3 +235,14 @@ describe('transpiler tabs and the .h/.cpp toggle expose their selected state', (
     expect(view.container.querySelectorAll('[aria-pressed="true"]').length).toBe(1);
   });
 });
+
+describe('WriteToProjectButton - the status banners share one block', () => {
+  it('has a single tinted-banner style block, not one per banner', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(
+      'src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/WriteToProjectButton.tsx',
+      'utf-8',
+    );
+    expect(src.split('OPACITY_10}`').length - 1).toBe(1);
+  });
+});
