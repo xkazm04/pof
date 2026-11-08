@@ -59,6 +59,15 @@ describe('POST /api/pipeline-artifacts/drain — a sent scope key never widens t
     expect((drainAllMock.mock.calls[0] as unknown[])[1]).toEqual({ catalogId: 'items' });
   });
 
+  // autoCapture is the L4 opt-in to RENDER a frame; without projectPath the route dropped it and
+  // the visual gates stayed deferred under a 200, so the caller believed a capture had run.
+  it('refuses autoCapture without projectPath instead of silently not capturing', async () => {
+    const res = await post({ catalogId: 'items', entityId: 'item-1', tier: 'L4', autoCapture: true });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('projectPath');
+    expect(drainAllMock).not.toHaveBeenCalled();
+  });
+
   it('still treats an empty object as the explicit global drain', async () => {
     const res = await post({});
     expect(res.status).toBe(200);

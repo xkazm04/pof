@@ -76,6 +76,10 @@ export async function POST(req: NextRequest) {
     if (unparsed.length > 0) {
       return apiError(`drain scope key(s) ${unparsed.join(', ')} did not parse — refusing rather than widening the drain`, 400);
     }
+    // autoCapture without a project used to be dropped, leaving the L4 gates deferred under a 200.
+    if (request.autoCapture && !request.projectPath) {
+      return apiError('autoCapture requires projectPath (the UE project to render the frame from)', 400);
+    }
 
     // Lease keys: one per requested entity for a batch, else the single (or global) key —
     // the same helper the worker uses, so both contend on one registry.
