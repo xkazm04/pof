@@ -5,6 +5,7 @@
  */
 
 import type { DetectedEngine } from './useProjectScan';
+import { toolRow } from '@/lib/project-setup/toolchain';
 
 export interface ProjectIdentity {
   projectName: string;
@@ -63,6 +64,7 @@ export function buildBuildVerifyPrompt({
   engines,
 }: ProjectIdentity & { engines: DetectedEngine[] }): string {
   const majorMinor = ueVersion.split('.').slice(0, 2).join('.');
+  const dotnetX = `${toolRow('dotnet').version}.x`;
   const { engine: matchedEngine, mismatch } = selectBuildEngine(ueVersion, engines);
   const eng = (matchedEngine?.path ?? '').replace(/\\/g, '/');
   const proj = projectPath.replace(/\\/g, '/');
@@ -75,11 +77,11 @@ RULES: Be concise. Do NOT use TodoWrite. Maximize parallel Bash calls. Every Bas
 
 STEP 1 — Pre-flight (run ALL in parallel):
   a) \`test -d "${proj}/Source" && echo "SOURCE OK" || echo "SOURCE MISSING"\`
-  b) \`ls "C:/Program Files/dotnet/x64/shared/Microsoft.NETCore.App/" 2>/dev/null || true; echo "---"; ls "C:/Program Files/dotnet/shared/Microsoft.NETCore.App/" 2>/dev/null || true\` — look for 8.x in either path. If x64 has 8.x, use DOTNET="C:/Program Files/dotnet/x64/dotnet.exe". If default has 8.x, use DOTNET=dotnet.
+  b) \`ls "C:/Program Files/dotnet/x64/shared/Microsoft.NETCore.App/" 2>/dev/null || true; echo "---"; ls "C:/Program Files/dotnet/shared/Microsoft.NETCore.App/" 2>/dev/null || true\` — look for ${dotnetX} in either path. If x64 has ${dotnetX}, use DOTNET="C:/Program Files/dotnet/x64/dotnet.exe". If default has ${dotnetX}, use DOTNET=dotnet.
   c) \`test -f "${eng}/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" && echo "UBT OK" || echo "UBT MISSING"\`
 
 Evaluate:
-- If no .NET 8.x in either path → BLOCKING, stop.
+- If no .NET ${dotnetX} in either path → BLOCKING, stop.
 - If UBT MISSING → BLOCKING, stop.
 - If SOURCE MISSING → proceed to Step 2 to create it.
 
