@@ -106,3 +106,12 @@ describe('combat-flow sankey conserves flow', () => {
     expect(conservationErrors(dataMetrics.SANKEY_COLUMNS, broken).length).toBeGreaterThan(0);
   });
 });
+
+describe('hitstop scale', () => {
+  it('MAX_HITSTOP is the largest authored hitstop, derived not re-typed', () => {
+    expect(dataMetrics.MAX_HITSTOP).toBe(Math.max(...dataMetrics.HITSTOP_ABILITIES.map((a) => a.hitstop)));
+    const src = fs.readFileSync(path.join(process.cwd(), 'src', 'components', 'modules', 'core-engine', 'sub_combat', '_shared', 'data-metrics.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(src).not.toMatch(/export const MAX_HITSTOP\s*=\s*[\d.]+\s*;/);
+  });
+});

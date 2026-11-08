@@ -297,7 +297,8 @@ export const HITSTOP_ABILITIES: HitstopAbility[] = [
   { name: 'Slam', hitstop: 0.15, animDuration: 1.2, color: STATUS_ERROR },
 ];
 
-export const MAX_HITSTOP = 0.15;
+/** Scale for the hitstop bars: the largest authored hitstop (was a re-typed 0.15). */
+export const MAX_HITSTOP = Math.max(...HITSTOP_ABILITIES.map((a) => a.hitstop));
 
 /* ── Combat Metrics data ──────────────────────────────────────────────── */
 
