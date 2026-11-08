@@ -140,10 +140,18 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
 
   function dispatch() {
     if (dispatching) return; // guard against double-dispatch while in flight
-    const err = validate?.(direction);
-    // A refusal is not a failed dispatch: Retry would re-send the previous prompt past `validate`.
-    if (err) { setResult({ ok: false, msg: err }); setRetryable(false); return; }
-    const ctx = { direction, prompt: buildPrompt(direction) };
+    let ctx: { direction: string; prompt: string };
+    try {
+      const err = validate?.(direction);
+      // A refusal is not a failed dispatch: Retry would re-send the previous prompt past `validate`.
+      if (err) { setResult({ ok: false, msg: err }); setRetryable(false); return; }
+      ctx = { direction, prompt: buildPrompt(direction) };
+    } catch (e) {
+      // Rule 4: the step's own prompt logic threw in a click handler, where nothing would report it.
+      setResult({ ok: false, msg: e instanceof Error ? e.message : 'Could not build the prompt' });
+      setRetryable(false);
+      return;
+    }
     setLastCtx(ctx);
 
     if (sync) {

@@ -150,3 +150,16 @@ describe('CliProduce refusal after a failed dispatch', () => {
     expect(screen.queryByTestId('cli-produce-retry')).toBeNull();
   });
 });
+
+describe('CliProduce prompt logic that throws', () => {
+  afterEach(cleanup);
+
+  it('reports a buildPrompt throw as the reason and dispatches nothing', () => {
+    const onComplete = vi.fn();
+    render(<CliProduce t={t} label="Run It" buildPrompt={() => { throw new Error('sibling step unreadable'); }} onComplete={onComplete} />);
+    fireEvent.click(screen.getByTestId('cli-produce-run'));
+    expect(screen.getByTestId('cli-produce-result').textContent).toContain('sibling step unreadable');
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('cli-produce-retry')).toBeNull();
+  });
+});
