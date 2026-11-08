@@ -49,6 +49,21 @@ describe('pof_leonardo.mjs', () => {
     expect(deletes(r.calls)).toHaveLength(1);
   });
 
+  it('an error exits non-zero, the same as the sibling Tripo CLI', () => {
+    expect(run(rules({ image: [{ status: 500, body: 'x' }] })).status).toBe(1);
+  });
+
+  it.each([
+    ['a bare --output', ['--prompt', 'p', '--output']],
+    ['a bare --prompt', ['--output', '{dir}/o.png', '--prompt']],
+    ['a non-numeric --width', ['--prompt', 'p', '--output', '{dir}/o.png', '--width', 'wide']],
+  ])('%s is refused before anything is bought', (_name, args) => {
+    const r = run(rules(), args);
+    expect(r.stdout).toContain('POF_LEO_ERROR=');
+    expect(r.status).toBe(1);
+    expect(r.calls).toEqual([]);
+  });
+
   it('an interrupt while polling still deletes the generation, once', () => {
     const r = run(rules({ poll: [{ emit: 'SIGINT', body: { generations_by_pk: { status: 'PENDING' } } }] }));
     expect(r.status).toBe(130);

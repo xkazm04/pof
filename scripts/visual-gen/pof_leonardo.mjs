@@ -41,7 +41,11 @@ async function req(method, url, body) {
 async function main() {
   const a = parseArgs(process.argv);
   if (!API_KEY) { console.log('POF_LEO_ERROR=no LEONARDO_API_KEY'); process.exit(1); }
-  if (!a.prompt || !a.output) { console.log('POF_LEO_ERROR=need --prompt --output'); process.exit(1); }
+  // A flag with no value parses as `true`, which would pay first and fail at resolve(true).
+  if (typeof a.prompt !== 'string' || typeof a.output !== 'string') { console.log('POF_LEO_ERROR=need --prompt --output'); process.exit(1); }
+  for (const dim of ['width', 'height']) {
+    if (a[dim] !== undefined && !(Number.parseInt(a[dim], 10) > 0)) { console.log(`POF_LEO_ERROR=--${dim} must be a positive integer`); process.exit(1); }
+  }
 
   const params = {
     quality: a.quality || 'HIGH',
@@ -102,6 +106,7 @@ async function main() {
     console.log(`POF_LEO_DONE=${p.replace(/\\/g, '/')} bytes=${buf.length}`);
   } catch (e) {
     console.log('POF_LEO_ERROR=' + String(e.message || e).slice(0, 300));
+    process.exitCode = 1;
   } finally {
     await deleteGeneration();
   }

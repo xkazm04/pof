@@ -77,7 +77,9 @@ async function runTask(label, body, maxMs = 600000) {
 async function main() {
   const a = parseArgs(process.argv);
   if (!API_KEY) { console.log('POF_TRIPO_ERROR=no TRIPO_API_KEY in env'); process.exitCode = 1; return; }
-  if (!a.output || (!a['model-task'] && !a['rig-task'])) {
+  // A flag with no value parses as `true`, which would buy tasks and fail at resolve(true).
+  const given = (k) => typeof a[k] === 'string';
+  if (!given('output') || (!given('model-task') && !given('rig-task'))) {
     console.log('POF_TRIPO_ERROR=need --output and one of --model-task / --rig-task'); process.exitCode = 1; return;
   }
   const format = a.format || 'fbx';
