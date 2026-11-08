@@ -138,3 +138,14 @@ describe('project health that could not be computed', () => {
     expect((await findByRole('alert')).textContent).toContain('health engine down');
   });
 });
+
+describe('marks dated before the visible window', () => {
+  it('are clipped to the plot so they cannot paint over the label gutter', async () => {
+    installFetch();
+    const { container, findByTestId } = render(<CalendarRoadmapView />);
+    const marker = await findByTestId('deadline-marker-ms-1');
+    const clipped = marker.closest('g[clip-path]');
+    expect(clipped?.getAttribute('clip-path')).toBe('url(#roadmap-plot-clip)');
+    expect(container.querySelector('#roadmap-plot-clip rect')?.getAttribute('x')).toBe('200');
+  });
+});

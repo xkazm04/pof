@@ -142,6 +142,13 @@ export function GanttTimeline({
           );
         })}
 
+        {/* Date-positioned marks stop at the gutter: a date before the window, or a
+            scroll forward past today, has an x left of the labels. */}
+        <clipPath id="roadmap-plot-clip">
+          <rect x={LEFT_GUTTER} y={0} width={Math.max(0, svgWidth - LEFT_GUTTER)} height={svgHeight} />
+        </clipPath>
+        <g clipPath="url(#roadmap-plot-clip)">
+
         {/* Predicted bars (progress filled portion + remaining portion) */}
         {milestones.map((ms, i) => {
           if (!ms.predictedDate) return null;
@@ -273,6 +280,7 @@ export function GanttTimeline({
         >
           TODAY
         </text>
+        </g>
       </svg>
     </div>
   );
