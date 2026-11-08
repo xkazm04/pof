@@ -18,7 +18,7 @@ export interface UseBatchReviewResult {
   batch: BatchReviewState | null;
   isRunning: boolean;
   isStarting: boolean;
-  /** Why the last start failed (e.g. the 409 "already running"), else null. */
+  /** Why the last start or clear failed (e.g. the 409 "already running"), else null. */
   error: string | null;
   /** Start a batch: `moduleIds` scopes it; omitted = every module with definitions. */
   start: (moduleIds?: SubModuleId[]) => Promise<void>;
@@ -109,10 +109,13 @@ export function useBatchReview(options: { onSettled?: () => void } = {}): UseBat
   }, [pollStatus]);
 
   const clear = useCallback(async () => {
+    setError(null);
     try {
       await apiFetch(ENDPOINT, { method: 'DELETE' });
       setBatch(null);
-    } catch { /* silent */ }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear');
+    }
   }, []);
 
   return { batch, isRunning, isStarting, error, start, abort, clear };
