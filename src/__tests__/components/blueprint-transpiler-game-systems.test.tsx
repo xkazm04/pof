@@ -137,3 +137,21 @@ describe('TranspilePane - a re-transpile does not stack a full-height spinner ov
     expect(screen.queryByText('Transpiling Blueprint graph...')).toBeNull();
   });
 });
+
+describe('badge tints use the opacity tokens, not a raw hex-alpha suffix', () => {
+  it('ChangeCard and QuestCard append no literal two-digit alpha to a colour', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const files = [
+      'src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/ChangeCard.tsx',
+      'src/components/modules/game-systems/DialogueView/QuestCard.tsx',
+    ];
+    const hits = files.flatMap((f) => {
+      const src = readFileSync(join(process.cwd(), f), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '');
+      return (src.match(/\$\{[^}]+\}[0-9a-fA-F]{2}`/g) ?? []).map((m) => `${f}: ${m}`);
+    });
+    expect(hits).toEqual([]);
+  });
+});

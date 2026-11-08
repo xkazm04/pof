@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { TermChip } from '@/components/ui/TermChip';
 import type { SemanticChange } from '@/types/blueprint';
 import { CHANGE_TYPE_META } from '@/lib/blueprint-jargon';
+import { withOpacity, OPACITY_8 } from '@/lib/chart-colors';
 import { ACCENT, CONFLICT_STYLES } from './constants';
 
 // ─── Change Card ────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ export function ChangeCard({ change }: { change: SemanticChange }) {
           term={t.code}
           underline={false}
           className="font-bold px-1.5 py-0.5 rounded"
-          style={{ color: t.color, backgroundColor: `${t.color}15` }}
+          style={{ color: t.color, backgroundColor: withOpacity(t.color, OPACITY_8) }}
         />
         <TermChip term={change.scope} className="uppercase text-text-muted" />
         <button
