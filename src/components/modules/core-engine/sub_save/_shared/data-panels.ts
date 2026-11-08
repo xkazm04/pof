@@ -35,14 +35,8 @@ export const MIGRATION_PATH = SCHEMA_VERSIONS.map(v => ({
   breaking: v.breaking,
 }));
 
-export const COMPAT_MATRIX: { from: string; to: string; compat: 'full' | 'partial' | 'none' }[] = [
-  { from: 'V1.0', to: 'V1.1', compat: 'full' },
-  { from: 'V1.0', to: 'V1.2', compat: 'full' },
-  { from: 'V1.0', to: 'V2.0', compat: 'partial' },
-  { from: 'V1.1', to: 'V1.2', compat: 'full' },
-  { from: 'V1.1', to: 'V2.0', compat: 'partial' },
-  { from: 'V1.2', to: 'V2.0', compat: 'full' },
-];
+/** One row per real migration: a SAVE_SCHEMA_VERSION bump adds it alongside its SCHEMA_VERSIONS entry. */
+export const COMPAT_MATRIX: { from: string; to: string; compat: 'full' | 'partial' | 'none' }[] = [];
 
 export const COMPAT_VERSIONS = MIGRATION_PATH.map(n => n.version);
 export const COMPAT_LOOKUP = new Map(COMPAT_MATRIX.map(c => [`${c.from}->${c.to}`, c.compat]));
