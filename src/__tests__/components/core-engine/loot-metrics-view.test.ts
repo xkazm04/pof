@@ -3,7 +3,7 @@ import { lootMetricsView, LOOT_PIPELINE_STAGES } from '@/components/modules/core
 import { initialTunerState, tunerReducer, exactEV, type TunerState } from '@/components/modules/core-engine/sub_loot/_shared/bindingTuner';
 import { DEFAULT_ENEMY_LOOT_BINDINGS, DEFAULT_RARITY_GOLD } from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
 import { findPercentileKill } from '@/components/modules/core-engine/sub_loot/_shared/math';
-import { getAllSectionIds } from '@/components/modules/core-engine/unique-tabs/feature-map-config';
+import { getAllSectionIds, getSections } from '@/components/modules/core-engine/unique-tabs/feature-map-config';
 
 // The loot Feature Map's glyphs read ONE typed view over live module state (the
 // tuned roster + the pity threshold), not 11 import-time constants.
@@ -79,5 +79,10 @@ describe('lootMetricsView', () => {
     expect(v.timer.basis).toBe('live');
     expect(v.drought.basis).toBe('live');
     expect(v.impact.basis).toBe('tuned');
+  });
+
+  it('the Pipeline card summary names every stage the glyph draws', () => {
+    const summary = getSections('arpg-loot').find((x) => x.id === 'pipeline')?.summary ?? '';
+    for (const stage of LOOT_PIPELINE_STAGES) expect(summary, stage).toContain(stage);
   });
 });

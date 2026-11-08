@@ -122,7 +122,7 @@ const SECTIONS = {
     g('Simulation', 'loot-filter', 'Loot Filter', 'Show / hide / highlight drop rules'),
   ],
   'arpg-loot': [
-    g('Core', 'pipeline', 'Pipeline', 'Roll → rarity → affix → drop flow'),
+    g('Core', 'pipeline', 'Pipeline', 'LootTable → WeightedRandom → WorldItem → Pickup → Inventory'),
     sub('Core', 'weights', 'Weights', 'pipeline'),
     sub('Core', 'world-items', 'World Items', 'pipeline'),
     g('Probability', 'treemap', 'Treemap', 'Drop chance hierarchy visualization'),
