@@ -33,7 +33,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
   const { plan, loading, error, filter, updateFilter, clearFilter, refresh } = useImplementationPlan({
     filter: moduleId ? { moduleId } : undefined,
   });
-  const [page, setPage] = useState(0);
+  const [requestedPage, setPage] = useState(0);
   const [showAllModules, setShowAllModules] = useState(!moduleId);
 
   // The ONE plan dispatch door: planDispatch gates readiness, the feature-fix
@@ -62,14 +62,16 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
     dispatch(item);
   }, [dispatch]);
 
-  // Pagination
+  // Pagination. The page is clamped to the plan as it is NOW: a filter change or
+  // a landed build can shrink the plan under a later page, and an unclamped
+  // slice would show the "no features match" empty state over matching items.
+  const totalPages = plan ? Math.ceil(plan.items.length / PAGE_SIZE) : 0;
+  const page = Math.min(requestedPage, Math.max(0, totalPages - 1));
   const pagedItems = useMemo(() => {
     if (!plan) return [];
     const start = page * PAGE_SIZE;
     return plan.items.slice(start, start + PAGE_SIZE);
   }, [plan, page]);
-
-  const totalPages = plan ? Math.ceil(plan.items.length / PAGE_SIZE) : 0;
 
   // Progress percentage
   const progress = plan && plan.totalFeatures > 0
