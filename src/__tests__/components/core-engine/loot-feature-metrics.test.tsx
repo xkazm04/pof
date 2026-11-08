@@ -31,6 +31,22 @@ describe('loot Feature Map glyphs', () => {
     expect(container.querySelector('[title*="sample data"]')).not.toBeNull();
   });
 
+  it('a fixture glyph tells assistive tech it is sample data, not only a hover title', () => {
+    // The glyph marks are aria-hidden and a title is not reliably announced, so the
+    // disclosure must be in the text a screen reader reads.
+    for (const id of ['pipeline', 'co-occurrence', 'beacon']) {
+      const { container, unmount } = renderMetric(id);
+      const srOnly = container.querySelector('.sr-only');
+      expect(srOnly?.textContent ?? '', id).toMatch(/sample data/);
+      unmount();
+    }
+  });
+
+  it('a live glyph has no sample-data disclosure in its text either', () => {
+    const { container } = renderMetric('drought');
+    expect(container.textContent ?? '').not.toMatch(/sample data/);
+  });
+
   it('a live glyph is not marked as sample data', () => {
     const { container } = renderMetric('timer');
     expect(container.querySelector('[title*="sample data"]')).toBeNull();

@@ -47,10 +47,12 @@ function LootMetric({ id }: { id: LootSectionId }) {
   const reading = useLootMetricsView()[id];
   const glyph = GLYPHS[id](reading);
   if (reading.basis !== 'fixture') return <>{glyph}</>;
-  // Hand-authored numbers say so instead of posing as measured ones.
+  // Hand-authored numbers say so instead of posing as measured ones - on hover (title)
+  // and in the text assistive tech reads, since the glyph marks are aria-hidden.
   return (
     <span className="inline-flex" title={`${reading.detail ?? reading.unit} - sample data, not measured`}>
       {glyph}
+      <span className="sr-only"> (sample data, not measured)</span>
     </span>
   );
 }
