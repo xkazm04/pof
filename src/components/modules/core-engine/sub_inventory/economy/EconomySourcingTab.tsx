@@ -150,7 +150,8 @@ function InventoryCapacitySection() {
             Frag: <span className="font-bold" style={{ color: STATUS_WARNING }}>{Math.round(metrics.fragmentation * 100)}%</span>
           </p>
           <p className="text-sm font-mono text-text-muted">
-            Total Value: <span className="font-bold" style={{ color: STATUS_WARNING, textShadow: `0 0 12px ${withOpacity(STATUS_WARNING, OPACITY_25)}` }}>{INVENTORY_GOLD_VALUE}g</span>
+            {/* Catalog items carry no gold value, so a populated stash shows the sample figure, labelled. */}
+            Total Value{metrics.usedCells === 0 ? '' : ' (sample)'}: <span className="font-bold" style={{ color: STATUS_WARNING, textShadow: `0 0 12px ${withOpacity(STATUS_WARNING, OPACITY_25)}` }}>{metrics.usedCells === 0 ? 0 : INVENTORY_GOLD_VALUE}g</span>
           </p>
         </div>
         {/* Cleanup suggestions */}
