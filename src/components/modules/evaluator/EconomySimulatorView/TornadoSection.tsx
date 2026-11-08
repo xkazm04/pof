@@ -60,6 +60,7 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
             <button
               key={o}
               onClick={() => setOutput(o)}
+              aria-pressed={output === o}
               className={`px-2.5 py-1 rounded-lg text-2xs font-medium border transition-colors ${
                 output === o ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 'border-border text-text-muted bg-surface hover:text-text'
               }`}
