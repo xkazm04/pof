@@ -74,3 +74,35 @@ describe('weapon category order has one source', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe('combat-flow sankey conserves flow', () => {
+  type Col = { items: { id: string; pct: number }[] };
+  type Link = { source: string; target: string; value: number };
+  // ProportionalSankey sizes each band as value / node.pct of the node height, so a
+  // node whose links do not sum to its pct draws bands past its own edge.
+  function conservationErrors(cols: readonly Col[], links: readonly Link[]): string[] {
+    const errs: string[] = [];
+    cols.forEach((col, ci) => {
+      for (const n of col.items) {
+        const out = links.filter((l) => l.source === n.id).reduce((a, l) => a + l.value, 0);
+        const inn = links.filter((l) => l.target === n.id).reduce((a, l) => a + l.value, 0);
+        if (ci < cols.length - 1 && out !== n.pct) errs.push(`${n.id} out ${out} != ${n.pct}`);
+        if (ci > 0 && inn !== n.pct) errs.push(`${n.id} in ${inn} != ${n.pct}`);
+      }
+      const total = col.items.reduce((a, n) => a + n.pct, 0);
+      if (total !== 100) errs.push(`column ${ci} sums to ${total}`);
+    });
+    const ids = new Set(cols.flatMap((c) => c.items.map((n) => n.id)));
+    for (const l of links) if (!ids.has(l.source) || !ids.has(l.target)) errs.push(`dangling ${l.source}->${l.target}`);
+    return errs;
+  }
+
+  it('every node pct equals its in- and out-flow, every column sums to 100', () => {
+    expect(conservationErrors(dataMetrics.SANKEY_COLUMNS, dataMetrics.SANKEY_FLOWS)).toEqual([]);
+  });
+
+  it('seeded control: the checker catches a leaking flow', () => {
+    const broken = dataMetrics.SANKEY_FLOWS.map((l, i) => (i === 0 ? { ...l, value: l.value + 5 } : l));
+    expect(conservationErrors(dataMetrics.SANKEY_COLUMNS, broken).length).toBeGreaterThan(0);
+  });
+});
