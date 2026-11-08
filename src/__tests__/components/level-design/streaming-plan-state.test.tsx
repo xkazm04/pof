@@ -79,7 +79,7 @@ function installApi(docs: LevelDesignDocument[] = [DOC]) {
   }) as unknown as typeof fetch;
 }
 
-const tab = (name: RegExp) => screen.getAllByRole('button').find((b) => name.test(b.textContent ?? ''))!;
+const tab = (name: RegExp) => screen.getAllByRole('tab').find((b) => name.test(b.textContent ?? ''))!;
 
 describe('the level-design view keeps the streaming plan across tabs', () => {
   it('Streaming -> Difficulty -> Streaming: the painted zone is still on the grid', async () => {
