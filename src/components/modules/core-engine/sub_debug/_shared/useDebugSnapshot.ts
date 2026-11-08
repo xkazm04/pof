@@ -88,16 +88,21 @@ export function useDebugSnapshot(): DebugSnapshotState {
           ? Promise.resolve(res.data.triage)
           : postProfiling<{ triage: TriageResult }>({ action: 'triage', sessionId: session.id }).then((r) => (r.ok ? r.data.triage ?? null : null)),
         baseId
-          ? postProfiling<SessionComparisonResponse>({ action: 'compare', baseId, headId: session.id }).then((r) => (r.ok && r.data?.findings ? r.data : null))
+          ? postProfiling<SessionComparisonResponse>({ action: 'compare', baseId, headId: session.id })
           : Promise.resolve(null),
       ]);
+      // A base capture exists but the compare failed: say so, never "no earlier capture".
+      const comparison = compared && compared.ok && compared.data?.findings ? compared.data : null;
+      const compareError = compared && !comparison
+        ? (compared.ok ? 'compare returned no verdict' : compared.error)
+        : undefined;
       if (!live) return;
       const head = { id: session.id, name: session.name, source: session.source, importedAt: session.importedAt };
       setLoaded({
         id: session.id,
         snapshot: projectDebugSnapshot(session, triaged),
         provenance,
-        latest: { kind: 'ready', session: head, triage: triaged, comparison: compared },
+        latest: { kind: 'ready', session: head, triage: triaged, comparison, ...(compareError ? { compareError } : {}) },
       });
     })();
     return () => { live = false; };

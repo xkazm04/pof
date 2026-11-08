@@ -83,6 +83,7 @@ function RowView({ row, index, onDispatched }: { row: QueueRow; index: number; o
 
 function verificationNote(latest: Extract<LatestTriage, { kind: 'ready' }>, realized: number | null): string {
   const c = latest.comparison;
+  if (!c && latest.compareError) return `Not verified: comparing with the previous capture failed (${latest.compareError}).`;
   if (!c) return 'No earlier real capture to compare with: a Fix is verified only by the next capture.';
   if (!c.comparable) return `Not verified against ${c.base.name}: ${c.reason ?? 'the two captures are not comparable'}.`;
   return `Verified against ${c.base.name}: ${c.findings.resolved.length} resolved, ~${(realized ?? 0).toFixed(2)} ms/frame realized.`;
