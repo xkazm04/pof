@@ -25,7 +25,7 @@ import { POST } from '@/app/api/verify/visual/route';
 const realShot = join(tmpdir(), `pof-visual-${process.pid}.png`);
 const missingShot = join(tmpdir(), `pof-visual-${process.pid}-missing.png`);
 
-beforeAll(() => writeFileSync(realShot, Buffer.from('fake-png-bytes')));
+beforeAll(() => writeFileSync(realShot, Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('fake-png-bytes')])));
 afterAll(() => { try { rmSync(realShot); } catch { /* noop */ } });
 
 function req(body: unknown): Request {

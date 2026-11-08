@@ -61,6 +61,7 @@ interface CharacterVerdict {
 type AnyVerdict = HudVerdict | TextureVerdict | LightingVerdict | CharacterVerdict;
 
 /** A model's JSON is untrusted: what is stored is what the record's types promise. */
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
 const strings = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
@@ -148,14 +149,22 @@ export async function POST(request: NextRequest) {
   }
 
   let pngBase64: string;
+  let isPng = true;
   try {
-    pngBase64 = readFileSync(screenshotPath).toString('base64');
+    const bytes = readFileSync(screenshotPath);
+    isPng = bytes.length === 0 || (bytes.length >= PNG_SIGNATURE.length && bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE));
+    pngBase64 = bytes.toString('base64');
   } catch (e) {
     return apiError(`Failed to read screenshot: ${e instanceof Error ? e.message : 'unknown'}`, 500);
   }
   // A frame the capture has not finished flushing: a verdict on it would be a billed "fail".
   if (pngBase64.length === 0) {
     return apiError(`Screenshot is empty (0 bytes), the capture may still be writing: ${screenshotPath}`, 422);
+  }
+
+  // The provider is told image/png: refuse a file that is not one before it leaves the machine.
+  if (!isPng) {
+    return apiError(`Screenshot is not a PNG (signature mismatch): ${screenshotPath}`, 422);
   }
 
   // THE CHOKEPOINT. This route no longer names an eye: it asks for the `recognize`

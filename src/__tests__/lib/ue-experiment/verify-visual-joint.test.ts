@@ -37,7 +37,7 @@ import { postVerifyVisual, EXPERIMENT_MODULE_ID } from '@/lib/ue-experiment/runn
 const shot = join(tmpdir(), `pof-exp-joint-${process.pid}.png`);
 const missingShot = join(tmpdir(), `pof-exp-joint-${process.pid}-gone.png`);
 
-beforeAll(() => writeFileSync(shot, Buffer.from('fake-png-bytes')));
+beforeAll(() => writeFileSync(shot, Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('fake-png-bytes')])));
 afterAll(() => { try { rmSync(shot); } catch { /* noop */ } });
 
 /** The REAL route handler, reached through a fetch-shaped seam. Nothing between them is faked. */
