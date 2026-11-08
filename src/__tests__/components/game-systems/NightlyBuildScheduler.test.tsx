@@ -142,3 +142,35 @@ describe('NightlyBuildScheduler', () => {
     });
   });
 });
+
+describe('NightlyBuildScheduler time field', () => {
+  it('writes once per committed valid time, never for a half-typed value', async () => {
+    const fetchMock = mockFetchRoutes([{ match: '/api/packaging/schedule', response: { body: statusBody() } }]);
+    render(<NightlyBuildScheduler profiles={[profile]} />);
+    const time = (await screen.findByTestId('pof-nightly-time')) as HTMLInputElement;
+    const timeSaves = () => fetchMock.mock.calls.filter(([, init]) => {
+      const body = (init as RequestInit | undefined)?.body;
+      return typeof body === 'string' && body.includes('"action":"save"') && body.includes('"time"');
+    });
+
+    fireEvent.change(time, { target: { value: '' } });
+    fireEvent.change(time, { target: { value: '03:30' } });
+    expect(timeSaves().length).toBe(0);
+    fireEvent.blur(time);
+
+    await waitFor(() => expect(timeSaves().length).toBe(1));
+    const body = JSON.parse(String((timeSaves()[0][1] as RequestInit).body));
+    expect(body.time).toBe('03:30');
+  });
+
+  it('does not write when the field is left empty', async () => {
+    const fetchMock = mockFetchRoutes([{ match: '/api/packaging/schedule', response: { body: statusBody() } }]);
+    render(<NightlyBuildScheduler profiles={[profile]} />);
+    const time = (await screen.findByTestId('pof-nightly-time')) as HTMLInputElement;
+    fireEvent.change(time, { target: { value: '' } });
+    fireEvent.blur(time);
+    await new Promise((r) => setTimeout(r, 50));
+    const saves = fetchMock.mock.calls.filter(([, init]) => String((init as RequestInit | undefined)?.body ?? '').includes('"action":"save"'));
+    expect(saves.length).toBe(0);
+  });
+});
