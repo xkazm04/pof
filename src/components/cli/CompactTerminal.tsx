@@ -170,6 +170,8 @@ export function CompactTerminal({
         isStreaming={tq.isStreaming}
         executionInfo={tq.executionInfo}
         lastResult={tq.lastResult}
+        error={tq.error}
+        outcomeUnknown={tq.outcomeUnknown}
         logFilePath={tq.logFilePath}
         editCount={editCount}
         writeCount={writeCount}

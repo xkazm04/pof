@@ -104,7 +104,7 @@ type TaskPhase =
   | { phase: 'connecting'; taskId: string | null }
   | { phase: 'streaming'; taskId: string | null; executionInfo: ExecutionInfo }
   | { phase: 'complete'; lastResult: ExecutionResult }
-  | { phase: 'error'; error: string; taskId: string | null };
+  | { phase: 'error'; error: string; taskId: string | null; outcomeUnknown?: boolean };
 
 interface TaskQueueState {
   current: TaskPhase;
@@ -129,7 +129,7 @@ type TaskQueueAction =
   | { type: 'SET_RESOLVED_MODEL'; model: string | null; effort: string | null }
   | { type: 'ABORT' }
   | { type: 'TASK_DONE' }
-  | { type: 'STUCK_RESOLVED'; success: boolean }
+  | { type: 'STUCK_RESOLVED'; success: boolean; outcomeUnknown?: boolean }
   | { type: 'CLEAR' };
 
 const INITIAL_STATE: TaskQueueState = {
@@ -188,9 +188,19 @@ function taskQueueReducer(state: TaskQueueState, action: TaskQueueAction): TaskQ
     case 'SET_RESOLVED_MODEL':
       return { ...state, resolvedModel: action.model, resolvedEffort: action.effort };
 
+    case 'STUCK_RESOLVED':
+      // A server-arbitrated END that was not a clean success must not read as Ready:
+      // a lost run ends as unknown, a failed one as an error result.
+      if (action.outcomeUnknown) {
+        return { ...state, current: { phase: 'error', error: 'Outcome unknown', taskId: getTaskId(state.current), outcomeUnknown: true } };
+      }
+      if (!action.success) {
+        return { ...state, current: { phase: 'complete', lastResult: { isError: true } } };
+      }
+      return { ...state, current: { phase: 'idle' } };
+
     case 'ABORT':
     case 'TASK_DONE':
-    case 'STUCK_RESOLVED':
       return {
         ...state,
         current: { phase: 'idle' },
@@ -224,6 +234,10 @@ function currentError(state: TaskQueueState): string | null {
   return state.current.phase === 'error' ? state.current.error : null;
 }
 
+function currentOutcomeUnknown(state: TaskQueueState): boolean {
+  return state.current.phase === 'error' && state.current.outcomeUnknown === true;
+}
+
 function currentExecutionInfo(state: TaskQueueState): ExecutionInfo | null {
   return state.current.phase === 'streaming' ? state.current.executionInfo : null;
 }
@@ -254,6 +268,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const streaming = isStreaming(state);
   const taskId = currentTaskId(state);
   const error = currentError(state);
+  const outcomeUnknown = currentOutcomeUnknown(state);
   const executionInfo = currentExecutionInfo(state);
   const result = lastResult(state);
 
@@ -715,7 +730,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         if (callbackStatus && obs.kind === 'status') applyServerVerdict(callbackStatus, obs.status.callbacksFailed ?? [], runTokenRef.current);
         finishRun(verdict.success, callbackStatus ? { callbackStatus } : undefined);
       }
-      dispatch({ type: 'STUCK_RESOLVED', success: verdict.success });
+      dispatch({ type: 'STUCK_RESOLVED', success: verdict.success, outcomeUnknown: verdict.outcomeUnknown });
       return;
     }
     // An open stream keeps its own watch; a hidden terminal is re-consulted by its poll.
@@ -1047,6 +1062,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     executionInfo,
     lastResult: result,
     error,
+    outcomeUnknown,
     currentTaskId: taskId,
     logFilePath: state.logFilePath,
     resolvedModel: state.resolvedModel,
