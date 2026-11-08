@@ -87,10 +87,10 @@ export interface RecommendedNextModule {
  * Compute recommended next modules for a user based on their checklist progress.
  *
  * Strategy:
- * 1. Find modules that are substantially complete (>= 70% checklist)
- * 2. For those, find dependent modules that haven't been started much (< 30%)
+ * 1. Only when the current module is substantially complete (>= 50% checklist)
+ * 2. Take the modules that list it as a prerequisite and are < 50% complete
  * 3. Only recommend modules whose prerequisites are all >= 50% complete
- * 4. Sort by: all-prereqs-done first, then by number of prereqs satisfied
+ * 4. Sort by number of prerequisites (most first); return at most 3
  */
 export function getRecommendedNextModules(
   currentModuleId: SubModuleId,
