@@ -86,7 +86,7 @@ export function EventBusDevTools() {
   }, []);
 
   const filteredEvents = filter
-    ? events.filter((e) => e.channel.includes(filter) || (e.source ?? '').includes(filter))
+    ? events.filter((e) => getNamespace(e.channel) === filter)
     : events;
 
   // Unique namespaces for filter chips
