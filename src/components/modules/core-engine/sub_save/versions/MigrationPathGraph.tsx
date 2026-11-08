@@ -7,11 +7,11 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN, ACCENT_CYAN_
   withOpacity, OPACITY_10, OPACITY_5, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
-import { ACCENT } from '../_shared/data';
+import { ACCENT, SCHEMA_VERSIONS } from '../_shared/data';
 import { MIGRATION_PATH, COMPAT_VERSIONS, COMPAT_LOOKUP } from '../_shared/data-panels';
 
 export function MigrationPathGraph() {
-  const [expandedMigration, setExpandedMigration] = useState<string | null>('V2.0');
+  const [expandedMigration, setExpandedMigration] = useState<string | null>(SCHEMA_VERSIONS.find(v => v.isCurrent)?.label ?? null);
 
   return (
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">

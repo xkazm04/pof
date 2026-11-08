@@ -10,7 +10,7 @@ import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { ACCENT, SCHEMA_VERSION_HISTORY } from '../_shared/data';
 
 export function VersionHistory() {
-  const [expandedVersion, setExpandedVersion] = useState<string | null>('v2.0.0');
+  const [expandedVersion, setExpandedVersion] = useState<string | null>(SCHEMA_VERSION_HISTORY.find(v => v.isCurrent)?.version ?? null);
 
   return (
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
