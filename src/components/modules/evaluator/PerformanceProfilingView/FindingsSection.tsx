@@ -35,13 +35,19 @@ export function FindingsSection({ findings }: { findings: PerformanceFinding[] }
 
 function FindingCard({ finding }: { finding: PerformanceFinding }) {
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
+  // The receipt follows the verified write, never the attempt: a rejected
+  // clipboard write shows "Copy failed", not "Copied!".
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   const style = PRIORITY_STYLE[finding.priority];
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(finding.fixPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(finding.fixPrompt);
+      setCopyState('copied');
+    } catch {
+      setCopyState('failed');
+    }
+    setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
   }, [finding.fixPrompt]);
 
   return (
@@ -96,7 +102,7 @@ function FindingCard({ finding }: { finding: PerformanceFinding }) {
                   className="absolute top-7 right-2 flex items-center gap-1 px-2 py-1 bg-surface border border-border rounded text-2xs text-text-muted hover:text-text transition-colors"
                 >
                   <Copy className="w-3 h-3" />
-                  {copied ? 'Copied!' : 'Copy'}
+                  {copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
                 </button>
               </div>
 
