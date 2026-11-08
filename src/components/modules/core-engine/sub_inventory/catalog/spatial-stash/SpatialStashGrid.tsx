@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { RotateCw, X } from 'lucide-react';
 import {
   canPlace,
@@ -21,6 +21,7 @@ import {
   withOpacity, OPACITY_8, OPACITY_15, OPACITY_25, OPACITY_50,
   STATUS_SUCCESS, STATUS_ERROR, STATUS_SUBDUED, OVERLAY_WHITE,
 } from '@/lib/chart-colors';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 const CELL_PX = 32;
 const GAP_PX = 2;
@@ -46,7 +47,19 @@ export function SpatialStashGrid({ tab, accent }: Props) {
   const removePlacementAction = useSpatialInventoryStore((s) => s.removePlacement);
 
   // Re-render when the rotation flips mid-drag so the preview updates.
-  useSyncExternalStore(subscribeDragIntent, getDragIntent, () => null);
+  const intent = useSyncExternalStore(subscribeDragIntent, getDragIntent, () => null);
+  const lookupItem = useInventoryItemLookup();
+  // Keyboard cursor: tied to the carried intent, so a stale cursor never outlives its pick-up.
+  // Transient explanation for a refused action (a rotate whose footprint does not fit).
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), UI_TIMEOUTS.toast);
+    return () => clearTimeout(t);
+  }, [notice]);
+  const [kb, setKb] = useState<{ x: number; y: number; key: string } | null>(null);
+  const intentKey = intent ? (intent.kind === 'new' ? `n:${intent.itemId}` : `m:${intent.placementId}`) : null;
+  const kbPos = intent && kb && kb.key === intentKey ? kb : null;
 
   const totalW = tab.cols * CELL_PX + (tab.cols - 1) * GAP_PX;
   const totalH = tab.rows * CELL_PX + (tab.rows - 1) * GAP_PX;
@@ -83,33 +96,97 @@ export function SpatialStashGrid({ tab, accent }: Props) {
 
   const onDragLeave = useCallback(() => setHover(null), []);
 
+  /** Place or move the carried intent at (x, y). Returns false (and changes nothing) when it does not fit. */
+  const commitIntent = useCallback(
+    (x: number, y: number): boolean => {
+      const cur = getDragIntent();
+      if (!cur) return false;
+      const fp = orientedFootprint(cur.footprint, cur.rotated);
+      if (cur.kind === 'new') {
+        if (!canPlace(tab, x, y, fp.w, fp.h)) return false;
+        placeItem(tab.id, cur.itemId, { x, y, rotated: cur.rotated });
+        return true;
+      }
+      // Cross-tab move not supported in this iteration — same-tab only.
+      if (cur.fromTabId !== tab.id) return false;
+      return movePlacementAction(tab.id, cur.placementId, x, y, cur.rotated);
+    },
+    [tab, placeItem, movePlacementAction],
+  );
+
   const onDrop = useCallback(
     (e: React.DragEvent) => {
-      const intent = getDragIntent();
-      if (!intent) return;
+      if (!getDragIntent()) return;
       e.preventDefault();
       const { x, y } = cellFromEvent(e);
-      const fp = orientedFootprint(intent.footprint, intent.rotated);
-      if (intent.kind === 'new') {
-        if (canPlace(tab, x, y, fp.w, fp.h)) {
-          placeItem(tab.id, intent.itemId, { x, y, rotated: intent.rotated });
-        }
-      } else {
-        // Cross-tab move not supported in this iteration — same-tab only.
-        if (intent.fromTabId === tab.id) {
-          movePlacementAction(tab.id, intent.placementId, x, y, intent.rotated);
-        }
-      }
+      commitIntent(x, y);
       setHover(null);
       setDragIntent(null);
     },
-    [cellFromEvent, tab, placeItem, movePlacementAction],
+    [cellFromEvent, commitIntent],
   );
 
-  // Keyboard rotation while a drag is in flight (browsers fire keydown on the document during DnD).
-  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'r' || e.key === 'R') rotateDragIntent();
-  }, []);
+  // Keyboard path (WCAG 2.1.1). A pick-up from the palette or a tile sets the shared drag intent;
+  // while it is set the document owns R / arrows / Enter / Escape (focus may still be on the palette).
+  useEffect(() => {
+    if (!intent || !intentKey) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+      const fp = orientedFootprint(intent.footprint, intent.rotated);
+      const start = intent.kind === 'move' && intent.fromTabId === tab.id
+        ? tab.items.find((p) => p.id === intent.placementId)
+        : undefined;
+      const cur = kbPos ?? { x: start?.x ?? 0, y: start?.y ?? 0, key: intentKey };
+      const clampTo = (x: number, y: number, w: number, h: number) => ({
+        x: Math.max(0, Math.min(tab.cols - w, x)),
+        y: Math.max(0, Math.min(tab.rows - h, y)),
+      });
+      const delta: Record<string, [number, number]> = {
+        ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+      };
+      if (e.key in delta) {
+        e.preventDefault();
+        const [dx, dy] = delta[e.key];
+        setKb({ ...clampTo(cur.x + dx, cur.y + dy, fp.w, fp.h), key: intentKey });
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        const flipped = orientedFootprint(intent.footprint, !intent.rotated);
+        setKb({ ...clampTo(cur.x, cur.y, flipped.w, flipped.h), key: intentKey });
+        rotateDragIntent();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (commitIntent(cur.x, cur.y)) {
+          setKb(null);
+          setDragIntent(null);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setKb(null);
+        setDragIntent(null);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [intent, intentKey, kbPos, tab, commitIntent]);
+
+  const kbPreview = useMemo<HoverState | null>(() => {
+    if (!intent || !kbPos) return null;
+    const fp = orientedFootprint(intent.footprint, intent.rotated);
+    const ignore = intent.kind === 'move' && intent.fromTabId === tab.id ? intent.placementId : undefined;
+    return { x: kbPos.x, y: kbPos.y, w: fp.w, h: fp.h, valid: canPlace(tab, kbPos.x, kbPos.y, fp.w, fp.h, ignore) };
+  }, [intent, kbPos, tab]);
+  const shownHover = kbPreview ?? hover;
+
+  const carriedItemId = !intent
+    ? null
+    : intent.kind === 'new'
+      ? intent.itemId
+      : tab.items.find((p) => p.id === intent.placementId)?.itemId ?? '';
+  const carriedName = carriedItemId == null ? null : lookupItem(carriedItemId)?.name ?? 'item';
+  const carryStatus = carriedName
+    ? `Carrying ${carriedName}${kbPreview ? ` at column ${kbPreview.x + 1}, row ${kbPreview.y + 1}${kbPreview.valid ? '' : ', blocked'}` : ''}. Arrow keys move, R rotates, Enter places, Escape cancels.`
+    : '';
 
   const cellMap = useMemo(() => new Array(tab.cols * tab.rows).fill(null), [tab.cols, tab.rows]);
 
@@ -117,9 +194,17 @@ export function SpatialStashGrid({ tab, accent }: Props) {
     <div
       className="relative"
       style={{ width: totalW, height: totalH }}
-      onKeyDown={onKeyDown}
       tabIndex={0}
     >
+      <p role="status" data-stash-status className="sr-only">{carryStatus}</p>
+      <p
+        role="status"
+        data-stash-notice
+        className={notice ? 'absolute left-0 top-full mt-1 text-xs font-mono whitespace-nowrap' : 'sr-only'}
+        style={notice ? { color: STATUS_ERROR } : undefined}
+      >
+        {notice}
+      </p>
       <div
         ref={gridRef}
         className="grid relative"
@@ -145,17 +230,17 @@ export function SpatialStashGrid({ tab, accent }: Props) {
           />
         ))}
 
-        {hover && (
+        {shownHover && (
           <div
             className="absolute pointer-events-none rounded-md border-2 transition-colors"
             style={{
-              left: hover.x * (CELL_PX + GAP_PX),
-              top: hover.y * (CELL_PX + GAP_PX),
-              width: hover.w * CELL_PX + (hover.w - 1) * GAP_PX,
-              height: hover.h * CELL_PX + (hover.h - 1) * GAP_PX,
-              borderColor: hover.valid ? STATUS_SUCCESS : STATUS_ERROR,
-              backgroundColor: withOpacity(hover.valid ? STATUS_SUCCESS : STATUS_ERROR, OPACITY_25),
-              boxShadow: `inset 0 0 12px ${withOpacity(hover.valid ? STATUS_SUCCESS : STATUS_ERROR, OPACITY_50)}`,
+              left: shownHover.x * (CELL_PX + GAP_PX),
+              top: shownHover.y * (CELL_PX + GAP_PX),
+              width: shownHover.w * CELL_PX + (shownHover.w - 1) * GAP_PX,
+              height: shownHover.h * CELL_PX + (shownHover.h - 1) * GAP_PX,
+              borderColor: shownHover.valid ? STATUS_SUCCESS : STATUS_ERROR,
+              backgroundColor: withOpacity(shownHover.valid ? STATUS_SUCCESS : STATUS_ERROR, OPACITY_25),
+              boxShadow: `inset 0 0 12px ${withOpacity(shownHover.valid ? STATUS_SUCCESS : STATUS_ERROR, OPACITY_50)}`,
             }}
           />
         )}
@@ -169,8 +254,9 @@ export function SpatialStashGrid({ tab, accent }: Props) {
               // toggle rotation in place when it fits
               const ok = movePlacementAction(tab.id, p.id, p.x, p.y, !p.rotated);
               if (!ok) {
-                // Try to find a nearby spot that fits the rotated footprint
-                // (keep silent on failure — designer can always drag it out).
+                // Say why nothing happened instead of leaving a dead button; the designer can
+                // still drag the tile somewhere roomier.
+                setNotice(`No room to rotate ${lookupItem(p.itemId)?.name ?? 'this item'} here`);
               }
             }}
             onRemove={() => removePlacementAction(tab.id, p.id)}
@@ -212,11 +298,32 @@ function PlacedTile({ placement, tabId, onRotate, onRemove }: TileProps) {
 
   const onDragEnd = () => setDragIntent(null);
 
+  // Keyboard pick-up: only from the tile itself (its Rotate/Remove buttons keep their own Enter),
+  // and only when nothing is being carried, so Enter while carrying still drops.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target !== e.currentTarget || !item || getDragIntent()) return;
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragIntent({
+      kind: 'move',
+      placementId: placement.id,
+      fromTabId: tabId,
+      footprint: { w: placement.rotated ? placement.h : placement.w, h: placement.rotated ? placement.w : placement.h },
+      rotated: placement.rotated,
+    });
+  };
+
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      data-placed-tile
+      tabIndex={0}
+      role="group"
+      aria-label={`${tileName} (${placement.w}×${placement.h}). Press Enter to pick up and move.`}
+      onKeyDown={onKeyDown}
       className="absolute rounded-md border cursor-grab active:cursor-grabbing group flex flex-col items-center justify-center text-center px-1 transition-transform"
       title={item
         ? `${item.name} — ${item.rarity} ${item.subtype} (${placement.w}×${placement.h})`

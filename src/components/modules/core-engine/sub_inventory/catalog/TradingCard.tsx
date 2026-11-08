@@ -12,6 +12,7 @@ import type { ItemData } from '../_shared/data';
 import { RARITY_COLORS, ITEM_SETS } from '../_shared/data';
 import { TradingCardTooltip } from './TradingCardTooltip';
 import { itemPower } from './itemComparison';
+import { logger } from '@/lib/logger';
 
 /* ── Pre-compute set membership ──────────────────────────────────────── */
 const ITEM_SET_MAP = new Map<string, { setName: string; color: string }>();
@@ -48,6 +49,9 @@ function TradingCard({ item, tabIndex, onFocus: onFocusProp, onActivate }, ref) 
   // rarity is a free string; an off-ladder value must not paint invalid `undefined…` colours.
   const color = RARITY_COLORS[item.rarity] ?? STATUS_SUBDUED;
   const [showTooltip, setShowTooltip] = useState(false);
+  // Keyed by path: a new imagePath retries. Add Item sets imagePath before the CLI has written the
+  // file, so a 404 falls back to the same placeholder an image-less item gets.
+  const [failedImagePath, setFailedImagePath] = useState<string | null>(null);
   const [isFocusVisible, setIsFocusVisible] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -116,8 +120,12 @@ function TradingCard({ item, tabIndex, onFocus: onFocusProp, onActivate }, ref) 
         {/* Content */}
         <div className="p-4 flex-1 flex flex-col gap-3 relative z-10 bg-surface/50">
           <div className="w-full h-24 rounded-lg bg-surface-deep border flex items-center justify-center relative overflow-hidden group-hover:border-text-muted/50 transition-colors" style={{ borderColor: `${withOpacity(color, OPACITY_12)}` }}>
-            {item.imagePath ? (
-              <Image src={item.imagePath} width={512} height={512} alt={item.name} className="w-full h-full object-cover" />
+            {item.imagePath && item.imagePath !== failedImagePath ? (
+              <Image src={item.imagePath} width={512} height={512} alt={item.name} className="w-full h-full object-cover"
+                onError={() => {
+                  logger.warn(`Catalog item image failed to load: ${item.imagePath}`);
+                  setFailedImagePath(item.imagePath ?? null);
+                }} />
             ) : (
               <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}>
                 <Package className="w-10 h-10 opacity-30" style={{ color }} />

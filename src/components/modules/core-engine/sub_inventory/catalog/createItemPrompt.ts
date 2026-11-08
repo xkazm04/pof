@@ -10,6 +10,15 @@
 /** Leonardo's prompt ceiling (MAX_PROMPT_LENGTH in the server-only @/lib/leonardo; the route 400s above it). */
 const MAX_PROMPT_LENGTH = 1500;
 
+/**
+ * File/entity slug for a created item: the readable name part (never empty - "item" when the
+ * name is only symbols) plus the item's unique suffix, so two same-named items own two icon files.
+ */
+export function itemSlug(name: string, uniqueSuffix: string): string {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'item';
+  return `${base}-${uniqueSuffix}`;
+}
+
 export interface CreateItemPromptInput {
   name: string;
   type: string;

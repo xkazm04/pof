@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Grid3x3, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../../unique-tabs/_design';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   useActiveStashTab,
   useSpatialInventoryStore,
@@ -41,9 +42,14 @@ export function SpatialStashSection() {
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
 
   const onAddTab = useCallback(() => addTab('Tab ' + (tabs.length + 1)), [addTab, tabs.length]);
-  const onRemoveActive = useCallback(() => {
-    if (tabs.length > 1) removeTab(activeTab.id);
-  }, [removeTab, tabs.length, activeTab.id]);
+  // Both actions wipe the hand-arranged (persisted) layout, so they ask first.
+  const [confirming, setConfirming] = useState<'remove' | 'reseed' | null>(null);
+  const onConfirm = useCallback(() => {
+    if (confirming === 'remove' && tabs.length > 1) removeTab(activeTab.id);
+    if (confirming === 'reseed') reseed();
+  }, [confirming, removeTab, reseed, tabs.length, activeTab.id]);
+  const itemCount = activeTab.items.length;
+  const itemsLabel = `${itemCount} placed ${itemCount === 1 ? 'item' : 'items'}`;
 
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
@@ -112,7 +118,7 @@ export function SpatialStashSection() {
         {tabs.length > 1 && (
           <button
             type="button"
-            onClick={onRemoveActive}
+            onClick={() => setConfirming('remove')}
             className="text-xs font-mono px-1.5 py-1 rounded-md border flex items-center gap-1"
             style={{ borderColor: withOpacity(STATUS_ERROR, OPACITY_25), color: STATUS_ERROR }}
             title="Remove active tab"
@@ -122,7 +128,7 @@ export function SpatialStashSection() {
         )}
         <button
           type="button"
-          onClick={reseed}
+          onClick={() => setConfirming('reseed')}
           className="text-xs font-mono px-1.5 py-1 rounded-md border flex items-center gap-1 ml-auto"
           style={{ borderColor: withOpacity(STATUS_SUBDUED, OPACITY_25), color: 'var(--text-muted)' }}
           title="Reseed active tab"
@@ -145,6 +151,16 @@ export function SpatialStashSection() {
           <SpatialStashPalette accent={ACCENT} />
         </div>
       </div>
+      <ConfirmDialog
+        open={confirming !== null}
+        onClose={() => setConfirming(null)}
+        onConfirm={onConfirm}
+        title={confirming === 'remove' ? `Remove tab "${activeTab.name}"?` : `Reseed tab "${activeTab.name}"?`}
+        description={confirming === 'remove'
+          ? `This deletes the tab and its ${itemsLabel}. It cannot be undone.`
+          : `This replaces the tab's ${itemsLabel} with a fresh first-fit pack of the catalog. It cannot be undone.`}
+        confirmLabel={confirming === 'remove' ? 'Remove tab' : 'Reseed'}
+      />
     </BlueprintPanel>
   );
 }
