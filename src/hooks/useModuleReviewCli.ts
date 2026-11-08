@@ -129,22 +129,17 @@ export function useModuleReviewCli(
   }, [fixCli, moduleId, moduleLabel]);
 
   const handleSync = useCallback(async () => {
-    try {
-      const res = await fetch('/api/feature-matrix/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId, projectPath }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Sync failed' }));
-        onToast(err.error ?? `Sync failed (${res.status})`, 'error');
-        return;
-      }
-      const data = await res.json();
-      onToast(`Imported ${data.imported} features`, 'success');
-    } catch (err) {
-      onToast(err instanceof Error ? err.message : 'Failed to sync', 'error');
+    // The route answers in the { success, data } envelope — the count lives on `data`.
+    const result = await tryApiFetch<{ imported: number }>('/api/feature-matrix/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ moduleId, projectPath }),
+    });
+    if (!result.ok) {
+      onToast(result.error || 'Failed to sync', 'error');
+      return;
     }
+    onToast(`Imported ${result.data.imported} features`, 'success');
   }, [moduleId, projectPath, onToast]);
 
   const startReview = useCallback(() => {
