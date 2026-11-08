@@ -180,6 +180,8 @@ export function TranspilePane({
             {/* Code tabs */}
             <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border">
               <button
+                type="button"
+                aria-pressed={showCode === 'header'}
                 onClick={() => setShowCode('header')}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors ${
                   showCode === 'header' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'
@@ -189,6 +191,8 @@ export function TranspilePane({
                 {result.className}.h
               </button>
               <button
+                type="button"
+                aria-pressed={showCode === 'source'}
                 onClick={() => setShowCode('source')}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors ${
                   showCode === 'source' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'

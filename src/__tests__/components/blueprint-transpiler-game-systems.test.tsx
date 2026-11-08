@@ -208,3 +208,30 @@ describe('QuestGeneratorPanel - the JSON export defers the blob revoke', () => {
     expect(revoke).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('transpiler tabs and the .h/.cpp toggle expose their selected state', () => {
+  it('has exactly one aria-selected tab and one aria-pressed code toggle', async () => {
+    const { BlueprintTranspilerView } = await import(
+      '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView'
+    );
+    const { container } = render(<BlueprintTranspilerView />);
+    expect(container.querySelectorAll('[role="tab"]').length).toBe(2);
+    expect(container.querySelectorAll('[aria-selected="true"]').length).toBe(1);
+    cleanup();
+    const noop = () => {};
+    const view = render(
+      <TranspilePane
+        blueprintJson="{}" setBlueprintJson={noop} onTranspile={noop} onLoadSample={noop}
+        isLoading={false} error={null} asset={null} summary={null}
+        result={{
+          headerCode: '#pragma once', sourceCode: '// body', className: 'AHero', parentClass: 'ACharacter',
+          includes: [], warnings: [], nodeCount: 1, functionCount: 0,
+          replication: { hasReplication: false, properties: [] },
+        }}
+        showCode="header" setShowCode={noop} moduleName="P" onModuleChange={noop} projectPath=""
+      />,
+    );
+    expect(view.container.querySelectorAll('[aria-pressed]').length).toBe(2);
+    expect(view.container.querySelectorAll('[aria-pressed="true"]').length).toBe(1);
+  });
+});
