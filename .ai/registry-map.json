@@ -2454,7 +2454,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:495 The GAS balance health report leads with a composite A-F grade averaged from survival, duration, defense and consistency sub-scores. It never looks at what the fight does over time, so a squarely fair but flat fight is headlined as 'in great shape'.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "difficulty-design-and-adaptation",
@@ -10335,7 +10339,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/predictive/data.ts:67 The predictive simulator's heatmap and curves classify survival through private colour-only cuts (0.8 / 0.5) that are never stated as numbers and that disagree with the shared encounter-band law (0.9 / 0.6 / 0.35). The same survival rate is therefore green here and 'fair' or 'easy' elsewhere.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "eval-harness",
@@ -19000,7 +19008,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/DroughtMetric.tsx:15 This context measures loot drop distributions, droughts, weights and affixes, not combat encounters. A case-insensitive search of both its directories for tension, climax, comeback, dead zone, breather, survival, TTK, encounter and fight found nothing, so there is no encounter time series to pace.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         },
         {
           "subject": "voice-io",
@@ -24628,7 +24640,11 @@
           "revision": 5,
           "changedAt": "2026-10-01",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:956 The combat simulator API (route -> runCombatSimulationBatched -> detectAlerts) uses its own duration ceiling (60 s) and survival cut (0.3). The shared encounter-band law says stall at 45 s and brutal below 0.35, and the plain-language card calls a fight a slog at 30 s, so three sources disagree about one quantity in front of the designer.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:3d4a9be63146f2ed",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"

@@ -23214,6 +23214,120 @@
         "at": "2026-11-08T03:27:01.526736+00:00",
         "reason": "reviewer (sonnet): The not-applicable leans on a technique anchor, useUnifiedSummaryView.ts:145, that belongs to UnifiedSummaryView, which is not one of this context's files. HolisticHealthView does not reference UnifiedSummaryView, and its own directory has no navigate call, so that anchor is incidental and the shell"
       }
+    },
+    "7bd9e87a-be16-4ec4-b792-b4761bc0e742/combat-pacing-and-dramatic-arc": {
+      "context": "simulation-tools",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:38:57.659Z",
+      "worker": "606443c8-9a9b-473c-bf24-c55c0ef8fd63",
+      "techniques": [
+        {
+          "technique": "encounter-duration-envelopes",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:956 One global 60 s ceiling, coded inline. There is no envelope per encounter class, no floor for a player dying too fast (only the one-shot check), and no structural check of the effective-health ratio."
+        },
+        {
+          "technique": "difficulty-band-classification",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/simulation-engine.ts:1011 Restates a survival cut inline (0.3) that disagrees with SURVIVAL_BAND_CUTS.tough = 0.35 in src/lib/balance/encounter-bands.ts. That gives the band two authorities."
+        },
+        {
+          "technique": "plain-language-fight-report",
+          "verdict": "deviation",
+          "evidence": "src/lib/combat/fight-report.ts:79 This is the technique's named failure: the narrated card calls a fight a slog at 30 s while the alert that gates it fires at 60 s. The thresholds are not read from one source."
+        },
+        {
+          "technique": "beat-taxonomy-climax-comeback-deadzone",
+          "verdict": "deviation",
+          "evidence": "src/types/combat-simulator.ts:143 The Monte Carlo summary aggregates survival, duration, damage and one-shot rate. It reports no beat rate across trials (no near-death, comeback or flat-pacing rate), even though many trials are run."
+        },
+        {
+          "technique": "proxy-driver-limit-declaration",
+          "verdict": "deviation",
+          "evidence": "src/types/combat-simulator.ts:129 The fairness verdicts (one-shot, survival-low) come from a simulated stand-in for the player. A search for proxy/human/stand-in in the result types, engine and fight report found no driver-policy or 'human sample: none' declaration."
+        },
+        {
+          "technique": "lead-car-wreck-before-lap-one-rate",
+          "verdict": "not-applicable",
+          "evidence": "src/types/combat-simulator.ts:77 These are ARPG player-versus-enemy-pack encounters, with no laps, race or multi-entrant field."
+        },
+        {
+          "technique": "division-wide-damage-multiplier",
+          "verdict": "not-applicable",
+          "evidence": "src/types/combat-simulator.ts:86 A sandbox tuning slider for one scenario. There are no campaign divisions or tiers whose entrants would share a scalar."
+        }
+      ]
+    },
+    "ee957a28-f90d-4863-8f75-c599520803a4/combat-pacing-and-dramatic-arc": {
+      "context": "ability-gas-balance",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:38:57.659Z",
+      "worker": "606443c8-9a9b-473c-bf24-c55c0ef8fd63",
+      "techniques": [
+        {
+          "technique": "difficulty-band-classification",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:81 Bands named for actions (easy/fair/tough/brutal) come from the shared law, the numeric boundaries are written into the prose, and a separate win-margin finding exists. Minor gap: the card reads 'tough' as 'too punishing' rather than 'confirm the wall was intended'."
+        },
+        {
+          "technique": "encounter-duration-envelopes",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:147 One global set of cuts (instant <1 s, long >20 s, stall >45 s) applied to mean TTK. There is no envelope per encounter class, the floor sits well below the ~3 s 'no arc fits' floor, and there is no separate floor for a player dying too fast."
+        },
+        {
+          "technique": "plain-language-fight-report",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:99 Good: thresholds come from the shared law and suggestions are phrased as input moves. Missing: the sample size in the verdict line, a shape section that states absences, and counts out of ten except for the brutal band. The headline is a scalar grade, not the band."
+        },
+        {
+          "technique": "beat-taxonomy-climax-comeback-deadzone",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceHealth.ts:229 It guesses at missing near-death moments from the spread (coefficient of variation) of TTK instead of detecting beats. No near-death or comeback rate is ever measured, and a run with no low-variance trigger reports pacing as healthy."
+        }
+      ]
+    },
+    "e589fc28-aa8c-4cf7-805f-819d1b92d568/combat-pacing-and-dramatic-arc": {
+      "context": "loot-metrics-designer",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:38:57.659Z",
+      "worker": "606443c8-9a9b-473c-bf24-c55c0ef8fd63",
+      "techniques": [
+        {
+          "technique": "encounter-duration-envelopes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/DroughtMetric.tsx:15 'Drought' here is a loot-drop interval, not the length of a fight."
+        }
+      ]
+    },
+    "078fa4be-c8be-460f-97da-b6230a0612f8/combat-pacing-and-dramatic-arc": {
+      "context": "character-simulator",
+      "subject": "combat-pacing-and-dramatic-arc",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:38:57.659Z",
+      "worker": "606443c8-9a9b-473c-bf24-c55c0ef8fd63",
+      "techniques": [
+        {
+          "technique": "difficulty-band-classification",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/predictive/data.ts:67 The technique names green/amber/red as a failure. Here the boundary exists only as a colour, the band has no action name, and the cuts are a second authority beside encounter-bands.ts."
+        },
+        {
+          "technique": "encounter-duration-envelopes",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_character/simulator/feedback/ResultsPanel.tsx:126 Duration is treated as one-sided, with shorter always better. There is no floor or ceiling envelope, and Avg TTK (predictive ResultsPanel) is shown without any bound."
+        }
+      ]
     }
   }
 }
