@@ -20,3 +20,11 @@ describe('ZoneEditor always-loaded pair', () => {
     expect(onUpdate).toHaveBeenCalledWith({ alwaysLoaded: false, loadPriority: 'normal' });
   });
 });
+
+describe('ZoneEditor preload radius', () => {
+  it('names its unit: the field is cells, not seconds', () => {
+    render(<ZoneEditor zone={ZONE} onUpdate={() => {}} onClose={() => {}} />);
+    expect(screen.queryByText(/SECS/i)).toBeNull();
+    expect(screen.getByText(/PRELOAD RADIUS \(CELLS\)/)).toBeTruthy();
+  });
+});

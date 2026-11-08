@@ -90,7 +90,7 @@ export function ZoneEditor({
 
         {/* Preload radius */}
         <div className="space-y-1 col-span-2 pt-2 border-t border-violet-900/30">
-          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD SECS / RADIUS</label>
+          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD RADIUS (CELLS)</label>
           <div className="flex items-center gap-3">
             <input
               type="range"
