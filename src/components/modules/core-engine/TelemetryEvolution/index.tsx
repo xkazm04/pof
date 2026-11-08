@@ -6,6 +6,7 @@ import { Dna, Scan, Loader2, AlertCircle } from 'lucide-react';
 import { motionSafe } from '@/lib/motion';
 import { useGenreEvolution } from '@/hooks/useGenreEvolution';
 import { useProjectStore } from '@/stores/projectStore';
+import { logger } from '@/lib/logger';
 import { GenreDnaTimeline } from '@/components/modules/core-engine/GenreDnaTimeline';
 import { ACCENT } from './constants';
 import { EmptyState } from './EmptyState';
@@ -18,12 +19,26 @@ export function TelemetryEvolution() {
   const { stats, history, loading, scanning, scanError, scanProject, resolveSuggestion } = useGenreEvolution();
   const { projectPath, dynamicContext } = useProjectStore();
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();
 
   const handleScan = async () => {
     if (!projectPath) return;
     const result = await scanProject(projectPath, dynamicContext);
     if (!result) return; // Failure — surfaced to the user via the scanError banner below.
+  };
+
+  // Accept/Dismiss is a POST that can fail; the hook rethrows, so the failure is
+  // caught HERE and stated — not left as an unhandled rejection with no feedback.
+  const handleResolve = async (id: string, action: 'accept' | 'dismiss') => {
+    setResolveError(null);
+    try {
+      await resolveSuggestion(id, action);
+    } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : 'the request failed';
+      logger.warn(`[TelemetryEvolution] ${action} suggestion ${id} failed: ${message}`);
+      setResolveError(`${action === 'accept' ? 'Accept' : 'Dismiss'} not saved: ${message}`);
+    }
   };
 
   if (loading) {
@@ -107,6 +122,17 @@ export function TelemetryEvolution() {
         </div>
       )}
 
+      {resolveError && (
+        <div
+          role="alert"
+          data-testid="genre-resolve-error"
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400"
+        >
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span className="min-w-0 flex-1">{resolveError}</span>
+        </div>
+      )}
+
       {/* Out-of-scope scans — stated and counted, never adopted into this project. */}
       {foreignScans > 0 && (
         <p className="text-2xs text-text-muted" data-testid="telemetry-scope-note">
@@ -132,7 +158,7 @@ export function TelemetryEvolution() {
           suggestions={suggestions}
           expandedId={expandedSuggestion}
           onToggle={(id) => setExpandedSuggestion(prev => prev === id ? null : id)}
-          onResolve={resolveSuggestion}
+          onResolve={(id, action) => { void handleResolve(id, action); }}
         />
       )}
 
