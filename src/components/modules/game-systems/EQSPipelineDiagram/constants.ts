@@ -3,29 +3,16 @@ import {
   AlertTriangle, Gauge,
 } from 'lucide-react';
 import {
-  ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_ORANGE,
-  STATUS_SUCCESS,
-} from '@/lib/chart-colors';
-import {
   EQS_ATTACK_POSITIONS, EQS_PATROL_POINTS, EQS_COVER_POSITIONS,
   EQS_LINE_OF_SIGHT, EQS_ELEVATION_ADVANTAGE,
   eqsFloat,
 } from '@/lib/ai-director/eqs-defaults';
-import { eqsComponent, type EQSComponentId } from '@/lib/ai-director/eqs-catalog';
+import { eqsComponent, KIND_STYLE, type EQSComponentId } from '@/lib/ai-director/eqs-catalog';
 import type { StepKind, PipelineStep, QueryPipeline } from './types';
 
 // The runtime test order is shared with the squad composed pipeline, so it lives
 // with the catalog; re-exported here for the diagram's existing imports.
 export { isTestStep, runtimeTestOrder, testOrderDiffers } from '@/lib/ai-director/eqs-catalog';
-
-/** Stage color per kind — one table, so a kind can never render two hues. */
-const KIND_COLORS: Record<StepKind, string> = {
-  'context': ACCENT_CYAN,
-  'generator': ACCENT_VIOLET,
-  'test-score': ACCENT_EMERALD,
-  'test-filter': ACCENT_ORANGE,
-  'result': STATUS_SUCCESS,
-};
 
 /** A pipeline step that instantiates a catalog component: identity comes from the catalog. */
 function componentStep(
@@ -42,7 +29,7 @@ function componentStep(
     label: entry.label,
     cppClass: entry.cppClass,
     kind: entry.kind,
-    color: KIND_COLORS[entry.kind],
+    color: KIND_STYLE[entry.kind].color,
     detail,
     ...(entry.cost ? { cost: entry.cost } : {}),
     ...(entry.status === 'engine' ? { builtIn: true } : {}),
@@ -51,7 +38,7 @@ function componentStep(
 }
 
 function resultStep(id: string, label: string, detail: string): PipelineStep {
-  return { id, label, cppClass: '', kind: 'result', color: KIND_COLORS.result, detail };
+  return { id, label, cppClass: '', kind: 'result', color: KIND_STYLE.result.color, detail };
 }
 
 const PATH_EXISTS_PARAMS = [
@@ -154,11 +141,11 @@ export const CUSTOM_COMPONENT_COUNT = new Set(
 // ── Kind styling ───────────────────────────────────────────────────────────
 
 export const KIND_LABELS: Record<StepKind, string> = {
-  'context': 'Context',
-  'generator': 'Generator',
-  'test-score': 'Test (Score)',
-  'test-filter': 'Test (Filter)',
-  'result': 'Result',
+  'context': KIND_STYLE.context.label,
+  'generator': KIND_STYLE.generator.label,
+  'test-score': KIND_STYLE['test-score'].label,
+  'test-filter': KIND_STYLE['test-filter'].label,
+  'result': KIND_STYLE.result.label,
 };
 
 export const KIND_ICONS: Record<StepKind, React.ComponentType<{ className?: string }>> = {

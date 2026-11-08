@@ -10,6 +10,11 @@
 //     pipeline is derived from them (squad-engine).
 // Adding or re-costing a component is a one-place change.
 
+import {
+  ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_ORANGE,
+  STATUS_SUCCESS, MODULE_COLORS,
+} from '@/lib/chart-colors';
+
 /**
  * Where a component lives:
  *  - `source`   — implemented in `Source/PoF/AI/EQS/` (listed by the inventory),
@@ -20,6 +25,23 @@ export type EQSComponentStatus = 'source' | 'proposed' | 'engine';
 
 /** A component's role in a query. Tests are split by how they are used. */
 export type EQSComponentKind = 'context' | 'generator' | 'test-score' | 'test-filter' | 'director';
+
+/** A pipeline stage: a component kind, plus the terminal `result` step. */
+export type EQSStageKind = EQSComponentKind | 'result';
+
+/**
+ * One color + label per stage kind. Every EQS surface (pipeline diagram, squad
+ * pipeline view, component inventory) reads this, so a kind never renders two
+ * hues or two names.
+ */
+export const KIND_STYLE: Record<EQSStageKind, { readonly color: string; readonly label: string }> = {
+  'context': { color: ACCENT_CYAN, label: 'Context' },
+  'generator': { color: ACCENT_VIOLET, label: 'Generator' },
+  'test-score': { color: ACCENT_EMERALD, label: 'Test (Score)' },
+  'test-filter': { color: ACCENT_ORANGE, label: 'Test (Filter)' },
+  'director': { color: MODULE_COLORS.systems, label: 'Director' },
+  'result': { color: STATUS_SUCCESS, label: 'Result' },
+};
 
 /** UE5 `EEnvTestCost` — the engine runs cheap tests before expensive ones. */
 export type EQSCost = 'Low' | 'High';
