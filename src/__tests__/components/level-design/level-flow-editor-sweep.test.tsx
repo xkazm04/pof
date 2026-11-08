@@ -166,3 +166,21 @@ describe('room titles on the canvas use one case', () => {
     expect(texts).toContain('FLOODED CATHED...');
   });
 });
+
+describe('the narrative tab names its fields', () => {
+  it('each textarea is reachable by its visible label', async () => {
+    installApi();
+    await openDoc();
+    fireEvent.click(screen.getByRole('button', { name: /Narrative/ }));
+    for (const name of ['Level Description', 'Design Narrative', 'Pacing Notes']) {
+      expect(screen.getByRole('textbox', { name }).tagName).toBe('TEXTAREA');
+    }
+  });
+
+  it('the icon-only Create button in the sidebar has a name', async () => {
+    installApi();
+    render(<LevelDesignView />);
+    await screen.findByPlaceholderText('New level design...');
+    expect(screen.getByRole('button', { name: 'Create level design' })).toBeTruthy();
+  });
+});
