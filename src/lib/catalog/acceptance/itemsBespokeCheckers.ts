@@ -1,5 +1,4 @@
-import { readHistory, selectedCandidate } from '@/components/layout-lab/steps/shared/genHistory';
-import { candidateAsset } from './galleryArtifact';
+import { gradeSelectedCandidate } from './galleryArtifact';
 import { templateGuard } from './template';
 import type { AcceptanceResult, Checker } from './types';
 
@@ -200,47 +199,7 @@ export const itemsInventoryWired: Checker = (data) => {
  * registered `Icon 2D Art` / `3D Mesh` checkers.
  */
 export function gradeGeneratedAsset(data: Record<string, unknown>, label: string): AcceptanceResult {
-  const history = readHistory(data);
-  if (history.batches.length === 0) {
-    return {
-      label,
-      tier: 'L4',
-      status: 'deferred',
-      detail: 'no generation history',
-      reason:
-        'the artifact holds no generation history — nothing proves any candidate was ever ' +
-        'generated for this step, so the values it grades are the produce stub\'s constants. ' +
-        'Run the gallery\'s Produce so the batch (and its candidates) are recorded, then re-grade.',
-    };
-  }
-  const cand = selectedCandidate(history);
-  const kept = history.batches.reduce((n, b) => n + b.candidates.length, 0);
-  if (!cand) {
-    return {
-      label,
-      tier: 'L1',
-      status: 'fail',
-      detail: `selection ${JSON.stringify(history.selectedId)} unresolved`,
-      reason:
-        `the artifact selects candidate id ${JSON.stringify(history.selectedId)}, which is not among the ` +
-        `${kept} candidate(s) in the ${history.batches.length} kept batch(es) — the graded selection points at nothing.`,
-    };
-  }
-  const asset = candidateAsset(cand);
-  const named = cand.caption ?? cand.id;
-  if (asset) {
-    return { label, tier: 'L1', status: 'pass', detail: `${named} → ${asset}` };
-  }
-  return {
-    label,
-    tier: 'L4',
-    status: 'deferred',
-    detail: `${named} — swatch placeholder`,
-    reason:
-      `the selected candidate (${named}) is a deterministic swatch preview, not a generated asset — no image ` +
-      'or mesh was produced for this step, so the selection cannot be visually verified. Run the generator ' +
-      '(gap-loop / the provider script) so the step owns real art, then re-roll the gallery and select it.',
-  };
+  return gradeSelectedCandidate(data, label);
 }
 
 /**

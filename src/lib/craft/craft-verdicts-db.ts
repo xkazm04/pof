@@ -372,7 +372,7 @@ export function upsertCraftVerdict(v: CraftVerdict, cost?: Partial<CraftGaugeCos
 
 /** Stable index key for one gauged cell. */
 export function craftVerdictKey(catalogId: string, entityId: string, step: string): string {
-  return `${catalogId} ${entityId} ${step}`;
+  return `${catalogId}\u0000${entityId}\u0000${step}`;
 }
 
 /**

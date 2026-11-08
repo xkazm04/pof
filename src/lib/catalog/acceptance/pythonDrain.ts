@@ -20,8 +20,10 @@
  *    artifact stays `deferred`, because "we could not ask" is not "the step failed" — the
  *    error is reported in the summary instead (Rule 4: surface the reason, don't fake it);
  *  - steps run in the pipeline's declared ORDER, and by default a chain stops after a step
- *    the re-grade condemns: `retarget` failing merely because `import_clips` never ran is a
- *    consequence, not an independent finding, and recording it as one would be noise.
+ *    the re-grade condemns OR whose module could not be run (a bridge error): `retarget` failing
+ *    merely because `import_clips` never ran is a consequence, not an independent finding, and
+ *    recording it as one would be noise. The skipped steps report `upstream-failed` naming which.
+ *    `continueOnFail` opts out of both stops.
  *
  * Pure orchestration over injected deps (no fs / db / network / clock), like `staticVerify`
  * and `bindIconsAll`, so it is unit-testable with no editor and no SQLite.
@@ -127,6 +129,8 @@ export async function drainPythonAll(
     const order = deps.stepOrder(list[0].catalogId);
     const chain = [...list].sort((x, y) => orderKey(order, x.step) - orderKey(order, y.step));
     let broken = false;
+    // Why the chain stopped, for the detail of the steps it skips: a condemned step vs a module that never ran.
+    let brokenBy: 'condemned' | 'unreachable' = 'condemned';
 
     for (const a of chain) {
       const row = (outcome: PythonDrainOutcome, detail: string, to = a.status, module?: string): void => {
@@ -139,13 +143,19 @@ export async function drainPythonAll(
 
       const dispatch = readDispatch(a.data);
       if (!dispatch) { skipped++; row('no-dispatch', 'step declares no python module'); continue; }
-      if (broken) { skipped++; row('upstream-failed', 'an earlier step in this chain was condemned', a.status, dispatch.module); continue; }
+      if (broken) {
+        skipped++;
+        row('upstream-failed', brokenBy === 'unreachable'
+          ? 'an earlier step in this chain could not be run (bridge error), so this one has no inputs to run on'
+          : 'an earlier step in this chain was condemned', a.status, dispatch.module);
+        continue;
+      }
       if (!opts?.force && hasResult(a.data)) {
         skipped++;
         row('already-drained', 'a module return is already recorded', a.status, dispatch.module);
         // Its PERSISTED verdict still speaks for the chain: a fail recorded on an earlier run
         // condemns the steps after it exactly as a fail drained this run does.
-        if (a.status === 'fail' && !opts?.continueOnFail) broken = true;
+        if (a.status === 'fail' && !opts?.continueOnFail) { broken = true; brokenBy = 'condemned'; }
         continue;
       }
 
@@ -154,6 +164,9 @@ export async function drainPythonAll(
         // Could not ASK — that is not the step failing. Leave the artifact alone.
         errors++;
         row('bridge-error', out.error, a.status, dispatch.module);
+        // The step definitely did not run, so everything after it would be dispatched against missing
+        // inputs and recorded as an independent fail. Stop the chain, as a condemned step does.
+        if (!opts?.continueOnFail) { broken = true; brokenBy = 'unreachable'; }
         continue;
       }
 
@@ -167,7 +180,7 @@ export async function drainPythonAll(
       dispatched++;
       if (verdict.status === 'pass') passed++;
       else if (verdict.status === 'pending') pending++;
-      else if (verdict.status === 'fail') { failed++; if (!opts?.continueOnFail) broken = true; }
+      else if (verdict.status === 'fail') { failed++; if (!opts?.continueOnFail) { broken = true; brokenBy = 'condemned'; } }
       else if (verdict.status === 'deferred') stillDeferred++;
       if (verdict.status !== a.status) changed++;
       if (apply) deps.save(a.catalogId, a.entityId, a.step, merged, verdict);
