@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { isFeatureDone } from '@/lib/constellation/layout';
 import type { ConstellationNode } from '@/lib/constellation/layout';
 import { PLAN_STATUS_COLORS, STATUS_BLOCKER, STATUS_INFO } from '@/lib/chart-colors';
@@ -22,6 +22,8 @@ export function ConstellationNodeG({
   onHoverStart: () => void;
   onHoverEnd: () => void;
 }) {
+  // SMIL <animate> sits outside framer's reducedMotion policy and the CSS reset.
+  const reduceMotion = useReducedMotion() ?? false;
   const color = PLAN_STATUS_COLORS[node.status] ?? PLAN_STATUS_COLORS.unknown;
   const done = isFeatureDone(node.status);
   const x = node.x - NODE_W / 2;
@@ -44,7 +46,7 @@ export function ConstellationNodeG({
       {/* "Do this next" pulsing ring */}
       {isNext && (
         <rect x={x - 4} y={y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={12} fill="none" stroke={STATUS_INFO} strokeWidth={2} filter={`url(#${glowId})`}>
-          <animate attributeName="opacity" values="0.35;0.95;0.35" dur="1.8s" repeatCount="indefinite" />
+          {!reduceMotion && <animate attributeName="opacity" values="0.35;0.95;0.35" dur="1.8s" repeatCount="indefinite" />}
         </rect>
       )}
 

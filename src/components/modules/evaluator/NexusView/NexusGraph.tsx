@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_20,
@@ -37,6 +38,8 @@ export function NexusGraph({
   // <svg>, which cropped the graph inside this overflow-hidden frame. Edge
   // endpoints come from the nodes' own centres.
   const byId = new Map(nodes.map((n) => [n.moduleId as string, n]));
+  // SMIL <animate> sits outside framer's reducedMotion policy and the CSS reset.
+  const reduceMotion = useReducedMotion() ?? false;
   // Per-instance marker / filter ids (LRU-hidden modules stay mounted beside others).
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const ARROW = `nexus-arrow-${uid}`;
@@ -199,7 +202,7 @@ export function NexusGraph({
                   opacity={0.6}
                   filter={`url(#${GLOW_RED})`}
                 >
-                  <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" />
+                  {!reduceMotion && <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" />}
                 </rect>
               )}
 
