@@ -96,6 +96,7 @@ export function BuildCodeExportPanel({
           <div className="flex items-stretch gap-2">
             <input
               readOnly
+              aria-label="Shareable build code"
               value={code || 'Encoding…'}
               onFocus={(e) => e.currentTarget.select()}
               className="flex-1 text-xs font-mono bg-surface-deep border border-border/40 rounded-lg px-2.5 py-2 text-text focus:outline-none focus:border-blue-500/50 truncate"

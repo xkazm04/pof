@@ -39,3 +39,19 @@ describe('GenomeImportPanel failure paths report a reason', () => {
     expect(container.textContent).not.toContain('Decoding');
   });
 });
+
+describe('genome build-code fields have accessible names', () => {
+  it('import textarea and export input are both textboxes named for the build code', async () => {
+    const { BuildCodeExportPanel } = await import('@/components/modules/core-engine/unique-tabs/_genome-share/BuildCodeExport');
+    const { getAllByRole } = render(
+      <>
+        <GenomeImportPanel<G>
+          kind="item" kindLabel="item" accent="#fff" baseline={undefined} baselineName="base"
+          getName={(g) => g.name} sanitize={() => ({ error: 'x' })} diffSpecs={[]} onApply={() => {}} onClose={() => {}}
+        />
+        <BuildCodeExportPanel kind="item" genome={{}} color="#fff" onClose={() => {}} />
+      </>,
+    );
+    expect(getAllByRole('textbox', { name: /build code/i }).length).toBe(2);
+  });
+});

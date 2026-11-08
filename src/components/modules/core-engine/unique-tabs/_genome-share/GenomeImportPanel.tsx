@@ -157,6 +157,7 @@ export function GenomeImportPanel<T>({
           {!pending && (
             <>
               <textarea
+                aria-label="Build code or genome JSON to import"
                 value={importText}
                 onChange={(e) => { setImportText(e.target.value); setError(''); }}
                 placeholder="Paste a build code (e.g. pofc1.…) or genome JSON here…"
