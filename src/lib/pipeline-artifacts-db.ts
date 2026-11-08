@@ -356,13 +356,6 @@ export function deleteArtifact(catalogId: string, entityId: string, step: string
 
 export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
   ensureTable();
-  // Archive what this write is about to overwrite — but only when the CONTENT differs.
-  // Drains, static-verify and packaging-verify all re-upsert identical data with a new
-  // verdict; archiving those would bury the few real produce versions under dozens of
-  // duplicates and make the history useless for the one thing it is for.
-  const prev = getArtifact(a.catalogId, a.entityId, a.step);
-  if (prev && contentChanged(prev, a)) archive(prev);
-
   // The content hash is stamped HERE, in the same statement as the data it names (see
   // ensureContentHash). When the data text changed but its hash did not (a `_provenance`-only
   // rewrite), the invalidation trigger cannot tell the door from a bypass writer and NULLs it —
@@ -375,6 +368,14 @@ export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
     content_hash: stepContentHash(a.data),
   };
   db.transaction(() => {
+    // Archive what this write is about to overwrite — but only when the CONTENT differs.
+    // Drains, static-verify and packaging-verify all re-upsert identical data with a new
+    // verdict; archiving those would bury the few real produce versions under dozens of
+    // duplicates and make the history useless for the one thing it is for. The read and the
+    // archive sit INSIDE the write's transaction: a write that fails rolls its archive back
+    // with it, so a failed write can never leave (and a retry can never duplicate) a revision.
+    const prev = getArtifact(a.catalogId, a.entityId, a.step);
+    if (prev && contentChanged(prev, a)) archive(prev);
     db.prepare(`
       INSERT INTO pipeline_artifacts (catalog_id, entity_id, step, data, ue_assets, status, tier, reason, updated_at, content_hash)
       VALUES (@catalog_id, @entity_id, @step, @data, @ue_assets, @status, @tier, @reason, datetime('now'), @content_hash)
