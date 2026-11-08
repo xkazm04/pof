@@ -128,9 +128,12 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
                 aria-label={`Encounter ${i + 1} archetype`}
                 value={ec.archetypeId}
                 onChange={e => {
-                  const next = [...config.enemyConfigs];
-                  next[i] = { ...next[i], archetypeId: e.target.value };
-                  setConfig(c => ({ ...c, enemyConfigs: next }));
+                  const archetypeId = e.target.value;
+                  setConfig(c => {
+                    const next = [...c.enemyConfigs];
+                    next[i] = { ...next[i], archetypeId };
+                    return { ...c, enemyConfigs: next };
+                  });
                 }}
                 className="flex-1 bg-transparent text-text border-none outline-none"
               >
@@ -146,9 +149,12 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
                 aria-label={`Encounter ${i + 1} enemy count`}
                 value={ec.count}
                 onChange={e => {
-                  const next = [...config.enemyConfigs];
-                  next[i] = { ...next[i], count: +e.target.value };
-                  setConfig(c => ({ ...c, enemyConfigs: next }));
+                  const count = +e.target.value;
+                  setConfig(c => {
+                    const next = [...c.enemyConfigs];
+                    next[i] = { ...next[i], count };
+                    return { ...c, enemyConfigs: next };
+                  });
                 }}
                 className="w-8 px-1 py-0.5 rounded bg-surface border border-border/40 text-text text-center"
               />

@@ -10,11 +10,24 @@ import {
   withOpacity,
   OPACITY_8,
 } from '@/lib/chart-colors';
+import { StatusTag } from '@/components/ui/StatusTag';
+import { STATUS_TOKENS, type StatusLevel } from '@/lib/status-token';
 import { RadarChart } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '../_shared/design';
-import { COMPARISON_STATS, deviationColor, type BalanceResult } from '../_shared/data';
+import { COMPARISON_STATS, DEVIATION_THRESHOLDS, deviationColor, type BalanceResult } from '../_shared/data';
 
 const TOP_N = 5;
+const pctLabel = (fraction: number) => `${+(fraction * 100).toFixed(1)}`;
+
+/** Composite-score delta bands (fraction of the 0-1 score): below `even` is even, below `drift` drifting, else off-mean. */
+export const SCORE_DELTA_BANDS = { even: 0.03, drift: 0.08 } as const;
+
+function scoreDeltaBand(delta: number): { level: StatusLevel; word: string } {
+  const abs = Math.abs(delta);
+  if (abs < SCORE_DELTA_BANDS.even) return { level: 'ok', word: 'Even' };
+  if (abs < SCORE_DELTA_BANDS.drift) return { level: 'warn', word: 'Drift' };
+  return { level: 'bad', word: 'Off' };
+}
 
 interface ArchetypeBalanceRadarProps {
   balanceResults: BalanceResult[];
@@ -32,6 +45,18 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
     const sorted = [...balanceResults].sort((a, b) => b.compositeScore - a.compositeScore);
     return !needsTruncation || showAll ? sorted : sorted.slice(0, TOP_N);
   }, [balanceResults, showAll, needsTruncation]);
+
+  if (balanceResults.length < 2) {
+    return (
+      <BlueprintPanel className="p-3" color={ACCENT_CYAN}>
+        <SectionHeader icon={Radar} label="Balance Radar" color={ACCENT_CYAN} />
+        <div role="status" className="text-xs font-mono text-text-muted" data-testid="radar-empty">
+          Pick at least two characters to compare
+        </div>
+      </BlueprintPanel>
+    );
+  }
+
   return (
     <BlueprintPanel className="p-3" color={ACCENT_CYAN}>
       <div className="flex items-center gap-3 mb-1">
@@ -55,8 +80,8 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
             {displayResults.map((br, i) => {
               const delta = br.compositeScore - scoreMean;
               const deltaSign = delta >= 0 ? '+' : '';
-              const deltaColor = Math.abs(delta) < 0.03 ? STATUS_SUCCESS
-                : Math.abs(delta) < 0.08 ? STATUS_WARNING : STATUS_ERROR;
+              const band = scoreDeltaBand(delta);
+              const deltaColor = STATUS_TOKENS[band.level].color;
               return (
                 <motion.div
                   key={br.name}
@@ -82,11 +107,16 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
                       <span className="text-xs font-mono font-bold tabular-nums" style={{ color: deltaColor }}>
                         ({deltaSign}{(delta * 100).toFixed(1)})
                       </span>
+                      <StatusTag level={band.level} word={band.word} className="!px-1 !py-0 !tracking-normal" iconClassName="w-2.5 h-2.5" />
                     </div>
                   </div>
                 </motion.div>
               );
             })}
+          </div>
+
+          <div className="text-xs font-mono text-text-muted" data-testid="score-delta-legend">
+            Score vs roster mean: Even (&lt;{pctLabel(SCORE_DELTA_BANDS.even)} pts), Drift (&lt;{pctLabel(SCORE_DELTA_BANDS.drift)} pts), Off (&ge;{pctLabel(SCORE_DELTA_BANDS.drift)} pts)
           </div>
 
           {/* Deviation heatmap */}
@@ -145,7 +175,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
             <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/10 text-[9px] font-mono text-text-muted">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: withOpacity(STATUS_SUCCESS, OPACITY_12), border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_20)}` }} />
-                <span style={{ color: STATUS_SUCCESS }}>Balanced</span> (&lt;10%)
+                <span style={{ color: STATUS_SUCCESS }}>Balanced</span> (&lt;{pctLabel(DEVIATION_THRESHOLDS.balanced)}%)
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: withOpacity(STATUS_WARNING, OPACITY_12), border: `1px solid ${withOpacity(STATUS_WARNING, OPACITY_20)}` }} />
@@ -153,7 +183,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: withOpacity(STATUS_ERROR, OPACITY_12), border: `1px solid ${withOpacity(STATUS_ERROR, OPACITY_20)}` }} />
-                <span style={{ color: STATUS_ERROR }}>Outlier</span> (&ge;25%)
+                <span style={{ color: STATUS_ERROR }}>Outlier</span> (&ge;{pctLabel(DEVIATION_THRESHOLDS.outlier)}%)
               </span>
             </div>
           </div>

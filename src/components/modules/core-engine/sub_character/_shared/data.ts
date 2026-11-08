@@ -429,10 +429,13 @@ export function computeBalanceScores(characters: ComparisonCharacter[]): Balance
   });
 }
 
+/** Deviation bands (fraction of the roster mean): below `balanced` is balanced, `outlier` and above is an outlier. */
+export const DEVIATION_THRESHOLDS = { balanced: 0.1, outlier: 0.25 } as const;
+
 export function deviationColor(dev: number): string {
   const abs = Math.abs(dev);
-  if (abs < 0.1) return STATUS_SUCCESS;
-  if (abs < 0.25) return STATUS_WARNING;
+  if (abs < DEVIATION_THRESHOLDS.balanced) return STATUS_SUCCESS;
+  if (abs < DEVIATION_THRESHOLDS.outlier) return STATUS_WARNING;
   return STATUS_ERROR;
 }
 

@@ -13,6 +13,9 @@ import { ScalableSelector } from '@/components/shared/ScalableSelector';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../_shared/design';
 import { COMPARISON_STATS, COMPARISON_CHARACTERS, type SelectableCharacter } from '../_shared/data';
 
+const MIN_COMPARE = 2;
+const EMPTY_COMPARE_HINT = 'Pick at least two characters to compare';
+
 interface ComparisonMatrixProps {
   selected: string[];
   onSelectionChange: (ids: string[]) => void;
@@ -79,7 +82,14 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
         accent={ACCENT_VIOLET}
       />
 
+      {selected.length < MIN_COMPARE && (
+        <div role="status" className="mb-2 text-xs font-mono text-text-muted" data-testid="comparison-empty">
+          {EMPTY_COMPARE_HINT}
+        </div>
+      )}
+
       {/* Comparison table */}
+      {visibleCharacters.length > 0 && (
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-xs border-collapse font-mono">
           <thead>
@@ -148,6 +158,7 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/10 text-xs font-mono text-text-muted">
