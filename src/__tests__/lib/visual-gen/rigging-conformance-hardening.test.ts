@@ -248,3 +248,19 @@ describe('rig gate: a joint index the skin does not declare', () => {
     expect(parseGlbRig(skinnedGlb([[good]])).outOfRangeJointRefs).toBe(0);
   });
 });
+
+describe('rig gate: WEIGHTS_1 / JOINTS_1', () => {
+  it('adds the second influence set to the vertex', () => {
+    const prim: TestPrim = {
+      weights: [[0.2, 0.1, 0.1, 0.1]],
+      joints: [[0, 1, 0, 1]],
+      weights1: [[0.5, 0, 0, 0]],
+      joints1: [[2, 0, 0, 0]],
+    };
+    const facts = parseGlbRig(skinnedGlb([[prim]]));
+    expect(facts.weightSumMin).toBeCloseTo(1, 5);
+    expect(facts.maxInfluences).toBe(5);
+    expect(facts.referencedJoints).toBe(3);
+    expect(scoreRig(facts).failures).toEqual([]);
+  });
+});

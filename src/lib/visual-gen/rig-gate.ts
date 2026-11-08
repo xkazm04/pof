@@ -243,7 +243,12 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   const skinned = primitives.flatMap((p) => {
     const weights = readAccessor(p.attributes.WEIGHTS_0);
     const joints = readAccessor(p.attributes.JOINTS_0);
-    return weights && joints ? [{ weights, joints, scale: scaleOf(p.attributes.WEIGHTS_0) }] : [];
+    if (!weights || !joints) return [];
+    const weights1 = readAccessor(p.attributes.WEIGHTS_1);
+    const joints1 = readAccessor(p.attributes.JOINTS_1);
+    // A vertex over four influences continues in the second set, and its sum is over both.
+    const second = weights1 && joints1 ? { weights1, joints1, scale1: scaleOf(p.attributes.WEIGHTS_1) } : undefined;
+    return [{ weights, joints, scale: scaleOf(p.attributes.WEIGHTS_0), second }];
   });
   if (!skin || skinned.length === 0) {
     const vertexCount = primitives.reduce((n, p) => n + (readAccessor(p.attributes.POSITION)?.length ?? 0), 0);
@@ -261,15 +266,15 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   const referenced = new Set<number>();
   let weightedVertices = 0;
 
-  for (const { weights, joints, scale } of skinned) {
+  for (const { weights, joints, scale, second } of skinned) {
     weightedVertices += weights.length;
     for (let i = 0; i < weights.length; i++) {
-      const w = weights[i];
-      const j = joints[i] ?? [];
+      const w = [...weights[i].map((v) => v * scale), ...(second?.weights1[i] ?? []).map((v) => v * second!.scale1)];
+      const j = [...(joints[i] ?? []), ...(second?.joints1[i] ?? [])];
       let sum = 0;
       let influences = 0;
       for (let c = 0; c < w.length; c++) {
-        const value = w[c] * scale;
+        const value = w[c];
         if (!Number.isFinite(value)) { nonFiniteWeights++; continue; }
         if (value < 0) negativeWeights++;
         sum += value;
