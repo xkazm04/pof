@@ -38,14 +38,15 @@ export function PityCohortChart({ rate, threshold, color }: PityCohortChartProps
       return m * pity.kills.length;
     });
     const peak = Math.max(1, ...counts, ...analytic);
-    return { max, nBins, counts, analytic, peak };
+    // ONE x domain for bars, markers and ticks: the bars cover nBins*binW kills, not max.
+    return { max, domain: nBins * binW, nBins, counts, analytic, peak };
   }, [result]);
 
   if (!result || !view) {
     return <div className="mt-2 text-2xs font-mono text-text-muted">Simulating 5,000 players...</div>;
   }
 
-  const x = (kill: number) => LEFT + (kill / view.max) * (RIGHT - LEFT);
+  const x = (kill: number) => LEFT + (kill / view.domain) * (RIGHT - LEFT);
   const y = (c: number) => BASE - (c / view.peak) * (BASE - TOP);
   const bw = (RIGHT - LEFT) / view.nBins;
   const [p50, p95, p99] = result.percentiles;
@@ -78,7 +79,7 @@ export function PityCohortChart({ rate, threshold, color }: PityCohortChartProps
           </g>
         ))}
         {[0, 0.5, 1].map((f) => (
-          <text key={f} x={x(view.max * f)} y={H - 6} textAnchor="middle" className="text-xs font-mono" fill="var(--text-muted)">{Math.round(view.max * f)}</text>
+          <text key={f} x={x(view.domain * f)} y={H - 6} textAnchor="middle" className="text-xs font-mono" fill="var(--text-muted)">{Math.round(view.domain * f)}</text>
         ))}
       </svg>
       <div className="flex flex-wrap gap-3 mt-1 text-2xs font-mono text-text-muted">
