@@ -112,6 +112,9 @@ export function SearchCombobox<P>({
   const [q, setQ] = useState('');
   // The recall list shows only while the input is focused (an autoFocused one starts so).
   const [recallOpen, setRecallOpen] = useState(!!autoFocus);
+  // True once focus has LEFT the input: the popup collapses (APG combobox) but the query is kept,
+  // and re-focusing — or typing, which needs focus — brings it back.
+  const [blurred, setBlurred] = useState(false);
   // Highlighted option. Clamped during render (never reset from an effect) so the index
   // stays valid as the hit list shrinks under the user's typing.
   const [activeRaw, setActiveRaw] = useState(0);
@@ -121,10 +124,10 @@ export function SearchCombobox<P>({
   // Full match set first (recall-ranked when opted in), capped list second — so the cap can
   // be reported rather than hidden. An empty needle yields the recents (recall) or nothing.
   const { matches, record } = useRecallMatches(idPrefix, recall?.resolve, needle, search);
-  const shown = needle || recallOpen ? matches : NO_HITS;
+  const shown = !blurred && (needle || recallOpen) ? matches : NO_HITS;
   const hits = useMemo(() => shown.slice(0, maxHits) as SearchHit<P>[], [shown, maxHits]);
 
-  const open = needle.length > 0;
+  const open = needle.length > 0 && !blurred;
   const hasHits = hits.length > 0;
   const recalling = !open && hasHits;
   const hidden = matches.length - hits.length;
@@ -195,10 +198,10 @@ export function SearchCombobox<P>({
         type="text"
         role="combobox"
         value={q}
-        onChange={(e) => { setQ(e.target.value); setActiveRaw(0); }}
+        onChange={(e) => { setQ(e.target.value); setActiveRaw(0); setBlurred(false); }}
         onKeyDown={onKeyDown}
-        onFocus={() => setRecallOpen(true)}
-        onBlur={() => setRecallOpen(false)}
+        onFocus={() => { setRecallOpen(true); setBlurred(false); }}
+        onBlur={() => { setRecallOpen(false); setBlurred(true); }}
         placeholder={placeholder}
         aria-label={ariaLabel}
         aria-expanded={hasHits}

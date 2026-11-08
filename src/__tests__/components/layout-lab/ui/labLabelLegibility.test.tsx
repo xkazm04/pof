@@ -68,7 +68,11 @@ describe('lab primitive captions meet the AA text floor in both themes', () => {
     const w = worstContrast(tokenOf(screen.getByText('Title')));
     expect(w.ratio, `${w.theme} ${w.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(WCAG_AA_TEXT);
   });
-  it('[seeded control] the instrument bites: --lab-muted measures under the floor on Blueprint', () => {
-    expect(worstContrast('--lab-muted').ratio).toBeLessThan(WCAG_AA_TEXT);
+  it('--lab-muted (the shared muted text token) clears the floor in both themes on both surfaces', () => {
+    const w = worstContrast('--lab-muted');
+    expect(w.ratio, `${w.theme} ${w.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(WCAG_AA_TEXT);
+  });
+  it('[seeded control] the instrument bites: the old Blueprint grey #647488 measures under the floor', () => {
+    expect(contrastRatio('#647488', THEMES.blueprint['--lab-bg'])).toBeLessThan(WCAG_AA_TEXT); // eslint-disable-line no-restricted-syntax -- the retired sub-floor grey, a literal on purpose
   });
 });

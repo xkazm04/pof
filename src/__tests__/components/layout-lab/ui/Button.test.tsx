@@ -42,4 +42,14 @@ describe('Button', () => {
     render(<Button variant="accent">A</Button>);
     expect(screen.getByRole('button', { name: 'A' }).style.background).toContain('var(--lab-accent)');
   });
+  it('`current` marks a single-select member via aria-current, not aria-pressed, with the accent fill', () => {
+    render(<><Button current>One</Button><Button current={false}>Two</Button></>);
+    const one = screen.getByRole('button', { name: 'One' });
+    const two = screen.getByRole('button', { name: 'Two' });
+    expect(one.getAttribute('aria-current')).toBe('true');
+    expect(one.getAttribute('aria-pressed')).toBeNull();
+    expect(one.style.background).toContain('var(--lab-accent)');
+    expect(two.getAttribute('aria-current')).toBeNull();
+    expect(two.getAttribute('aria-pressed')).toBeNull();
+  });
 });
