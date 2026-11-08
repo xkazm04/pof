@@ -1,4 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   createSession,
   listSessions,
@@ -243,6 +244,8 @@ export async function GET(req: Request) {
 
 // ─── POST: create session, start session, add finding, add event, run analysis
 export async function POST(req: Request) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const body = await req.json().catch(() => undefined);
     // A body that is not a JSON object is the caller's error (400), not a server fault.
@@ -432,6 +435,8 @@ export async function POST(req: Request) {
 
 // ─── DELETE: remove session
 export async function DELETE(req: Request) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId');
