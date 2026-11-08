@@ -112,6 +112,13 @@ export async function POST(request: NextRequest) {
     return apiError('Request body must be a JSON object', 400);
   }
 
+  // Checked before anything is read or billed: these reach fs and a SQLite bind as given.
+  for (const field of ['moduleId', 'itemId', 'screenshotPath', 'projectPath'] as const) {
+    if (body[field] != null && typeof body[field] !== 'string') {
+      return apiError(`"${field}" must be a string`, 400);
+    }
+  }
+
   const { moduleId, itemId, screenshotPath, projectPath } = body;
   if (!moduleId || !itemId || !screenshotPath) {
     return apiError('Missing "moduleId", "itemId", or "screenshotPath"', 400);
@@ -139,6 +146,10 @@ export async function POST(request: NextRequest) {
     pngBase64 = readFileSync(screenshotPath).toString('base64');
   } catch (e) {
     return apiError(`Failed to read screenshot: ${e instanceof Error ? e.message : 'unknown'}`, 500);
+  }
+  // A frame the capture has not finished flushing: a verdict on it would be a billed "fail".
+  if (pngBase64.length === 0) {
+    return apiError(`Screenshot is empty (0 bytes), the capture may still be writing: ${screenshotPath}`, 422);
   }
 
   // THE CHOKEPOINT. This route no longer names an eye: it asks for the `recognize`
