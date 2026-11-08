@@ -192,6 +192,8 @@ function PlacedTile({ placement, tabId, onRotate, onRemove }: TileProps) {
   // Reactive: the tile re-resolves when the catalog store gains or edits the item.
   const item = useInventoryItemLookup()(placement.itemId);
   const color = item ? RARITY_COLORS[item.rarity] ?? STATUS_SUBDUED : STATUS_SUBDUED;
+  // Tile controls name their item so a grid of Rotate/Remove buttons stays distinguishable.
+  const tileName = item ? item.name : `unresolved item ${placement.itemId}`;
   const w = placement.w * CELL_PX + (placement.w - 1) * GAP_PX;
   const h = placement.h * CELL_PX + (placement.h - 1) * GAP_PX;
 
@@ -234,13 +236,13 @@ function PlacedTile({ placement, tabId, onRotate, onRemove }: TileProps) {
       <span className="text-[10px] font-mono font-bold leading-tight line-clamp-2 select-none">
         {item ? item.name : '?'}
       </span>
-      <div className="absolute inset-x-0 top-0 flex justify-end gap-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute inset-x-0 top-0 flex justify-end gap-0.5 p-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
         <button
           type="button"
           onClick={onRotate}
           className="rounded p-0.5"
           style={{ backgroundColor: withOpacity(OVERLAY_WHITE, '15'), color }}
-          aria-label="Rotate"
+          aria-label={`Rotate ${tileName}`}
         >
           <RotateCw className="w-3 h-3" />
         </button>
@@ -249,7 +251,7 @@ function PlacedTile({ placement, tabId, onRotate, onRemove }: TileProps) {
           onClick={onRemove}
           className="rounded p-0.5"
           style={{ backgroundColor: withOpacity(OVERLAY_WHITE, '15'), color: STATUS_ERROR }}
-          aria-label="Remove"
+          aria-label={`Remove ${tileName}`}
         >
           <X className="w-3 h-3" />
         </button>
