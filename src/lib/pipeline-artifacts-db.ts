@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db';
+import { logger } from '@/lib/logger';
 import { CONTENT_HASH_SCHEME, isComparableHash, stepContentHash } from '@/lib/judge/contentHash';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
 // Type-only import (erased at runtime), so the runner→db dependency stays one-way.
@@ -245,17 +246,49 @@ export function getRevision(id: number): ArtifactRevision | null {
   return row ? rowToRevision(row) : null;
 }
 
-/** Column row → PipelineArtifact. Pure (exported for unit test). */
+/** Reason prefix of a row whose stored blob could not be parsed (see {@link rowToArtifact}). */
+export const CORRUPT_ARTIFACT_PREFIX = 'CORRUPT: ';
+const CORRUPT_KEY = '__corrupt';
+
+/** True for the placeholder {@link rowToArtifact} returns for an unparseable row. Never persisted. */
+export function isCorruptArtifact(a: Pick<PipelineArtifact, 'data' | 'reason'>): boolean {
+  return a.data?.[CORRUPT_KEY] === true || a.reason?.startsWith(CORRUPT_ARTIFACT_PREFIX) === true;
+}
+
+function parseColumn<T>(text: unknown, fallback: string): { ok: true; value: T } | { ok: false } {
+  try {
+    return { ok: true, value: JSON.parse((text as string) || fallback) as T };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
+ * Column row → PipelineArtifact. Pure apart from a log line (exported for unit test).
+ *
+ * One unparseable `data` / `ue_assets` blob (a bypass writer, manual SQL) must not 500 every full-row
+ * read of its catalog. The row stays VISIBLE as a `fail` whose reason says it is corrupt, and its
+ * `data` is a marked placeholder - never a silent `{}` - which {@link upsertArtifact} refuses to
+ * write back over the real blob.
+ */
 export function rowToArtifact(row: Record<string, unknown>): PipelineArtifact {
+  const data = parseColumn<Record<string, unknown>>(row.data, '{}');
+  const ue = parseColumn<string[]>(row.ue_assets, '[]');
+  const which = !data.ok ? 'data' : !ue.ok ? 'ue_assets' : null;
+  if (which) {
+    logger.error(`pipeline_artifacts: unparseable ${which} for ${String(row.catalog_id)}/${String(row.entity_id)}/${String(row.step)}`);
+  }
   return {
     catalogId: row.catalog_id as string,
     entityId: row.entity_id as string,
     step: row.step as string,
-    data: JSON.parse((row.data as string) || '{}'),
-    ueAssets: JSON.parse((row.ue_assets as string) || '[]'),
-    status: row.status as AcceptanceStatus,
-    ...(row.tier ? { tier: row.tier as AcceptanceTier } : {}),
-    ...(row.reason ? { reason: row.reason as string } : {}),
+    data: data.ok ? data.value : { [CORRUPT_KEY]: true },
+    ueAssets: ue.ok ? ue.value : [],
+    status: (which ? 'fail' : row.status) as AcceptanceStatus,
+    ...(which ? {} : row.tier ? { tier: row.tier as AcceptanceTier } : {}),
+    ...(which
+      ? { reason: `${CORRUPT_ARTIFACT_PREFIX}${which} unparseable (stored status ${String(row.status)})` }
+      : row.reason ? { reason: row.reason as string } : {}),
     ...(row.updated_at ? { updatedAt: row.updated_at as string } : {}),
   };
 }
@@ -355,6 +388,9 @@ export function deleteArtifact(catalogId: string, entityId: string, step: string
 }
 
 export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
+  if (isCorruptArtifact(a)) {
+    throw new Error(`upsertArtifact: refusing to persist the corrupt-row placeholder for ${a.catalogId}/${a.entityId}/${a.step}`);
+  }
   ensureTable();
   // The content hash is stamped HERE, in the same statement as the data it names (see
   // ensureContentHash). When the data text changed but its hash did not (a `_provenance`-only
@@ -375,7 +411,7 @@ export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
     // archive sit INSIDE the write's transaction: a write that fails rolls its archive back
     // with it, so a failed write can never leave (and a retry can never duplicate) a revision.
     const prev = getArtifact(a.catalogId, a.entityId, a.step);
-    if (prev && contentChanged(prev, a)) archive(prev);
+    if (prev && !isCorruptArtifact(prev) && contentChanged(prev, a)) archive(prev);
     db.prepare(`
       INSERT INTO pipeline_artifacts (catalog_id, entity_id, step, data, ue_assets, status, tier, reason, updated_at, content_hash)
       VALUES (@catalog_id, @entity_id, @step, @data, @ue_assets, @status, @tier, @reason, datetime('now'), @content_hash)

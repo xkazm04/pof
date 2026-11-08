@@ -95,7 +95,22 @@ export async function POST(req: NextRequest) {
   const denied = requireOperator(req);
   if (denied) return denied;
   try {
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    // An EMPTY body is {} (then the missing catalogId is the honest refusal); an unparseable or
+    // non-object one is refused as what it is, not misreported as a missing field.
+    const text = await req.text();
+    let body: Record<string, unknown> = {};
+    if (text.trim()) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        return apiError('settle body is not valid JSON', 400);
+      }
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        return apiError('settle body must be a JSON object', 400);
+      }
+      body = parsed as Record<string, unknown>;
+    }
     const filter = settleFilter(body);
     if (!filter) return apiError('catalogId is required — a settle is scoped to one catalog', 400);
 
