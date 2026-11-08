@@ -143,7 +143,7 @@ export function ComponentCard({ comp }: { comp: EQSComponentDef }) {
           {comp.properties.map((p) => (
             <div key={`desc-${p.name}`} className="flex gap-2 items-start">
               <span className="text-2xs font-mono text-text-muted shrink-0 w-28">{p.name}</span>
-              <span className="text-2xs text-text-muted/70">{p.description}</span>
+              <span className="text-2xs text-text-subtle">{p.description}</span>
             </div>
           ))}
         </div>

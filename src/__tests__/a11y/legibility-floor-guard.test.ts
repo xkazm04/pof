@@ -147,7 +147,6 @@ const CONTRAST_BASELINE: Record<string, Partial<Record<HitKind, number>>> = {
   'modules/evaluator/WorkflowOrchestratorView/ExecutionHistoryRow.tsx': { text: 2 },
   'modules/evaluator/WorkflowOrchestratorView/constants.ts': { text: 1 },
   'modules/game-systems/BuildHistoryDashboard/SortableHeader.tsx': { icons: 1 },
-  'modules/game-systems/EQSComponentInventory/ComponentCard.tsx': { text: 1 },
   'modules/project-setup/BidirectionalStateSyncPanel/PropertyEditorRow.tsx': { text: 1 },
   'modules/project-setup/BidirectionalStateSyncPanel/SyncLogSection.tsx': { text: 2 },
   'modules/project-setup/BlueprintInspector/index.tsx': { text: 2, icons: 1 },
