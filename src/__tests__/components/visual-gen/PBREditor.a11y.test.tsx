@@ -24,3 +24,11 @@ describe('PBREditor — texture slot upload is keyboard reachable', () => {
     expect(input.getAttribute('aria-label')).toBe(`Upload ${LABELS[channel]} map`);
   });
 });
+
+describe('PBREditor — texture slot clear button is named', () => {
+  it.each(CHANNELS)('%s: the icon-only clear button has an accessible name', (channel) => {
+    useMaterialStore.setState({ [`${channel}Texture`]: `/maps/${channel}.png` });
+    render(<PBREditor />);
+    expect(screen.getByRole('button', { name: `Clear ${LABELS[channel]} map` })).toBeTruthy();
+  });
+});

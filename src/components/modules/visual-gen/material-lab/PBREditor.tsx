@@ -132,10 +132,13 @@ function TextureSlot({
       </div>
       {textureUrl && (
         <button
+          type="button"
           onClick={() => setTexture(channel, null)}
-          className="text-text-muted hover:text-text"
+          aria-label={`Clear ${label} map`}
+          title={`Clear ${label} map`}
+          className="focus-ring rounded text-text-muted hover:text-text"
         >
-          <X size={12} />
+          <X size={12} aria-hidden />
         </button>
       )}
     </div>
