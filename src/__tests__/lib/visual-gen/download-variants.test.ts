@@ -159,3 +159,29 @@ describe('case 6 — a flat-saved glTF still finds its textures and buffer', () 
     expect(JSON.stringify(input)).toBe(before);
   });
 });
+
+describe('ambientCgVariants — a malformed link is isolated to its variant', () => {
+  it('a relative downloadLink with no fileName does not throw and the other variants survive', () => {
+    const dl = (attribute: string, downloadLink: string) => ({ attribute, downloadLink, size: 10, filetype: 'zip' });
+    const row = {
+      downloadFolders: {
+        f: {
+          downloadFiletypeCategories: {
+            zip: {
+              downloads: [
+                dl('1K-JPG', 'https://ambientcg.com/get?file=Good_1K-JPG.zip'),
+                dl('2K-JPG', '/get?file=Rel_2K-JPG.zip'),
+                dl('4K-JPG', 'http://'),
+              ],
+            },
+          },
+        },
+      },
+    };
+    let variants: ReturnType<typeof ambientCgVariants> = [];
+    expect(() => { variants = ambientCgVariants(row); }).not.toThrow();
+    expect(variants.map((v) => v.label)).toEqual(['1K-JPG', '2K-JPG', '4K-JPG']);
+    expect(variants[0].files[0].path).toBe('Good_1K-JPG.zip');
+    expect(variants[1].files[0].path).toBe('Rel_2K-JPG.zip');
+  });
+});

@@ -68,6 +68,15 @@ export interface AmbientCgDownloadRow {
 
 const basename = (p: string) => p.slice(p.lastIndexOf('/') + 1);
 
+/** The `file` query param of a download link; a relative or malformed link reads as absent, not as a throw. */
+function fileParam(link: string): string | null {
+  try {
+    return new URL(link, 'https://ambientcg.com').searchParams.get('file');
+  } catch {
+    return null;
+  }
+}
+
 /** Every package ambientCG lists for the row, in API order, each with its size. */
 export function ambientCgVariants(row: AmbientCgDownloadRow): DownloadVariant[] {
   const out: DownloadVariant[] = [];
@@ -80,7 +89,7 @@ export function ambientCgVariants(row: AmbientCgDownloadRow): DownloadVariant[] 
         const label = seen.has(d.attribute) ? `${d.attribute} ${format}` : d.attribute;
         seen.add(d.attribute);
         const bytes = d.size ?? 0;
-        const path = d.fileName || new URL(d.downloadLink).searchParams.get('file') || basename(d.downloadLink);
+        const path = d.fileName || fileParam(d.downloadLink) || basename(d.downloadLink);
         out.push({
           id: label, label, format,
           resolution: /^(\d+K)/i.exec(d.attribute)?.[1].toLowerCase() ?? d.attribute,
