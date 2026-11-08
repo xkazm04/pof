@@ -9,7 +9,7 @@ import { cleanup, render, renderHook, act, screen, fireEvent } from '@testing-li
 import type { PofTestSpec } from '@/types/pof-bridge';
 
 vi.mock('@/hooks/useTestRunner', () => ({
-  useTestRunner: () => ({ runTest: vi.fn(), results: [], isRunning: false, error: null, clearResults: vi.fn() }),
+  useTestRunner: () => ({ runTest: vi.fn(), results: [], isRunning: false, error: null, clearResults: vi.fn(), abort: vi.fn() }),
 }));
 
 vi.mock('@/hooks/useSnapshots', () => ({

@@ -12,7 +12,7 @@ import { deriveSuiteStatus, generateId, parseScenariosDraft } from './helpers';
 const SNAPSHOT_DIFF_THRESHOLD = 0.5;
 
 export function useTestHarnessPanel() {
-  const { runTest, results: testResults, isRunning: isTestRunning, error: testError, clearResults } = useTestRunner();
+  const { runTest, results: testResults, isRunning: isTestRunning, error: testError, clearResults, abort: abortTest } = useTestRunner();
   const { capture, acceptBaselines, diffReport, isCapturing, error: snapError, refreshDiff } = useSnapshots();
 
   // ── Suites ──
@@ -209,7 +209,8 @@ export function useTestHarnessPanel() {
 
   const abortRun = useCallback(() => {
     runAbortRef.current = true;
-  }, []);
+    abortTest();
+  }, [abortTest]);
 
   // ── Render helpers ──
 

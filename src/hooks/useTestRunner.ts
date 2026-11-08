@@ -21,6 +21,8 @@ const TEST_POLL_TIMEOUT = 120_000;
 
 interface UseTestRunnerResult {
   runTest: (spec: PofTestSpec) => Promise<PofTestResult | null>;
+  /** Ends the in-flight poll at its next wake (within one TEST_POLL_INTERVAL); the run resolves null. */
+  abort: () => void;
   results: PofTestResult[];
   isRunning: boolean;
   error: string | null;
@@ -124,6 +126,10 @@ export function useTestRunner(): UseTestRunnerResult {
     return finalResult;
   }, [pollForResult, isMounted]);
 
+  const abort = useCallback(() => {
+    abortRef.current = true;
+  }, []);
+
   // ── Clear results ──────────────────────────────────────────────────────────
 
   const clearResults = useCallback(() => {
@@ -133,6 +139,7 @@ export function useTestRunner(): UseTestRunnerResult {
 
   return {
     runTest,
+    abort,
     results,
     isRunning,
     error,
