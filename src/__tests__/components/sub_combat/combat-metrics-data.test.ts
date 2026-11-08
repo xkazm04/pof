@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   EFFECTIVENESS_DATA, DMG_TYPES, ARMOR_TYPES,
 } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
+import * as dataMetrics from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 
 // Shared combat-metrics data is internally consistent: what one field says, the
 // others agree with (scan-sweep night 2026-11-08, combat-metrics).
@@ -32,5 +33,20 @@ describe('damage-type effectiveness heatmap', () => {
       }
     }
     expect(inversions).toEqual([]);
+  });
+});
+
+describe('data-metrics export surface', () => {
+  // Zero-consumer exports (repo-wide grep, 2026-11-08): sample data nothing renders.
+  // Re-adding one means re-adding a consumer first.
+  it('carries no orphaned sample exports', () => {
+    const orphans = ['HIT_ACCURACY_GAUGE', 'ABILITY_USAGE', 'STAGGER_PIPELINE_STEPS', 'WEAPON_COUNT', 'COMBO_COUNT', 'WEAPON_METADATA'];
+    expect(orphans.filter((k) => k in dataMetrics)).toEqual([]);
+  });
+
+  it('keeps the exports the combat tabs read', () => {
+    for (const k of ['WEAPONS', 'WEAPON_GROUPINGS', 'WEAPON_ROSTER', 'COMBO_SEQUENCES', 'KPI_CARDS', 'SANKEY_COLUMNS', 'SANKEY_FLOWS', 'HITSTOP_ABILITIES', 'MAX_HITSTOP', 'STAGGER_CONFIG', 'STAGGER_TIMELINE', 'COMBO_SECTIONS', 'EFFECTIVENESS_DATA']) {
+      expect(k in dataMetrics, k).toBe(true);
+    }
   });
 });

@@ -2,8 +2,8 @@ import {
   STATUS_ERROR, STATUS_NEUTRAL,
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
-import type { EntityMetadata, EntityGrouping } from '@/types/game-metadata';
-import type { HeatmapCell, TimelineEvent, SankeyLink, SankeyColumn, PieSlice, GaugeMetric } from '@/types/unique-tab-improvements';
+import type { EntityGrouping } from '@/types/game-metadata';
+import type { HeatmapCell, TimelineEvent, SankeyLink, SankeyColumn } from '@/types/unique-tab-improvements';
 import { parseDamageRange, weaponRoster } from '@/lib/combat/weapon-throughput';
 
 /* ── Weapon Categories & Tiers ─────────────────────────────────────────── */
@@ -103,19 +103,6 @@ export const WEAPONS: Weapon[] = [
   w('pl-celestial', 'Celestial Partisan',      'Polearm','Legendary','26-38', '1.6s', '13%', 'Holy reach weapon with AoE smite on finisher.'),
 ];
 
-/** Weapon count by category for quick reference. */
-export const WEAPON_COUNT = WEAPONS.length;
-
-/* ── Weapon Metadata for ScalableSelector ──────────────────────────────── */
-
-export const WEAPON_METADATA: EntityMetadata[] = WEAPONS.map((wp) => ({
-  id: wp.id,
-  name: wp.name,
-  category: wp.category,
-  tier: wp.tier,
-  tags: [wp.category.toLowerCase(), wp.tier.toLowerCase(), ...(wp.element ? [wp.element.toLowerCase()] : [])],
-}));
-
 export const WEAPON_GROUPINGS: EntityGrouping[] = [
   { field: 'category', label: 'Category', order: ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'] },
   { field: 'tier', label: 'Tier', order: ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'] },
@@ -180,8 +167,6 @@ export const COMBO_SEQUENCES: ComboSequence[] = [
   { id: 'cb-pl-whirl',   name: 'Polearm Cyclone',       weaponCategory: 'Polearm', hits: 4, totalTime: '2.5s', dps: 275, chain: ['Spin', 'Spin', 'Thrust', 'Slam'] },
   { id: 'cb-pl-dragon',  name: 'Dragon Dance',          weaponCategory: 'Polearm', hits: 5, totalTime: '3.0s', dps: 295, chain: ['Thrust', 'Sweep', 'Vault', 'Dive', 'Impale'] },
 ];
-
-export const COMBO_COUNT = COMBO_SEQUENCES.length;
 
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 
@@ -330,21 +315,6 @@ export const KPI_CARDS: KPICard[] = [
   { label: 'Avg Combo Length', value: '2.3', barPct: 46, barColor: ACCENT_VIOLET, context: 'Mean hits per combo chain (max 5)' },
 ];
 
-export const HIT_ACCURACY_GAUGE: GaugeMetric = {
-  label: 'Hit Accuracy',
-  current: 73,
-  target: 100,
-  unit: '%',
-  trend: 'up',
-};
-
-export const ABILITY_USAGE: PieSlice[] = [
-  { label: 'MeleeAttack', pct: 45, color: ACCENT_ORANGE },
-  { label: 'Dodge', pct: 25, color: ACCENT_CYAN },
-  { label: 'Fireball', pct: 20, color: STATUS_ERROR },
-  { label: 'Other', pct: 10, color: STATUS_NEUTRAL },
-];
-
 /* ── Stagger & Status Effect data ─────────────────────────────────────── */
 
 export const STAGGER_CONFIG = {
@@ -352,8 +322,6 @@ export const STAGGER_CONFIG = {
   threshold: 100,
   decayRate: 5,
 };
-
-export const STAGGER_PIPELINE_STEPS = ['Hits Accumulate', 'Threshold Reached', 'Stun Triggered', 'Recovery'];
 
 export const STAGGER_TIMELINE: TimelineEvent[] = [
   { id: 'st1', timestamp: 0, label: '+15', category: 'hit', color: ACCENT_ORANGE, duration: 0.3 },
