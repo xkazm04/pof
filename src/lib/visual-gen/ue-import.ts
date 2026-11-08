@@ -41,6 +41,26 @@ export interface UeImportResult {
 
 type RunExperimentFn = (spec: ExperimentSpec, deps?: RunnerDeps) => Promise<ExperimentResult>;
 
+const UE_CONTENT_PATH = /^\/[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*$/;
+const UE_ASSET_NAME = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Why these strings cannot be written into the import python, or undefined when they can.
+ * All three land inside single-quoted python literals that the editor executes, so a quote or
+ * a newline is code, not a bad name. The folder and name also have to be legal UE package
+ * segments; the file path only has to stay inside its literal (spaces are fine there).
+ */
+function unsafeImportInput(glbPath: string, destPath?: string, assetName?: string): string | undefined {
+  if (/['\r\n]/.test(glbPath)) return `glbPath contains a quote or newline: ${JSON.stringify(glbPath)}`;
+  if (destPath !== undefined && !UE_CONTENT_PATH.test(destPath)) {
+    return `destPath is not a content path like /Game/Generated: ${JSON.stringify(destPath)}`;
+  }
+  if (assetName !== undefined && !UE_ASSET_NAME.test(assetName)) {
+    return `assetName may only hold letters, digits, _ and -: ${JSON.stringify(assetName)}`;
+  }
+  return undefined;
+}
+
 /** Import a generated .glb into the connected UE project. `runExperimentFn` is injectable
  * for tests; defaults to the real Experiment Lab runner (launches the editor). */
 export async function importGlbToUE(
@@ -55,6 +75,9 @@ export async function importGlbToUE(
     runExperimentFn?: RunExperimentFn;
   } = {},
 ): Promise<UeImportResult> {
+  const unsafe = unsafeImportInput(glbPath, opts.destPath, opts.assetName);
+  if (unsafe) return { ok: false, error: `import refused before launching the editor: ${unsafe}`, logs: [] };
+
   const run = opts.runExperimentFn ?? runExperiment;
   const res = await run({
     python: buildGlbImportPython(glbPath, opts.destPath, opts.assetName, {
