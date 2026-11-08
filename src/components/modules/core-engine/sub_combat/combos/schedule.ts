@@ -28,8 +28,10 @@ export interface ComboScheduleOptions {
 
 export interface ScheduledCast {
   ability: ComboAbility;
-  /** Position within its own pass of the chain (0 = the opener). */
+  /** Position within its own pass of the chain (0 = the opener). Unknown ids are skipped, so this counts resolved casts only. */
   index: number;
+  /** Position of this cast's id in the RAW chain passed in (what a remove must target). */
+  chainIndex: number;
   /** Loop number (0 for a one-pass schedule). */
   loop: number;
   start: number;
@@ -93,23 +95,25 @@ export function comboCastDamage(ability: ComboAbility, multiplier: number, defen
 
 function run(ids: readonly string[], loops: number, opts: ComboScheduleOptions) {
   const table = opts.abilities ?? COMBO_ABILITY_MAP;
-  const chain = ids.map(id => table.get(id)).filter((a): a is ComboAbility => !!a);
+  const chain = ids
+    .map((id, chainIndex) => ({ ability: table.get(id), chainIndex }))
+    .filter((e): e is { ability: ComboAbility; chainIndex: number } => !!e.ability);
   const readyAt = new Map<string, number>();
   const casts: ScheduledCast[] = [];
   const loopEnds: number[] = [];
   /** Per loop end: each distinct ability's remaining cooldown, i.e. the schedule's whole carried state. */
   const states: number[][] = [];
-  const stateIds = [...new Set(chain.map(a => a.id))].sort();
+  const stateIds = [...new Set(chain.map(e => e.ability.id))].sort();
   let t = 0;
   for (let loop = 0; loop < loops; loop++) {
-    chain.forEach((ability, index) => {
+    chain.forEach(({ ability, chainIndex }, index) => {
       const ready = readyAt.get(ability.id) ?? 0;
       const waited = ready > t ? ready - t : 0;
       const start = t + waited;
       const multiplier = comboMultiplierAt(ability, index);
       const end = start + ability.animDuration;
       casts.push({
-        ability, index, loop, start, end, waited,
+        ability, index, chainIndex, loop, start, end, waited,
         waitedOn: waited > 0 ? ability.id : null,
         multiplier,
         damage: comboCastDamage(ability, multiplier, opts.defense),

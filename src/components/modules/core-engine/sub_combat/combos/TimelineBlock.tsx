@@ -60,7 +60,7 @@ export function TimelineBlock({
       {/* Icon-only and hover-revealed: name it, and reveal it on keyboard focus too. */}
       <button
         type="button"
-        onClick={() => onRemove(index)}
+        onClick={() => onRemove(cast.chainIndex)}
         aria-label={`Remove ${ability.name} from the combo (step ${index + 1})`}
         className={`absolute -top-1.5 -right-1.5 z-20 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer ${FOCUS_RING_CLASS}`}
         style={{ backgroundColor: ACCENT_RED, color: OVERLAY_WHITE, ...focusRingStyle(ACCENT_RED) }}
