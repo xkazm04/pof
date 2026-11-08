@@ -155,7 +155,7 @@ export const OPACITY_90 = 'e6';
 
 /** Default border opacity — visible but not heavy (20%) */
 export const BORDER_DEFAULT = OPACITY_20;
-/** Hover border opacity — stronger emphasis on interaction (37%) */
+/** Hover border opacity — stronger emphasis on interaction (40%) */
 export const BORDER_HOVER = OPACITY_37;
 /** Subtle border opacity — faint structural hints (10%) */
 export const BORDER_SUBTLE = OPACITY_10;
