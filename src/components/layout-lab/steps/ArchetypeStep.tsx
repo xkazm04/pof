@@ -475,7 +475,9 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   let panels: StepPanel[];
   if (spec.view.kind === 'gallery') {
     const sel = selectedCandidate(history);
-    const assetPath = produced.ueAssets?.[0];
+    // The target the STORED artifact records — not the template `produced` would write. A row
+    // from the MCP submit path or a headless drain can carry a selection and no ueAssets.
+    const assetPath = art?.ueAssets?.[0];
     // A generated 3D candidate carries a served .glb URL — render it interactively so the
     // step is visually verifiable (rotate/zoom the real mesh, not just the preview render).
     const glbUrl = typeof sel?.payload?.glbUrl === 'string' ? sel.payload.glbUrl : null;
@@ -506,9 +508,13 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
               ? `Real generated asset for this step: ${sel.caption ?? 'generated image'}`
               : 'Deterministic seed preview — not the generated asset.'}
           </span>
-          {sel && assetPath
-            ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ asset target: {assetPath} <span style={{ color: t.muted }}>(written by the drain)</span></span>
-            : <span style={{ fontSize: 14, color: t.muted }}>Pick a candidate; the choice + its prompt persist. The asset is written to that path when the gate drain runs.</span>}
+          <span data-testid="gallery-asset-target" style={{ display: 'contents' }}>
+            {sel && assetPath
+              ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ asset target: {assetPath} <span style={{ color: t.muted }}>(written by the drain)</span></span>
+              : sel
+                ? <span style={{ fontSize: 14, color: t.warn }}>This artifact records no asset target — re-run Produce to stamp one before the gate drain runs.</span>
+                : <span style={{ fontSize: 14, color: t.muted }}>Pick a candidate; the choice + its prompt persist. The asset is written to that path when the gate drain runs.</span>}
+          </span>
         </div>
       ) },
       { label: 'Produce', node: cli((ctx) => generate(ctx?.direction ?? spec.defaultDirection ?? '', ctx?.prompt ?? buildPrompt(spec.defaultDirection ?? ''))) },
