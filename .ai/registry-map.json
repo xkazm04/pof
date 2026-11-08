@@ -4740,7 +4740,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/iconSetRun.ts:12 The icon-set runner posts every planned paid contact sheet in turn with no local reservation and no stop latch, so a quota or rate-limit failure on one sheet does not stop the next paid dispatch.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "repository-landing-document",
@@ -5156,7 +5160,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/AssetRow.tsx:29 Clicking Acquire records only the asset's id and name, even though `asset.source` is available in the same component, so no source and no licence are ever written; the acquired list then shows a green 'Integration ready' badge and no licence line, so an unknown licence reads as no restriction.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "concept-scene-parity",
@@ -27352,7 +27360,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_tripo_smartlowpoly_arena.ts:256 The arena sends one paid Tripo task after another with no local ledger and no stop latch; a failed task, including a quota or 429 failure, is recorded as ok:false and the loop dispatches the next paid task, with only a human abort to stop it.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "generated-mesh-acceptance",
@@ -28609,7 +28621,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/reference-conformance.ts:127 The vision grader's SEVERITY value is clamped into 0..3 instead of being failed closed, so an out-of-schema reply such as SEVERITY=-1 becomes 0 and grades as `match`.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "cross-runtime-rules-conformance",
@@ -28739,7 +28755,11 @@
           "revision": 8,
           "changedAt": "2026-10-26",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/generated-assets.ts:146 Each gallery entry's origin is taken from the folder it sits in. The allow-list includes `converted` (operator FBX files) and `mcp` (provider downloads), so a file that was brought in is listed as a GeneratedAsset with no acquisition record or licence.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b031449ec8fc69c2",
+          "evaluatedRevision": 8
         },
         {
           "subject": "repository-landing-document",

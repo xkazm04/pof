@@ -21750,22 +21750,17 @@
       "context": "asset-visual-studio",
       "subject": "generative-artifact-gating",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:41:44.392Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:02:55.212Z",
+      "worker": "47fd58a7-3bc2-46ba-a2f5-54a88ffcaf63",
       "techniques": [
         {
           "technique": "acquired-is-not-generated",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/AssetScoutView/AssetRow.tsx:29 Acquired assets are recorded as acquired and never fill a slot a generator also fills in this context, so the technique's precondition does not hold."
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/AssetScoutView/AssetRow.tsx:29 The acquisition record is written without source, price or licence. `AcquiredAsset.licence` exists in src/types/marketplace.ts, but no code fills it in. AcquiredAssetsList.tsx:42 still shows a success-variant 'Integration ready' badge, where the technique wants a deferral that names the missing licence."
         }
-      ],
-      "withdrawn": {
-        "worker": "eda8e2fc-8d58-4fe2-801a-11cec23b0ca9",
-        "state": "not-applicable",
-        "at": "2026-11-07T03:42:20.400869+00:00",
-        "reason": "reviewer (sonnet): The claim that there is no generator is contradicted by the code. AssetRow.tsx:32-43 calls generateIntegration ('Generate Adapter'), and IntegrationView.tsx shows scaffold warnings for the generated code. The anchor at :29 is only the manual handleAcquire line, so it does not show the precondition i"
-      }
+      ]
     },
     "a5282390-b3a3-4015-90c9-7ff9f7481788/generative-artifact-gating": {
       "context": "visual-gen-quality-and-animation",
@@ -22913,6 +22908,106 @@
           "evidence": "scripts/visual-gen/pof_mesh_finish.py:487 An unmeasured UV stretch emits its own marker rather than a 0. A smaller lapse in the see-through script: lines 147-148 coerce a None backface_share to 0 when computing rest/posed max."
         }
       ]
+    },
+    "aece38a1-8119-45ea-a968-6441cb31ee70/generative-artifact-gating": {
+      "context": "asset-forge",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:02:55.212Z",
+      "worker": "47fd58a7-3bc2-46ba-a2f5-54a88ffcaf63",
+      "techniques": [
+        {
+          "technique": "reserve-before-dispatch-stop-latch",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/iconSetRun.ts:12 The loop at line 98 marks any non-400 error as 'failed' and keeps going. Nothing latches on quota or 429 evidence, and there is no per-window or per-slot cap. This is the failure mode the technique names: 'the loop that finds the ceiling by hitting it'."
+        },
+        {
+          "technique": "placeholder-is-not-an-asset",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/forgeJobStatus.ts:160 A completed job with no `accepted` and no `ungated` field is shown as the green 'complete' state, so the absence of a verdict counts as a pass ('green by default'). The file's own comment at line 101 says a path that projects none of these fields 'silently read[s] as passes'. The client side, though, removed its placeholder branch (GenerationPanel.tsx:132)."
+        },
+        {
+          "technique": "gate-before-every-credit-spend",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:78 Every image-to-3D submit passes the Tier-0 input gate before the provider call. A failing image is refused before any spend, and a gate that could not run is surfaced through `inputGateNote` instead of being treated as a pass."
+        },
+        {
+          "technique": "generation-history-as-artifact",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-forge/forgeJobStatus.ts:2 This meets the single-source rule: the route's projection and the client's consumption read one shared shape, so they cannot drift. The shape carries attempts, accepted, ungated and gateReason."
+        }
+      ]
+    },
+    "9a11b0c7-a013-434b-8325-086ee4151f70/generative-artifact-gating": {
+      "context": "visual-gen-style-asset-library",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:02:55.212Z",
+      "worker": "47fd58a7-3bc2-46ba-a2f5-54a88ffcaf63",
+      "techniques": [
+        {
+          "technique": "acquired-is-not-generated",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/generated-assets.ts:146 Origin is inferred from storage location, which the technique explicitly forbids. The separate CC0 library (asset-sources.ts:34 `license: 'CC0'`, asset-library-db.ts) does record source and licence when downloading, but the generated-asset gallery has no declared origin at all."
+        },
+        {
+          "technique": "generation-history-as-artifact",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/generated-assets.ts:19 Re-roll attempts survive only as `_aN` filename suffixes. No record says which candidate was kept or discarded, so a delivered mesh cannot be told apart from a rejected attempt."
+        },
+        {
+          "technique": "placeholder-is-not-an-asset",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/style-dna-job-store.ts:76 A failed Style DNA distillation ends as an error with its reason. No empty stand-in profile is saved and later injected into generation prompts."
+        }
+      ]
+    },
+    "c120fef4-1da4-432b-9fac-7abb92a27830/generative-artifact-gating": {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:02:55.212Z",
+      "worker": "47fd58a7-3bc2-46ba-a2f5-54a88ffcaf63",
+      "techniques": [
+        {
+          "technique": "reserve-before-dispatch-stop-latch",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_tripo_smartlowpoly_arena.ts:256 There is no reservation under a lock, no cap and no durable latch. Related: pof_leonardo.mjs:83 deletes the cloud generation in `finally` even when the poll timed out (line 72), which destroys the provider-side evidence of a call whose outcome is unknown. pof_tripo.mjs:14 `--resume ... never re-buy it` does follow the 'charge the uncertain, do not re-dispatch' rule."
+        }
+      ]
+    },
+    "2fb73390-0315-4551-953a-09c67b495733/generative-artifact-gating": {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "generative-artifact-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:02:55.212Z",
+      "worker": "47fd58a7-3bc2-46ba-a2f5-54a88ffcaf63",
+      "techniques": [
+        {
+          "technique": "generator-failure-deterministic-gates",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/reference-conformance.ts:127 The rule is that a schema violation fails closed and an out-of-range value is ungraded; clamping guesses on the model's behalf. One mitigation: the verdict is advisory only and is not folded into pass/fail (line 29)."
+        },
+        {
+          "technique": "declare-the-producer-per-asset-class",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/linear-prop-routing.ts:5 Linear props (rope and similar) have a declared constructed producer. Prompts for that class are refused before the generator and sent to the procedural `linear-prop` route."
+        },
+        {
+          "technique": "gate-before-every-credit-spend",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/linear-prop-routing.ts:58 The shape-route gate runs on the input before the paid generate call; the refusal text states that no generation was spent."
+        }
+      ],
+      "registryProposal": "In generator-failure-deterministic-gates, 'a schema violation fails closed' could name clamping into the valid range explicitly as a failure. It is the most common way parsers quietly turn an out-of-range value into an in-range verdict."
     }
   }
 }
