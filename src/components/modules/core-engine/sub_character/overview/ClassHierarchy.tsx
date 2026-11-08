@@ -92,11 +92,14 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
           className="relative flex items-center gap-2 group cursor-default"
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
+          onFocus={() => setHovered(true)}
+          onBlur={() => setHovered(false)}
           whileHover={{ scale: 1.02 }}
         >
           {/* Class name chip */}
           <span
-            className="relative text-sm font-mono font-bold px-3 py-1.5 rounded-md border transition-all overflow-hidden"
+            tabIndex={node.headerFile ? 0 : undefined}
+            className="relative text-sm font-mono font-bold px-3 py-1.5 rounded-md border transition-all overflow-hidden focus-ring"
             style={{
               borderColor: withOpacity(node.color, OPACITY_25),
               backgroundColor: withOpacity(node.color, OPACITY_8),

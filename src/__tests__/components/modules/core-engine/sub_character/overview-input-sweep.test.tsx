@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, cleanup, fireEvent, act } from '@testing-library/react';
+import { render, cleanup, fireEvent, act, waitFor } from '@testing-library/react';
 import { AbilityQuickPicker } from '@/components/modules/core-engine/sub_character/input/AbilityQuickPicker';
 import { COMBO_ABILITIES } from '@/components/modules/core-engine/sub_ability/_shared/data';
 
@@ -71,6 +71,20 @@ describe('Features-tab metrics read the persisted feel stack', () => {
       expect(container.textContent).toContain(`${preset.profile.dodge.distance / 100}m`);
       unmount();
     }
+  });
+});
+
+describe('Class tree header-file tooltip is reachable by keyboard', () => {
+  it('focusing a class chip shows its header path; blur hides it', async () => {
+    const { container, queryByText, getByText } = render(<ClassHierarchy />);
+    const header = 'Engine/Source/Runtime/Engine/Classes/GameFramework/Character.h';
+    expect(queryByText(header)).toBeNull();
+    const chip = getByText('ACharacter');
+    expect(chip.getAttribute('tabindex')).toBe('0');
+    act(() => { chip.focus(); });
+    expect(queryByText(header)).not.toBeNull();
+    act(() => { chip.blur(); });
+    await waitFor(() => expect(container.textContent).not.toContain(header));
   });
 });
 
