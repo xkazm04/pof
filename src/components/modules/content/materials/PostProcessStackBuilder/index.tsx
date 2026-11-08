@@ -269,7 +269,10 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
 
         {/* Blender result */}
         {blenderResult && (
-          <div className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+          <div
+            role={blenderResult.isError ? 'alert' : 'status'}
+            data-testid="pp-blender-result"
+            className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
             {blenderResult.message}
           </div>
         )}
