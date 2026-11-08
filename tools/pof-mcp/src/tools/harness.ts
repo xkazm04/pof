@@ -22,6 +22,11 @@ export const HARNESS_TOOLS: ToolDef[] = [
           description:
             'Force a NEW forked run (new runId, parentRunId recorded) even when the statePath holds a resumable run. Default is resume-not-fork.',
         },
+        replacePaused: {
+          type: 'boolean',
+          description:
+            'Start at a different statePath even though a PAUSED run exists, orphaning that run. Without it the server answers 409 and names the paused run; prefer resuming it.',
+        },
         maxIterations: { type: 'number' },
         targetPassRate: {
           type: 'number',
@@ -90,6 +95,7 @@ export const HARNESS_TOOLS: ToolDef[] = [
         ueVersion: reqStr(args, 'ueVersion'),
         ...(optStr(args, 'statePath') != null ? { statePath: optStr(args, 'statePath') } : {}),
         ...(args.fork === true ? { fork: true } : {}),
+        ...(args.replacePaused === true ? { replacePaused: true } : {}),
         ...(optNum(args, 'maxIterations') != null ? { maxIterations: optNum(args, 'maxIterations') } : {}),
         ...(optNum(args, 'targetPassRate') != null ? { targetPassRate: optNum(args, 'targetPassRate') } : {}),
         ...(optStr(args, 'passRateBasis') != null ? { passRateBasis: optStr(args, 'passRateBasis') } : {}),
