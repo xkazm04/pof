@@ -1,7 +1,7 @@
 'use client';
 import { getModuleChecklist } from '@/lib/module-registry';
 
-import { useState, useCallback, useMemo, useReducer } from 'react';
+import { useState, useCallback, useMemo, useReducer, useRef } from 'react';
 import { toast } from 'sonner';
 import { useDesignDocument } from '@/hooks/useDesignDocument';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -244,10 +244,15 @@ export function useLevelDesignView() {
 
   // ── Handlers ──
 
+  // Single-flight: the Create button disables on isCreating, but Enter in the
+  // name input calls this directly, and state lags a second keypress — a ref does not.
+  const creatingRef = useRef(false);
   const handleCreateDoc = useCallback(async () => {
-    if (!newDocName.trim()) return;
+    if (!newDocName.trim() || creatingRef.current) return;
+    creatingRef.current = true;
     setIsCreating(true);
     const result = await createDoc({ name: newDocName.trim(), description: '' });
+    creatingRef.current = false;
     setIsCreating(false);
     if (!result.ok) {
       toast.error(`Could not create the level design: ${result.error}`);

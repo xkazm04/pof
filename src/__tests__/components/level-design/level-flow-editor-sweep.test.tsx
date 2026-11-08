@@ -136,3 +136,19 @@ describe('a room type the editor does not know degrades instead of crashing the 
     expect(document.querySelector('[data-room-node="r1"]')).not.toBeNull();
   });
 });
+
+describe('creating a document is single-flight', () => {
+  it('two Enters while the POST is in flight create ONE document', async () => {
+    let release!: () => void;
+    const hold = new Promise<void>((r) => { release = r; });
+    const api = installApi([DOC], hold);
+    render(<LevelDesignView />);
+    const input = await screen.findByPlaceholderText('New level design...');
+    fireEvent.change(input, { target: { value: 'Drowned Abbey' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    release();
+    await new Promise((r) => setTimeout(r, 30));
+    expect(api.posts()).toHaveLength(1);
+  });
+});
