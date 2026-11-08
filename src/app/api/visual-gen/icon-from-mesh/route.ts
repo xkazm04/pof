@@ -4,6 +4,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { renderIconFromMesh } from '@/lib/visual-gen/icon-from-mesh';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/visual-gen/icon-from-mesh
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
     }
     if (!existsSync(meshPath)) return apiError(`mesh not found at ${meshPath}`, 400);
 
+    const startedAt = Date.now();
     const result = await renderIconFromMesh({
       meshPath,
       catalogId,
@@ -80,6 +82,12 @@ export async function POST(request: NextRequest) {
     // A render that produced no icon is an ERROR envelope carrying its reason, not a
     // success carrying `ok: false` — a caller reading `success` must not also have to
     // read `ok` to find out that nothing was written.
+    // One structured line per outcome: provider, status, duration. Never the mesh path or error text.
+    (result.ok ? logger.info : logger.warn)('[visual-gen/icon-from-mesh] outcome', {
+      provider: 'blender',
+      status: result.ok ? 200 : 500,
+      ms: Date.now() - startedAt,
+    });
     if (!result.ok) return apiError(result.error ?? result.reason, 500);
     return apiSuccess(result);
   } catch (e) {

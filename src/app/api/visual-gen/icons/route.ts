@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { stat } from 'node:fs/promises';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { dirStamp } from '@/app/api/visual-gen/_lib/generatedFiles';
 import { iconsFor, type GeneratedIcon } from '@/lib/visual-gen/generated-icons';
 import { ICON_LISTING_CACHE_KEY, iconLibraryDir, readIconLibrary } from '@/lib/visual-gen/icon-library';
 import { readListingCache, writeListingCache } from '@/lib/visual-gen/generated-assets';
@@ -39,6 +39,11 @@ export async function GET(req: NextRequest) {
   const step = q.get('step');
   const entityId = q.get('entityId');
   const slug = q.get('slug');
+  // A half-given filter is a malformed query, not "no filter": answering it with the whole
+  // library would hand another catalog's art back under a 200. Only the pair filters.
+  if (!slug && (catalogId || step || entityId) && !(catalogId && step)) {
+    return apiError('a filtered icon lookup needs both catalogId and step (entityId is optional)', 400);
+  }
   try {
     const all = await listIcons(dir);
     if (all === null) return apiSuccess({ icons: [] }); // dir absent → empty gallery, not an error
@@ -50,15 +55,6 @@ export async function GET(req: NextRequest) {
     return apiSuccess({ icons: all });
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'failed to list icons', 500);
-  }
-}
-
-/** The directory's own mtime — the stamp the listing cache revalidates against. */
-async function dirStamp(dir: string): Promise<number | null> {
-  try {
-    return (await stat(dir)).mtimeMs;
-  } catch {
-    return null;
   }
 }
 

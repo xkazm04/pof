@@ -90,7 +90,13 @@ type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
  * face limit is sent to the generator as its native decimation target, and the delivery
  * is then graded against that same limit. `runner`/`critic` are injectable for tests;
  * default to the real `runTrellis` / `critiqueMesh`. */
-export function startTrellisJob(spec: TrellisJobSpec, runner: Runner = runTrellis, critic: Critic = critiqueMesh): string {
+export function startTrellisJob(
+  spec: TrellisJobSpec,
+  runner: Runner = runTrellis,
+  critic: Critic = critiqueMesh,
+  /** Runs once the job has settled (done or error) — the caller's hook to drop its temp input. */
+  onSettled?: () => void,
+): string {
   const id = `t2-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const faceLimit = trellisFaceLimit(spec);
   const gate = trellisGateDeps(spec.assetClass, spec.targetExtentM, faceLimit);
@@ -121,7 +127,8 @@ export function startTrellisJob(spec: TrellisJobSpec, runner: Runner = runTrelli
     .catch((e: unknown) => {
       job.error = e instanceof Error ? e.message : String(e);
       job.status = 'error';
-    });
+    })
+    .finally(() => onSettled?.());
   return id;
 }
 

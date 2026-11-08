@@ -12,6 +12,7 @@ import { commitLibraryIcon } from '@/lib/visual-gen/icon-library';
 import { styleClause, styleRequestOf } from '@/lib/visual-gen/style-apply';
 import { SHEET_DEFAULTS, SHEET_GRIDS, SHEET_PROVIDER_ID } from '@/lib/visual-gen/icon-set-plan';
 import { getDb } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 /**
  * One generation -> a whole SET of per-entity icons.
@@ -185,6 +186,7 @@ export async function POST(request: NextRequest) {
     await mkdir(outDir, { recursive: true });
     await mkdir(icons, { recursive: true });
 
+    const startedAt = Date.now();
     const result = await runContactSheet(
       { spec, catalogId, step },
       {
@@ -213,6 +215,13 @@ export async function POST(request: NextRequest) {
       },
     );
 
+    // One structured line per outcome: provider, status, duration. Never the prompt or the error text.
+    const status = result.ok ? 200 : result.refused ? 400 : 502;
+    (result.ok ? logger.info : logger.warn)('[visual-gen/contact-sheet] outcome', {
+      provider: typeof body?.providerId === 'string' ? body.providerId : SHEET_PROVIDER_ID,
+      status,
+      ms: Date.now() - startedAt,
+    });
     if (!result.ok) {
       // The uncut branch: the credit is spent and the sheet exists — hand back its url and verdict.
       const uncut = result.sheetUrl || result.verdict

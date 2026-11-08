@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { gateInputImage, parseVisionImage } from '@/lib/visual-gen/input-gate';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/visual-gen/input-gate
@@ -33,7 +34,14 @@ export async function POST(request: NextRequest) {
     const image = parseVisionImage(body.imageDataUrl);
     if (!image) return apiError('imageDataUrl must be a base64 image data URL', 400);
 
+    const startedAt = Date.now();
     const card = await gateInputImage(image, { subject: body.subject });
+    // One structured line per outcome: provider, status, duration. Never the image, subject or error text.
+    (card.ok ? logger.info : logger.warn)('[visual-gen/input-gate] outcome', {
+      provider: 'vision',
+      status: card.ok ? 200 : 502,
+      ms: Date.now() - startedAt,
+    });
     if (!card.ok) return apiError(`input gate could not run: ${card.error}`, 502);
     return apiSuccess(card);
   } catch (e) {

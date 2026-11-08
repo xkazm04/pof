@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { gateFootage, type FootagePurpose } from '@/lib/visual-gen/footage-gate';
+import { logger } from '@/lib/logger';
 
 const PURPOSES: readonly string[] = ['body', 'body+face'] satisfies FootagePurpose[];
 /** Every sampled frame goes to the paid vision call; the default is 8. */
@@ -38,7 +39,14 @@ export async function POST(request: NextRequest) {
       return apiError(`frameCount must be a whole number from 1 to ${MAX_FRAME_COUNT}`, 400);
     }
 
+    const startedAt = Date.now();
     const card = await gateFootage(body.videoPath, { purpose: body.purpose, frameCount: body.frameCount });
+    // One structured line per outcome: provider, status, duration. Never the clip path or error text.
+    (card.ok ? logger.info : logger.warn)('[visual-gen/footage-gate] outcome', {
+      provider: 'vision',
+      status: card.ok ? 200 : 502,
+      ms: Date.now() - startedAt,
+    });
     if (!card.ok) return apiError(`footage gate could not run: ${card.error}`, 502);
     return apiSuccess(card);
   } catch (e) {

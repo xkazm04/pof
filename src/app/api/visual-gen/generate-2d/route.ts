@@ -11,6 +11,7 @@ import {
 } from '@/lib/visual-gen/image-providers';
 import { applyStyle, styleRequestOf } from '@/lib/visual-gen/style-apply';
 import { getDb } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 /**
  * The in-app 2D generation front — the one prompt → image path.
@@ -82,6 +83,7 @@ export async function POST(request: NextRequest) {
     const env = process.env as Record<string, string | undefined>;
     const { prompt, ...style } = applyStyle(getDb, body?.prompt ?? '', styleRequestOf(body));
 
+    const startedAt = Date.now();
     const result = await generateTwoDImage(
       {
         prompt,
@@ -93,6 +95,13 @@ export async function POST(request: NextRequest) {
       { env, outDir: outDir() },
     );
 
+    // One structured line per outcome: provider, status, duration. Never the prompt or the error text.
+    const status = result.ok ? 200 : result.refused ? 400 : 502;
+    (result.ok ? logger.info : logger.warn)('[visual-gen/generate-2d] outcome', {
+      provider: result.providerName,
+      status,
+      ms: Date.now() - startedAt,
+    });
     if (!result.ok) {
       // 400 = the request could never have run here (unwired provider, no key, no
       // prompt); 502 = we asked a provider and it failed. Both carry the reason.

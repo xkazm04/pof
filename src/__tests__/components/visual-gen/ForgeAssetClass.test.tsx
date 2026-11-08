@@ -19,7 +19,7 @@ import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/re
 import { GenerationPanel } from '@/components/modules/visual-gen/asset-forge/GenerationPanel';
 import { GenerationQueue } from '@/components/modules/visual-gen/asset-forge/GenerationQueue';
 import { useForgeStore } from '@/components/modules/visual-gen/asset-forge/useForgeStore';
-import { jobOutcome } from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
+import { jobOutcome } from '@/lib/visual-gen/forgeJobStatus';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { resolveAssetClass } from '@/lib/visual-gen/polycount-presets';
 
