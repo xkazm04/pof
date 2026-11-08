@@ -17797,7 +17797,11 @@
           "revision": 8,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/layout-lab/NewHome.tsx:42 The homepage lab shell returns a skeleton of its own header bar, catalog rail and canvas until persist hydration reports done, and the server snapshot is always false. So the first paint shows a placeholder frame instead of the shell painted from local knowledge.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:b55c5172e3d9fac0",
+          "evaluatedRevision": 8
         },
         {
           "subject": "agent-memory",

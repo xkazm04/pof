@@ -23152,6 +23152,68 @@
         "at": "2026-11-08T03:00:15.971047+00:00",
         "reason": "reviewer (sonnet): The anchor data.ts:8 is a type-only import line that does not show any supply-chain precondition is absent (incidental), and the claim that no crossing exists is contradicted by AnimationRealityLedger.tsx, which fetches /api/animation-ledger with a projectPath via tryApiFetch, so the context reads a"
       }
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/app-shell": {
+      "context": "lab-shell-and-navigation",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:25:11.421Z",
+      "worker": "7511e160-4c55-42ca-b04b-8ef83e472112",
+      "techniques": [
+        {
+          "technique": "lazy-section-loading",
+          "verdict": "deviation",
+          "evidence": "src/components/layout-lab/NewHome.tsx:42 The shell skeletons itself. In addition, every view (CatalogMatrix, CanonView, GameHome) is statically imported into the eager frame (LayoutLab.tsx:10). Views also remount through AnimatePresence keyed on view, replaying the entrance motion on every return (LayoutLab.tsx:155)."
+        },
+        {
+          "technique": "navigation-model",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:56 Catalog, entity, step and view form one location value with one navigate door. Tree, rail, matrix, search, work queue and toast all dispatch through nav, and useLabAddress maps it to the address and history. View buttons derive active from the view value."
+        },
+        {
+          "technique": "badge-and-attention",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/CatalogTree.tsx:47 The rail counter states its predicate. It is derived (a useMemo over the server lifecycle map), and it renders an honest unknown (—) instead of a seeded zero for catalogs that have not been derived."
+        },
+        {
+          "technique": "entitlement-gating",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/LabRouteLinks.tsx:36 Surface links come from one declaration with no per-user policy. /harness is left unadvertised as an editorial choice, not a role gate. There are no tiers, flags or roles."
+        },
+        {
+          "technique": "screen-contributed-second-level",
+          "verdict": "not-applicable",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:155 Each view owns its full column (Baseline renders its own tree and rail). There is no persistent shell sidebar slot for screens to contribute to."
+        }
+      ]
+    },
+    "739c172b-ab24-4b0d-92fc-0ddcd39d5466/app-shell": {
+      "context": "holistic-quality-overview",
+      "subject": "app-shell",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:25:11.421Z",
+      "techniques": [
+        {
+          "technique": "nav-hierarchy",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/HolisticHealthView/index.tsx:204 Depth below the sub-module is page-owned tabs, which is where the standard puts a third level. It is not shell nav."
+        },
+        {
+          "technique": "navigation-model",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/UnifiedSummaryView/useUnifiedSummaryView.ts:145 As a consumer, cross-module jumps go through the shell's single navigate door instead of writing location fields directly."
+        }
+      ],
+      "withdrawn": {
+        "worker": "7511e160-4c55-42ca-b04b-8ef83e472112",
+        "state": "not-applicable",
+        "at": "2026-11-08T03:27:01.526736+00:00",
+        "reason": "reviewer (sonnet): The not-applicable leans on a technique anchor, useUnifiedSummaryView.ts:145, that belongs to UnifiedSummaryView, which is not one of this context's files. HolisticHealthView does not reference UnifiedSummaryView, and its own directory has no navigate call, so that anchor is incidental and the shell"
+      }
     }
   }
 }
