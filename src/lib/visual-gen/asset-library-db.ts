@@ -10,6 +10,7 @@
 
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import { filterLibraryAssets } from '@/lib/visual-gen/library-filter';
 import type {
   AssetSource,
   AssetCategory,
@@ -123,22 +124,14 @@ export function listLibraryAssets(db: Database.Database, filter: LibraryFilter =
     where.push('id IN (SELECT assetId FROM asset_collection_items WHERE collectionId = ?)');
     params.push(filter.collectionId);
   }
-  if (filter.query?.trim()) {
-    // The SAME haystack `library-filter.ts` searches in memory: `name` + the tags joined by
-    // spaces, as a literal substring. Matching the raw JSON tag string let `"` and `,` hit
-    // every tagged row, and an unescaped `_` / `%` was a LIKE wildcard ("rock_m" matched
-    // "rockymoss"), so the two lists the user sees for one query disagreed.
-    where.push(
-      "LOWER(name || ' ' || CASE WHEN json_valid(tags) THEN COALESCE((SELECT group_concat(value, ' ') FROM json_each(asset_library.tags)), '') ELSE '' END) LIKE ? ESCAPE '\\'",
-    );
-    const literal = filter.query.trim().toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
-    params.push(`%${literal}%`);
-  }
 
   const sql = `SELECT * FROM asset_library${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY createdAt DESC, rowid DESC`;
   const rows = db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
   const memberships = loadMemberships(db);
-  return rows.map((r) => rowToAsset(r, memberships));
+  const assets = rows.map((r) => rowToAsset(r, memberships));
+  // Text search is the in-memory filter itself, not a SQL twin of it: SQLite's LOWER and LIKE fold
+  // ASCII only, so "école" missed "École" here while the panel's filter found it.
+  return filter.query?.trim() ? filterLibraryAssets(assets, { query: filter.query }) : assets;
 }
 
 export function getLibraryAsset(db: Database.Database, id: string): LibraryAsset | null {

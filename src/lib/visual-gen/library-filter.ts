@@ -1,8 +1,8 @@
 /**
  * Pure client-side filtering for the Asset Library. The store loads the full
  * tracked set once and filters in memory so search/filter is instant (a user's
- * downloaded-asset count is small). Mirrors the SQL filter in
- * `asset-library-db.listLibraryAssets`.
+ * downloaded-asset count is small). `asset-library-db.listLibraryAssets` applies
+ * its text search through this same function.
  */
 
 import type { LibraryAsset, LibraryFilter } from '@/types/asset-library';
