@@ -160,9 +160,12 @@ export function RarityTab({ result, config, inflation }: {
 
 function RarityBreakdown({ label, sublabel, brackets, unsampled = false }: {
   label: string; sublabel: string;
-  brackets: { rarityDistribution: Record<string, number> }[];
+  brackets: { rarityDistribution: Record<string, number>; agents: number }[];
   unsampled?: boolean;
 }) {
+  // An unreached bracket carries an all-zero distribution; averaging it in would
+  // read as a measured 0% share, so only sampled brackets form the denominator.
+  const sampled = brackets.filter((b) => b.agents > 0);
   return (
     <BlueprintPanel color={ACCENT} className="p-2 text-center">
       <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">
@@ -174,8 +177,8 @@ function RarityBreakdown({ label, sublabel, brackets, unsampled = false }: {
           <span className="text-xs font-mono uppercase text-text-muted">no agent reached it</span>
         )}
         {!unsampled && RARITY_LABELS.map((r) => {
-          const avg = brackets.reduce((s, b) => s + (b.rarityDistribution[r] ?? 0), 0)
-            / Math.max(brackets.length, 1);
+          const avg = sampled.reduce((s, b) => s + (b.rarityDistribution[r] ?? 0), 0)
+            / Math.max(sampled.length, 1);
           return avg > 0.005 ? (
             <span key={r} className="text-xs font-mono font-bold" style={{ color: RARITY_COLORS[r] }}>
               {(avg * 100).toFixed(0)}%
