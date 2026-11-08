@@ -241,6 +241,7 @@ stick, so the comedy lives in the hands and not in cutscenes. A 3-second clip is
   - If the owner wants AI-generated sprite sheets for production, that changes the policy, and it should be decided explicitly.
 - **[proposal]** GTA 2 itself was 2.5D: a 3D block city with 2D sprites on top. **A top-down camera means one sprite rotates freely,** so a character needs its animation frames once, not once per direction. That one fact is what makes 2D cheap for this game.
 
+- **[owner, 2026-11-08] The city camera is a true 70 degrees** (supersedes the 90-degree lock above; bosses keep 55). Walls at half height, the grey print look kept. Set after an in-engine block test (`gtai-masters/d10/block70/`).
 - **[owner, 2026-11-03] Art direction after the graphics night** (supersedes the riso lock above as the production look; the 90-degree camera stands):
   - **D5 "Inked Grime" is the direction to chase.** It is the D4 "Ink and Hatch" world (`art-direction/directions-v2/d4h2_mock.jpg`) with the Rivet concept's grime, hatch and rust (`trivet/ref-4-rivet-concept.jpg`) where it survives: up close, in arenas, kill-cams and portraits.
   - **Noir** (black and white with red blood) is a **special-mission art direction for mid/late game**, not the core style.

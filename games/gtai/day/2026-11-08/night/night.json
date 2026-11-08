@@ -1,0 +1,81 @@
+{
+ "common": "briefs/common.md",
+ "lanes": [
+  {
+   "id": "rivet",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n10-rivet",
+   "brief": "briefs/rivet.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n10",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai",
+    "C:/Users/kazda/kiro/gtai-n5",
+    "C:/Users/kazda/kiro/gtai-art"
+   ]
+  },
+  {
+   "id": "world",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n10-world",
+   "brief": "briefs/world.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n10",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai",
+    "C:/Users/kazda/kiro/gtai-n5",
+    "C:/Users/kazda/kiro/gtai-art"
+   ]
+  },
+  {
+   "id": "perf",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n10-perf",
+   "brief": "briefs/perf.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n10",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai",
+    "C:/Users/kazda/kiro/gtai-n5",
+    "C:/Users/kazda/kiro/gtai-art"
+   ]
+  },
+  {
+   "id": "handheld",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n10-handheld",
+   "brief": "briefs/handheld.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n10",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai",
+    "C:/Users/kazda/kiro/gtai-n5",
+    "C:/Users/kazda/kiro/gtai-art"
+   ]
+  }
+ ]
+}
