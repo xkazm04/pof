@@ -294,3 +294,4 @@ KIND is one of:
 - [2026-11-08] [ue5-bridge] DECISION: the live WS binds 127.0.0.1 and refuses non-loopback browser origins (it had been on all interfaces); the engine socket sends binary frames only, so clients must decode ArrayBuffer.
 - [2026-11-08] [catalog-acceptance] DECISION: owner overrode registry technique first-non-pass-reporting-in-all-of for PoF: an allOf deferral no longer masks a later fail or pending (8326d3e3d), because serverVerdictOverlay can lift a local deferred to a pass; do not revert to first-non-pass order.
 - [2026-11-09] [scan-sweep] DELIVERED: Lane B drain of the 2026-11-08 backlog complete: 114 groups, 696 cards, 583 built with seeded controls; 162 cards remain in the Approvals spool (68 demoted/unmeasurable plus Lane C), nothing pushed.
+- [2026-11-07] [balance] DELIVERED: bestiary-guardrails.ts header now states it has no production caller (facet deleted in fb7efa5b); keep, delete or rewire is the owner's call.

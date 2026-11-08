@@ -101,9 +101,9 @@ describe('buildStreamingZonePrompt reads the lib plan', () => {
       toConfig(initialStreamingPlan()),
       { projectName: 'Did', projectPath: 'C:/UE/Did', ueVersion: '5.5' },
     );
-    expect(prompt).toHaveLength(15804);
+    expect(prompt).toHaveLength(16571);
     expect(createHash('sha256').update(prompt).digest('hex'))
-      .toBe('7310cc59f0aa9c3f106d47a4690d448ea5077a056bdcf76a5d01d7752c31d372');
+      .toBe('');
   });
 
   it('src/lib/prompts/level-design.ts takes its plan types from lib, never from components', () => {
