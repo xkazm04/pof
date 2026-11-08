@@ -15,13 +15,17 @@ import { submitStepArtifact, CatalogNotFoundError } from '@/lib/catalog/headless
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as {
+    const body = (await req.json().catch(() => undefined)) as {
       catalogId?: unknown;
       entityId?: unknown;
       step?: unknown;
       data?: unknown;
       ueAssets?: unknown;
-    };
+    } | null | undefined;
+    // `null` used to throw on `body.catalogId` and surface as a 500.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     if (typeof body.catalogId !== 'string' || typeof body.entityId !== 'string' || typeof body.step !== 'string') {
       return apiError('catalogId, entityId, and step are required', 400);
     }

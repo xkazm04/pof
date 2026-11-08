@@ -22,7 +22,10 @@ export async function GET(req: NextRequest) {
 /** POST /api/pipeline { catalogId, entityId, trackId, state, note? } → upsert */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = (await req.json().catch(() => undefined)) as Record<string, unknown> | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const catalogId = typeof body.catalogId === 'string' ? body.catalogId : '';
     const entityId = typeof body.entityId === 'string' ? body.entityId : '';
     const trackId = body.trackId as PipelineTrackId;

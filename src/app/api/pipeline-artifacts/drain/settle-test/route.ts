@@ -25,10 +25,13 @@ import { acquireLeases, releaseLeases, scopeFromKey, leaseKeysForFilter } from '
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as {
+    const body = (await req.json().catch(() => undefined)) as {
       testName?: string; result?: unknown;
       tier?: string; catalogId?: string; entityId?: string; entityIds?: string[];
-    };
+    } | null | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const testName = typeof body.testName === 'string' ? body.testName.trim() : '';
     if (!testName) return apiError('"testName" (non-empty string) is required', 400);
     if (body.result === undefined) {

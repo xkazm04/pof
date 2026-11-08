@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     const denied = requireOperator(req);
     if (denied) return denied;
 
-    const body = (await req.json()) as {
+    const body = (await req.json().catch(() => undefined)) as {
       catalogId?: string;
       entityId?: string;
       name?: string;
@@ -121,7 +121,10 @@ export async function POST(req: NextRequest) {
       categoryPath?: string[];
       data?: unknown;
       provenance?: unknown;
-    };
+    } | null | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { catalogId, entityId, name } = body;
     if (!catalogId || !entityId || !name) {
       return apiError('catalogId, entityId and name are required', 400);

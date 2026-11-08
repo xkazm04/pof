@@ -46,7 +46,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { revisionId?: unknown; dryRun?: unknown };
+    const body = (await req.json().catch(() => undefined)) as { revisionId?: unknown; dryRun?: unknown } | null | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const revisionId = Number(body.revisionId);
     if (!Number.isInteger(revisionId) || revisionId <= 0) {
       return apiError('revisionId (a positive integer) is required', 400);

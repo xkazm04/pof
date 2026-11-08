@@ -68,7 +68,9 @@ export async function POST(req: NextRequest) {
   try {
     const denied = requireOperator(req);
     if (denied) return denied;
-    const body = (await req.json()) as unknown;
+    const body = (await req.json().catch(() => undefined)) as unknown;
+    // Unparseable JSON is the caller's error (400) — it used to escape as a 500.
+    if (body === undefined) return apiError('Request body is not valid JSON', 400);
     const parsed = artifactUpsertSchema.safeParse(body);
     // The validation DETAIL goes in the `error` STRING, not only in `details`: the standard
     // client (`tryApiFetch`) surfaces `error` and drops `details`, so a payload rejection
