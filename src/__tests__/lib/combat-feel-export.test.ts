@@ -23,7 +23,9 @@ describe('combat-feel Python emitter', () => {
 
 describe('combat-feel emitter is derived from the tuner param table', () => {
   const snake = (id: string) => id.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`);
-  const COMMENT_NAME: Record<string, string> = { hitstopDuration: 'hit_stop_duration', shakeScale: 'hit_camera_shake_scale' };
+  const COMMENT_NAME: Record<string, string> = {
+    hitstopDuration: 'hit_stop_duration', shakeScale: 'hit_camera_shake_scale', hitstopTimeDilation: 'hit_stop_time_dilation',
+  };
 
   it('surfaces every FEEDBACK_PARAMS knob (mapped or commented), none silently dropped', () => {
     const py = buildCombatFeelPython({});
@@ -40,5 +42,24 @@ describe('combat-feel emitter is derived from the tuner param table', () => {
       return !mapped && !commented;
     }).map(p => p.id);
     expect(wrong).toEqual([]);
+  });
+});
+
+describe('every GA_MeleeAttack feel UPROPERTY is reachable from the tuner', () => {
+  // GA_MeleeAttack.h: HitStopDuration, HitStopTimeDilation, HitCameraShakeScale.
+  const PROPS = ['hit_stop_duration', 'hit_stop_time_dilation', 'hit_camera_shake_scale'];
+
+  it('the tuner has a hitstop time-dilation knob defaulting to the C++ 0.1', () => {
+    const row = FEEDBACK_PARAMS.find(p => p.id === 'hitstopTimeDilation');
+    expect(row?.category).toBe('Hitstop');
+    expect(row?.defaultValue).toBe(0.1);
+    expect(row!.min).toBeLessThan(row!.max);
+  });
+
+  it('the script sets all three properties, hit_stop_time_dilation from the tuner value', () => {
+    const py = buildCombatFeelPython({ hitstopTimeDilation: 0.35 });
+    const unset = PROPS.filter(n => !py.includes(`cdo.set_editor_property("${n}", `));
+    expect(unset).toEqual([]);
+    expect(py).toContain('cdo.set_editor_property("hit_stop_time_dilation", 0.35)');
   });
 });
