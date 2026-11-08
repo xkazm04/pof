@@ -104,8 +104,8 @@ describe('selection → watch helpers', () => {
 
 describe('ActorRow offers the watch entry point', () => {
   it('"Watch…" opens Property Watches with the path prefilled and focus on Property', () => {
-    useUE5BridgeStore.setState({ wsStatus: 'connected', liveSnapshot: snapshotWith([ENEMY]) });
-    render(<LiveStateSyncPanel />);
+    render(<LiveStateSyncPanel />); // the mount reads the client, so set the store after it
+    act(() => useUE5BridgeStore.setState({ wsStatus: 'connected', liveSnapshot: snapshotWith([ENEMY]) }));
 
     expect(screen.queryByRole('region', { name: 'Property Watches' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Watch a property on BP_VSEnemy' }));
@@ -118,23 +118,23 @@ describe('ActorRow offers the watch entry point', () => {
   });
 
   it('no watch action for an actor without a path', () => {
-    useUE5BridgeStore.setState({
+    render(<LiveStateSyncPanel />); // the mount reads the client, so set the store after it
+    act(() => useUE5BridgeStore.setState({
       wsStatus: 'connected',
       liveSnapshot: snapshotWith([{ path: '', label: 'Pathless', className: 'Actor' }]),
-    });
-    render(<LiveStateSyncPanel />);
+    }));
     expect(screen.getByText('Pathless')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Watch a property on/ })).toBeNull();
   });
 
   it('shows how many watches the actor already has', () => {
     const other: SelectedActor = { path: 'B', label: 'Other', className: 'Actor' };
-    useUE5BridgeStore.setState({
+    render(<LiveStateSyncPanel />); // the mount reads the client, so set the store after it
+    act(() => useUE5BridgeStore.setState({
       wsStatus: 'connected',
       liveSnapshot: snapshotWith([{ ...ENEMY, path: 'A' }, other]),
       propertyWatches: Object.fromEntries([watch('w1', 'A'), watch('w2', 'A'), watch('w3', 'B')]),
-    });
-    render(<LiveStateSyncPanel />);
+    }));
 
     const region = screen.getByRole('region', { name: 'Selected Actors' });
     const rows = Array.from(region.querySelectorAll('[data-actor-path]'));
