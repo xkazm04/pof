@@ -105,7 +105,12 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   }, [entries, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy]);
 
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
-  const pageEntries = filteredEntries.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+  // A store-side shrink (delete / reset / re-seed elsewhere) can leave `currentPage` past the
+  // last page; clamp for display so the grid never renders an empty out-of-range page.
+  const page = Math.min(currentPage, Math.max(0, totalPages - 1));
+  // Persist the clamp (during render, like the guards above) so Prev/Next step from the page shown.
+  if (page !== currentPage) setCurrentPage(page);
+  const pageEntries = filteredEntries.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
 
   // Lets the empty state tell "nothing matches your filters" apart from "the catalog
   // is empty", and offers the way out of the former.
@@ -133,8 +138,8 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState(0);
 
-  const [prevFilterKey, setPrevFilterKey] = useState(() => [currentPage, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|'));
-  const filterKey = [currentPage, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|');
+  const [prevFilterKey, setPrevFilterKey] = useState(() => [page, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|'));
+  const filterKey = [page, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|');
   if (prevFilterKey !== filterKey) {
     setPrevFilterKey(filterKey);
     setFocusedIndex(0);
@@ -248,7 +253,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
         />
 
         {/* Pagination */}
-        <CatalogPagination currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} />
+        <CatalogPagination currentPage={page} totalPages={totalPages} setCurrentPage={setCurrentPage} />
 
         {/* Item Detail Drawer */}
         <ItemDetailDrawer item={selectedItem} onClose={() => setSelectedItem(null)} />
