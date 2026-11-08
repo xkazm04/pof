@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiError, apiSuccess, withRoute } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { attachClothToCharacter, CHAOS_CLOTH_NOT_RUN } from '@/lib/visual-gen/chaos-cloth';
 
 /**
@@ -49,11 +50,37 @@ interface ClothBody {
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
 
+// Every accepted string lands inside a single-quoted literal of the editor Python
+// (`buildClothGraphPython`), so a value that could close the literal is refused here.
+const GAME_PATH = /^\/[A-Za-z0-9_\-/.]+$/;
+const ASSET_NAME = /^[A-Za-z0-9_-]+$/;
+const ENUM_VALUE = /^[A-Za-z][A-Za-z0-9_]*$/;
+const FILE_PATH = /^[^'"\r\n\0]+$/;
+
+const FIELD_SHAPES: ReadonlyArray<readonly [keyof ClothBody, RegExp, string]> = [
+  ['targetSkeletalMesh', GAME_PATH, 'a /Game path'],
+  ['physicsAsset', GAME_PATH, 'a /Game path'],
+  ['garmentMeshPath', GAME_PATH, 'a /Game path'],
+  ['destPath', GAME_PATH, 'a /Game path'],
+  ['garmentGlbPath', FILE_PATH, 'a file path with no quotes or line breaks'],
+  ['clothAssetName', ASSET_NAME, 'letters, digits, _ or -'],
+  ['dataflowName', ASSET_NAME, 'letters, digits, _ or -'],
+  ['garmentMeshName', ASSET_NAME, 'letters, digits, _ or -'],
+  ['transferMethod', ENUM_VALUE, 'an EChaosClothAssetTransferSkinWeightsMethod name'],
+];
+
 export const POST = withRoute(async (request: NextRequest) => {
   const denied = requireOperator(request);
   if (denied) return denied;
 
-  const body = (await request.json()) as ClothBody;
+  const raw = await readJsonObject(request);
+  if (!raw) return apiError(MALFORMED_BODY_ERROR, 400);
+  const body = raw as ClothBody;
+  for (const [field, shape, expected] of FIELD_SHAPES) {
+    const value = str(body[field]);
+    if (value && !shape.test(value)) return apiError(`${field} must be ${expected}`, 400);
+  }
+
   const targetSkeletalMesh = str(body.targetSkeletalMesh);
   const physicsAsset = str(body.physicsAsset);
   const garmentMeshPath = str(body.garmentMeshPath);
