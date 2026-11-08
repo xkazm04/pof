@@ -48,6 +48,18 @@ export function ItemScalingChart({ lines, width, height }: { lines: ScalingLine[
 
   const handleMouseLeave = useCallback(() => setHoverIdx(null), []);
 
+  // Math.min/max over nothing are +/-Infinity, which turns every coordinate into NaN.
+  if (allValues.length === 0 || allLevels.length === 0) {
+    return (
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="No scaling data">
+        <text x={width / 2} y={height / 2} textAnchor="middle" dominantBaseline="central"
+          className="text-xs font-mono fill-[var(--text-muted)]">
+          No scaling data
+        </text>
+      </svg>
+    );
+  }
+
   return (
     <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible"
       onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
