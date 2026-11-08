@@ -78,14 +78,14 @@ const polyHavenCatalogCache = new Map<
   { fetchedAt: number; results: AssetSearchResult[] }
 >();
 
-export async function searchPolyHaven(
-  category: 'hdris' | 'textures' | 'models' = 'textures',
-): Promise<AssetSearchResult[]> {
-  const cached = polyHavenCatalogCache.get(category);
-  if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) {
-    return cached.results;
-  }
+// A search that arrives while the first fetch is still in flight joins it instead of
+// downloading the catalog again. The entry is dropped when the fetch settles, so a failure
+// is never shared with later callers.
+const polyHavenCatalogInFlight = new Map<string, Promise<AssetSearchResult[]>>();
 
+async function fetchPolyHavenCatalog(
+  category: 'hdris' | 'textures' | 'models',
+): Promise<AssetSearchResult[]> {
   const res = await fetch(`${POLYHAVEN_API}/assets?t=${category}`, sourceDeadline());
   if (!res.ok) throw new Error(`Poly Haven API error: ${res.status}`);
 
@@ -104,6 +104,23 @@ export async function searchPolyHaven(
 
   polyHavenCatalogCache.set(category, { fetchedAt: Date.now(), results });
   return results;
+}
+
+export async function searchPolyHaven(
+  category: 'hdris' | 'textures' | 'models' = 'textures',
+): Promise<AssetSearchResult[]> {
+  const cached = polyHavenCatalogCache.get(category);
+  if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) {
+    return cached.results;
+  }
+  const pending = polyHavenCatalogInFlight.get(category);
+  if (pending) return pending;
+
+  const fetching = fetchPolyHavenCatalog(category).finally(() => {
+    polyHavenCatalogInFlight.delete(category);
+  });
+  polyHavenCatalogInFlight.set(category, fetching);
+  return fetching;
 }
 
 // The per-asset file tree behind the picker. Cached per id for the same reason as the
