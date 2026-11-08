@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { motionSafe } from '@/lib/motion';
 import { ScanLine, FolderOpen } from 'lucide-react';
@@ -26,6 +27,13 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
   // Same contract as the sibling AssetPipelineDiagram: no scale-in, spring or
   // hover lift under prefers-reduced-motion (opacity fades only).
   const prefersReduced = useReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+  // Collapsing unmounts the CLOSE button; hand focus back to the card (which is
+  // the expand control again) so keyboard focus never falls to <body>.
+  const collapse = () => {
+    setExpandedAsset(null);
+    cardRef.current?.focus();
+  };
 
   return (
     <motion.div
@@ -40,6 +48,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
       style={{ perspective: 1000 }}
     >
       <div
+        ref={cardRef}
         className={`h-full flex flex-col relative transition-all duration-300 focus-ring-outline ${isExpanded ? 'border-2 shadow-2xl' : 'border shadow-lg cursor-pointer'}`}
         style={{
           backgroundColor: 'var(--surface-card)',
@@ -70,7 +79,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
             setExpandedAsset(asset.relativePath);
           } else if (isExpanded && e.key === 'Escape') {
             e.stopPropagation();
-            setExpandedAsset(null);
+            collapse();
           }
         }}
       >
@@ -154,7 +163,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
                     <ScanLine className="w-4 h-4" /> Dependency Graph
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setExpandedAsset(null); }}
+                    onClick={(e) => { e.stopPropagation(); collapse(); }}
                     aria-label={`Close dependency graph for ${asset.name}`}
                     className="text-xs text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm cursor-pointer hover:bg-surface-hover transition-colors font-mono focus-ring"
                   >

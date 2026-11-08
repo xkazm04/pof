@@ -231,3 +231,24 @@ describe('AssetInventory: the scan async states are announced', () => {
     expect(within(alert).getByRole('button', { name: /Retry/ })).toBeTruthy();
   });
 });
+
+describe('AssetInventory: collapsing a dependency graph keeps keyboard focus', () => {
+  it('CLOSE and Escape return focus to the card, not to <body>', async () => {
+    respond({ success: true, data: scanResult(ROCK, [ROCK_EDGE]) });
+    render(<AssetInventory />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Scan Content/ })); });
+
+    const card = () => screen.getByRole('button', { name: /^SM_Rock/ });
+    await act(async () => { fireEvent.click(card()); });
+    const close = screen.getByRole('button', { name: /Close dependency graph for SM_Rock/ });
+    close.focus();
+    await act(async () => { fireEvent.click(close); });
+    expect(document.activeElement).toBe(card());
+
+    await act(async () => { fireEvent.click(card()); });
+    const close2 = screen.getByRole('button', { name: /Close dependency graph for SM_Rock/ });
+    close2.focus();
+    await act(async () => { fireEvent.keyDown(close2, { key: 'Escape' }); });
+    expect(document.activeElement).toBe(card());
+  });
+});
