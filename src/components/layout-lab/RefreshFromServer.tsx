@@ -82,7 +82,7 @@ function describeOutcome(o: RefreshOutcome): string {
   const total = o.adopted.length + o.removed.length + o.kept.length + o.unchanged;
   if (total === 0) return 'The server holds no artifacts for this entity.';
   if (o.adopted.length === 0 && o.removed.length === 0 && o.kept.length === 0) {
-    return `Up to date — ${o.unchanged} step${o.unchanged === 1 ? '' : 's'} match the server.`;
+    return `Up to date — ${o.unchanged === 1 ? '1 step matches' : `${o.unchanged} steps match`} the server.`;
   }
   return [
     o.adopted.length ? `${o.adopted.length} adopted` : null,

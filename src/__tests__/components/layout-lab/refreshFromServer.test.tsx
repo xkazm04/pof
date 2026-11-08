@@ -26,6 +26,11 @@ describe('<RefreshFromServer /> — a refresh always reports what it did', () =>
     expect(getByTestId('refresh-outcome').textContent).toBe('The server holds no artifacts for this entity.');
   });
 
+  it('agrees the verb with a single unchanged step', () => {
+    const { getByTestId } = render(<RefreshFromServer {...entityProps} outcome={outcome({ unchanged: 1 })} />);
+    expect(getByTestId('refresh-outcome').textContent).toBe('Up to date — 1 step matches the server.');
+  });
+
   it('reads "Up to date" only when nothing moved', () => {
     const many = render(<RefreshFromServer {...entityProps} outcome={outcome({ unchanged: 3 })} />);
     expect(many.getByTestId('refresh-outcome').textContent).toBe('Up to date — 3 steps match the server.');
