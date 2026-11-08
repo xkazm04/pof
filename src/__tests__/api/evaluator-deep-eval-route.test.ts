@@ -106,3 +106,19 @@ describe('POST /api/evaluator/deep-eval refuses a ueVersion no pass can run unde
     });
   }
 });
+
+describe('POST /api/evaluator/deep-eval refuses module ids outside the module universe', () => {
+  for (const ids of [['nope'], ['audio', 'arpg-combt'], ['constructor']]) {
+    it(`answers ${JSON.stringify(ids)} with a 400 naming the unknown id, starting no job`, async () => {
+      const before = startExecution.mock.calls.length;
+      const project = `C:/unknown-${ids.join('-')}`;
+      const res = await POST(post({ projectPath: project, ueVersion: '5.5', moduleIds: ids }));
+      expect(res.status).toBe(400);
+      const unknown = ids.filter((id) => id !== 'audio');
+      expect((await res.json()).error).toContain(unknown.join(', '));
+      expect(startExecution.mock.calls.length).toBe(before);
+      const polled = await GET(new NextRequest(`${URL_BASE}?project=${encodeURIComponent(project)}`));
+      expect((await polled.json()).data.job).toBeNull();
+    });
+  }
+});
