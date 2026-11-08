@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visual-gen/mesh-critique';
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
+import { assessStage } from '@/lib/visual-gen/critique-stage';
 
 describe('parseCritiqueMetrics refuses counts it cannot read', () => {
   const block = (over: Record<string, string>) => {
@@ -78,5 +79,30 @@ describe('generateUntilAcceptable does not pay for rolls a broken critic can nev
 
   it('failureShape reads an error when there are no reasons', () => {
     expect(failureShape({ ok: false, error: 'exit 3' })).toBe('exit #');
+  });
+});
+
+describe('a stage caveat always names the codes it talks about', () => {
+  const failing = (...codes: string[]): CritiqueResult => ({
+    ok: true, verdict: 'fail', score: 0, reasons: codes,
+    findings: codes.map((code) => ({ code, severity: 'fail', reason: code })) as CritiqueResult['findings'],
+  });
+
+  it('names a reroll-only failure on raw geometry', () => {
+    const c = assessStage(failing('empty-mesh'), 'raw').caveat ?? '';
+    expect(c).toContain('empty-mesh');
+    expect(c).not.toMatch(/\.\s+is not resolved/);
+  });
+
+  it('names what still fails on a finished mesh', () => {
+    const c = assessStage(failing('budget-over'), 'finished').caveat ?? '';
+    expect(c).toContain('budget-over');
+    expect(c).not.toMatch(/\.\s+is not resolved/);
+  });
+
+  it('names the reroll code beside a finish-resolvable one on raw geometry', () => {
+    const c = assessStage(failing('face-count', 'empty-mesh'), 'raw').caveat ?? '';
+    expect(c).toContain('empty-mesh');
+    expect(c).not.toMatch(/;\s+is not/);
   });
 });
