@@ -1,6 +1,6 @@
 /**
- * In-memory job store for TRELLIS.2 generation runs — the textured, MIT-licensed local
- * path. Inference is the slowest of the local providers (4B params + a PBR bake, and the
+ * In-memory job store for TRELLIS.2 generation runs — the textured local path (its code
+ * and weights are MIT, its licence chain is not: see `trellis-runner.ts`). Inference is the slowest of the local providers (4B params + a PBR bake, and the
  * first run downloads ~16GB), so the API is job-based like the others: POST /generate
  * starts a job + returns an id; GET /generate/status polls it. Module-global (survives
  * Next dev HMR). Ephemeral — the durable artifact is the .glb.
