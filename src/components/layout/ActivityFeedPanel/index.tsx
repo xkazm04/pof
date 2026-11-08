@@ -38,19 +38,23 @@ export function ActivityFeedPanel() {
   // the raw width — a resize that stays on one side of OVERLAY_BREAKPOINT is a no-op.
   const overlay = !useViewportAtLeast(OVERLAY_BREAKPOINT);
 
-  // Refresh relative timestamps every 60s
-  const [, setTick] = useState(0);
+  // Refresh relative timestamps and day buckets every 60s, only while visible.
+  const [tick, setTick] = useState(0);
   useEffect(() => {
+    if (!isOpen) return;
     const id = setInterval(() => setTick((n) => n + 1), 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [isOpen]);
 
   // In overlay mode, Escape dismisses the drawer (parity with the search palette / lab drawers) —
   // a LIFO layer, so it only closes when it is the topmost open layer.
   useEscapeLayer('activity-feed', isOpen && overlay, () => setOpen(false));
 
   const unreadCount = useMemo(() => countUnread(events), [events]);
-  const sections = useMemo(() => buildSections(events), [events]);
+  // tick and isOpen are clock inputs: buildSections reads Date.now(), so a memo on
+  // events alone keeps yesterday's 'Today' header until the next event arrives.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sections = useMemo(() => buildSections(events), [events, tick, isOpen]);
 
   const handleDismiss = useCallback(
     (id: string, e: React.MouseEvent) => {

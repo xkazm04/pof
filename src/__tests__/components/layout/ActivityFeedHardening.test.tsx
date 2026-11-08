@@ -1,10 +1,17 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { EventCard } from '@/components/layout/ActivityFeedPanel/EventCard';
 import { CollapsedGroup } from '@/components/layout/ActivityFeedPanel/CollapsedGroup';
-import type { ActivityEvent } from '@/stores/activityFeedStore';
+import { ActivityFeedPanel } from '@/components/layout/ActivityFeedPanel';
+import { useActivityFeedStore, type ActivityEvent } from '@/stores/activityFeedStore';
 
 afterEach(cleanup);
+
+vi.mock('@/hooks/useViewportWidth', () => ({ useViewportWidth: () => 1440, useViewportAtLeast: () => true, WIDE_FALLBACK_WIDTH: 1440 }));
+vi.mock('framer-motion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('framer-motion')>();
+  return { ...actual, useReducedMotion: () => true };
+});
 
 // jsdom has no ResizeObserver; TruncateWithTooltip uses one.
 globalThis.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
@@ -50,5 +57,27 @@ describe('CollapsedGroup', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(toggle);
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
+describe('ActivityFeedPanel clock', () => {
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+
+  it('re-buckets an open feed when the day rolls over', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    vi.setSystemTime(new Date(2026, 10, 8, 23, 59, 30));
+    useActivityFeedStore.setState({ events: [event({ timestamp: Date.now() })], isOpen: true });
+    render(<ActivityFeedPanel />);
+    expect(screen.getByText('Today')).toBeTruthy();
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(screen.getByText('Yesterday')).toBeTruthy();
+    expect(screen.queryByText('Today')).toBeNull();
+  });
+
+  it('runs no refresh timer while the feed is closed', () => {
+    const spy = vi.spyOn(globalThis, 'setInterval');
+    useActivityFeedStore.setState({ events: [], isOpen: false });
+    render(<ActivityFeedPanel />);
+    expect(spy.mock.calls.filter(([, ms]) => ms === 60_000)).toHaveLength(0);
   });
 });
