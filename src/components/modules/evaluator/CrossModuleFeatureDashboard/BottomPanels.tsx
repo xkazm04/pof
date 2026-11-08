@@ -5,12 +5,13 @@ import {
   Hammer,
   ChevronRight,
 } from 'lucide-react';
-import { STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS, STATUS_BLOCKER, statusBorder } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_BLOCKER, statusBorder } from '@/lib/chart-colors';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import type { PlanItem } from '@/lib/implementation-planner/plan-generator';
 import type { SubModuleId } from '@/types/modules';
 import type { CellData } from './types';
 import { BuildButton } from './CellDrillPanel';
+import { completionColor } from './helpers';
 
 export function BottomPanels({
   lowestModules,
@@ -56,13 +57,13 @@ export function BottomPanels({
                     className="h-full rounded-full"
                     style={{
                       width: `${pct}%`,
-                      backgroundColor: pct >= 40 ? STATUS_WARNING : pct > 0 ? STATUS_ERROR : 'var(--text-muted)',
+                      backgroundColor: completionColor(pct),
                     }}
                   />
                 </div>
                 <span
                   className="text-xs font-medium w-7 text-right"
-                  style={{ color: pct >= 40 ? STATUS_WARNING : pct > 0 ? STATUS_ERROR : 'var(--text-muted)' }}
+                  style={{ color: completionColor(pct) }}
                 >
                   {pct}%
                 </span>
