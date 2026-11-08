@@ -11,6 +11,9 @@ export function formatDateRange(start: string, end: string): string {
   const e = new Date(end + 'T12:00:00');
   e.setDate(e.getDate() - 1); // end is exclusive
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (s.getFullYear() !== e.getFullYear()) {
+    return `${s.toLocaleDateString('en', opts)}, ${s.getFullYear()} — ${e.toLocaleDateString('en', opts)}, ${e.getFullYear()}`;
+  }
   return `${s.toLocaleDateString('en', opts)} — ${e.toLocaleDateString('en', opts)}, ${s.getFullYear()}`;
 }
 
