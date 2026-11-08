@@ -9,6 +9,7 @@ import type { CallbackStatus } from '@/lib/cli-task';
 import { getAppOrigin } from '@/lib/constants';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
+import { err } from '@/types/result';
 
 interface UsePlanDispatchOptions {
   /** Unique CLI session key for this dispatch site. */
@@ -71,7 +72,17 @@ export function usePlanDispatch(opts: UsePlanDispatchOptions): UsePlanDispatchRe
     onComplete,
   });
 
+  const isRunningRef = useRef(isRunning);
+  useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+
   const dispatch = useCallback((item: PlanItem): PlanDispatchResult => {
+    // One build in flight per door: a second dispatch would overwrite inFlight and
+    // the first run's callback would settle the wrong item. Refused with no unmet
+    // deps (the item is ready; the door is busy) and a named reason.
+    if (isRunningRef.current) {
+      setLastError(`${item.featureName}: a build is already running`);
+      return err({ reason: 'blocked', unmet: [] });
+    }
     const result = planDispatch(item, getAppOrigin());
     if (!result.ok) {
       setLastError(`${item.featureName} is blocked by ${result.error.unmet.map(shortName).join(', ')}`);
