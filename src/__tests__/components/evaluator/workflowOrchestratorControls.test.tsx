@@ -47,3 +47,21 @@ describe('ActiveWorkflowPanel module groups', () => {
     expect(screen.getByRole('button', { name: /^b/ }).textContent).toContain('1/1');
   });
 });
+
+describe('TemplateCard', () => {
+  const template: WorkflowTemplate = {
+    id: 't', name: 'Full Audit', description: 'd', icon: 'Zap', moduleScope: 'single', nodes: [], createdAt: '2026-11-08T00:00:00.000Z',
+  };
+
+  it('is a keyboard-operable toggle', () => {
+    const onClick = vi.fn();
+    render(<TemplateCard template={template} isSelected onClick={onClick} />);
+    const card = screen.getByRole('button', { name: /Full Audit/ });
+    expect(card.getAttribute('aria-pressed')).toBe('true');
+    expect(card.getAttribute('tabindex')).toBe('0');
+    fireEvent.keyDown(card, { key: 'Enter' });
+    fireEvent.keyDown(card, { key: ' ' });
+    fireEvent.keyDown(card, { key: 'a' });
+    expect(onClick).toHaveBeenCalledTimes(2);
+  });
+});
