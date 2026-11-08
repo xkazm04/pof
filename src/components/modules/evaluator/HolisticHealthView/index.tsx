@@ -12,7 +12,7 @@ import { scoreStatusToken } from '@/lib/status-token';
 import { describeVelocitySample } from '@/lib/roadmap/completion-ledger';
 import type { HolisticHealthViewProps } from './types';
 import { useHolisticHealthView } from './useHolisticHealthView';
-import { SubTab } from './SubTab';
+import { SubTab, HEALTH_PANEL_ID, healthTabId } from './SubTab';
 import { PerformanceStatCard } from './PerformanceStatCard';
 import { OverviewTab } from './OverviewTab';
 import { VelocityTab } from './VelocityTab';
@@ -217,12 +217,13 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
 
           {/* Sub-tabs */}
           <div role="tablist" aria-label="Project health views" className="flex items-center gap-1 border-b border-border">
-            <SubTab label="Overview" active={viewTab === 'overview'} onClick={() => setViewTab('overview')} />
-            <SubTab label="Velocity" active={viewTab === 'velocity'} onClick={() => setViewTab('velocity')} />
-            <SubTab label="Quality" active={viewTab === 'quality'} onClick={() => setViewTab('quality')} />
-            <SubTab label="Milestones" active={viewTab === 'milestones'} onClick={() => setViewTab('milestones')} />
+            <SubTab tab="overview" label="Overview" active={viewTab === 'overview'} onClick={() => setViewTab('overview')} />
+            <SubTab tab="velocity" label="Velocity" active={viewTab === 'velocity'} onClick={() => setViewTab('velocity')} />
+            <SubTab tab="quality" label="Quality" active={viewTab === 'quality'} onClick={() => setViewTab('quality')} />
+            <SubTab tab="milestones" label="Milestones" active={viewTab === 'milestones'} onClick={() => setViewTab('milestones')} />
           </div>
 
+          <div role="tabpanel" id={HEALTH_PANEL_ID} aria-labelledby={healthTabId(viewTab)} className="space-y-6">
           {/* ── Overview Tab ───────────────────────────────────────── */}
           {viewTab === 'overview' && (
             <OverviewTab
@@ -247,6 +248,7 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
           {viewTab === 'milestones' && (
             <MilestonesTab burnChart={burnChart} summary={summary} milestones={milestones} />
           )}
+          </div>
         </>
       )}
     </div>

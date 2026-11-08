@@ -20,7 +20,7 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, ACCENT_VIOLE
 import { WEIGHTS } from '@/lib/evaluator/combined-health';
 import type { Props } from './types';
 import { useUnifiedSummaryView } from './useUnifiedSummaryView';
-import { ViewModeToggle } from './ViewModeToggle';
+import { ViewModeToggle, SUMMARY_PANEL_ID, summaryTabId } from './ViewModeToggle';
 import { CombinedHealthGauge } from './CombinedHealthGauge';
 import { DimensionBar } from './DimensionBar';
 import { SourceBadge, sourceState } from './SourceBadge';
@@ -107,6 +107,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
         )}
       </div>
 
+      <div role="tabpanel" id={SUMMARY_PANEL_ID} aria-labelledby={summaryTabId(viewMode)} className="space-y-5">
       {viewMode === 'brief' ? (
         <BriefView brief={brief} />
       ) : (
@@ -284,6 +285,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       )}
       </>
       )}
+      </div>
     </div>
   );
 }

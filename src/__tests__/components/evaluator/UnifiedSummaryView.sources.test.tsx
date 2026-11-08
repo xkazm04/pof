@@ -4,7 +4,7 @@
  * and the badges must carry an accessible name.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, cleanup, act } from '@testing-library/react';
+import { render, cleanup, act, fireEvent } from '@testing-library/react';
 import type { ModuleAggregate } from '@/lib/feature-matrix-db';
 import type { SubModuleId } from '@/types/modules';
 
@@ -98,5 +98,23 @@ describe('UnifiedSummaryView — failed source is not an empty source', () => {
       'Analytics: data available',
       'Scanner: no data',
     ]);
+  });
+});
+
+describe('UnifiedSummaryView — view-mode tablist keyboard model', () => {
+  it('ArrowRight on Detailed selects Brief and focuses it; the panel is wired to the selected tab', async () => {
+    h.fetch.mockResolvedValue({ ok: true, data: { totalSessions: 3, moduleStats: [] } });
+    const { container } = render(<UnifiedSummaryView onNavigateTab={vi.fn()} />);
+    await settle();
+    const tabs = () => [...container.querySelectorAll<HTMLButtonElement>('[aria-label="Summary view mode"] [role="tab"]')];
+    expect(tabs().map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs().map((t) => t.tabIndex)).toEqual([0, -1]);
+    fireEvent.keyDown(tabs()[0], { key: 'ArrowRight' });
+    await settle();
+    expect(tabs().map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(document.activeElement).toBe(tabs()[1]);
+    const panel = container.querySelector('[role="tabpanel"]');
+    expect(panel?.getAttribute('aria-labelledby')).toBe(tabs()[1].id);
+    expect(tabs()[1].getAttribute('aria-controls')).toBe(panel?.id);
   });
 });

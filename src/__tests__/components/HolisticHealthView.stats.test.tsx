@@ -3,7 +3,7 @@
  * tablist keyboard behaviour, and the stale-summary cue under a refresh error.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, cleanup, act } from '@testing-library/react';
+import { render, cleanup, act, fireEvent } from '@testing-library/react';
 
 afterEach(cleanup);
 
@@ -77,5 +77,23 @@ describe('Project Health — Module Health card', () => {
     const text = moduleHealthCard(container);
     expect(text).toContain('2 healthy');
     expect(text).toContain('1 critical');
+  });
+});
+
+describe('Project Health — sub-tab keyboard model', () => {
+  it('ArrowRight on the selected sub-tab selects the next and focuses it; panel is wired', async () => {
+    setStore([mod('a', 'healthy')]);
+    const { container } = render(<HolisticHealthView />);
+    await settle();
+    const tabs = () => [...container.querySelectorAll<HTMLButtonElement>('[aria-label="Project health views"] [role="tab"]')];
+    expect(tabs().map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false']);
+    expect(tabs().map((t) => t.tabIndex)).toEqual([0, -1, -1, -1]);
+    fireEvent.keyDown(tabs()[0], { key: 'ArrowRight' });
+    await settle();
+    expect(tabs().map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
+    expect(document.activeElement).toBe(tabs()[1]);
+    const panel = container.querySelector('[role="tabpanel"]');
+    expect(panel?.getAttribute('aria-labelledby')).toBe(tabs()[1].id);
+    expect(tabs()[1].getAttribute('aria-controls')).toBe(panel?.id);
   });
 });
