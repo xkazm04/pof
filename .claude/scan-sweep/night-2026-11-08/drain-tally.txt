@@ -93,3 +93,7 @@ material-style-tools {"better":3}
 visual-gen-library {"better":3}
 project-ops-api {"unmeasurable":2,"better":3,"demoted":1,"not-better":1}
 build-quality-monitoring {"better":10}
+loot-affix-workbench {"better":6,"demoted":1}
+coach-and-guidance {"better":5,"not-better":1}
+bestiary-archetypes-ai {"better":6}
+economy-simulator {"better":5}
