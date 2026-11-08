@@ -24,7 +24,7 @@ import {
   MODULE_PREREQUISITES,
   type FeatureDefinition,
 } from '@/lib/feature-definitions';
-import { SUB_MODULES } from '@/lib/module-registry';
+import { SUB_MODULES, CATEGORIES, getSubModulesForCategory } from '@/lib/module-registry';
 import { SUB_MODULE_IDS } from '@/types/modules';
 
 type FeatureDefs = Partial<Record<string, FeatureDefinition[]>>;
@@ -223,5 +223,37 @@ describe('registry integrity (SUB_MODULES)', () => {
     expect(danglingChecklistDeps(seeded)).toEqual(['mod-a:a-2 -> a-9']);
     expect(checklistCycles(seeded)).toEqual(['mod-a: a-1 > a-2 > a-1']);
     expect(duplicateQuickActionIds(seeded)).toEqual(['mod-a:q-1']);
+  });
+});
+
+// ─── Category membership (CATEGORIES) ───────────────────────────────────────
+//
+// Membership has one authority: each SubModuleDefinition's `categoryId`. Every
+// reader of `CategoryDefinition.subModules` (search-index category bodies, search
+// intents' first-sub-module, the sidebar via getSubModulesForCategory) must see
+// the same set, so no category may carry a list that disagrees with it.
+
+describe('category membership integrity (CATEGORIES)', () => {
+  const byCategory = (categoryId: string) =>
+    SUB_MODULES.filter((m) => m.categoryId === categoryId).map((m) => m.id as string).sort();
+
+  it("each category's subModules is exactly the modules whose categoryId names it", () => {
+    const drift = CATEGORIES.filter(
+      (c) => JSON.stringify([...c.subModules].sort()) !== JSON.stringify(byCategory(c.id)),
+    ).map((c) => c.id);
+    expect(drift).toEqual([]);
+  });
+
+  it('getSubModulesForCategory agrees with categoryId for every category', () => {
+    const drift = CATEGORIES.filter(
+      (c) => JSON.stringify(getSubModulesForCategory(c.id).map((m) => m.id as string).sort())
+        !== JSON.stringify(byCategory(c.id)),
+    ).map((c) => c.id);
+    expect(drift).toEqual([]);
+  });
+
+  it('every module belongs to a declared category', () => {
+    const ids = new Set(CATEGORIES.map((c) => c.id as string));
+    expect(SUB_MODULES.filter((m) => !ids.has(m.categoryId)).map((m) => m.id)).toEqual([]);
   });
 });

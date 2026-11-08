@@ -384,6 +384,15 @@ const ARPG_QUICK_ACTIONS: Record<string, QuickAction[]> = {
   ],
 };
 
+// ─── Core Engine module IDs ────────────────────────────────────────────────────────
+
+const CORE_ENGINE_IDS = [
+  'arpg-character', 'arpg-animation', 'arpg-gas', 'arpg-combat',
+  'arpg-enemy-ai', 'arpg-inventory', 'arpg-loot', 'arpg-ui',
+  'arpg-progression', 'arpg-world', 'arpg-save', 'arpg-polish',
+  'core-engine-plan', // Plan pseudo-module at end
+] as const;
+
 export const CATEGORIES: CategoryDefinition[] = [
   {
     id: 'project-setup',
@@ -399,7 +408,9 @@ export const CATEGORIES: CategoryDefinition[] = [
     icon: Code,
     accentColor: '#3b82f6',
     accentColorVar: 'var(--core)',
-    subModules: [], // Driven by CORE_ENGINE_IDS
+    // Declared like every other category, so every reader of subModules (search
+    // index, search intents, getSubModulesForCategory) sees the arpg-* modules.
+    subModules: [...CORE_ENGINE_IDS],
   },
   {
     id: 'content',
@@ -442,15 +453,6 @@ export const CATEGORIES: CategoryDefinition[] = [
     subModules: ['asset-viewer', 'asset-forge', 'material-lab', 'blender-pipeline', 'asset-browser', 'import-automation', 'auto-rig', 'procedural-engine', 'scene-composer'],
   },
 ];
-
-// ─── Core Engine module IDs ────────────────────────────────────────────────────────
-
-const CORE_ENGINE_IDS = [
-  'arpg-character', 'arpg-animation', 'arpg-gas', 'arpg-combat',
-  'arpg-enemy-ai', 'arpg-inventory', 'arpg-loot', 'arpg-ui',
-  'arpg-progression', 'arpg-world', 'arpg-save', 'arpg-polish',
-  'core-engine-plan', // Plan pseudo-module at end
-] as const;
 
 export const SUB_MODULES: SubModuleDefinition[] = [
   // ── Core Engine (aRPG) ───────────────────────────────────────────────────────────
@@ -1234,9 +1236,6 @@ for (const mod of SUB_MODULES) {
 }
 
 export function getSubModulesForCategory(categoryId: string): SubModuleDefinition[] {
-  if (categoryId === 'core-engine') {
-    return SUB_MODULES.filter(m => CORE_ENGINE_IDS.includes(m.id as typeof CORE_ENGINE_IDS[number]));
-  }
   const category = CATEGORY_MAP[categoryId];
   if (!category) return [];
   return category.subModules.map(id => SUB_MODULE_MAP[id]).filter((m): m is SubModuleDefinition => !!m);
