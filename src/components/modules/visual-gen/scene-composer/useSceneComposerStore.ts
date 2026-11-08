@@ -97,7 +97,10 @@ export const useSceneComposerStore = create<SceneComposerState>()(
         });
         return;
       }
-      set({ actionResult: result.data.output.trim() || `Deleted "${name}".` });
+      set((s) => ({
+        actionResult: result.data.output.trim() || `Deleted "${name}".`,
+        selectedObject: s.selectedObject === name ? null : s.selectedObject,
+      }));
       await get().refreshScene();
     },
 
