@@ -77,6 +77,25 @@ describe('material-db', () => {
   });
 });
 
+describe('an unreadable materials row is contained to that row', () => {
+  it('the list skips it, a direct read returns null, and the good rows still read', () => {
+    const good = `preset-ok-${Date.now()}`;
+    const bad = `preset-corrupt-${Date.now()}`;
+    createMaterial(good, 'Good', PARAMS);
+    getDb().prepare('INSERT INTO materials (id, name, params) VALUES (?, ?, ?)').run(bad, 'Bad', '{');
+    try {
+      const ids = listMaterials().map((m) => m.id);
+      expect(ids).toContain(good);
+      expect(ids).not.toContain(bad);
+      expect(getMaterial(bad)).toBeNull();
+      expect(getMaterial(good)?.params).toEqual(PARAMS);
+    } finally {
+      deleteMaterial(good);
+      deleteMaterial(bad);
+    }
+  });
+});
+
 describe('/api/visual-gen/materials', () => {
   it('serves the full preset CRUD the lab needs', async () => {
     const id = `preset-route-${Date.now()}`;
