@@ -119,7 +119,8 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
                   <td
                     key={ci}
                     className="p-px outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:rounded-sm"
-                    tabIndex={0}
+                    // A read-only grid is not a row of dead tab stops: focus only when a cell acts.
+                    tabIndex={onCellClick ? 0 : undefined}
                     role="gridcell"
                     aria-label={cell?.tooltip ?? `${rowLabel} × ${cols[ci]}: ${(v * 100).toFixed(0)}%`}
                     title={cell?.tooltip ?? `${rowLabel} × ${cols[ci]}: ${(v * 100).toFixed(0)}%`}
@@ -132,7 +133,7 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
                     }}
                   >
                     <div
-                      className="w-8 h-8 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 focus-visible:ring-2 focus-visible:ring-white/60 transition-all flex items-center justify-center"
+                      className={`w-8 h-8 rounded-sm ${onCellClick ? 'cursor-pointer' : ''} hover:ring-1 hover:ring-white/30 focus-visible:ring-2 focus-visible:ring-white/60 transition-all flex items-center justify-center`}
                       style={{ backgroundColor: interpolateColor(lowColor, high, v) }}
                     >
                       {cell?.label && <span className="text-xs font-mono text-white/80">{cell.label}</span>}

@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { DonutChart } from '@/components/modules/core-engine/unique-tabs/charts';
+import { HeatmapGrid } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { ACCENT_CYAN, ACCENT_EMERALD } from '@/lib/chart-colors';
 
 afterEach(cleanup);
@@ -31,5 +32,21 @@ describe('DonutChart — every segment is drawn', () => {
       const { start, end } = outerArc(p.getAttribute('d')!);
       expect(span(start, end)).toBeGreaterThan(1);
     }
+  });
+});
+
+describe('HeatmapGrid — a cell is a tab stop only when it does something', () => {
+  const cells = [{ row: 0, col: 0, value: 0.5 }, { row: 0, col: 1, value: 1 }, { row: 1, col: 0, value: 0 }, { row: 1, col: 1, value: 0.2 }];
+  const stops = (c: HTMLElement) => c.querySelectorAll('td[tabindex="0"]').length;
+
+  it('read-only grid (no onCellClick, as in all 8 call sites) adds 0 tab stops', () => {
+    const { container } = render(<HeatmapGrid rows={['r1', 'r2']} cols={['c1', 'c2']} cells={cells} accent={ACCENT_CYAN} />);
+    expect(stops(container)).toBe(0);
+    expect(container.querySelectorAll('td[role="gridcell"]').length).toBe(4);
+  });
+
+  it('[control] an interactive grid keeps every cell focusable', () => {
+    const { container } = render(<HeatmapGrid rows={['r1', 'r2']} cols={['c1', 'c2']} cells={cells} accent={ACCENT_CYAN} onCellClick={() => {}} />);
+    expect(stops(container)).toBe(4);
   });
 });
