@@ -5,12 +5,17 @@ import {
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
+import { useState } from 'react';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScrollableTabBar, TabButton } from './TabBar';
 import { LevelTabContent } from './LevelTabContent';
 import type { LevelDesignVM } from './useLevelDesignView';
 
+const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
 export function ActiveDocView({ vm }: { vm: LevelDesignVM }) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const {
     activeDoc,
     activeTab,
@@ -31,6 +36,7 @@ export function ActiveDocView({ vm }: { vm: LevelDesignVM }) {
 
   if (!activeDoc) return null;
 
+  const docId = activeDoc.id;
   const saveState = isSaving ? 'Saving…' : isDirty ? 'Unsaved changes' : null;
 
   return (
@@ -66,13 +72,26 @@ export function ActiveDocView({ vm }: { vm: LevelDesignVM }) {
         </button>
 
         <button
-          onClick={() => deleteDoc(activeDoc.id)}
+          onClick={() => setConfirmingDelete(true)}
           className="px-2 py-1.5 rounded-md text-text-muted hover:text-[#f87171] hover:bg-[#f8717110] transition-colors"
           title="Delete document"
+          aria-label="Delete document"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       </div>
+
+      {/* Deleting the document is irreversible and takes every room, link and
+          note with it (room deletes are undoable; this is not), so it is confirmed
+          and the dialog names what goes. */}
+      <ConfirmDialog
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => deleteDoc(docId)}
+        title="Delete this level design?"
+        description={`"${activeDoc.name}" and its ${plural(activeDoc.rooms.length, 'room')} and ${plural(activeDoc.connections.length, 'link')} will be permanently removed. This cannot be undone.`}
+        confirmLabel="Delete document permanently"
+      />
 
       {/* A failed write is never silent, and never costs the user their edit —
           the buffered change stays on screen and Retry re-sends exactly it. */}
