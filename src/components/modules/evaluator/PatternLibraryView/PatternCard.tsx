@@ -35,6 +35,7 @@ export function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
       {/* Header row */}
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-hover/50 transition-colors"
       >
         {/* Success rate ring */}

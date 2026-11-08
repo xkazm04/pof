@@ -47,6 +47,7 @@ export function ViolationRow({
     <div className="rounded-lg border border-border bg-surface-deep overflow-hidden" data-violation-id={v.id}>
       <button
         onClick={onToggle}
+        aria-expanded={expanded}
         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-surface-hover transition-colors"
       >
         {expanded ? (
