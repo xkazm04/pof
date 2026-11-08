@@ -131,8 +131,11 @@ export function ArpgHudPreview() {
           const isSelected = selected === el.id;
           return (
             <motion.button key={el.id}
+              type="button"
               onClick={() => handleClick(el.id)}
-              className="absolute cursor-pointer z-10 focus:outline-none"
+              aria-label={el.label}
+              aria-pressed={isSelected}
+              className="focus-ring absolute cursor-pointer z-10"
               style={{ top: `${el.y}%`, left: `${el.x}%`, width: `${el.w}%`, height: `${el.h}%` }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
