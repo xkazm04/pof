@@ -26,7 +26,7 @@ export function GridSection({
       {/* Dimension controls */}
       <div className="flex items-center gap-6 bg-black/40 p-4 rounded-xl border border-violet-900/30 backdrop-blur-md shadow-lg w-fit">
         <DimensionControl label="Columns" value={config.gridCols} onChange={setCols} min={2} max={12} />
-        <span className="text-violet-500/50 text-xl font-light">Ă—</span>
+        <span className="text-violet-500/50 text-xl font-light">×</span>
         <DimensionControl label="Rows" value={config.gridRows} onChange={setRows} min={2} max={8} />
         <div className="ml-4 flex flex-col items-center">
           <span className="text-[11px] uppercase text-violet-400/60 font-bold mb-1">Total Capacity</span>

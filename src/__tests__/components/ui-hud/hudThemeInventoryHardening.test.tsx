@@ -128,3 +128,14 @@ describe('HUD theme colour picker keeps the colour alpha', () => {
     expect(screen.getByText(/FLinearColor HealthBarColor = FLinearColor\(1\.00f, 0\.00f, 0\.00f, 0\.50f\);/)).toBeTruthy();
   });
 });
+
+describe('Inventory designer prints a real multiplication sign', () => {
+  it('the grid summary and the dimension row read cols×rows, no mojibake', async () => {
+    const { InventoryGridDesigner } = await import('@/components/modules/content/ui-hud/InventoryGridDesigner');
+    const { container } = render(<InventoryGridDesigner onGenerate={vi.fn()} isGenerating={false} />);
+    const text = container.textContent ?? '';
+    expect(text).not.toMatch(/Ă/); // 'Ă' — UTF-8 '×' (C3 97) decoded as CP1250
+    expect(screen.getByText(/GRID:/).textContent).toMatch(/GRID:\s*\d+×\d+ \(\d+\)/);
+    expect(text.split('×').length - 1).toBe(2);
+  });
+});
