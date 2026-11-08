@@ -6,6 +6,13 @@ import { logger } from '@/lib/logger';
 import { useCatalogStore } from '@/stores/catalogStore';
 import type { PersistedRow } from '@/lib/catalog/persistedHydration';
 
+/** A row the merge can read: string ids and an entity object. */
+function isPersistedRow(r: unknown): r is PersistedRow {
+  if (!r || typeof r !== 'object') return false;
+  const o = r as Record<string, unknown>;
+  return typeof o.catalogId === 'string' && typeof o.entityId === 'string' && !!o.entity && typeof o.entity === 'object';
+}
+
 /**
  * Load every server-persisted catalog entity into the lab once, on mount.
  *
@@ -33,7 +40,13 @@ export function usePersistedEntityHydration(): void {
         logger.warn(`catalog-entities hydration: expected { entities: [] }, got ${JSON.stringify(res.data)?.slice(0, 120)} — cache left unchanged`);
         return;
       }
-      const { shadowed } = hydrate(rows as PersistedRow[]);
+      // …and so is each ROW: one null / id-less record used to throw inside the merge, an
+      // unhandled rejection that discarded every good row beside it.
+      const valid = rows.filter(isPersistedRow);
+      if (valid.length < rows.length) {
+        logger.warn(`catalog-entities hydration: ${rows.length - valid.length} malformed row(s) dropped (need catalogId, entityId, entity)`);
+      }
+      const { shadowed } = hydrate(valid);
       if (shadowed.length) {
         logger.warn(`catalog-entities: ${shadowed.length} persisted row(s) collide with code seeds and are not shown: ${shadowed.join(', ')}`);
       }
