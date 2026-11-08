@@ -29,7 +29,6 @@ interface ProduceErrorBannerProps {
 export function ProduceErrorBanner({ t, step, error, hasContent, onDismiss }: ProduceErrorBannerProps) {
   return (
     <div
-      role="alert"
       data-testid="produce-error-banner"
       data-step={step}
       style={{
@@ -40,7 +39,7 @@ export function ProduceErrorBanner({ t, step, error, hasContent, onDismiss }: Pr
       }}
     >
       <span aria-hidden style={{ color: t.bad, fontWeight: 700 }}>✕</span>
-      <span style={{ fontSize: 14, color: t.text, minWidth: 0 }}>
+      <span role="alert" style={{ fontSize: 14, color: t.text, minWidth: 0 }}>
         <strong style={{ color: 'var(--lab-ink-deep)' }}>Last produce failed</strong> —{' '}
         <span data-testid="produce-error-reason">{error}</span>
         <span style={{ color: t.muted }}>

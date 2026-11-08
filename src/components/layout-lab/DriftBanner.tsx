@@ -28,7 +28,6 @@ export function DriftBanner({ t, step, drift, hasHistory, onAdopt }: DriftBanner
   const [replaceHistory, setReplaceHistory] = useState(false);
   return (
     <div
-      role="status"
       data-testid="drift-banner"
       data-step={step}
       style={{
@@ -39,7 +38,7 @@ export function DriftBanner({ t, step, drift, hasHistory, onAdopt }: DriftBanner
       }}
     >
       <span aria-hidden style={{ color: t.bad, fontWeight: 700 }}>⚠</span>
-      <span style={{ fontSize: 14, color: t.text }} data-drift-kind={drift.kind}>
+      <span role="status" style={{ fontSize: 14, color: t.text }} data-drift-kind={drift.kind}>
         {drift.kind === 'status' ? (
           <>
             Server truth differs for this step — local reads{' '}
