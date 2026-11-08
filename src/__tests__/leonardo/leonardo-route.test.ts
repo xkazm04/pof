@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@/lib/leonardo', () => ({
   generateImage: vi.fn(async () => ({ imageUrl: 'u', generationId: 'g', imageBase64: 'YQ==' })),
-  upscaleImage: vi.fn(async () => ({ upscaleJobId: 'up-1' })),
-  unzoomImage: vi.fn(async () => ({ unzoomJobId: 'uz-1' })),
+  upscaleImage: vi.fn(async () => ({ imageUrl: 'u', variationId: 'up-1', imageBase64: 'QQ==', variationDeleted: true })),
+  unzoomImage: vi.fn(async () => ({ imageUrl: 'u', variationId: 'uz-1', imageBase64: 'QQ==', variationDeleted: true })),
   generateTextureOn3DModel: vi.fn(async () => ({ modelAssetId: 'm', albedoUrl: 'a', normalUrl: 'n', roughnessUrl: 'r' })),
   MAX_PROMPT_LENGTH: 1500,
 }));
@@ -80,7 +80,8 @@ describe('POST /api/leonardo', () => {
   it('mode=unzoom routes to unzoomImage', async () => {
     const res = await POST(req({ mode: 'unzoom', imageId: 'img-3', prompt: 'more floor' }));
     const json = await res.json();
-    expect(json.data.unzoomJobId).toBe('uz-1');
+    expect(json.data.variationId).toBe('uz-1');
+    expect(json.data.imageBase64).toBe('QQ==');
     expect(leo.unzoomImage).toHaveBeenCalledWith('img-3', { prompt: 'more floor' });
   });
 
@@ -92,7 +93,8 @@ describe('POST /api/leonardo', () => {
   it('mode=upscale routes to upscaleImage', async () => {
     const res = await POST(req({ mode: 'upscale', imageId: 'img-1', style: 'GENERAL' }));
     const json = await res.json();
-    expect(json.data.upscaleJobId).toBe('up-1');
+    expect(json.data.variationId).toBe('up-1');
+    expect(json.data.imageBase64).toBe('QQ==');
     expect(leo.upscaleImage).toHaveBeenCalledWith('img-1', 'GENERAL');
   });
 

@@ -5,12 +5,13 @@ import { Sparkles, Loader2, ArrowUpRight, Maximize2, Workflow, Brush, ArrowRight
 import { TileError } from '../TileError';
 import { PBR_MAP_CHANNELS, tileBtn, tileInput } from './constants';
 import { useAdvancedTexturePanel } from './useAdvancedTexturePanel';
+import { LiveImageIdNote, VariationResultView } from './variationResultView';
 
 export function AdvancedTexturePanel() {
   const {
     prompt, setPrompt, modelId, setModelId, pbr, pbrErr, pbrLoading,
-    imageId, setImageId, style, setStyle, jobId, upErr, upLoading,
-    uzImageId, setUzImageId, uzPrompt, setUzPrompt, uzJob, uzErr, uzLoading,
+    imageId, setImageId, style, setStyle, upResult, upErr, upLoading,
+    uzImageId, setUzImageId, uzPrompt, setUzPrompt, uzResult, uzErr, uzLoading,
     cnPrompt, setCnPrompt, cnImageId, setCnImageId, cnPreproc, setCnPreproc, cnResult, cnErr, cnLoading,
     ipPrompt, setIpPrompt, ipImageId, setIpImageId, ipMaskId, setIpMaskId, ipResult, ipErr, ipLoading,
     appliedChannels,
@@ -150,11 +151,12 @@ export function AdvancedTexturePanel() {
         <header className="flex items-center gap-2 text-sm font-medium text-[var(--visual-gen)]">
           <ArrowUpRight className="w-4 h-4" /> Universal Upscaler
         </header>
+        <LiveImageIdNote />
         <input
           data-testid="upscale-image-id" aria-label="Image id to upscale"
           value={imageId}
           onChange={(e) => setImageId(e.target.value)}
-          placeholder="Leonardo generated image id"
+          placeholder="Id of an image still on your Leonardo account"
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
         />
         <select
@@ -164,8 +166,9 @@ export function AdvancedTexturePanel() {
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
         >
           <option value="GENERAL">General</option>
-          <option value="ARTISTIC">Artistic</option>
-          <option value="REALISTIC">Realistic</option>
+          <option value="CINEMATIC">Cinematic</option>
+          <option value="2D ART &amp; ILLUSTRATION">2D art and illustration</option>
+          <option value="CG ART &amp; GAME ASSETS">CG art and game assets</option>
         </select>
         <button
           data-testid="upscale-run"
@@ -178,11 +181,7 @@ export function AdvancedTexturePanel() {
         </button>
 
         {upErr && <TileError error={upErr} onRetry={runUpscale} testId="upscale-error" />}
-        {jobId && (
-          <div data-testid="upscale-job" className="text-[11px] text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
-            Upscale job started: {jobId}
-          </div>
-        )}
+        {upResult && <VariationResultView result={upResult} testId="upscale" filename="upscaled.png" />}
       </section>
 
       {/* Tile C — Unzoom (outpaint) */}
@@ -190,11 +189,12 @@ export function AdvancedTexturePanel() {
         <header className="flex items-center gap-2 text-sm font-medium text-[var(--visual-gen)]">
           <Maximize2 className="w-4 h-4" /> Unzoom (extend borders)
         </header>
+        <LiveImageIdNote />
         <input
           data-testid="unzoom-image-id" aria-label="Image id to unzoom"
           value={uzImageId}
           onChange={(e) => setUzImageId(e.target.value)}
-          placeholder="Leonardo generated image id"
+          placeholder="Id of an image still on your Leonardo account"
           className={tileInput}
         />
         <input
@@ -209,11 +209,7 @@ export function AdvancedTexturePanel() {
           Unzoom
         </button>
         {uzErr && <TileError error={uzErr} onRetry={runUnzoom} testId="unzoom-error" />}
-        {uzJob && (
-          <div data-testid="unzoom-job" className="text-[11px] text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
-            Unzoom job started: {uzJob}
-          </div>
-        )}
+        {uzResult && <VariationResultView result={uzResult} testId="unzoom" filename="unzoomed.png" />}
       </section>
 
       {/* Tile D — ControlNet guided generation */}

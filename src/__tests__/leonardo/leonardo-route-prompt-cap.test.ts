@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const h = vi.hoisted(() => ({
-  unzoom: vi.fn(async () => ({ unzoomJobId: 'u' })),
+  unzoom: vi.fn(async () => ({ imageUrl: 'u', variationId: 'v', imageBase64: 'QQ==', variationDeleted: true })),
   texture: vi.fn(async () => ({ modelAssetId: 'm' })),
 }));
 vi.mock('@/lib/leonardo', () => ({

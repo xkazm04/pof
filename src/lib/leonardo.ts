@@ -439,64 +439,141 @@ async function deleteIfThrows<T>(generationId: string, enabled: boolean, step: (
   }
 }
 
+/** Variation jobs (upscale above all) outlast an image generation; 2 minutes at the default interval. */
+const MAX_VARIATION_POLL_ATTEMPTS = 60;
+
 /**
- * Universal Upscaler. The exact response key is endpoint-version-dependent;
- * parse the common candidates and surface the job id.
+ * The source of an upscale or unzoom must be a live Leonardo image, and every generation PoF
+ * makes is deleted right after download. Leonardo's refusal alone would not tell the operator
+ * why an id from a PoF run stopped working.
  */
-export async function upscaleImage(
-  generatedImageId: string,
-  style: string = 'GENERAL',
-): Promise<{ upscaleJobId: string }> {
-  const res = await fetch(`${LEONARDO_API_BASE}/universal-upscaler`, {
-    method: 'POST',
-    headers: authHeaders(true),
-    body: JSON.stringify({ generatedImageId, upscalerStyle: style }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Leonardo upscale failed (${res.status}): ${text}`);
+const LIVE_IMAGE_ID_HINT =
+  'The image id must still exist on the Leonardo account: PoF deletes its own generations after download, so ids from PoF runs no longer resolve.';
+
+export interface VariationPollOptions {
+  /** Library seams, lowered in tests. Never forwarded from a request. */
+  pollIntervalMs?: number;
+  maxPollAttempts?: number;
+}
+
+export interface VariationImageResult {
+  /** Leonardo's URL for the result. Dead once the variation is deleted; use `imageBase64`. */
+  imageUrl: string;
+  variationId: string;
+  /** base64 of the downloaded bytes: the only retained copy. */
+  imageBase64: string;
+  /** False when Leonardo refused the delete, so the variation is still on the account. */
+  variationDeleted: boolean;
+}
+
+interface VariationPollResponse {
+  generated_image_variation_generic?: { status?: string; url?: string | null }[];
+}
+type VariationSnapshot = NonNullable<VariationPollResponse['generated_image_variation_generic']>[number];
+
+/**
+ * Never throws: the outcome is a value because a failed cleanup must not cost the caller the
+ * bytes. UNVERIFIED ROUTE: Leonardo's SDK (4.21.3) publishes no variation delete; this is the
+ * best guess, and `variationDeleted: false` is how a refusal reaches the operator.
+ */
+async function deleteVariation(variationId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${LEONARDO_API_BASE}/variations/${variationId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (res.ok) return true;
+    logger.warn(`[leonardo] deleteVariation ${variationId} returned ${res.status}`);
+  } catch (err) {
+    logger.warn(`[leonardo] deleteVariation ${variationId} failed: ${String(err)}`);
   }
-  const data = (await res.json()) as {
-    universalUpscaler?: { id?: string };
-    sdUpscaleJob?: { id?: string };
-  };
-  const upscaleJobId = data.universalUpscaler?.id ?? data.sdUpscaleJob?.id;
-  if (!upscaleJobId) throw new Error('Leonardo upscale returned no job id');
-  return { upscaleJobId };
+  return false;
 }
 
-export interface UnzoomOptions {
-  /** Optional prompt describing what to paint into the extended border region. */
-  prompt?: string;
+/** Poll a variation to completion, download it, and delete it on every exit. */
+async function collectVariation(
+  variationId: string,
+  label: string,
+  opts: VariationPollOptions,
+): Promise<VariationImageResult> {
+  const pollMs = opts.pollIntervalMs ?? POLL_INTERVAL_MS;
+  const maxAttempts = opts.maxPollAttempts ?? MAX_VARIATION_POLL_ATTEMPTS;
+  let imageUrl: string;
+  let bytes: Uint8Array;
+  try {
+    const variation = await pollUntilReady<VariationSnapshot>({
+      intervalMs: pollMs,
+      maxAttempts,
+      fetchStatus: async () => {
+        const res = await fetch(`${LEONARDO_API_BASE}/variations/${variationId}`, { headers: authHeaders() });
+        if (!res.ok) return undefined;
+        const data = (await res.json()) as VariationPollResponse;
+        return data.generated_image_variation_generic?.[0];
+      },
+      isDone: (v) => v.status === 'COMPLETE' && !!v.url,
+      isFailed: (v) => v.status === 'FAILED',
+      onFailed: () => new Error(`Leonardo ${label} failed`),
+      onTimeout: () => new Error(`Leonardo ${label} timed out after ${(maxAttempts * pollMs) / 1000}s`),
+    });
+    imageUrl = variation.url!;
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) throw new Error(`Leonardo ${label} download failed (${imgRes.status})`);
+    bytes = new Uint8Array(await imgRes.arrayBuffer());
+  } catch (err) {
+    if (await deleteVariation(variationId)) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`${message} (variation ${variationId} is still on the Leonardo account: its delete failed)`, { cause: err });
+  }
+  const variationDeleted = await deleteVariation(variationId);
+  return { imageUrl, variationId, imageBase64: Buffer.from(bytes).toString('base64'), variationDeleted };
 }
 
-/**
- * Unzoom (outpaint) a previously-generated image — extends it beyond its borders.
- * Leonardo exposes this as a variation job (`POST /variations/unzoom`); the result
- * is fetched later via the variations API. Returns the variation job id.
- */
-export async function unzoomImage(
-  generatedImageId: string,
-  opts: UnzoomOptions = {},
-): Promise<{ unzoomJobId: string }> {
-  const body: Record<string, unknown> = { id: generatedImageId, isVariation: false };
-  if (opts.prompt) body.prompt = opts.prompt;
-  const res = await fetch(`${LEONARDO_API_BASE}/variations/unzoom`, {
+/** POST a variation job; nothing exists on the account until this returns an id. */
+async function startVariation(path: string, label: string, body: Record<string, unknown>): Promise<unknown> {
+  const res = await fetch(`${LEONARDO_API_BASE}${path}`, {
     method: 'POST',
     headers: authHeaders(true),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Leonardo unzoom failed (${res.status}): ${text}`);
+    const hint = [400, 404, 422].includes(res.status) ? ` ${LIVE_IMAGE_ID_HINT}` : '';
+    throw new Error(`Leonardo ${label} failed (${res.status}): ${text}.${hint}`);
   }
-  const data = (await res.json()) as {
-    sdUnzoomJob?: { id?: string };
-    sdVariationJob?: { id?: string };
-  };
-  const unzoomJobId = data.sdUnzoomJob?.id ?? data.sdVariationJob?.id;
-  if (!unzoomJobId) throw new Error('Leonardo unzoom returned no job id');
-  return { unzoomJobId };
+  return res.json();
+}
+
+/** Universal Upscaler: upscale a live Leonardo image, download the result, delete the variation. */
+export async function upscaleImage(
+  generatedImageId: string,
+  style: string = 'GENERAL',
+  opts: VariationPollOptions = {},
+): Promise<VariationImageResult> {
+  const data = (await startVariation('/variations/universal-upscaler', 'upscale', {
+    generatedImageId,
+    upscalerStyle: style,
+  })) as { universalUpscaler?: { id?: string } };
+  const variationId = data.universalUpscaler?.id;
+  if (!variationId) throw new Error('Leonardo upscale returned no job id');
+  return collectVariation(variationId, 'upscale', opts);
+}
+
+export interface UnzoomOptions extends VariationPollOptions {
+  /** Optional prompt describing what to paint into the extended border region. */
+  prompt?: string;
+}
+
+/** Unzoom (outpaint) a live Leonardo image, download the result, delete the variation. */
+export async function unzoomImage(
+  generatedImageId: string,
+  opts: UnzoomOptions = {},
+): Promise<VariationImageResult> {
+  const body: Record<string, unknown> = { id: generatedImageId, isVariation: false };
+  if (opts.prompt) body.prompt = opts.prompt;
+  const data = (await startVariation('/variations/unzoom', 'unzoom', body)) as { sdUnzoomJob?: { id?: string } };
+  const variationId = data.sdUnzoomJob?.id;
+  if (!variationId) throw new Error('Leonardo unzoom returned no job id');
+  return collectVariation(variationId, 'unzoom', opts);
 }
 
 export interface Texture3DRequest {

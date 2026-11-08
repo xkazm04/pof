@@ -4,7 +4,7 @@ import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useMaterialStore, type TextureChannel } from '../useMaterialStore';
-import type { ScenarioResult, ImageResult } from './types';
+import type { ScenarioResult, ImageResult, VariationResult } from './types';
 import { SEAMLESS_HINT, PBR_MAP_CHANNELS } from './constants';
 
 export function useAdvancedTexturePanel() {
@@ -18,14 +18,14 @@ export function useAdvancedTexturePanel() {
   // Universal Upscaler tile
   const [imageId, setImageId] = useState('');
   const [style, setStyle] = useState('GENERAL');
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [upResult, setUpResult] = useState<VariationResult | null>(null);
   const [upErr, setUpErr] = useState<string | null>(null);
   const [upLoading, setUpLoading] = useState(false);
 
   // Unzoom (outpaint) tile
   const [uzImageId, setUzImageId] = useState('');
   const [uzPrompt, setUzPrompt] = useState('');
-  const [uzJob, setUzJob] = useState<string | null>(null);
+  const [uzResult, setUzResult] = useState<VariationResult | null>(null);
   const [uzErr, setUzErr] = useState<string | null>(null);
   const [uzLoading, setUzLoading] = useState(false);
 
@@ -119,25 +119,25 @@ export function useAdvancedTexturePanel() {
   };
 
   const runUpscale = async () => {
-    setUpLoading(true); setJobId(null); setUpErr(null);
-    const r = await tryApiFetch<{ upscaleJobId: string }>('/api/leonardo', {
+    setUpLoading(true); setUpResult(null); setUpErr(null);
+    const r = await tryApiFetch<VariationResult>('/api/leonardo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'upscale', imageId, style }),
     });
-    if (r.ok) setJobId(r.data.upscaleJobId);
+    if (r.ok) setUpResult(r.data);
     else { setUpErr(r.error); logger.warn(`[advanced-texture] upscale: ${r.error}`); }
     setUpLoading(false);
   };
 
   const runUnzoom = async () => {
-    setUzLoading(true); setUzJob(null); setUzErr(null);
-    const r = await tryApiFetch<{ unzoomJobId: string }>('/api/leonardo', {
+    setUzLoading(true); setUzResult(null); setUzErr(null);
+    const r = await tryApiFetch<VariationResult>('/api/leonardo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'unzoom', imageId: uzImageId, prompt: uzPrompt || undefined }),
     });
-    if (r.ok) setUzJob(r.data.unzoomJobId);
+    if (r.ok) setUzResult(r.data);
     else { setUzErr(r.error); logger.warn(`[advanced-texture] unzoom: ${r.error}`); }
     setUzLoading(false);
   };
@@ -176,8 +176,8 @@ export function useAdvancedTexturePanel() {
 
   return {
     prompt, setPrompt, modelId, setModelId, pbr, pbrErr, pbrLoading,
-    imageId, setImageId, style, setStyle, jobId, upErr, upLoading,
-    uzImageId, setUzImageId, uzPrompt, setUzPrompt, uzJob, uzErr, uzLoading,
+    imageId, setImageId, style, setStyle, upResult, upErr, upLoading,
+    uzImageId, setUzImageId, uzPrompt, setUzPrompt, uzResult, uzErr, uzLoading,
     cnPrompt, setCnPrompt, cnImageId, setCnImageId, cnPreproc, setCnPreproc, cnResult, cnErr, cnLoading,
     ipPrompt, setIpPrompt, ipImageId, setIpImageId, ipMaskId, setIpMaskId, ipResult, ipErr, ipLoading,
     appliedChannels,
