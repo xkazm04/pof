@@ -40,6 +40,23 @@ describe('GET /api/pipeline-artifacts/drain/frame', () => {
     expect(res.status).toBe(403);
   });
 
+  it('refuses a PNG in the temp dir that no L4 capture wrote (only pof_l4_* is served)', async () => {
+    // The OS temp dir is shared with every other program on the machine: being under it
+    // proves nothing about who wrote a file. Only the capture's own names are frames.
+    const foreignDir = fs.mkdtempSync(path.join(os.tmpdir(), 'other-app-'));
+    const foreign = path.join(foreignDir, 'screenshot.png');
+    const looseForeign = path.join(os.tmpdir(), `other-app-${process.pid}.png`);
+    fs.writeFileSync(foreign, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    fs.writeFileSync(looseForeign, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    try {
+      expect((await GET(req(`?path=${encodeURIComponent(foreign)}`))).status).toBe(403);
+      expect((await GET(req(`?path=${encodeURIComponent(looseForeign)}`))).status).toBe(403);
+    } finally {
+      fs.rmSync(foreignDir, { recursive: true, force: true });
+      fs.rmSync(looseForeign, { force: true });
+    }
+  });
+
   it('refuses a traversal attempt out of the temp jail', async () => {
     const escape = path.join(os.tmpdir(), '..', '..', 'Windows', 'system.ini.png');
     const res = await GET(req(`?path=${encodeURIComponent(escape)}`));
