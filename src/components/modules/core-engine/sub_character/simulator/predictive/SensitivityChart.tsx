@@ -6,6 +6,10 @@ import { STATUS_WARNING,
 } from '@/lib/chart-colors';
 import { survivalColor, type SensitivityCurve } from './data';
 
+/** One unit rule for the axis AND the tooltip: chance attributes are fractions, shown as %. */
+const formatSensValue = (attribute: string, v: number) =>
+  attribute === 'critChance' ? `${+(v * 100).toFixed(1)}%` : v.toFixed(0);
+
 export function SensitivityChart({ curve, width, height, color }: {
   curve: SensitivityCurve; width: number; height: number; color: string;
 }) {
@@ -92,7 +96,7 @@ export function SensitivityChart({ curve, width, height, color }: {
               <div className="bg-surface-1 border border-border rounded px-2 py-1 text-2xs font-mono shadow-lg"
                 style={{ borderColor: `${withOpacity(color, OPACITY_25)}` }}>
                 <div className="font-bold mb-0.5" style={{ color }}>
-                  {curve.attribute}: {hp.value.toFixed(curve.attribute === 'critChance' ? 2 : 0)}
+                  {curve.attribute}: {formatSensValue(curve.attribute, hp.value)}
                 </div>
                 <div className="text-text-muted">
                   Survival: <span style={{ color: survivalColor(hp.survivalRate) }}>
@@ -125,7 +129,7 @@ export function SensitivityChart({ curve, width, height, color }: {
       {[pts[0], pts[Math.floor(pts.length / 2)], pts[pts.length - 1]].map((p, i) => (
         <text key={i} x={toX(p.value)} y={height - 2}
           textAnchor="middle" className="text-2xs fill-text-muted">
-          {curve.attribute === 'critChance' ? (p.value * 100).toFixed(0) + '%' : p.value.toFixed(0)}
+          {formatSensValue(curve.attribute, p.value)}
         </text>
       ))}
     </svg>
