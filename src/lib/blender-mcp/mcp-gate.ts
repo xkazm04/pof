@@ -24,7 +24,7 @@
 import { critiqueMesh, critiqueUnavailable, summarizeGate, type CritiqueResult } from '@/lib/visual-gen/mesh-critique';
 import { fetchMeshForGrading, MCP_ASSET_DIR, type MeshFetchOutcome } from '@/lib/visual-gen/mesh-fetch';
 import { assetUrl } from '@/lib/visual-gen/generated-assets';
-import type { ForgeGateProjection } from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
+import type { ForgeGateProjection } from '@/lib/visual-gen/forgeJobStatus';
 import type { JobStatus } from '@/lib/blender-mcp/types';
 
 /** What is missing, in the operator's terms — not a hedge, a located gap. */

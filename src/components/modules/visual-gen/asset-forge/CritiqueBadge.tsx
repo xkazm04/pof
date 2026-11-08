@@ -3,7 +3,7 @@
 import type { Scorecard } from '@/lib/visual-gen/mesh-critique';
 import type { StatusLevel } from '@/lib/status-token';
 import { StatusTag } from '@/components/ui/StatusTag';
-import type { ForgeCritique } from './forgeJobStatus';
+import type { ForgeCritique } from '@/lib/visual-gen/forgeJobStatus';
 
 /** Verdict → the shared colorblind-safe status ramp (color + glyph + word). */
 const VERDICT_LEVEL: Record<Scorecard['verdict'], StatusLevel> = {

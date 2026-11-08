@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { resolveRunnerJob } from '@/lib/visual-gen/runner-dispatch';
-import { projectCritique } from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
+import { projectCritique } from '@/lib/visual-gen/forgeJobStatus';
 import { remedyFor } from '@/lib/visual-gen/delivery-remedy';
 
 /**

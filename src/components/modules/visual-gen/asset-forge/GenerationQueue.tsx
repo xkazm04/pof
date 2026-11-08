@@ -8,7 +8,7 @@ import { StatusTag } from '@/components/ui/StatusTag';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from '@/components/layout-lab/steps/shared/GlbPreviewPanel';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import { useForgeStore, mcpReattachable, runnerRecoverable, type GenerationJob } from './useForgeStore';
-import { jobOutcome, meshPreview, type ForgeOutcome } from './forgeJobStatus';
+import { jobOutcome, meshPreview, type ForgeOutcome } from '@/lib/visual-gen/forgeJobStatus';
 import { CritiqueBadge } from './CritiqueBadge';
 import { FinishRemedy } from './FinishRemedy';
 

@@ -6,7 +6,7 @@ import {
   projectCritique,
   jobOutcome,
   meshPreview,
-} from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
+} from '@/lib/visual-gen/forgeJobStatus';
 import type { MeshMetrics } from '@/lib/visual-gen/mesh-critique';
 
 // The lab's 3D viewer is WebGL-only (three/r3f behind next/dynamic). We assert the
