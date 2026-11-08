@@ -14,11 +14,12 @@ import type { BudgetStatus, DailySpend } from '@/types/cli-spend';
  * Every figure is labelled as a projection or a replay; nothing is stored or sent.
  */
 
-/** A typed limit: blank / invalid = no limit (mirrors the panel's save rule). */
+/** A typed limit: blank / invalid / <= 0 = no limit — the server's save rule
+ *  (`normalizeLimit` in src/app/api/cli-spend/route.ts stores 0 as "no limit"). */
 function parseLimit(input: string): number | null {
   if (input.trim() === '') return null;
   const n = Number(input);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 /** `3 Sep` for an instant, on the calendar of `zone`. */
