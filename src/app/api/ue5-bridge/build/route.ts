@@ -10,6 +10,7 @@
 
 import { type NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { buildQueue } from '@/lib/ue5-bridge/build-queue';
 import { getBuildHistory, getBuildRequestById, getBuildStatusRow } from '@/lib/ue5-bridge/build-pipeline';
 import { resolveBuildStatus } from '@/lib/ue5-bridge/build-status';
@@ -43,6 +44,8 @@ interface RebuildAction {
 type BuildAction = StartAction | AbortAction | RebuildAction | { action: string };
 
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const body = (await req.json()) as BuildAction;
 
