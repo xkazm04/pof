@@ -5,7 +5,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startMeshFinishJob } from '@/lib/visual-gen/mesh-finish-job-store';
-import { polycountFor } from '@/lib/visual-gen/polycount-presets';
+import { ASSET_CLASS_IDS, polycountFor } from '@/lib/visual-gen/polycount-presets';
 import type { BakeMap, MirrorAxis } from '@/lib/visual-gen/mesh-finish';
 
 /**
@@ -37,6 +37,38 @@ export const CULL_INTERIOR_REFUSAL =
   'here. It also removes nothing on the assembled multi-shell meshes this pipeline ' +
   'produces (select_interior_faces sees only WELDED interior). Re-send without it.';
 
+const MIRROR_AXES: readonly MirrorAxis[] = ['x', 'y', 'z'];
+/** Every map the runner knows; a `Record` so a new `BakeMap` cannot be forgotten here. */
+const BAKE_MAPS: Record<BakeMap, true> = { normal: true, ao: true, diffuse: true, roughness: true, metallic: true };
+/** A bake's cost is the square of this; the script's own docs run 1024-2048. */
+const MIN_BAKE_SIZE = 64;
+const MAX_BAKE_SIZE = 8192;
+
+/** The refusal for the first field the runner could not honour, or null. Pure. */
+function invalidField(body: Record<string, unknown>): string | null {
+  const { highPolyPath, outputPath, assetClass, targetFaces, mirror, unwrap, bake, bakeSize } = body;
+  if (highPolyPath !== undefined && typeof highPolyPath !== 'string') return 'highPolyPath must be a string';
+  if (outputPath !== undefined && typeof outputPath !== 'string') return 'outputPath, when given, must be a string';
+  if (assetClass !== undefined && !(ASSET_CLASS_IDS as readonly unknown[]).includes(assetClass)) {
+    // An unknown class has no budget, so the run would silently skip retopo altogether.
+    return `assetClass must be one of ${ASSET_CLASS_IDS.join(', ')}`;
+  }
+  if (targetFaces !== undefined && !(Number.isInteger(targetFaces) && (targetFaces as number) > 0)) {
+    return 'targetFaces, when given, must be a positive integer (triangles)';
+  }
+  if (mirror !== undefined && !(MIRROR_AXES as readonly unknown[]).includes(mirror)) {
+    return `mirror must be one of ${MIRROR_AXES.join(', ')}`;
+  }
+  if (unwrap !== undefined && typeof unwrap !== 'boolean') return 'unwrap, when given, must be a boolean';
+  if (bake !== undefined && !(Array.isArray(bake) && bake.every((m) => typeof m === 'string' && Object.hasOwn(BAKE_MAPS, m)))) {
+    return `bake must be an array of ${Object.keys(BAKE_MAPS).join(', ')}`;
+  }
+  if (bakeSize !== undefined && !(Number.isInteger(bakeSize) && (bakeSize as number) >= MIN_BAKE_SIZE && (bakeSize as number) <= MAX_BAKE_SIZE)) {
+    return `bakeSize, when given, must be an integer from ${MIN_BAKE_SIZE} to ${MAX_BAKE_SIZE}`;
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
@@ -60,6 +92,9 @@ export async function POST(request: NextRequest) {
     // Refused by name, before anything else — a silently-dropped flag would let a caller
     // read the result as a cull that found nothing. See the header.
     if (cullInterior) return apiError(CULL_INTERIOR_REFUSAL, 400);
+
+    const invalid = invalidField(parsed);
+    if (invalid) return apiError(invalid, 400);
 
     if (!highPolyPath?.trim()) return apiError('highPolyPath is required', 400);
     // Fail on a missing input here rather than letting a Blender run burn minutes to

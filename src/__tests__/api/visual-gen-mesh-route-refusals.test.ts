@@ -123,4 +123,39 @@ describe('view-gate status', () => {
   });
 });
 
+describe('mesh-finish fields', () => {
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['highPolyPath', 7],
+    ['outputPath', 7],
+    ['mirror', 'w'],
+    ['bake', 'normal'],
+    ['bake', ['gloss']],
+    ['bakeSize', 0],
+    ['bakeSize', 99999],
+    ['bakeSize', 'big'],
+    ['targetFaces', -1],
+    ['targetFaces', 1.5],
+    ['targetFaces', 'many'],
+    ['assetClass', 'not-a-class'],
+    ['assetClass', 7],
+    ['unwrap', 'yes'],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)}`, async () => {
+      const res = await finish(json({ highPolyPath: glb, targetFaces: 5000, [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  it('still starts a job for a fully valid request', async () => {
+    const res = await finish(json({
+      highPolyPath: glb, assetClass: 'prop', targetFaces: 5000, mirror: 'x', bake: ['normal', 'metallic'], bakeSize: 1024, unwrap: true,
+    }));
+    expect(res.status).toBe(202);
+    expect(seams.startFinish).toHaveBeenCalledTimes(1);
+  });
+});
+
 // FINDINGS-APPEND
