@@ -79,10 +79,20 @@ const NOT_A_PROP_STEMS = [
   'bush', 'grass', 'tree', 'vine', 'ground', 'terrain', 'sky', 'wall', 'ceiling', 'water',
 ];
 
+/**
+ * Real props whose spelling merely begins with a scenery stem. Prefix matching is what catches
+ * `stairs`, `archway` and `bushes`, and it also caught a wallet and a bottle of vinegar.
+ */
+const PROP_WORDS_SHARING_A_STEM = new Set([
+  'wallet', 'wallets', 'archery', 'archive', 'archives', 'watering', 'waterskin', 'waterskins',
+  'waterproof', 'bushel', 'bushels', 'vinegar', 'stepladder', 'stepladders', 'stepstool',
+  'stepstools', 'groundsheet', 'groundsheets',
+]);
+
 /** Does this prop name name something the prompt excludes? Pure. */
 export function namesExcludedScenery(name: string): boolean {
   const words = name.toLowerCase().split(/[^a-z]+/).filter(Boolean);
-  return words.some((w) => NOT_A_PROP_STEMS.some((stem) => w.startsWith(stem)));
+  return words.some((w) => !PROP_WORDS_SHARING_A_STEM.has(w) && NOT_A_PROP_STEMS.some((stem) => w.startsWith(stem)));
 }
 
 /** Beyond this a "count" is a texture, not a prop set worth spawning individually. */
