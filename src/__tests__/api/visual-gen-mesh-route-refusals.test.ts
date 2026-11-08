@@ -305,3 +305,26 @@ describe('scene-decompose fields', () => {
   }
 });
 
+describe('assetClass is one rule across mesh-finish, remediate, ue-import and its plan', () => {
+  const bodies: ReadonlyArray<readonly [string, Handler, (assetClass: string) => Record<string, unknown>]> = [
+    ['mesh-finish', finish, (assetClass) => ({ highPolyPath: glb, assetClass })],
+    ['mesh-finish/remediate', remediate, (assetClass) => ({ name: 'crate.glb', dir: 'meshes', assetClass })],
+    ['ue-import', ueImport, (assetClass) => ({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', assetClass })],
+    ['ue-import/plan', uePlan, (assetClass) => ({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', assetClass })],
+  ];
+  for (const [name, handler, body] of bodies) {
+    it(`${name} refuses a mistyped class with a 400 naming the valid ones and starts nothing`, async () => {
+      const res = await handler(json(body('charcter')));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain('assetClass must be one of');
+      expectNothingStarted();
+    });
+  }
+
+  it('ue-import still starts a job for a known class and for an empty (class-less) one', async () => {
+    for (const assetClass of ['prop', '']) {
+      const res = await ueImport(json({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', assetClass }));
+      expect(res.status).toBe(202);
+    }
+  });
+});

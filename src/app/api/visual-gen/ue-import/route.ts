@@ -4,6 +4,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startUeImportJob } from '@/lib/visual-gen/ue-import-job-store';
+import { ASSET_CLASS_IDS } from '@/lib/visual-gen/polycount-presets';
 import { UE_ASSET_NAME, UE_CONTENT_PATH, type CollisionUse } from '@/lib/visual-gen/ue-import';
 
 const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
@@ -85,6 +86,11 @@ export async function POST(req: NextRequest) {
     }
     if (body.assetClass !== undefined && typeof body.assetClass !== 'string') {
       return apiError('assetClass, when given, must be a string', 400);
+    }
+    // The same rule mesh-finish applies: a typo (`charcter`) must not silently drop the class
+    // budget and the scale nominal. An empty string still means "no class", as before.
+    if (body.assetClass?.trim() && !(ASSET_CLASS_IDS as readonly string[]).includes(body.assetClass.trim())) {
+      return apiError(`assetClass must be one of ${ASSET_CLASS_IDS.join(', ')}`, 400);
     }
 
     // The importer refuses these too, but only after the job has critiqued the mesh.
