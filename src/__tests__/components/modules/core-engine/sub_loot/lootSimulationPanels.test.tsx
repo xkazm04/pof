@@ -20,6 +20,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
   ),
 }));
 
+import { DroughtCalculator } from '@/components/modules/core-engine/sub_loot/pity/DroughtCalculator';
 import { DropSimulator } from '@/components/modules/core-engine/sub_loot/simulation/DropSimulator';
 import { useLootTuningStore, resetLootTuning } from '@/components/modules/core-engine/sub_loot/_shared/lootTuningStore';
 
@@ -57,5 +58,21 @@ describe('DropSimulator', () => {
     act(() => useLootTuningStore.getState().dispatch({ type: 'setField', id: 'MeleeGrunt', field: 'dropChance', value: 0.9 }));
     const { container } = render(<DropSimulator />);
     expect(container.querySelector('[data-pick="MeleeGrunt"]')!.textContent).toContain('Drop: 90%');
+  });
+});
+
+describe('DroughtCalculator headline stats honour the pity toggle', () => {
+  const stat = (container: HTMLElement, label: string) =>
+    [...container.querySelectorAll('div')].find((d) => d.textContent === label)!.nextElementSibling!.textContent;
+
+  it('Legendary (2%) with pity @ 20: median and expected dry are capped by the pity, not the raw geometric', () => {
+    const { container, getByText } = render(<DroughtCalculator pityThreshold={20} />);
+    // P(drop within 19 kills) = 1 - 0.98^19 = 0.32 < 0.5, so half the players are only saved by the pity at 20.
+    expect(stat(container, 'Median (P50)')).toBe('20 kills');
+    // E[kills] with a hard pity at T = (1 - (1-r)^T) / r = 16.6.
+    expect(stat(container, 'Expected Dry')).toBe('17 kills');
+    fireEvent.click(getByText('Pity @ 20'));
+    expect(stat(container, 'Median (P50)')).toBe('35 kills');
+    expect(stat(container, 'Expected Dry')).toBe('50 kills');
   });
 });

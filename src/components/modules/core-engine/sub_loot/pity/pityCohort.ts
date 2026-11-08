@@ -23,6 +23,17 @@ export function mulberry32(seed: number): Rng {
   };
 }
 
+/**
+ * Mean kills to the first drop, with an optional hard pity forcing it at kill T:
+ * E = sum_{k=0}^{T-1} (1-r)^k = (1 - (1-r)^T) / r. Without pity it is 1/r.
+ */
+export function expectedKillsToDrop(rate: number, threshold: number | null): number {
+  const pity = threshold && threshold > 0 ? Math.floor(threshold) : null;
+  if (rate >= 1) return 1;
+  if (rate <= 0) return pity ?? Infinity;
+  return pity === null ? 1 / rate : (1 - Math.pow(1 - rate, pity)) / rate;
+}
+
 export interface CohortInput {
   rate: number;
   threshold: number | null;
