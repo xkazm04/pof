@@ -44,6 +44,12 @@ export function buildAttributeDefaultsPython(rows: AttributeRow[]): string {
     L.push(`# ── ${row.rowName} ──`);
     L.push(`${rowVar(row)} = unreal.ARPGAttributeInitRow()`);
     for (const [field, value] of Object.entries(row.values)) {
+      // NaN / Infinity (e.g. a typed "1e999") would emit a bare name Python
+      // cannot resolve and abort the whole script; keep the struct default.
+      if (!Number.isFinite(value)) {
+        L.push(`# ${field}: non-finite value skipped (struct default kept)`);
+        continue;
+      }
       // set_editor_property uses snake_case; field names here are plain (no bool b-prefix)
       L.push(`${rowVar(row)}.set_editor_property("${toSnake(field)}", ${value})`);
     }
