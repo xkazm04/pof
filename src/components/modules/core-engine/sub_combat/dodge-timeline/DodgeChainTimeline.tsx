@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import {
@@ -8,7 +8,8 @@ import {
   withOpacity, OPACITY_2, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_60, OPACITY_80,
 } from '@/lib/chart-colors';
 import type { DodgeChainEntry } from '../_shared/dodge-types';
-import { computePhases } from '../_shared/dodge-math';
+import { computePhases, getChainEndTime } from '../_shared/dodge-math';
+import { useScrubBar } from '@/hooks/useScrubBar';
 import { SectionHeader } from '../../unique-tabs/_design';
 
 export function DodgeChainTimeline({
@@ -20,31 +21,8 @@ export function DodgeChainTimeline({
   playhead: number;
   onScrub: (t: number) => void;
 }) {
-  const totalChainTime = useMemo(() => {
-    if (chain.length === 0) return 0;
-    const last = chain[chain.length - 1];
-    const phases = computePhases(last.params);
-    return last.startTime + phases.totalTimeline;
-  }, [chain]);
-
-  const barRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-
-  const handleInteraction = useCallback((clientX: number) => {
-    const bar = barRef.current;
-    if (!bar) return;
-    const rect = bar.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    onScrub(pct * totalChainTime);
-  }, [totalChainTime, onScrub]);
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => { if (dragging.current) handleInteraction(e.clientX); };
-    const onUp = () => { dragging.current = false; };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [handleInteraction]);
+  const totalChainTime = useMemo(() => getChainEndTime(chain), [chain]);
+  const { barRef, onMouseDown } = useScrubBar(totalChainTime, onScrub);
 
   if (chain.length === 0) return null;
 
@@ -68,7 +46,7 @@ export function DodgeChainTimeline({
         ref={barRef}
         className="relative h-10 rounded-md overflow-hidden cursor-pointer select-none"
         style={{ backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_2), border: `1px solid ${withOpacity(OVERLAY_WHITE, OPACITY_8)}` }}
-        onMouseDown={(e) => { dragging.current = true; handleInteraction(e.clientX); }}
+        onMouseDown={onMouseDown}
       >
         {chain.map((entry, i) => (
           <ChainSegment key={entry.id} entry={entry} index={i} totalChainTime={totalChainTime} />

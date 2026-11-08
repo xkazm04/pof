@@ -6,7 +6,7 @@ import { ACCENT_CYAN, ACCENT_ORANGE, ACCENT_VIOLET,
   withOpacity, OPACITY_25,
 } from '@/lib/chart-colors';
 import type { DodgeParams } from '../_shared/dodge-types';
-import { PARAM_FIELDS, DEFAULT_PARAMS } from '../_shared/dodge-types';
+import { PARAM_FIELDS } from '../_shared/dodge-types';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { safeDur } from '../_shared/dodge-math';
 

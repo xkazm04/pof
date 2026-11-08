@@ -38,6 +38,8 @@ import { computePhases } from '@/components/modules/core-engine/sub_combat/_shar
 import { useCharacterHeuristicStore } from '@/stores/heuristicTuningStore';
 import { VelocityCurve } from '@/components/modules/core-engine/sub_combat/dodge-timeline/VelocityCurve';
 import { ParameterEditor } from '@/components/modules/core-engine/sub_combat/dodge-timeline/ParameterEditor';
+import { TimelineBar } from '@/components/modules/core-engine/sub_combat/dodge-timeline/TimelineBar';
+import { DodgeChainTimeline } from '@/components/modules/core-engine/sub_combat/dodge-timeline/DodgeChainTimeline';
 
 /* ── Manual rAF clock ─────────────────────────────────────────────────────── */
 
@@ -150,5 +152,47 @@ describe('zero dodge duration never renders Infinity/NaN readouts', () => {
   it('ParameterEditor quick stats are finite', () => {
     const { container } = render(<ParameterEditor params={params} onUpdate={() => {}} onReset={() => {}} />);
     expect(container.textContent).not.toMatch(/Infinity|NaN/);
+  });
+});
+
+/* ── Scrub bars: drag maps clientX onto [0, total] ───────────────────────── */
+
+function stubRect(el: Element) {
+  vi.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+    left: 0, width: 200, top: 0, height: 10, right: 200, bottom: 10, x: 0, y: 0, toJSON: () => ({}),
+  } as DOMRect);
+}
+
+describe('scrub bars', () => {
+  it('TimelineBar scrubs on mousedown + drag and stops on mouseup', () => {
+    const phases = computePhases(DEFAULT_PARAMS);
+    const onScrub = vi.fn();
+    const { container } = render(
+      <TimelineBar phases={phases} playhead={0} hitMarkers={[]} totalTime={phases.totalTimeline} onScrub={onScrub} />,
+    );
+    const bar = container.querySelector('.cursor-pointer') as HTMLElement;
+    stubRect(bar);
+    fireEvent.mouseDown(bar, { clientX: 100 });
+    expect(onScrub).toHaveBeenLastCalledWith(phases.totalTimeline / 2);
+    fireEvent.mouseMove(window, { clientX: 400 });
+    expect(onScrub).toHaveBeenLastCalledWith(phases.totalTimeline);
+    fireEvent.mouseUp(window);
+    fireEvent.mouseMove(window, { clientX: 0 });
+    expect(onScrub).toHaveBeenCalledTimes(2);
+  });
+
+  it('DodgeChainTimeline scrubs across the whole chain', () => {
+    const p = DEFAULT_PARAMS;
+    const span = computePhases(p).totalTimeline;
+    const chain = [
+      { id: 'a', startTime: 0, params: p },
+      { id: 'b', startTime: span, params: p },
+    ];
+    const onScrub = vi.fn();
+    const { container } = render(<DodgeChainTimeline chain={chain} playhead={0} onScrub={onScrub} />);
+    const bar = container.querySelector('.cursor-pointer') as HTMLElement;
+    stubRect(bar);
+    fireEvent.mouseDown(bar, { clientX: 50 });
+    expect(onScrub).toHaveBeenLastCalledWith((2 * span) / 4);
   });
 });

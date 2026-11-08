@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useScrubBar } from '@/hooks/useScrubBar';
 import {
   ACCENT_EMERALD, STATUS_ERROR, OVERLAY_WHITE,
   withOpacity, OPACITY_3, OPACITY_8, OPACITY_15, OPACITY_30, OPACITY_10, OPACITY_37, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_60, OPACITY_80,
@@ -25,24 +25,7 @@ export function TimelineBar({
   onScrub: (t: number) => void;
   hapticEffect?: HapticEffect;
 }) {
-  const barRef = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
-
-  const handleInteraction = useCallback((clientX: number) => {
-    const bar = barRef.current;
-    if (!bar) return;
-    const rect = bar.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    onScrub(pct * totalTime);
-  }, [totalTime, onScrub]);
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => { if (dragging.current) handleInteraction(e.clientX); };
-    const onUp = () => { dragging.current = false; };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [handleInteraction]);
+  const { barRef, onMouseDown } = useScrubBar(totalTime, onScrub);
 
   const phaseBars: Phase[] = [phases.movement, phases.invuln, phases.cancel, phases.recovery];
 
@@ -70,7 +53,7 @@ export function TimelineBar({
               : 'border-color 0.3s ease-out, box-shadow 0.3s ease-out, transform 0.05s',
           animation: isHitHaptic ? 'dodge-hit-shake 0.15s ease-in-out 0s 2' : 'none',
         }}
-        onMouseDown={(e) => { dragging.current = true; handleInteraction(e.clientX); }}
+        onMouseDown={onMouseDown}
       >
         {/* Haptic flash overlay */}
         <AnimatePresence>
