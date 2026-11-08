@@ -42,7 +42,7 @@ export function BidirectionalStateSyncPanel() {
       />
 
       {/* ── Offline state ─────────────────────────────────────────── */}
-      {!s.isLive && <OfflineState autoSync={s.autoSync} />}
+      {!s.isLive && <OfflineState autoSync={s.autoSync} wsStatus={s.wsStatus} wsPort={s.wsPort} />}
 
       {/* ── Live sections ─────────────────────────────────────────── */}
       {s.isLive && (

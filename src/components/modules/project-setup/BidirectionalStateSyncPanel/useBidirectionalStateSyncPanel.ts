@@ -26,6 +26,7 @@ export function useBidirectionalStateSyncPanel() {
   } = useLiveStateSync();
 
   const autoSync = useUE5BridgeStore((s) => s.autoSyncLiveState);
+  const wsPort = useUE5BridgeStore((s) => s.wsPort);
 
   // ── Sync log ──
   const [syncLog, setSyncLog] = useState<SyncLogEntry[]>([]);
@@ -192,6 +193,7 @@ export function useBidirectionalStateSyncPanel() {
 
   return {
     wsStatus,
+    wsPort,
     snapshot,
     frameRate,
     isLive,

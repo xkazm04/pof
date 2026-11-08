@@ -330,3 +330,16 @@ describe('direct write form after a dropped frame', () => {
     expect(pushDirect(true)).toBe('');
   });
 });
+
+describe('offline copy tells the connection state', () => {
+  it('a failed socket does not read as merely not connected', () => {
+    render(<OfflineState autoSync={false} wsStatus="error" wsPort={30041} />);
+    expect(screen.getByText('WebSocket connection failed')).not.toBeNull();
+    expect(screen.queryByText('Not connected to UE5')).toBeNull();
+  });
+
+  it('a retrying socket says it is retrying', () => {
+    render(<OfflineState autoSync={false} wsStatus="reconnecting" wsPort={30041} />);
+    expect(screen.getByText(/reconnecting/i)).not.toBeNull();
+  });
+});
