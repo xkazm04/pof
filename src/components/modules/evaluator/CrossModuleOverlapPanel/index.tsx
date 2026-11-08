@@ -22,7 +22,7 @@ import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { invalidateFeatureData } from '@/hooks/useModuleAggregates';
 import { UI_TIMEOUTS, getAppOrigin } from '@/lib/constants';
-import { STATUS_ERROR, STATUS_SUCCESS, MODULE_COLORS } from '@/lib/chart-colors';
+import { STATUS_ERROR, STATUS_SUCCESS, STATUS_NEUTRAL, MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { REASON_CONFIG, TWIN_KIND_CONFIG, type FilterReason } from './constants';
 import { moduleLabel } from './helpers';
@@ -239,7 +239,7 @@ export function CrossModuleOverlapPanel() {
             {!statuses.loaded && <span className="text-2xs text-text-muted">· loading twin statuses…</span>}
           </div>
           <div className="flex items-center gap-1">
-            <FilterChip label="All" active={filterReason === 'all'} onClick={() => setFilterReason('all')} color="var(--text-muted)" />
+            <FilterChip label="All" active={filterReason === 'all'} onClick={() => setFilterReason('all')} color={STATUS_NEUTRAL} />
             {(Object.keys(REASON_CONFIG) as OverlapPair['reason'][]).map((reason) => (
               <FilterChip
                 key={reason}
