@@ -68,8 +68,12 @@ export const GET = withRoute(async (req: NextRequest) => {
     return apiSuccess({ scan: inRequestedProject(getLatestScan(projectId), projectId) });
   }
 
-  const limitRaw = Number(searchParams.get('limit'));
-  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 500) : 50;
+  const limitRaw = searchParams.get('limit');
+  const limitParsed = limitRaw === null ? 50 : Number(limitRaw);
+  if (limitRaw !== null && (limitRaw.trim() === '' || !Number.isInteger(limitParsed) || limitParsed < 1)) {
+    return apiError('limit must be an integer >= 1', 400);
+  }
+  const limit = Math.min(limitParsed, 500);
   const scans = getScanHistory(limit, projectId).filter((s) => inRequestedProject(s, projectId) !== null);
   return apiSuccess({ scans });
 }, 'Failed to read scan history');
