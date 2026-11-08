@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { codeSeededEntities } from '@/lib/catalog/seed';
 import { pluginFor } from '@/lib/catalog/gap-analysis/plugins';
-import { unmeasuredDimensions } from '@/lib/catalog/gap-analysis/coverage';
+import { measureDimensions, unmeasuredDimensions } from '@/lib/catalog/gap-analysis/coverage';
 
 /** Catalogs whose declared dimensions cover 0 of their code seed (2026-09-27). Shrink only. */
 const STALE_PLUGIN_ALLOWLIST = [
@@ -35,6 +35,13 @@ const EMPTY_SEED_ALLOWLIST = ['animation-assets', 'audio'].sort();
  */
 const NO_PLUGIN_ALLOWLIST = ['affixes', 'character-pipeline', 'contracts', 'player-movement', 'story-arcs'].sort();
 
+/**
+ * Plugin catalogs with a declared dimension that is DEGENERATE on its code seed (every value
+ * unique - an id list, not a distribution), so the plugin histograms nothing there (2026-11-08).
+ * `loot-tables` keys on `archetypeName` and its seed carries no categorical field. Shrink only.
+ */
+const DEGENERATE_PLUGIN_ALLOWLIST = ['loot-tables'].sort();
+
 const sectioned = CATALOG_SECTIONS.map((s) => s.catalogId);
 const withPlugin = sectioned.filter((id) => pluginFor(id));
 
@@ -50,6 +57,14 @@ describe('gap-analysis coverage ratchet', () => {
   it('the set of plugin catalogs with an empty code seed equals the enumerated allowlist', () => {
     const empty = withPlugin.filter((id) => codeSeededEntities(id).length === 0).sort();
     expect(empty).toEqual(EMPTY_SEED_ALLOWLIST);
+  });
+
+  it('the set of plugin catalogs with a degenerate declared dimension equals the enumerated allowlist', () => {
+    const degenerate = withPlugin.filter((id) => {
+      const p = pluginFor(id)!;
+      return measureDimensions(p.dimensions, codeSeededEntities(id), p.expectedShare).degenerate.length > 0;
+    }).sort();
+    expect(degenerate).toEqual(DEGENERATE_PLUGIN_ALLOWLIST);
   });
 
   it('the set of sectioned catalogs with no plugin equals the enumerated allowlist', () => {

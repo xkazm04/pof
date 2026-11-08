@@ -94,10 +94,18 @@ describe('analyzeCatalog — coverage, unmeasured, degenerate, gapBasis', () => 
     expect(analyzeCatalog('items', items).gapBasis).toBe('expected-share');
   });
 
-  it('combat-map: a per-entity-unique dimension is degenerate, not a histogram', () => {
-    const ents = [1, 2, 3, 4, 5, 6].map((i) => ent(`cm${i}`, 'combat-map', { name: `Node ${i}` }));
+  it('loot-tables: a per-entity-unique dimension is degenerate, not a histogram', () => {
+    const ents = [1, 2, 3, 4, 5, 6].map((i) => ent(`lt${i}`, 'loot-tables', { archetypeName: `Arch ${i}` }));
+    const out = analyzeCatalog('loot-tables', ents);
+    expect(out.degenerate).toContain('archetypeName');
+    expect(out.byAttribute).not.toHaveProperty('archetypeName');
+  });
+
+  it('combat-map: histograms the combo weaponCategory, not the per-combo-unique name', () => {
+    const cats = ['Sword', 'Sword', 'Axe', 'Axe', 'Bow', 'Bow'];
+    const ents = cats.map((c, i) => ent(`cm${i}`, 'combat-map', { name: `Combo ${i}`, weaponCategory: c }));
     const out = analyzeCatalog('combat-map', ents);
-    expect(out.degenerate).toContain('name');
-    expect(out.byAttribute).not.toHaveProperty('name');
+    expect(out.degenerate).toEqual([]);
+    expect(out.byAttribute.weaponCategory).toEqual({ Sword: 2, Axe: 2, Bow: 2 });
   });
 });
