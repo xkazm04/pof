@@ -83,24 +83,37 @@ describe('useScanTab batch fix — start step and selection', () => {
   });
 
   it('a FIRST selected finding that is no longer listed is skipped, not left as a stuck batch', () => {
-    storeState.current.scanResults = { [MODULE]: [finding('gone'), finding('f1')] };
-    const { result, rerender } = renderHook(() => useScanTab(MODULE));
-    act(() => {
-      result.current.toggleSelectFinding('gone');
-      result.current.toggleSelectFinding('f1');
-    });
-    // "gone" leaves the scan results (a reload replaced the store) while still selected.
-    storeState.current.scanResults = { [MODULE]: [finding('f1')] };
-    rerender();
-    act(() => { result.current.startBatchFix(); });
+    // A row's "Fix This" closes over its id; a reload can drop that finding before
+    // the click lands. (The batch path filters its selection to active findings —
+    // see the next test — so the single-row path is where startFixes meets it.)
+    const { result } = renderHook(() => useScanTab(MODULE));
+    act(() => { result.current.fixFinding('gone'); });
 
     // Nothing is dispatched for "gone", so no CLI run will ever call onComplete for
-    // it: without the skip the batch sits on it "fixing" forever.
+    // it: without the skip the view sits on it "fixing" forever.
     expect(sendPrompt).toHaveBeenCalledTimes(0);
     expect(logWarn.mock.calls.some(([m]) => String(m).includes('gone') && String(m).includes('no longer in scan results'))).toBe(true);
     tick();
+    expect(result.current.isBatchFixing).toBe(false);
+  });
+
+  it('a selected finding resolved after selection drops out of the selection — no fix run for it', () => {
+    const { result, rerender } = renderHook(() => useScanTab(MODULE));
+    act(() => {
+      result.current.toggleSelectFinding('f1');
+      result.current.toggleSelectFinding('f2');
+    });
+    // f1 is resolved (row "Mark Resolved", or a reload) while it is still ticked.
+    storeState.current.scanResults = { [MODULE]: [finding('f1', '2026-11-08T00:00:00Z'), finding('f2')] };
+    rerender();
+
+    // The count the "Fix Selected (n)" button shows is the ACTIVE selection.
+    expect(result.current.selectedFindings.size).toBe(1);
+    expect(result.current.allSelected).toBe(true);
+
+    act(() => { result.current.startBatchFix(); });
     expect(sendPrompt).toHaveBeenCalledTimes(1);
-    expect(sendPrompt.mock.calls[0][0]).toContain('desc f1');
-    expect(result.current.activeFixId).toBe('f1');
+    expect(sendPrompt.mock.calls[0][0]).toContain('desc f2');
+    expect(sendPrompt.mock.calls.some(([p]) => String(p).includes('desc f1'))).toBe(false);
   });
 });
