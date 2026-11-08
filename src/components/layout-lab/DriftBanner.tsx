@@ -31,14 +31,14 @@ export function DriftBanner({ t, step, drift, hasHistory, onAdopt }: DriftBanner
       data-testid="drift-banner"
       data-step={step}
       style={{
-        display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12,
-        padding: '10px 14px', margin: '0 0 16px',
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--lab-s4)',
+        padding: 'var(--lab-s3) var(--lab-s5)', margin: '0 0 16px',
         border: `1px solid ${t.bad}`, borderLeft: `3px solid ${t.bad}`,
-        borderRadius: t.glass ? 8 : 0, background: 'var(--lab-panel)',
+        borderRadius: 'var(--lab-r-md)', background: 'var(--lab-panel)',
       }}
     >
       <span aria-hidden style={{ color: t.bad, fontWeight: 700 }}>⚠</span>
-      <span role="status" style={{ fontSize: 14, color: t.text }} data-drift-kind={drift.kind}>
+      <span role="status" style={{ fontSize: 'var(--lab-fs-xs)', color: t.text }} data-drift-kind={drift.kind}>
         {drift.kind === 'status' ? (
           <>
             Server truth differs for this step — local reads{' '}
@@ -53,9 +53,9 @@ export function DriftBanner({ t, step, drift, hasHistory, onAdopt }: DriftBanner
           </>
         )}
       </span>
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--lab-s4)' }}>
         {hasHistory && (
-          <label className={t.fontMono} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.muted, cursor: 'pointer' }}>
+          <label className={t.fontMono} style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s2)', fontSize: 'var(--lab-fs-xs)', color: t.muted, cursor: 'pointer' }}>
             <input
               type="checkbox"
               checked={replaceHistory}

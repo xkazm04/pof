@@ -47,10 +47,10 @@ export function ProduceLogPanel({ t, steps, byStep, onJump }: {
   const persistLine = persistError ? <PersistErrorLine t={t} reason={persistError} /> : null;
 
   // nothing has run — an empty log is noise, not information
-  if (!sum.total) return persistLine && <div style={{ padding: '0 18px 10px' }}>{persistLine}</div>;
+  if (!sum.total) return persistLine && <div style={{ padding: '0 var(--lab-s5) var(--lab-s3)' }}>{persistLine}</div>;
 
   return (
-    <div data-testid="produce-log" data-attention={sum.needsAttention} style={{ padding: '0 18px 10px' }}>
+    <div data-testid="produce-log" data-attention={sum.needsAttention} style={{ padding: '0 var(--lab-s5) var(--lab-s3)' }}>
       {persistLine}
       <button
         type="button"
@@ -60,10 +60,10 @@ export function ProduceLogPanel({ t, steps, byStep, onJump }: {
         data-testid="produce-log-toggle"
         className={`focus-ring ${t.fontMono}`}
         style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          fontSize: 13, padding: '6px 10px', cursor: 'pointer',
+          width: '100%', display: 'flex', alignItems: 'center', gap: 'var(--lab-s3)',
+          fontSize: 'var(--lab-fs-xs)', padding: 'var(--lab-s2) var(--lab-s3)', cursor: 'pointer',
           border: `1px solid ${sum.needsAttention ? t.bad : t.line}`,
-          borderRadius: t.glass ? 6 : 0, background: 'transparent', color: t.text,
+          borderRadius: 'var(--lab-r-sm)', background: 'transparent', color: t.text,
         }}
       >
         <span aria-hidden>{open ? '▴' : '▾'}</span>
@@ -79,7 +79,7 @@ export function ProduceLogPanel({ t, steps, byStep, onJump }: {
         <ul
           id="produce-log-body"
           data-testid="produce-log-entries"
-          style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}
+          style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--lab-s3)' }}
         >
           {log.map((e) => <LogRow key={`${e.step}:${e.at}`} t={t} e={e} onJump={onJump} />)}
         </ul>
@@ -90,7 +90,7 @@ export function ProduceLogPanel({ t, steps, byStep, onJump }: {
 
 function PersistErrorLine({ t, reason }: { t: LabTheme; reason: string }) {
   return (
-    <div data-testid="produce-log-persist-error" role="status" style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 8, fontSize: 13, color: t.warn, lineHeight: 1.45 }}>
+    <div data-testid="produce-log-persist-error" role="status" style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--lab-s3)', flexWrap: 'wrap', marginBottom: 8, fontSize: 'var(--lab-fs-xs)', color: t.warn, lineHeight: 1.45 }}>
       <StatusTag level="warn" word="NOT SAVED LOCALLY" />
       <span>{reason}</span>
     </div>
@@ -105,12 +105,12 @@ function LogRow({ t, e, onJump }: { t: LabTheme; e: ProduceLogEntry; onJump: (in
       data-step={e.step}
       data-outcome={e.outcome}
       style={{
-        display: 'flex', flexDirection: 'column', gap: 4,
-        padding: '8px 10px', border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0,
+        display: 'flex', flexDirection: 'column', gap: 'var(--lab-s1)',
+        padding: 'var(--lab-s3) var(--lab-s3)', border: `1px solid ${t.line}`, borderRadius: 'var(--lab-r-sm)',
         borderLeft: `3px solid ${e.outcome === 'failed' ? t.bad : e.outcome === 'unsynced' ? t.warn : t.line}`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s3)', flexWrap: 'wrap' }}>
         <StatusTag level={tag.level} word={tag.word} />
         {e.index >= 0 ? (
           <button
@@ -118,22 +118,22 @@ function LogRow({ t, e, onJump }: { t: LabTheme; e: ProduceLogEntry; onJump: (in
             onClick={() => onJump(e.index)}
             data-testid="produce-log-jump"
             className={`focus-ring ${t.fontMono}`}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, color: t.inkDeep, fontWeight: 600, textDecoration: 'underline' }}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 'var(--lab-fs-xs)', color: t.inkDeep, fontWeight: 600, textDecoration: 'underline' }}
           >
             {e.step}
           </button>
         ) : (
           // Orphaned: an artifact for a step this pipeline no longer declares. Shown, not
           // hidden — but with nowhere to jump, and said plainly rather than as a dead link.
-          <span data-testid="produce-log-orphan" className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>
+          <span data-testid="produce-log-orphan" className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
             {e.step} · no longer in this pipeline
           </span>
         )}
-        <span className={t.fontMono} style={{ marginLeft: 'auto', fontSize: 12, color: t.muted }}>{stamp(e.at)}</span>
+        <span className={t.fontMono} style={{ marginLeft: 'auto', fontSize: 'var(--lab-fs-xs)', color: t.muted }}>{stamp(e.at)}</span>
       </div>
 
       {e.reason && (
-        <span data-testid="produce-log-reason" style={{ fontSize: 13, color: e.outcome === 'failed' ? t.bad : t.warn, lineHeight: 1.45 }}>
+        <span data-testid="produce-log-reason" style={{ fontSize: 'var(--lab-fs-xs)', color: e.outcome === 'failed' ? t.bad : t.warn, lineHeight: 1.45 }}>
           {e.reason}
           {e.outcome === 'failed' && e.hasContent && (
             <span style={{ color: t.muted }}> · the previous run’s content is still here.</span>
@@ -143,7 +143,7 @@ function LogRow({ t, e, onJump }: { t: LabTheme; e: ProduceLogEntry; onJump: (in
 
       {/* What was actually ASKED for. An empty direction is stated as such — a produce
           dispatched on the step's default is not the same as one nobody recorded. */}
-      <span data-testid="produce-log-direction" className={t.fontMono} style={{ fontSize: 12, color: t.muted, lineHeight: 1.45 }}>
+      <span data-testid="produce-log-direction" className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, lineHeight: 1.45 }}>
         {e.direction
           ? `“${e.direction}”${e.hadPrompt ? '' : ' · no CLI prompt (deterministic produce)'}`
           : 'no direction recorded'}
