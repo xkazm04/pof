@@ -38,3 +38,27 @@ describe('Project Health charts — text alternatives', () => {
     expect(named.filter(Boolean).length).toBe(4);
   });
 });
+
+describe('LineChartSimple — gridlines mean a value', () => {
+  function geometry(values: number[]) {
+    const { container } = render(
+      <LineChartSimple data={values.map((v, i) => ({ label: `S${i}`, value: v }))} color="currentColor" />,
+    );
+    const tops = [...container.querySelectorAll<HTMLElement>('div.absolute.border-t')].map((el) => parseFloat(el.style.top));
+    const cys = [...container.querySelectorAll('circle')].map((c) => parseFloat(c.getAttribute('cy') ?? 'NaN'));
+    const result = { topGrid: Math.min(...tops), cys, text: container.textContent ?? '' };
+    cleanup();
+    return result;
+  }
+
+  it('a score of 100 sits on the top gridline', () => {
+    const g = geometry([55, 100]);
+    expect(g.cys[1]).toBe(g.topGrid);
+  });
+
+  it('a latest score of 60 is not on the top gridline, which is labelled 100', () => {
+    const g = geometry([55, 60]);
+    expect(g.cys[1]).toBeGreaterThan(g.topGrid);
+    expect(g.text).toContain('100');
+  });
+});

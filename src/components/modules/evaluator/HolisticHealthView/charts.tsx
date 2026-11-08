@@ -37,10 +37,13 @@ export function BarChartSimple({ data, color, title = 'Weekly velocity' }: { dat
 
 export function LineChartSimple({ data, color, title = 'Quality score trend' }: { data: Point[]; color: string; title?: string }) {
   if (data.length === 0) return null;
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const min = Math.min(...data.map((d) => d.value), 0);
-  const range = max - min || 1;
+  // Scores are 0-100: pin the domain so a gridline marks the value it is labelled with,
+  // instead of normalising to the series' own max (which made the top line "the latest score").
+  const min = 0;
+  const max = 100;
+  const range = max - min;
   const h = 120;
+  const yOf = (v: number) => h - ((v - min) / range) * (h - 16) - 8;
 
   return (
     <div className="relative" style={{ height: h + 24 }} role="img" aria-label={describeSeries(title, data)}>
@@ -48,19 +51,22 @@ export function LineChartSimple({ data, color, title = 'Quality score trend' }: 
       {[0, 25, 50, 75, 100].map((pct) => (
         <div
           key={pct}
+          data-gridline={pct}
           className="absolute left-0 right-0 border-t border-border/30"
-          style={{ top: h - (pct / 100) * h }}
-        />
+          style={{ top: yOf(pct) }}
+        >
+          <span className="absolute left-0 -top-3.5 text-2xs text-text-muted" aria-hidden="true">{pct}</span>
+        </div>
       ))}
       {/* Points and lines */}
-      <svg className="absolute inset-0" viewBox={`0 0 ${data.length * 60} ${h}`} preserveAspectRatio="none">
+      <svg className="absolute left-0 top-0 w-full" style={{ height: h }} viewBox={`0 0 ${data.length * 60} ${h}`} preserveAspectRatio="none">
         {/* Line */}
         <polyline
           fill="none"
           stroke={color}
           strokeWidth="2"
           points={data
-            .map((d, i) => `${i * 60 + 30},${h - ((d.value - min) / range) * (h - 16) - 8}`)
+            .map((d, i) => `${i * 60 + 30},${yOf(d.value)}`)
             .join(' ')}
         />
         {/* Dots */}
@@ -68,7 +74,7 @@ export function LineChartSimple({ data, color, title = 'Quality score trend' }: 
           <circle
             key={i}
             cx={i * 60 + 30}
-            cy={h - ((d.value - min) / range) * (h - 16) - 8}
+            cy={yOf(d.value)}
             r="3"
             fill={color}
           />
