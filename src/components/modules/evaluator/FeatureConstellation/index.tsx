@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import { Sparkles, Loader2, RefreshCw, Stars } from 'lucide-react';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { layoutModuleConstellation } from '@/lib/constellation/layout';
@@ -24,6 +24,11 @@ import { NextCallout } from './NextCallout';
 export function FeatureConstellation() {
   const [moduleId, setModuleId] = useState<SubModuleId>('arpg-character');
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  // Per-instance marker / filter ids, never document-global ones.
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const ARROW = `cst-arrow-${uid}`;
+  const ARROW_BLOCKED = `cst-arrow-blocked-${uid}`;
+  const GLOW = `cst-glow-${uid}`;
 
   // Feature statuses come from the ONE shared all-statuses path, so mounting
   // beside the other Evaluator views costs no extra full-table scan and a
@@ -153,13 +158,13 @@ export function FeatureConstellation() {
               style={{ display: 'block', minWidth: layout.width }}
             >
               <defs>
-                <marker id="cst-arrow" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
+                <marker id={ARROW} viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
                   <path d="M 0 0 L 10 3.5 L 0 7 z" fill="var(--text-muted)" />
                 </marker>
-                <marker id="cst-arrow-blocked" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
+                <marker id={ARROW_BLOCKED} viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
                   <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_BLOCKER} />
                 </marker>
-                <filter id="cst-glow" x="-60%" y="-60%" width="220%" height="220%">
+                <filter id={GLOW} x="-60%" y="-60%" width="220%" height="220%">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="3.2" result="b" />
                   <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
@@ -193,7 +198,7 @@ export function FeatureConstellation() {
                     strokeWidth={1.5}
                     strokeDasharray={e.blocked ? '5 3' : undefined}
                     opacity={opacity}
-                    markerEnd={e.blocked ? 'url(#cst-arrow-blocked)' : 'url(#cst-arrow)'}
+                    markerEnd={`url(#${e.blocked ? ARROW_BLOCKED : ARROW})`}
                     className="transition-opacity duration-base"
                   />
                 );
@@ -206,6 +211,7 @@ export function FeatureConstellation() {
                   node={node}
                   index={i}
                   isNext={layout.nextKey === node.key}
+                  glowId={GLOW}
                   dimmed={litKeys ? !litKeys.has(node.key) : false}
                   onHoverStart={() => setHoveredKey(node.key)}
                   onHoverEnd={() => setHoveredKey(null)}

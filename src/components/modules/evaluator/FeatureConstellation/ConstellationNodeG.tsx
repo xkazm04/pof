@@ -11,11 +11,13 @@ import { truncate } from './helpers';
 // ── Node ─────────────────────────────────────────────────────────────────────
 
 export function ConstellationNodeG({
-  node, index, isNext, dimmed, onHoverStart, onHoverEnd,
+  node, index, isNext, glowId, dimmed, onHoverStart, onHoverEnd,
 }: {
   node: ConstellationNode;
   index: number;
   isNext: boolean;
+  /** The owning svg's per-instance glow filter id. */
+  glowId: string;
   dimmed: boolean;
   onHoverStart: () => void;
   onHoverEnd: () => void;
@@ -41,7 +43,7 @@ export function ConstellationNodeG({
 
       {/* "Do this next" pulsing ring */}
       {isNext && (
-        <rect x={x - 4} y={y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={12} fill="none" stroke={STATUS_INFO} strokeWidth={2} filter="url(#cst-glow)">
+        <rect x={x - 4} y={y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={12} fill="none" stroke={STATUS_INFO} strokeWidth={2} filter={`url(#${glowId})`}>
           <animate attributeName="opacity" values="0.35;0.95;0.35" dur="1.8s" repeatCount="indefinite" />
         </rect>
       )}
@@ -53,7 +55,7 @@ export function ConstellationNodeG({
         stroke={color}
         strokeWidth={done ? 2 : 1.25}
         opacity={done ? 1 : 0.92}
-        style={done ? { filter: 'url(#cst-glow)' } : undefined}
+        style={done ? { filter: `url(#${glowId})` } : undefined}
       />
       {/* Status accent bar (left) */}
       <rect x={x} y={y} width={3.5} height={NODE_H} rx={1.5} fill={color} opacity={node.isBlocked ? 0.5 : 0.9} />

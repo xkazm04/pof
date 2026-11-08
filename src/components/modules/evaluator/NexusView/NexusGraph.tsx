@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_20,
@@ -37,6 +37,12 @@ export function NexusGraph({
   // <svg>, which cropped the graph inside this overflow-hidden frame. Edge
   // endpoints come from the nodes' own centres.
   const byId = new Map(nodes.map((n) => [n.moduleId as string, n]));
+  // Per-instance marker / filter ids (LRU-hidden modules stay mounted beside others).
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const ARROW = `nexus-arrow-${uid}`;
+  const ARROW_BLOCKED = `nexus-arrow-blocked-${uid}`;
+  const GLOW_RED = `nexus-glow-red-${uid}`;
+  const GLOW_PURPLE = `nexus-glow-purple-${uid}`;
 
   // canvas-accessibility: the map is ONE tab stop with a roving cursor, not one stop
   // per module. Arrows / Home / End move the cursor; Enter / Space select.
@@ -65,18 +71,18 @@ export function NexusGraph({
         aria-label={`Nexus map: ${nodes.length} modules, ${edges.length} connections. Arrow keys move between modules, Enter selects.`}
       >
         <defs>
-          <marker id="nexus-arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <marker id={ARROW} viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill="var(--text-muted)" />
           </marker>
-          <marker id="nexus-arrow-blocked" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <marker id={ARROW_BLOCKED} viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_BLOCKER} />
           </marker>
           {/* Glow filters */}
-          <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={GLOW_RED} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={GLOW_PURPLE} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
@@ -118,7 +124,7 @@ export function NexusGraph({
                 strokeWidth={Math.min(3, 0.5 + edge.count * 0.5)}
                 strokeDasharray={edge.hasBlockers ? '4 2' : undefined}
                 opacity={opacity}
-                markerEnd={edge.hasBlockers ? 'url(#nexus-arrow-blocked)' : 'url(#nexus-arrow)'}
+                markerEnd={`url(#${edge.hasBlockers ? ARROW_BLOCKED : ARROW})`}
                 className="transition-opacity duration-base"
               />
               {/* Edge count label */}
@@ -191,7 +197,7 @@ export function NexusGraph({
                   stroke={MODULE_COLORS.evaluator}
                   strokeWidth={2}
                   opacity={0.6}
-                  filter="url(#glow-red)"
+                  filter={`url(#${GLOW_RED})`}
                 >
                   <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" />
                 </rect>
@@ -209,7 +215,7 @@ export function NexusGraph({
                   stroke={ACCENT_VIOLET}
                   strokeWidth={1.5}
                   opacity={0.5}
-                  filter="url(#glow-purple)"
+                  filter={`url(#${GLOW_PURPLE})`}
                 />
               )}
 
