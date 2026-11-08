@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Dna } from 'lucide-react';
 import type { GameplayPattern, TelemetrySnapshot } from '@/types/telemetry';
 import { motionSafe } from '@/lib/motion';
+import { formatPatternName } from '@/components/modules/core-engine/TelemetryEvolution/helpers';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   STATUS_LIME, STATUS_IMPROVED,
@@ -71,10 +72,6 @@ function strandStats(scans: TelemetrySnapshot[], pattern: GameplayPattern) {
   const first = conf(scans[0]);
   const latest = conf(scans[scans.length - 1]);
   return { first, latest, delta: latest - first };
-}
-
-function formatPatternName(p: string): string {
-  return p.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
 function buildSmoothPath(points: { x: number; y: number }[]): string {
