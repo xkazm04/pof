@@ -31,7 +31,8 @@ export function QuickActionsPanel({ actions, onRunPrompt, accentColor, isRunning
   const { suggestions, fetchSuggestions } = usePromptSuggestions((moduleId ?? '') as SubModuleId);
 
   const handleCustomPrompt = () => {
-    if (!customPrompt.trim()) return;
+    // Enter reaches here too, so it must honour the same guard as the disabled Send button.
+    if (!customPrompt.trim() || isRunning) return;
     onRunPrompt(customPrompt.trim());
     setCustomPrompt('');
   };
