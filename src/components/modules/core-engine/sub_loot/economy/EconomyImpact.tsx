@@ -12,6 +12,8 @@ import { EconomyFilters } from './EconomyFilters';
 import { EconomyImpactTable } from './EconomyImpactTable';
 
 const PAGE_SIZE = 15;
+/** Drop% denominator: the whole table. A filter narrows the rows shown, not the pool rolled from. */
+const TABLE_WEIGHT = EXPANDED_ENTRIES.reduce((s, e) => s + e.weight, 0);
 
 export function EconomyImpact() {
   const [economyProfile, setEconomyProfile] = useState<'casual' | 'hardcore'>('casual');
@@ -95,7 +97,7 @@ export function EconomyImpact() {
 
       <EconomyImpactTable
         pagedItems={pagedItems}
-        totalWeight={totalWeight}
+        totalWeight={TABLE_WEIGHT}
         economyProfile={economyProfile}
         safePage={safePage}
         totalPages={totalPages}

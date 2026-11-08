@@ -20,6 +20,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
   ),
 }));
 
+import { EXPANDED_ENTRIES } from '@/components/modules/core-engine/sub_loot/_shared/data';
 import { EconomyImpact } from '@/components/modules/core-engine/sub_loot/economy/EconomyImpact';
 import { PityCohortChart } from '@/components/modules/core-engine/sub_loot/pity/PityCohortChart';
 import { PityTimerSection } from '@/components/modules/core-engine/sub_loot/pity/PityTimerSection';
@@ -136,5 +137,20 @@ describe('EconomyFilters expose the active toggle', () => {
     fireEvent.click(getByText('Epic', { selector: 'button' }));
     expect(getByText('Epic', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
     expect(getByText('All', { selector: 'button' }).getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+describe('EconomyImpact Drop% is a share of the whole table', () => {
+  it('filtering to one tier does not renormalise each item to a share of the filter', () => {
+    const { container, getByText } = render(<EconomyImpact />);
+    const all = EXPANDED_ENTRIES.reduce((s, e) => s + e.weight, 0);
+    fireEvent.click(getByText('Legendary', { selector: 'button' }));
+    const rows = [...container.querySelectorAll('tbody tr')];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) {
+      const cells = [...r.querySelectorAll('td')].map((c) => c.textContent);
+      const item = EXPANDED_ENTRIES.find((e) => e.name === cells[0])!;
+      expect(cells[4]).toBe(`${((item.weight / all) * 100).toFixed(1)}%`);
+    }
   });
 });
