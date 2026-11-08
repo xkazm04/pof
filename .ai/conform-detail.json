@@ -7483,29 +7483,43 @@
       "subject": "generated-mesh-acceptance",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-16",
-      "evaluatedTs": "2026-10-16T23:18:14.935Z",
-      "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:44:51.755Z",
+      "worker": "574cfef0-362e-425b-b35c-3f0dc87f1049",
       "techniques": [
-        {
-          "technique": "defect-code-taxonomy-not-prose",
-          "verdict": "deviation",
-          "evidence": "src/app/api/visual-gen/mesh-finish/status/route.ts:49 The projection emits all human reasons but only failCodes, leaving warning findings without their machine-readable codes and severities."
-        },
-        {
-          "technique": "stage-declared-grading",
-          "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:102 The import implementation infers production stage from the pathname instead of accepting a declaration or reporting unknown."
-        },
         {
           "technique": "structural-scorecard",
           "verdict": "deviation",
-          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:159 After critique and planning, import runs without a structural-failure guard."
+          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:159 The scorecard itself (mesh-score.ts) is sound: findings come first, the score is 100-50·fails-15·warns, and density is only a warn. But the engine-entry edge ignores its fail verdict, and the job's comment at lines 114-116 says the critic is best-effort on purpose."
+        },
+        {
+          "technique": "defect-code-taxonomy-not-prose",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/mesh-finish/remediate/route.ts:99 The route returns stable fail codes taken from typed findings, not parsed from the reason strings. Routing goes through the FINISH_RESOLVES / REROLL_RESOLVES lists in critique-stage.ts."
+        },
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/mesh-finish/remediate/route.ts:44 The remediate edge declares the stage explicitly and attaches assessStage's caveat to the result. The ue-import path is weaker: importStageFor (ue-import-job-store.ts:102) infers the stage from the file's directory instead of taking it from the caller. That is not the density proxy the technique forbids, but it is still an inference."
+        },
+        {
+          "technique": "floater-vs-part-face-share-rule",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/mesh-finish/route.ts:36 The route refuses cullInterior by name and states the adjacency corollary. The remediate route will not run a finish on a failure caused only by floaters, because decimation multiplies them. The face-share split itself is in component-split.ts, with the 0.5% share and 8-face floor, and truncated histograms resolve toward the harsher verdict."
         },
         {
           "technique": "unmeasured-is-not-pass",
-          "verdict": "deviation",
-          "evidence": "src/app/api/visual-gen/mesh-finish/status/route.ts:54 An unavailable critique becomes an empty failCodes list while this projection omits its ok, unavailable, and error fields, losing the explicit ungraded outcome."
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/ue-import/status/route.ts:62 Fields that were read back are an explicit null when nothing measured them, so absence is never read as a pass. mesh-finish/status also reports skipped and failed bakes rather than dropping them."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:159 The HTTP import flow records the structural critique but invokes the importer without rejecting a failed verdict, so structurally rejected meshes can enter UE.",
+          "evaluatedAt": "2026-10-16T23:18:14.935Z",
+          "worker": "0ab9733f-6298-4213-8e38-5d53b3294b8b",
+          "reason": "replaced by 574cfef0-362e-425b-b35c-3f0dc87f1049"
         }
       ]
     },
@@ -22873,6 +22887,32 @@
       "evaluatedTs": "2026-11-08T01:23:09.000Z",
       "worker": "de8a4144-74cf-4a15-b772-d52780e21129",
       "techniques": []
+    },
+    "c120fef4-1da4-432b-9fac-7abb92a27830/generated-mesh-acceptance": {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "generated-mesh-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T01:44:51.755Z",
+      "worker": "574cfef0-362e-425b-b35c-3f0dc87f1049",
+      "techniques": [
+        {
+          "technique": "posed-see-through-render",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_seethrough.py:103 Several parts are right: six cameras (line 94), back faces shaded magenta on a transparent film, a closed or holed voxel-remesh control fixture, and enclosed background reported separately. The pose set, however, is not declared from the actions."
+        },
+        {
+          "technique": "floater-vs-part-face-share-rule",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_split.py:179 Specks are classified by face share (default 0.005), not by count. Components dropped by the cap are counted separately from specks, and a coverage gate refuses to split a shattered mesh. pof_mesh_finish.py:197 also documents that the interior cull sees only welded interior."
+        },
+        {
+          "technique": "unmeasured-is-not-pass",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_mesh_finish.py:487 An unmeasured UV stretch emits its own marker rather than a 0. A smaller lapse in the see-through script: lines 147-148 coerce a None backface_share to 0 when computing rest/posed max."
+        }
+      ]
     }
   }
 }

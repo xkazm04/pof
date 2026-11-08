@@ -27368,7 +27368,11 @@
           "revision": 2,
           "changedAt": "2026-10-24",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_mesh_seethrough.py:103 By default the see-through sweep rotates every limb group ±75° on each axis instead of using the poses the character's actions actually reach. That is the blind sweep the technique names as a failure: frames are spent on unreachable poses whose folds drown the gap signal.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:9c6867753eefa10b",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -27879,12 +27883,11 @@
           "changedAt": "2026-10-24",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:159 The HTTP import flow records the structural critique but invokes the importer without rejecting a failed verdict, so structurally rejected meshes can enter UE.",
-          "evaluatedAt": "2026-10-16",
-          "evaluatedAgainst": "sha256-b2:2f6134a34d83a7ab",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/lib/visual-gen/ue-import-job-store.ts:159 The import job runs the Tier-1 critic only to plan collision and scale, then calls the importer whatever the verdict was. No branch checks for a 'fail', so a mesh the structural gate rejected (for example floaters or an empty mesh) still enters the UE project, and the ue-import status route does not even report the verdict.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:9c6867753eefa10b",
+          "evaluatedRevision": 2,
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
