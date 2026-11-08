@@ -145,8 +145,10 @@ export function CompactTerminal({
 
   // --- Derived counts ---
 
-  const editCount = tq.fileChanges.filter(c => c.changeType === 'edit').length;
-  const writeCount = tq.fileChanges.filter(c => c.changeType === 'write').length;
+  // Distinct files — the badges read "N files edited/created", and fileChanges holds one row per tool call.
+  const distinctFiles = (type: 'edit' | 'write') => new Set(tq.fileChanges.filter(c => c.changeType === type).map(c => c.filePath)).size;
+  const editCount = distinctFiles('edit');
+  const writeCount = distinctFiles('write');
   const queuePendingCount = taskQueue.filter(t => t.status === 'pending').length;
 
   const handleCopyOutput = useCallback((): string | null => {
