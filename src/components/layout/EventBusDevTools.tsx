@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Radio, Trash2, Filter, Zap } from 'lucide-react';
 import { eventBus } from '@/lib/event-bus';
-import type { BusEvent, EventChannel } from '@/types/event-bus';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_STALE, ACCENT_CYAN, OPACITY_8, OPACITY_15 } from '@/lib/chart-colors';
+import type { BusEvent } from '@/types/event-bus';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_STALE, ACCENT_CYAN, OPACITY_8 } from '@/lib/chart-colors';
 
 const MAX_DISPLAY = 200;
+const FALLBACK_COLOR = 'var(--text-muted)';
 
 const NAMESPACE_COLORS: Record<string, string> = {
   cli: MODULE_COLORS.core,
@@ -23,7 +24,7 @@ function getNamespace(channel: string): string {
 }
 
 function getColor(channel: string): string {
-  return NAMESPACE_COLORS[getNamespace(channel)] ?? '#7d82a8';
+  return NAMESPACE_COLORS[getNamespace(channel)] ?? FALLBACK_COLOR;
 }
 
 /** A throw here would be a render throw: one odd payload must not take the shell down. */
@@ -165,7 +166,7 @@ export function EventBusDevTools() {
                   ? 'border-current'
                   : 'border-transparent hover:border-border'
               }`}
-              style={{ color: NAMESPACE_COLORS[ns] ?? '#7d82a8' }}
+              style={{ color: NAMESPACE_COLORS[ns] ?? FALLBACK_COLOR }}
             >
               {ns}
             </button>
