@@ -45,7 +45,7 @@ function severityFor(category: string): SeverityLevel {
 }
 
 function labelFor(category: string): string {
-  return CATEGORY_LABELS[category] ?? category;
+  return (CATEGORY_LABELS as Partial<Record<string, string>>)[category] ?? category;
 }
 
 interface Props {
