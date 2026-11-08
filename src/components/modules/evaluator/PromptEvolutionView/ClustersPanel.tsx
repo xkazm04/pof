@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatTerm } from '@/components/ui/StatTerm';
 import type { PromptCluster } from '@/types/prompt-evolution';
 import { plainClusterSummary } from '@/lib/prompt-evolution/plain-language';
+import { MIN_TRIALS_PER_VARIANT } from '@/lib/prompt-evolution/verdict';
 import { ACCENT } from './constants';
 import { EmptyState } from './EmptyState';
 
@@ -74,7 +75,9 @@ export function ClustersPanel({
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
-                      variant={cluster.successRate >= 0.7 ? 'success' : cluster.successRate >= 0.4 ? 'warning' : 'error'}
+                      variant={cluster.sessionIds.length < MIN_TRIALS_PER_VARIANT
+                        ? 'default'
+                        : cluster.successRate >= 0.7 ? 'success' : cluster.successRate >= 0.4 ? 'warning' : 'error'}
                       className="text-[11px]"
                     >
                       {Math.round(cluster.successRate * 100)}% success
