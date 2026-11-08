@@ -75,6 +75,17 @@ export async function GET(req: Request) {
   }
 }
 
+/** The scan iterates these three lists; a present non-array threw inside the signal extractor. */
+function badDynamicContext(ctx: unknown): string | null {
+  if (ctx == null) return null;
+  if (typeof ctx !== 'object' || Array.isArray(ctx)) return 'dynamicContext must be an object or null';
+  for (const key of ['classes', 'plugins', 'buildDependencies'] as const) {
+    const list = (ctx as Record<string, unknown>)[key];
+    if (list != null && !Array.isArray(list)) return `dynamicContext.${key} must be an array`;
+  }
+  return null;
+}
+
 // ─── POST: scan project, resolve suggestion ──────────────────────────────────
 
 export async function POST(req: Request) {
@@ -90,9 +101,11 @@ export async function POST(req: Request) {
         const { projectPath, dynamicContext } = body as ScanTelemetryPayload & {
           dynamicContext: DynamicProjectContext | null;
         };
-        if (!projectPath) {
+        if (typeof projectPath !== 'string' || !projectPath) {
           return apiError('projectPath required', 400);
         }
+        const badContext = badDynamicContext(dynamicContext);
+        if (badContext) return apiError(badContext, 400);
 
         // Extract signals from the project scan data
         const signals = extractSignals(dynamicContext ?? null, projectPath);
@@ -132,7 +145,7 @@ export async function POST(req: Request) {
       case 'resolve': {
         const suggestionId = body.suggestionId as string;
         const resolveAction = body.resolveAction as 'accept' | 'dismiss';
-        if (!suggestionId || !resolveAction || (resolveAction !== 'accept' && resolveAction !== 'dismiss')) {
+        if (typeof suggestionId !== 'string' || !suggestionId || !resolveAction || (resolveAction !== 'accept' && resolveAction !== 'dismiss')) {
           return apiError('suggestionId and resolveAction required', 400);
         }
         resolveSuggestion(suggestionId, resolveAction);

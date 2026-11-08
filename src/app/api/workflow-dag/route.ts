@@ -40,6 +40,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/** The minimum validateWorkflow walks: without it a malformed graph threw as a 500 instead of being reported. */
+function isWorkflowShape(w: unknown): boolean {
+  const nodes = (w as { nodes?: unknown } | null)?.nodes;
+  return Array.isArray(nodes) && nodes.every((n) => {
+    const node = n as { id?: unknown; dependsOn?: unknown } | null;
+    return typeof node?.id === 'string' && Array.isArray(node.dependsOn);
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => undefined);
@@ -51,6 +60,9 @@ export async function POST(req: NextRequest) {
     if (action === 'validate') {
       const workflow = body.workflow as WorkflowDefinition;
       if (!workflow) return apiError('workflow required', 400);
+      if (!isWorkflowShape(workflow)) {
+        return apiError('workflow must be an object whose nodes each have a string id and a dependsOn array', 400);
+      }
       const errors = validateWorkflow(workflow);
       return apiSuccess({ valid: errors.length === 0, errors });
     }

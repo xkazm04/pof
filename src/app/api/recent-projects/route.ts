@@ -75,9 +75,10 @@ export async function POST(req: NextRequest) {
 
     if (action === 'save') {
       const { projectName, projectPath, ueVersion, checklistProgress } = body;
-      if (!projectName || !projectPath) {
+      if (typeof projectName !== 'string' || !projectName || typeof projectPath !== 'string' || !projectPath) {
         return apiError('projectName and projectPath are required', 400);
       }
+      if (ueVersion != null && typeof ueVersion !== 'string') return apiError('ueVersion must be a string', 400);
 
       // A path already listed keeps the id it was listed under (the client touches /
       // removes by that id, and project_path is UNIQUE); a new one takes the progress
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'touch') {
       const { projectId: pid } = body;
-      if (!pid) return apiError('projectId required', 400);
+      if (typeof pid !== 'string' || !pid) return apiError('projectId required', 400);
       db.prepare("UPDATE recent_projects SET last_opened_at = datetime('now') WHERE id = ?").run(pid);
       // Return the freshened list so the client can update state without a follow-up GET.
       return apiSuccess({ touched: true, projects: loadRecentProjects(db) });
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'remove') {
       const { projectId: pid } = body;
-      if (!pid) return apiError('projectId required', 400);
+      if (typeof pid !== 'string' || !pid) return apiError('projectId required', 400);
       db.prepare('DELETE FROM recent_projects WHERE id = ?').run(pid);
       return apiSuccess({ removed: true });
     }
