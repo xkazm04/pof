@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Library, Check, X } from 'lucide-react';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { StatusTag } from '@/components/ui/StatusTag';
@@ -42,6 +42,7 @@ function ImportStatus({ option }: { option: AudioSetOption }) {
  * import says exactly that, in the picker and in the generated C++.
  */
 export function AssetSetPicker({ assetSetId, onBind }: AssetSetPickerProps) {
+  const labelId = useId();
   const [browsing, setBrowsing] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -59,11 +60,11 @@ export function AssetSetPicker({ assetSetId, onBind }: AssetSetPickerProps) {
   }, [options, query]);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" role="group" aria-labelledby={labelId}>
       <div className="flex items-center justify-between gap-2">
-        <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
+        <span id={labelId} className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
           Library Asset Set
-        </label>
+        </span>
         <button
           type="button"
           onClick={() => setBrowsing((b) => !b)}
