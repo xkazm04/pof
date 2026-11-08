@@ -2,16 +2,18 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, ShieldAlert, TrendingUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { DecoratedCrashText } from '@/components/ui/CrashTerm';
 import { formatTimeAgo } from '@/lib/format-time';
 import { plainCrashType } from '@/lib/crash-glossary';
+import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 import type { CrashPattern } from '@/types/crash-analyzer';
 
 export function PatternCard({ pattern, plainMode }: { pattern: CrashPattern; plainMode: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
   const plain = plainCrashType(pattern.crashType);
   const detailId = `pattern-detail-${pattern.id}`;
 
@@ -58,6 +60,7 @@ export function PatternCard({ pattern, plainMode }: { pattern: CrashPattern; pla
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            transition={motionSafe({ duration: DURATION.base, ease: EASE_OUT }, prefersReducedMotion)}
             className="overflow-hidden"
           >
             <div id={detailId} className="mt-2 pt-2 border-t border-border space-y-2">
