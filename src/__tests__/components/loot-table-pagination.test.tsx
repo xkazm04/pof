@@ -30,3 +30,11 @@ describe('LootTablePagination steps from the displayed page', () => {
     expect(resolve(setPage.mock.calls[0][0], 0)).toBe(1);
   });
 });
+
+describe('LootTablePagination icon buttons carry accessible names', () => {
+  it('Prev and Next are named, not bare chevrons', () => {
+    const { container } = render(<LootTablePagination safePage={0} totalPages={3} totalCount={50} setPage={vi.fn()} />);
+    const names = Array.from(container.querySelectorAll('button')).map((b) => b.getAttribute('aria-label'));
+    expect(names).toEqual(['Previous page', 'Next page']);
+  });
+});
