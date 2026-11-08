@@ -14,6 +14,21 @@ export function formatDateRange(start: string, end: string): string {
   return `${s.toLocaleDateString('en', opts)} — ${e.toLocaleDateString('en', opts)}, ${s.getFullYear()}`;
 }
 
+// ── Success rate (a week with no sessions has none) ──────────────────────────
+
+/** The week's success rate, or a dash when no session was measured: never a fabricated 0%. */
+export function successRateText(d: Pick<WeeklyDigest, 'totalSessions' | 'successRate'>): string {
+  return d.totalSessions > 0 ? `${Math.round(d.successRate * 100)}%` : '—';
+}
+
+/** Points moved vs the previous week; undefined unless BOTH weeks had sessions. */
+export function successRateDelta(
+  d: Pick<WeeklyDigest, 'totalSessions' | 'successRate' | 'prevWeekSessions' | 'prevWeekSuccessRate'>,
+): number | undefined {
+  if (d.totalSessions === 0 || d.prevWeekSessions === 0) return undefined;
+  return Math.round((d.successRate - d.prevWeekSuccessRate) * 100);
+}
+
 // ── Markdown export ──────────────────────────────────────────────────────────
 
 /** The Checklist figure: what landed this week vs last, or (no ledger read) the stored count. */
@@ -31,7 +46,7 @@ export function formatDigestMarkdown(d: WeeklyDigest, landed?: WeekLanded): stri
   lines.push('');
   lines.push(`## Stats`);
   lines.push(`- **Sessions:** ${d.totalSessions} (${d.totalSessions - d.prevWeekSessions >= 0 ? '+' : ''}${d.totalSessions - d.prevWeekSessions} vs last week)`);
-  lines.push(`- **Success Rate:** ${Math.round(d.successRate * 100)}%`);
+  lines.push(`- **Success Rate:** ${successRateText(d)}`);
   lines.push(`- **Checklist:** ${checklistLine(d, landed)}`);
   lines.push(`- **Time Invested:** ${formatDuration(d.totalTimeMs)}`);
   lines.push(`- **Current Streak:** ${d.currentStreak} | **Best:** ${d.longestStreak}`);
@@ -112,7 +127,7 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest,
   // Stat boxes
   const stats = [
     { label: 'Sessions', value: d.totalSessions.toString(), color: STATUS_INFO },
-    { label: 'Success Rate', value: `${Math.round(d.successRate * 100)}%`, color: MODULE_COLORS.setup },
+    { label: 'Success Rate', value: successRateText(d), color: MODULE_COLORS.setup },
     { label: 'Checklist', value: landed ? `${landed.count} landed` : `${d.checklistCompleted}/${d.checklistTotal}`, color: ACCENT_VIOLET },
     { label: 'Time', value: formatDuration(d.totalTimeMs), color: MODULE_COLORS.content },
   ];

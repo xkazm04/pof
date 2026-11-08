@@ -16,7 +16,7 @@ import { FetchError } from '@/components/modules/shared/FetchError';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { CompletionLedger } from '@/lib/roadmap/completion-ledger';
 import { EMPTY_PROGRESS } from './constants';
-import { formatDateRange, formatDigestMarkdown, renderDigestToCanvas } from './helpers';
+import { formatDateRange, formatDigestMarkdown, renderDigestToCanvas, successRateText, successRateDelta } from './helpers';
 import { weekLanded, digestWindows } from './weekLanded';
 import { DailyActivity } from './DailyActivity';
 import { ModuleLeaderboard } from './ModuleLeaderboard';
@@ -123,7 +123,6 @@ export function WeeklyDigestView() {
   }
 
   const sessionDelta = digest.totalSessions - digest.prevWeekSessions;
-  const rateDelta = digest.successRate - digest.prevWeekSuccessRate;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -203,8 +202,8 @@ export function WeeklyDigestView() {
         />
         <MetricCard
           label="Success Rate"
-          value={`${Math.round(digest.successRate * 100)}%`}
-          delta={Math.round(rateDelta * 100)}
+          value={successRateText(digest)}
+          delta={successRateDelta(digest)}
           deltaSuffix="%"
           icon={Zap}
           accent={MODULE_COLORS.setup}
