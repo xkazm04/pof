@@ -62,7 +62,7 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
     });
   }, []);
 
-  /* Radar overlay toggles — only player enabled by default; compared enemies auto-added */
+  /* Radar overlay toggles — only player enabled by default; toggled independently of the comparison selection */
   const [radarOverlays, setRadarOverlays] = useState<Record<string, boolean>>({ player: true });
 
   /* Elite modifier system */
