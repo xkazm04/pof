@@ -266,6 +266,38 @@ export async function GET(request: NextRequest) {
 
 // ── POST ────────────────────────────────────────────────────────────────────
 
+const START_STRING_FIELDS = ['projectPath', 'projectName', 'ueVersion', 'statePath', 'ueTestFilter'];
+const START_BOOLEAN_FIELDS = ['unlimited', 'checkpoint', 'ueTests', 'ueVisual', 'fork'];
+const START_NUMBER_FIELDS: { field: string; integer: boolean; max?: number }[] = [
+  { field: 'maxIterations', integer: true },
+  { field: 'targetPassRate', integer: false, max: 100 },
+  { field: 'sessionTimeoutMs', integer: false },
+  { field: 'budgetUsd', integer: false },
+  { field: 'maxConcurrent', integer: true },
+];
+
+/**
+ * The first start field the run could not honour, by name. These reach `createDefaultConfig`
+ * and the executor as given, so a wrong type or an out-of-range number was never refused
+ * (a non-positive budget, for one, is quietly replaced by the default cap).
+ */
+function startFieldError(body: Record<string, unknown>): string | null {
+  for (const field of START_STRING_FIELDS) {
+    if (body[field] != null && typeof body[field] !== 'string') return `${field} must be a string`;
+  }
+  for (const field of START_BOOLEAN_FIELDS) {
+    if (body[field] != null && typeof body[field] !== 'boolean') return `${field} must be a boolean`;
+  }
+  for (const { field, integer, max } of START_NUMBER_FIELDS) {
+    const v = body[field];
+    if (v == null) continue;
+    if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0 || (integer && !Number.isInteger(v)) || (max != null && v > max)) {
+      return `${field} must be a positive ${integer ? 'integer' : 'number'}${max != null ? ` of at most ${max}` : ''}`;
+    }
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   // start and resume spawn an autonomous CLI loop that runs with permissions skipped.
   const denied = requireOperator(request);
@@ -312,6 +344,8 @@ export async function POST(request: NextRequest) {
     if (!body.projectPath || !body.projectName || !body.ueVersion) {
       return apiError('Missing required fields: projectPath, projectName, ueVersion', 400);
     }
+    const fieldError = startFieldError(body as unknown as Record<string, unknown>);
+    if (fieldError) return apiError(fieldError, 400);
 
     // Validate the new steering levers loudly rather than silently coercing.
     if (body.themeDirective != null) {
@@ -335,7 +369,11 @@ export async function POST(request: NextRequest) {
     // exposes are now reachable from the API. Reject an unknown name loudly.
     let scenarioAreas;
     if (body.scenario) {
-      const def = SCENARIOS[body.scenario];
+      // Own keys only: `constructor` found an inherited member, so the run started on the
+      // default plan with no scenario applied.
+      const def = typeof body.scenario === 'string' && Object.hasOwn(SCENARIOS, body.scenario)
+        ? SCENARIOS[body.scenario]
+        : undefined;
       if (!def) {
         return apiError(`Unknown scenario "${body.scenario}". Available: ${scenarioNames().join(', ')}`, 400);
       }
@@ -454,6 +492,9 @@ export async function POST(request: NextRequest) {
     // continues — this also picks up a reaped 'interrupted' row and makes it live
     // again. The stranded in-progress→pending healing runs inside runLoop.
     if (!orchestrator) {
+      if (body.statePath != null && typeof body.statePath !== 'string') {
+        return apiError('statePath must be a string', 400);
+      }
       const statePath = body.statePath ?? globalForHarness.harnessConfig?.statePath;
       if (!statePath) {
         return apiError('Harness is not running and no statePath was provided to rehydrate a resumable run', 409);

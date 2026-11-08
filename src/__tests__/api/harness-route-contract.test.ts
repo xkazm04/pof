@@ -117,3 +117,49 @@ describe("a refused start leaves the current run's server state alone", () => {
     expect(G.harnessEvents).toBe(events);
   });
 });
+
+describe('start refuses input the run could not honour', () => {
+  for (const scenario of ['constructor', 'toString', '__proto__', 42]) {
+    it(`refuses scenario ${JSON.stringify(scenario)} instead of running the default plan`, async () => {
+      const res = await post({ ...START, scenario });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain('scenario');
+      expect(h.created).toBe(0);
+    });
+  }
+
+  const BAD: [string, unknown][] = [
+    ['projectPath', 42], ['projectName', true], ['ueVersion', 5.8], ['statePath', 7],
+    ['maxIterations', 0], ['maxIterations', 1.5], ['maxIterations', '3'],
+    ['targetPassRate', 0], ['targetPassRate', 101], ['targetPassRate', 'high'],
+    ['sessionTimeoutMs', -1], ['sessionTimeoutMs', 'soon'],
+    ['budgetUsd', -5], ['budgetUsd', 'ten'],
+    ['maxConcurrent', 0], ['maxConcurrent', 2.5],
+    ['unlimited', 'yes'], ['checkpoint', 1], ['ueTests', 'true'], ['ueVisual', 1], ['fork', 'true'],
+    ['ueTestFilter', 9],
+  ];
+  for (const [field, value] of BAD) {
+    it(`refuses ${field}=${JSON.stringify(value)} naming the field`, async () => {
+      const res = await post({ ...START, [field]: value });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expect(h.created).toBe(0);
+    });
+  }
+
+  it('admits a whole, valid start, a 0-1 target rate and a 0-100 one', async () => {
+    const res = await post({
+      ...START, statePath: 'C:/s', maxIterations: 3, targetPassRate: 0.9, sessionTimeoutMs: 1000, budgetUsd: 5,
+      maxConcurrent: 2, unlimited: false, checkpoint: true, ueTests: true, ueTestFilter: 'PoF.', ueVisual: false, fork: false,
+    });
+    expect(res.status).toBe(200);
+    G.harnessStatus = 'idle';
+    expect((await post({ ...START, targetPassRate: 90 })).status).toBe(200);
+  });
+
+  it('refuses a non-string statePath on resume', async () => {
+    const res = await post({ action: 'resume', statePath: 7 });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('statePath');
+  });
+});
