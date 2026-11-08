@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/hooks/useTestRunner', () => ({
   useTestRunner: () => ({
-    runTest: mocks.runTest, results: [], isRunning: false, error: null, clearResults: vi.fn(),
+    runTest: mocks.runTest, results: [], isRunning: false, error: null, clearResults: vi.fn(), abort: vi.fn(),
   }),
 }));
 

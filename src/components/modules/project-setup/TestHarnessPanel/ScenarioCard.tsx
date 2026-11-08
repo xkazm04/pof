@@ -32,6 +32,14 @@ export function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, 
     [scenario, onUpdate],
   );
 
+  /** Timeout text while editing; null = show the scenario's value. Only a positive finite number is committed. */
+  const [timeoutDraft, setTimeoutDraft] = useState<string | null>(null);
+  const onTimeoutChange = (raw: string) => {
+    setTimeoutDraft(raw);
+    const n = Number(raw);
+    if (raw.trim() !== '' && Number.isFinite(n) && n > 0) updateField('timeout', n);
+  };
+
   return (
     <div
       className="rounded border overflow-hidden"
@@ -79,8 +87,10 @@ export function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, 
               <input
                 className="w-full bg-surface-2 rounded px-2 py-1 text-xs font-mono text-text outline-none"
                 type="number"
-                value={scenario.timeout}
-                onChange={(e) => updateField('timeout', Number(e.target.value))}
+                min={1}
+                value={timeoutDraft ?? String(scenario.timeout)}
+                onChange={(e) => onTimeoutChange(e.target.value)}
+                onBlur={() => setTimeoutDraft(null)}
               />
             </label>
             <label className="space-y-0.5">

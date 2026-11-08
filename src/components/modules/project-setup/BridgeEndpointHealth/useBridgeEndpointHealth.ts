@@ -46,6 +46,7 @@ export function useBridgeEndpointHealth() {
   const wsPort = useUE5BridgeStore((s) => s.wsPort);
   const setHost = useUE5BridgeStore((s) => s.setHost);
   const setRcPort = useUE5BridgeStore((s) => s.setHttpPort);
+  const setWsPort = useUE5BridgeStore((s) => s.setWsPort);
   const pofPort = usePofBridgeStore((s) => s.pofPort);
   const setPofPort = usePofBridgeStore((s) => s.setPofPort);
   const pofAuthToken = usePofBridgeStore((s) => s.pofAuthToken);
@@ -119,7 +120,7 @@ export function useBridgeEndpointHealth() {
   const checkedCount = Object.keys(health).length;
 
   return {
-    host, rcPort, setHost, setRcPort, pofPort, setPofPort, connectionStatus,
+    host, rcPort, wsPort, setHost, setRcPort, setWsPort, pofPort, setPofPort, connectionStatus,
     collapsed, health, latencyHistory, pinging, showSettings, setShowSettings,
     toggleCollapse, pingAll,
     isDisconnected, healthyCount, checkedCount,

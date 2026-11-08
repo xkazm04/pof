@@ -8,6 +8,7 @@
  * structured pass/fail results with visual diff summaries.
  */
 
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { FlaskConical, ChevronDown, ChevronRight } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorBanner } from '../ErrorBanner';
@@ -18,6 +19,18 @@ import { ResultsTab } from './ResultsTab';
 import { SnapshotsTab } from './SnapshotsTab';
 import { WaitingTestsTab } from './WaitingTestsTab';
 import type { HarnessTab } from './types';
+
+const tabId = (id: HarnessTab) => `harness-tab-${id}`;
+const panelId = (id: HarnessTab) => `harness-panel-${id}`;
+
+/** One tabpanel per tab; only the selected one carries content. */
+function HarnessPanel({ id, active, children }: { id: HarnessTab; active: boolean; children: ReactNode }) {
+  return (
+    <div role="tabpanel" id={panelId(id)} aria-labelledby={tabId(id)} hidden={!active} className="space-y-3">
+      {active ? children : null}
+    </div>
+  );
+}
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -43,6 +56,20 @@ export function TestHarnessPanel() {
     { id: 'snapshots', label: 'Snapshots' },
   ];
 
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = tabs.length - 1;
+    const next = e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+      : e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+      : e.key === 'Home' ? 0
+      : e.key === 'End' ? last
+      : null;
+    if (next === null) return;
+    e.preventDefault();
+    setActiveTab(tabs[next].id);
+    tabRefs.current[next]?.focus();
+  };
+
   return (
     <SurfaceCard className="mt-4">
       {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -65,11 +92,16 @@ export function TestHarnessPanel() {
         <div className="px-4 pb-4 space-y-3">
           {/* ── Tab bar ──────────────────────────────────────────────────── */}
           <div className="flex gap-1 border-b border-border" role="tablist" aria-label="Test Harness sections">
-            {tabs.map((tab) => (
+            {tabs.map((tab, i) => (
               <button
                 key={tab.id}
+                ref={(el) => { tabRefs.current[i] = el; }}
+                id={tabId(tab.id)}
                 role="tab"
                 aria-selected={activeTab === tab.id}
+                aria-controls={panelId(tab.id)}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                onKeyDown={(e) => onTabKeyDown(e, i)}
                 className="px-3 py-1.5 text-xs font-medium transition-colors"
                 style={{
                   color: activeTab === tab.id ? ACCENT_VIOLET : undefined,
@@ -89,10 +121,10 @@ export function TestHarnessPanel() {
           {error && <ErrorBanner message={error} />}
 
           {/* ── Waiting tests Tab (default) ──────────────────────────── */}
-          {activeTab === 'waiting' && <WaitingTestsTab />}
+          <HarnessPanel id="waiting" active={activeTab === 'waiting'}><WaitingTestsTab /></HarnessPanel>
 
           {/* ── Suites Tab ───────────────────────────────────────────── */}
-          {activeTab === 'suites' && (
+          <HarnessPanel id="suites" active={activeTab === 'suites'}>
             <SuitesTab
               suites={suites}
               activeSuiteId={activeSuiteId}
@@ -117,19 +149,19 @@ export function TestHarnessPanel() {
               onRunSuite={runSuite}
               onAbort={abortRun}
             />
-          )}
+          </HarnessPanel>
 
           {/* ── Results Tab ──────────────────────────────────────────── */}
-          {activeTab === 'results' && (
+          <HarnessPanel id="results" active={activeTab === 'results'}>
             <ResultsTab
               history={suiteRunHistory}
               isRunning={isSuiteRunning}
               onClear={() => { setSuiteRunHistory([]); clearResults(); }}
             />
-          )}
+          </HarnessPanel>
 
           {/* ── Snapshots Tab ────────────────────────────────────────── */}
-          {activeTab === 'snapshots' && (
+          <HarnessPanel id="snapshots" active={activeTab === 'snapshots'}>
             <SnapshotsTab
               key={activeSuiteId ?? 'no-suite'}
               diffReport={diffReport}
@@ -141,7 +173,7 @@ export function TestHarnessPanel() {
               onAccept={acceptBaselines}
               onRefresh={refreshDiff}
             />
-          )}
+          </HarnessPanel>
         </div>
       )}
     </SurfaceCard>

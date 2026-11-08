@@ -137,11 +137,11 @@ export function WaitingTestsTab() {
         </button>
       </div>
 
-      {scanError && <p className="text-2xs" style={{ color: STATUS_WARNING }}>UE source not scanned ({scanError}) — presence unknown, every row offers Run.</p>}
-      {authorError && <p className="text-2xs" style={{ color: STATUS_ERROR }}>Could not build the authoring task: {authorError}</p>}
+      {scanError && <p className="text-xs" style={{ color: STATUS_WARNING }}>UE source not scanned ({scanError}) — presence unknown, every row offers Run.</p>}
+      {authorError && <p className="text-xs" style={{ color: STATUS_ERROR }}>Could not build the authoring task: {authorError}</p>}
 
       {lastRun && (
-        <p className="text-2xs" role="status" style={{ color: outcomeColor(lastRun.outcome) }}>
+        <p className="text-xs" role="status" style={{ color: outcomeColor(lastRun.outcome) }}>
           <span className="font-mono">{lastRun.testName}</span>: {describeRunOutcome(lastRun.outcome)}
         </p>
       )}
