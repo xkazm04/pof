@@ -102,3 +102,7 @@ combat-damage-pipeline {"better":6}
 catalog-gap-analysis {"better":4,"demoted":1}
 visual-gen-asset-pipeline {"unmeasurable":2,"better":2}
 visual-gen-style-asset-library {"better":3,"unmeasurable":2}
+visual-gen-3d-model-runners {"better":3,"unmeasurable":1}
+eqs-squad-combat-spatial {"better":7}
+progression-curves-builds {"better":4}
+cross-module-features {"better":8}
