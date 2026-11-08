@@ -16,6 +16,7 @@ import type {
   StarvedNode,
   UndeclaredSource,
 } from '@/types/economy-simulator';
+import { ITEM_CATEGORIES } from '@/types/economy-simulator';
 import { DEFAULT_FAUCETS, DEFAULT_SINKS, DEFAULT_ITEMS, DECLARED_LOOPS, generateXPCurve } from './definitions';
 import {
   auditEconomyNodes, evaluateBalanceBand, nodeKindOf, STARVATION_TOLERANCE,
@@ -772,7 +773,7 @@ function buildSupplyDemand(
   config: SimulationConfig,
 ): SupplyDemandPoint[] {
   const points: SupplyDemandPoint[] = [];
-  const categories: ItemCategory[] = ['weapon', 'armor', 'consumable', 'material', 'gem'];
+  const categories: readonly ItemCategory[] = ITEM_CATEGORIES;
 
   const agentCountDivisor = Math.max(agents.length, 1);
 
