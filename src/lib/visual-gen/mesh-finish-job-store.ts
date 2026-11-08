@@ -108,7 +108,10 @@ export function startMeshFinishJob(
       if (result.ok && result.meshPath) {
         try {
           job.critique = await critic(result.meshPath, gate.deps);
-        } catch { /* critique is best-effort — never fails the finish itself */ }
+        } catch (e) {
+          // Best-effort: it never fails the finish, but a gate that errored must say so.
+          job.critique = { ok: false, error: e instanceof Error ? e.message : String(e) };
+        }
       }
       // A routed run always reports before → after, including the case where the finish
       // completed and the mesh still fails. "The finish ran" is not a result.
