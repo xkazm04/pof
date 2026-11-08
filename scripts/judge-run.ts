@@ -531,7 +531,9 @@ async function calibrate(tmpDir: string, policy: { cliModel: string; effort: str
   const drift = calibrationDrift(prev, run);
   if (prev) {
     const delta = drift.rateDelta === null ? 'n/a' : `${drift.rateDelta >= 0 ? '+' : ''}${(drift.rateDelta * 100).toFixed(0)}pp`;
-    console.log(`  drift vs ${prev.ranAt} (rubric v${prev.rubricVersion}): rate ${delta}, ${drift.moved.length} target(s) changed band${drift.setChanged.length ? `, ${drift.setChanged.length} target(s) entered/left the set` : ''}`);
+    const pp = (d: number | null) => (d === null ? 'n/a' : `${d >= 0 ? '+' : ''}${(d * 100).toFixed(0)}pp`);
+    const rubricNote = drift.rubricChanged ? ` -> v${run.rubricVersion} (RUBRIC CHANGED: deltas cross a ruler change)` : '';
+    console.log(`  drift vs ${prev.ranAt} (rubric v${prev.rubricVersion}${rubricNote}): rate ${delta}, confirmed (enforced) rate ${pp(drift.confirmedRateDelta)}, ${drift.moved.length} target(s) changed band${drift.setChanged.length ? `, ${drift.setChanged.length} target(s) entered/left the set` : ''}`);
     for (const m of drift.moved) console.log(`    ${m.key}: ${m.from ?? 'unscored'} (${m.fromScore ?? '—'}) → ${m.to ?? 'unscored'} (${m.toScore ?? '—'})`);
   }
   if (budgetStop) console.error(`STOPPED — ${budgetStop}`);
