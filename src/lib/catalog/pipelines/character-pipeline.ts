@@ -6,11 +6,29 @@ import { entityRuntimeDeferred, visualDeferred } from '../acceptance/deferred';
 import { meshGalleryCandidates } from '@/components/layout-lab/steps/shared/meshGalleryCandidates';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import type { Checker } from '@/lib/catalog/acceptance/types';
 
 /** PascalCase asset token: 'Jinx' → 'Jinx' (UE package/asset names). */
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 /** lowercase file token: 'Jinx' → 'jinx' (generated/ file + task naming). */
 const fileSlug = (n: string) => slug(n).toLowerCase();
+
+/**
+ * A review gate passes only on a recorded `pass` verdict. Presence alone (`fieldsPopulated`) let a
+ * gate that recorded `fail` — the face did not survive — satisfy the step, so the next credit spend
+ * read as gated. Composed AFTER the presence check, so a missing verdict is still reported as missing.
+ */
+const gateVerdictPassed = (field: string, label: string): Checker => (data) => {
+  const raw = (data[field] as Record<string, unknown> | undefined)?.verdict;
+  const verdict = typeof raw === 'string' ? raw.trim().toLowerCase() : raw;
+  if (verdict === 'pass') return { label, tier: 'L0', status: 'pass', detail: 'verdict: pass' };
+  return {
+    label, tier: 'L0', status: 'fail', detail: `verdict: ${JSON.stringify(raw)}`,
+    reason: verdict === 'fail'
+      ? `the gate recorded a fail verdict (${field}.verdict) — regenerate or fix upstream before the next spend`
+      : `${field}.verdict must be "pass" or "fail", got ${JSON.stringify(raw)} — a gate that recorded no decision has not passed`,
+  };
+};
 
 /**
  * Character Pipeline (catalogId: 'character-pipeline').
@@ -88,7 +106,10 @@ registerCatalogPipeline({
         },
       }),
       criteria: ['visible sclera and defined pupils; natural brows; no glow or heavy makeup; expression readable'],
-      accept: fieldsPopulated('gate', 'face gate recorded (verdict+method+evidence)', ['verdict', 'method', 'criteria', 'evidence']),
+      accept: allOf(
+        fieldsPopulated('gate', 'face gate recorded (verdict+method+evidence)', ['verdict', 'method', 'criteria', 'evidence']),
+        gateVerdictPassed('gate', 'face gate verdict is pass'),
+      ),
       produceNote: 'Cheapest gate in the chain. A creepy source face survives every downstream model — reject here.',
     },
 
@@ -143,7 +164,10 @@ registerCatalogPipeline({
         },
       }),
       criteria: ['eyes with irises and lids survive meshing; hair and fine details read as geometry, not tubes'],
-      accept: fieldsPopulated('gate', '3D face gate recorded', ['verdict', 'method', 'criteria', 'evidence']),
+      accept: allOf(
+        fieldsPopulated('gate', '3D face gate recorded', ['verdict', 'method', 'criteria', 'evidence']),
+        gateVerdictPassed('gate', '3D face gate verdict is pass'),
+      ),
       produceNote: 'Rig + retargets cost ~55 credits — gate the mesh first. Re-texturing with a DIFFERENT reference image smears (projection mismatch); only regenerate.',
     },
 
