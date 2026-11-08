@@ -49,3 +49,12 @@ describe('DiminishingReturnsVisualizer', () => {
     expect(screen.getByText(/Soft Cap: 45 pts/)).toBeTruthy();
   });
 });
+
+describe('DiminishingReturnsVisualizer x axis', () => {
+  it('labels the left edge 0 pts, because points are plotted at x = pts', () => {
+    const { container } = render(<DiminishingReturnsVisualizer />);
+    expect(screen.getByText('0 pts')).toBeTruthy();
+    expect(screen.queryByText('10 pts')).toBeNull();
+    expect(container.querySelector('polyline')?.getAttribute('points')?.startsWith('10,')).toBe(true);
+  });
+});
