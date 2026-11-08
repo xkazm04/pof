@@ -148,13 +148,22 @@ export async function POST(request: NextRequest) {
   if (!existsSync(setDir)) mkdirSync(setDir, { recursive: true });
   const assetId = randomUUID();
   const filename = `${assetId}.${result.format}`;
+  const relPath = `${set.id}/${filename}`;
   writeFileSync(join(setDir, filename), result.bytes);
   invalidateDiskFootprint();
 
-  const asset = addAsset(db(), {
-    setId: set.id, filename, relPath: `${set.id}/${filename}`,
-    prompt, provider: p.id, durationMs: result.durationMs, format: result.format, promptHash,
-  });
+  // The file exists before its row does. If the row cannot be written, remove the file:
+  // with no row pointing at it, no DELETE could ever reach it again.
+  let asset;
+  try {
+    asset = addAsset(db(), {
+      setId: set.id, filename, relPath,
+      prompt, provider: p.id, durationMs: result.durationMs, format: result.format, promptHash,
+    });
+  } catch (e) {
+    const fileRemoval = removeAssetFile(relPath);
+    return apiError(`Could not record the generated clip: ${e instanceof Error ? e.message : 'asset insert failed'}`, 500, { fileRemoval });
+  }
   logUsage(db(), { provider: p.id, kind, promptHash, cached: false, durationMs: result.durationMs });
 
   return apiSuccess({ asset, set, cached: false });
