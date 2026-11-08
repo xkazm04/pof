@@ -9,7 +9,8 @@ import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** snake_case token for the per-entity build script name (Weathered Stone → weathered_stone). */
 const snake = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 

@@ -9,7 +9,8 @@ import { powerWithinTierTarget } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** UPPER form of the entity slug — the per-vendor localization key prefix (VENDOR_<V>_*),
  *  so two vendors can never write the same LocRes key for their barks. */
 const KEY = (n: string) => slug(n).toUpperCase();

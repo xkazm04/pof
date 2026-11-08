@@ -8,7 +8,8 @@ import { imageGalleryCandidates } from '@/components/layout-lab/steps/shared/ima
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 
 /**
  * ATLAS GEOMETRY — the ONE source for every number this pipeline's prose quotes.

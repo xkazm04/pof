@@ -8,7 +8,8 @@ import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** Prose form of the faction name with a leading article dropped ("The Ashen Order" → "Ashen Order"). */
 const shortName = (n: string) => n.replace(/^the\s+/i, '');
 /** Id form without the catalog prefix ("faction-ashen-order" → "ashen-order") — used for unlock ids. */

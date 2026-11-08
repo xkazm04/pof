@@ -9,7 +9,8 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { Checker } from '@/lib/catalog/acceptance/types';
 
 /** PascalCase asset token: 'Jinx' → 'Jinx' (UE package/asset names). */
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** lowercase file token: 'Jinx' → 'jinx' (generated/ file + task naming). */
 const fileSlug = (n: string) => slug(n).toLowerCase();
 
