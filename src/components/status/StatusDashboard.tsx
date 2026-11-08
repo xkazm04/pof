@@ -72,8 +72,9 @@ export function StatusDashboard() {
   const { tab, focus, catalog, filterClass, route } = parseStatusSearch(search);
 
   const setTab = (t: StatusTab) => {
-    if (t === 'item') navigate(focus ? `entity=${focus.catalogId}:${focus.entityId}` : 'tab=item');
-    else if (t === 'category') navigate(focus ? `catalog=${focus.catalogId}` : catalog ? `catalog=${catalog}` : 'tab=category');
+    const none = { focus: null, catalog: null, filterClass: null, route: null };
+    if (t === 'item') navigate(serializeStatusSearch({ ...none, tab: 'item', focus }));
+    else if (t === 'category') navigate(serializeStatusSearch({ ...none, tab: 'category', catalog: focus?.catalogId ?? catalog }));
     else if (t === 'models') navigate('tab=models');
     else if (t === 'pipelines') navigate('tab=pipelines');
     else navigate('');

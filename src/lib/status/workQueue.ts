@@ -125,8 +125,10 @@ export function parseStatusSearch(search: string): StatusSearch {
 
 /** The query string (no leading `?`) that `parseStatusSearch` reads back to the same state. */
 export function serializeStatusSearch(s: StatusSearch): string {
-  if (s.tab === 'item') return s.focus ? `entity=${s.focus.catalogId}:${s.focus.entityId}` : 'tab=item';
-  if (s.tab === 'category') return s.catalog ? `catalog=${s.catalog}` : 'tab=category';
+  if (s.tab === 'item') {
+    return s.focus ? `entity=${encodeURIComponent(s.focus.catalogId)}:${encodeURIComponent(s.focus.entityId)}` : 'tab=item';
+  }
+  if (s.tab === 'category') return s.catalog ? `catalog=${encodeURIComponent(s.catalog)}` : 'tab=category';
   if (s.tab === 'models') return 'tab=models';
   if (s.tab === 'pipelines') {
     const parts = ['tab=pipelines'];
