@@ -50,9 +50,11 @@ export function ExecPropRow({ name, code, codeExpanded, onToggleCode, even, chil
       <div className="flex items-center justify-between px-3 py-1 min-h-[28px]">
         <div className="flex items-center gap-1.5">
           {code && onToggleCode && (
-            <button onClick={onToggleCode}
-              className="text-text-muted hover:text-text text-xs transition-colors leading-none">
-              {codeExpanded ? '\u25BE' : '\u25B8'}
+            <button type="button" onClick={onToggleCode}
+              aria-expanded={Boolean(codeExpanded)}
+              aria-label={`Show C++ for ${name}`}
+              className="focus-ring rounded text-text-muted hover:text-text text-xs transition-colors leading-none">
+              <span aria-hidden="true">{codeExpanded ? '\u25BE' : '\u25B8'}</span>
             </button>
           )}
           <span className="text-xs font-mono text-text-muted">{name}</span>

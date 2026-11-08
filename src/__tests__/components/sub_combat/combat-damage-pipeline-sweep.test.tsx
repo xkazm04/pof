@@ -8,6 +8,7 @@ import { FeedbackTab } from '@/components/modules/core-engine/sub_combat/polish/
 import { FEEDBACK_PARAMS } from '@/components/modules/core-engine/sub_combat/_shared/data';
 import { ComboChainBuilder } from '@/components/modules/core-engine/sub_combat/combos';
 import { PRESET_COMBOS } from '@/components/modules/core-engine/sub_ability/_shared/data';
+import { UE_EXECUTION_STEPS } from '@/lib/combat/ue-damage-execution';
 import { DIRECT_PIPELINE } from '@/components/modules/core-engine/sub_combat/damage-pipeline/pipeline-data';
 
 // scan-sweep night 2026-11-08, combat-damage-pipeline: one block per landed finding.
@@ -123,5 +124,18 @@ describe('combo timeline remove buttons are reachable without a mouse', () => {
       expect(b.getAttribute('type')).toBe('button');
       expect(b.className).toMatch(/focus-visible:opacity-100/);
     }
+  });
+});
+
+describe('Execution breakdown code toggles announce what they open', () => {
+  it('every step with a snippet has a named disclosure button that reports its state', () => {
+    render(<ExecutionBreakdownPanel />);
+    const withCode = UE_EXECUTION_STEPS.filter(st => st.snippet);
+    const toggles = screen.queryAllByRole('button', { name: /^Show C\+\+ for / });
+    expect(toggles.length).toBe(withCode.length);
+    const first = toggles[0];
+    expect(first.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(first);
+    expect(first.getAttribute('aria-expanded')).toBe('true');
   });
 });
