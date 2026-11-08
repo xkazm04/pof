@@ -63,6 +63,8 @@ export function ResultsSection({
   /** The finding id or `module:<id>` currently being fixed, or null. */
   fixTargetId: string | null;
 }) {
+  const failed = new Set(result.failedModules);
+  const completedCount = result.modulesEvaluated.filter((m) => !failed.has(m)).length;
   return (
     <div data-testid="pof-module-evaluator-result-summary" className="space-y-4">
       {/* Regression summary banner — what changed since the last scan */}
@@ -178,13 +180,21 @@ export function ResultsSection({
         </div>
       )}
 
-      {/* Empty: the whole scan found nothing */}
-      {result.findings.totalFindings === 0 && (
-        <div className="bg-surface border rounded-lg p-8 text-center" style={{ borderColor: statusBorder(STATUS_SUCCESS, 0.12) }}>
+      {/* Empty: the scan found nothing in the modules it actually measured. A failed module
+          has zero findings because it was never evaluated, so it is not counted as clean, and
+          a run where every module failed shows no clean panel at all. */}
+      {result.findings.totalFindings === 0 && completedCount > 0 && (
+        <div
+          data-testid="pof-deep-eval-clean"
+          className="bg-surface border rounded-lg p-8 text-center"
+          style={{ borderColor: statusBorder(STATUS_SUCCESS, 0.12) }}
+        >
           <Check className="w-8 h-8 mx-auto mb-3" style={{ color: STATUS_SUCCESS }} />
           <h3 className="text-sm font-semibold text-text mb-1">No Issues Found</h3>
           <p className="text-xs text-text-muted">
-            All evaluated modules passed the deep analysis checks.
+            {completedCount === result.modulesEvaluated.length
+              ? `All ${completedCount} evaluated module${completedCount !== 1 ? 's' : ''} passed the deep analysis checks.`
+              : `The ${completedCount} of ${result.modulesEvaluated.length} modules that completed passed the deep analysis checks.`}
           </p>
         </div>
       )}
