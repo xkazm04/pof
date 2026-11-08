@@ -1,6 +1,7 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
+import { useState } from 'react';
+import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_20,
 } from '@/lib/chart-colors';
@@ -36,11 +37,32 @@ export function NexusGraph({
   // <svg>, which cropped the graph inside this overflow-hidden frame. Edge
   // endpoints come from the nodes' own centres.
   const byId = new Map(nodes.map((n) => [n.moduleId as string, n]));
+
+  // canvas-accessibility: the map is ONE tab stop with a roving cursor, not one stop
+  // per module. Arrows / Home / End move the cursor; Enter / Space select.
+  const [cursor, setCursor] = useState(0);
+  const active = Math.min(cursor, Math.max(0, nodes.length - 1));
+  const moveTo = (i: number, target: Element | null) => {
+    const next = (i + nodes.length) % nodes.length;
+    setCursor(next);
+    const sibling = target?.parentElement?.querySelectorAll<SVGGElement>(':scope > g[role="button"]')[next];
+    sibling?.focus();
+  };
+  const onNodeKey = (e: KeyboardEvent<SVGGElement>, i: number, toggle: () => void) => {
+    const step: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    else if (e.key in step) { e.preventDefault(); moveTo(i + step[e.key], e.currentTarget); }
+    else if (e.key === 'Home') { e.preventDefault(); moveTo(0, e.currentTarget); }
+    else if (e.key === 'End') { e.preventDefault(); moveTo(nodes.length - 1, e.currentTarget); }
+  };
+
   return (
     <div className="bg-background border border-border rounded-lg overflow-hidden relative">
       <svg
         width="100%"
         viewBox={zoomViewBox(svgWidth, svgHeight, zoom)}
+        role="group"
+        aria-label={`Nexus map: ${nodes.length} modules, ${edges.length} connections. Arrow keys move between modules, Enter selects.`}
       >
         <defs>
           <marker id="nexus-arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
@@ -116,7 +138,7 @@ export function NexusGraph({
         })}
 
         {/* Nodes */}
-        {nodes.map((node) => {
+        {nodes.map((node, i) => {
           const isSelected = selectedModule === node.moduleId;
           const isHighlighted = highlightModule === node.moduleId;
           const connectedToHighlight = highlightModule
@@ -143,10 +165,17 @@ export function NexusGraph({
           return (
             <g
               key={node.moduleId}
-              onClick={() => setSelectedModule(isSelected ? null : node.moduleId)}
+              role="button"
+              tabIndex={i === active ? 0 : -1}
+              aria-pressed={isSelected}
+              aria-label={`${node.label}: ${node.implementedCount} of ${node.featureCount} features implemented${node.blockedCount > 0 ? `, ${node.blockedCount} blocked` : ''}.`}
+              onClick={() => { setCursor(i); setSelectedModule(isSelected ? null : node.moduleId); }}
+              onKeyDown={(e) => onNodeKey(e, i, () => setSelectedModule(isSelected ? null : node.moduleId))}
               onMouseEnter={() => setHoveredModule(node.moduleId)}
               onMouseLeave={() => setHoveredModule(null)}
-              className="cursor-pointer"
+              onFocus={() => { setCursor(i); setHoveredModule(node.moduleId); }}
+              onBlur={() => setHoveredModule(null)}
+              className="cursor-pointer focus-ring"
               opacity={dimmed ? 0.2 : 1}
               style={{ transition: 'opacity 200ms' }}
             >
