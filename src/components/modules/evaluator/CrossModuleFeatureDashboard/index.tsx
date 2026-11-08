@@ -108,6 +108,8 @@ export function CrossModuleFeatureDashboard() {
         handleCellClick={handleCellClick}
         onBuild={buildItem}
         isBuilding={isBuilding}
+        // The drill shows the reason while it is open; otherwise it lands here.
+        buildError={selectedCell ? null : buildError}
       />
     </div>
   );

@@ -5,7 +5,7 @@ import {
   Hammer,
   ChevronRight,
 } from 'lucide-react';
-import { STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS, statusBorder } from '@/lib/chart-colors';
+import { STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS, STATUS_BLOCKER, statusBorder } from '@/lib/chart-colors';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import type { PlanItem } from '@/lib/implementation-planner/plan-generator';
 import type { SubModuleId } from '@/types/modules';
@@ -18,6 +18,7 @@ export function BottomPanels({
   handleCellClick,
   onBuild,
   isBuilding,
+  buildError,
 }: {
   lowestModules: CellData[];
   /** `buildableNow(plan)`: the highest-impact ready features across modules. */
@@ -25,6 +26,8 @@ export function BottomPanels({
   handleCellClick: (moduleId: SubModuleId) => void;
   onBuild: (item: PlanItem) => void;
   isBuilding: boolean;
+  /** Why the last Build was refused or failed — shown here when no drill is open to show it. */
+  buildError?: string | null;
 }) {
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -91,6 +94,9 @@ export function BottomPanels({
           </span>
           <span className="text-2xs text-text-muted">every dependency done · by impact</span>
         </div>
+        {buildError && (
+          <p role="alert" className="text-2xs mb-2 px-3" style={{ color: STATUS_BLOCKER }}>{buildError}</p>
+        )}
         <div className="space-y-1.5">
           {buildable.map((item) => (
             <div
