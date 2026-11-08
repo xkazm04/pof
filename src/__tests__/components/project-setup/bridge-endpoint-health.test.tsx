@@ -165,6 +165,33 @@ describe("case 6 — failures carry the Doctor's ProbeFailureKind", () => {
   });
 });
 
+describe('readings belong to the connection they were taken on', () => {
+  it('changing the host or port empties the health, the counts and the latency history', async () => {
+    const result = await pingAllViaHook();
+    expect(result.current.checkedCount).toBeGreaterThan(0);
+    expect(Object.keys(result.current.latencyHistory).length).toBeGreaterThan(0);
+    act(() => usePofBridgeStore.setState({ pofPort: 30099 }));
+    expect(result.current.checkedCount).toBe(0);
+    expect(result.current.healthyCount).toBe(0);
+    expect(result.current.health).toEqual({});
+    expect(result.current.latencyHistory).toEqual({});
+  });
+
+  it('a run in flight when the port changes stops and records nothing against the new port', async () => {
+    const { result } = renderHook(() => useBridgeEndpointHealth());
+    const realFetch = globalThis.fetch;
+    let changed = false;
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      if (!changed) { changed = true; usePofBridgeStore.setState({ pofPort: 30099 }); }
+      return realFetch(input, init);
+    }) as typeof fetch;
+    await act(async () => { await result.current.pingAll(); });
+    expect(calls).toHaveLength(1);
+    expect(result.current.checkedCount).toBe(0);
+    expect(result.current.pinging).toBe(false);
+  });
+});
+
 describe('case 8 — mounted in Project Setup; probing stays an explicit click', () => {
   it('panel present with a project, 0 bridge requests until Ping All is clicked', async () => {
     render(<ProjectSetupModule />);

@@ -20,6 +20,26 @@ function toHealth(res: ProbeResult): EndpointHealth {
   };
 }
 
+/** Readings taken against one connection; the sparkline never mixes two hosts. */
+interface Readings {
+  connection: string;
+  health: Record<string, EndpointHealth>;
+  /** Per-path ring buffer of the last MAX_LATENCY_SAMPLES response times (ms). */
+  latencyHistory: Record<string, number[]>;
+}
+
+const emptyReadings = (connection: string): Readings => ({ connection, health: {}, latencyHistory: {} });
+
+const connectionKey = (host: string, pofPort: number, rcPort: number, wsPort: number, token: string) =>
+  [host, pofPort, rcPort, wsPort, token].join('|');
+
+/** The connection the stores hold right now (a run in flight compares against this). */
+function liveConnection(): string {
+  const { host, httpPort, wsPort } = useUE5BridgeStore.getState();
+  const { pofPort, pofAuthToken } = usePofBridgeStore.getState();
+  return connectionKey(host, pofPort, httpPort, wsPort, pofAuthToken);
+}
+
 export function useBridgeEndpointHealth() {
   const host = useUE5BridgeStore((s) => s.host);
   const rcPort = useUE5BridgeStore((s) => s.httpPort);
@@ -32,9 +52,10 @@ export function useBridgeEndpointHealth() {
   const connectionStatus = usePofBridgeStore((s) => s.connectionStatus);
 
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [health, setHealth] = useState<Record<string, EndpointHealth>>({});
-  /** Per-path ring buffer of the last MAX_LATENCY_SAMPLES response times (ms). */
-  const [latencyHistory, setLatencyHistory] = useState<Record<string, number[]>>({});
+  const connection = connectionKey(host, pofPort, rcPort, wsPort, pofAuthToken);
+  const [readings, setReadings] = useState<Readings>(() => emptyReadings(connection));
+  // Derived, not reset in an effect: readings from another connection simply are not shown.
+  const { health, latencyHistory } = readings.connection === connection ? readings : emptyReadings(connection);
   const [pinging, setPinging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -61,7 +82,7 @@ export function useBridgeEndpointHealth() {
     setPinging(true);
     const results: Record<string, EndpointHealth> = {};
 
-    for (const subsystem of SUBSYSTEMS) {
+    run: for (const subsystem of SUBSYSTEMS) {
       for (const ep of subsystem.endpoints) {
         let result: EndpointHealth | null;
         try {
@@ -69,23 +90,29 @@ export function useBridgeEndpointHealth() {
         } catch {
           result = { status: 'error', kind: 'unknown', lastChecked: Date.now() };
         }
+        // The connection changed under this run: its remaining readings would be about the old one.
+        if (liveConnection() !== connection) break run;
         if (!result) continue;
         results[ep.path] = result;
-        // Update progressively
-        setHealth((prev) => ({ ...prev, [ep.path]: result }));
-        // Append the latest reading to the per-path ring buffer (keep last N).
-        if (result.responseMs !== undefined) {
-          setLatencyHistory((prev) => {
-            const buf = prev[ep.path] ?? [];
-            return { ...prev, [ep.path]: [...buf, result.responseMs!].slice(-MAX_LATENCY_SAMPLES) };
-          });
-        }
+        const reading = result;
+        // Update progressively, appending to the per-path ring buffer (keep last N).
+        setReadings((prev) => {
+          const base = prev.connection === connection ? prev : emptyReadings(connection);
+          const buf = base.latencyHistory[ep.path] ?? [];
+          return {
+            connection,
+            health: { ...base.health, [ep.path]: reading },
+            latencyHistory: reading.responseMs === undefined
+              ? base.latencyHistory
+              : { ...base.latencyHistory, [ep.path]: [...buf, reading.responseMs].slice(-MAX_LATENCY_SAMPLES) },
+          };
+        });
       }
     }
 
     setPinging(false);
     logger.info('[BridgeHealth] Ping complete:', Object.keys(results).length, 'probed routes');
-  }, [pingEndpoint]);
+  }, [pingEndpoint, connection]);
 
   const isDisconnected = connectionStatus === 'disconnected' || connectionStatus === 'error';
   const healthyCount = Object.values(health).filter((h) => h.status === 'healthy').length;
