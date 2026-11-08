@@ -8,6 +8,7 @@ import {
   BLENDER_RETRY_MAX_ATTEMPTS,
   nextRetryDelay,
 } from '@/lib/blender-mcp/diagnostics';
+import { connectTargetError } from '@/lib/blender-mcp/connect-target';
 import type { BlenderConnection } from '@/lib/blender-mcp/types';
 import {
   DEFAULT_BLENDER_HOST,
@@ -149,6 +150,19 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
         connect: async (host?: string, port?: number) => {
           const h = host ?? get().host;
           const p = port ?? get().port;
+          // The route refuses this target with a deterministic 400, so dialling it (and
+          // backing off five times) can never succeed: say why, keep the retry loop idle.
+          const targetError = connectTargetError(h, p);
+          if (targetError) {
+            clearRetryTimer();
+            set({
+              isConnecting: false,
+              lastError: targetError,
+              autoRetrying: false,
+              connection: { host: h, port: p, connected: false },
+            });
+            return;
+          }
           const gen = generation;
           set({ isConnecting: true, lastError: null });
 

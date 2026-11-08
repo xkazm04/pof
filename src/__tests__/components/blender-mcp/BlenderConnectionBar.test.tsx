@@ -183,3 +183,36 @@ describe('BlenderConnectionBar — guided setup + auto-connect', () => {
     expect(status.getAttribute('aria-label')).toMatch(/reconnecting/i);
   });
 });
+
+describe('BlenderConnectionBar - Save validates the target the route enforces', () => {
+  function openSettings() {
+    render(<BlenderConnectionBar />);
+    fireEvent.click(screen.getByRole('button', { name: /connection settings/i }));
+  }
+
+  it('shows the validation error and persists nothing for a bad port', () => {
+    openSettings();
+    fireEvent.change(screen.getByLabelText('Blender MCP port'), { target: { value: 'abc' } });
+    fireEvent.click(screen.getByLabelText('Save Blender MCP connection settings'));
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toBe('port must be an integer between 1 and 65535');
+    expect(useBlenderMCPStore.getState().port).toBe(9876);
+  });
+
+  it('refuses a non-loopback host with the route sentence and persists nothing', () => {
+    openSettings();
+    fireEvent.change(screen.getByLabelText('Blender MCP host'), { target: { value: '192.168.1.5' } });
+    fireEvent.click(screen.getByLabelText('Save Blender MCP connection settings'));
+    expect(screen.getByRole('alert').textContent).toBe(
+      'host must be a loopback address (localhost, 127.0.0.1 or ::1)',
+    );
+    expect(useBlenderMCPStore.getState().host).toBe('127.0.0.1');
+  });
+
+  it('saves a valid loopback target', () => {
+    openSettings();
+    fireEvent.change(screen.getByLabelText('Blender MCP port'), { target: { value: '9000' } });
+    fireEvent.click(screen.getByLabelText('Save Blender MCP connection settings'));
+    expect(useBlenderMCPStore.getState().port).toBe(9000);
+  });
+});

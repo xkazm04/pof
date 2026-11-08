@@ -354,3 +354,35 @@ describe('blenderMCPStore — a late response never overwrites a disconnect', ()
     expect(s.isConnecting).toBe(false);
   });
 });
+
+describe('blenderMCPStore - a connect target the route always refuses', () => {
+  const REFUSAL = 'host must be a loopback address (localhost, 127.0.0.1 or ::1)';
+
+  it('makes at most one request and never retries a non-loopback host under autoConnect', async () => {
+    vi.useFakeTimers();
+    mockFetch(failConnection(REFUSAL));
+    useBlenderMCPStore.setState({ autoConnect: true, host: '192.168.1.5' });
+
+    await useBlenderMCPStore.getState().connect();
+    for (let i = 0; i < BLENDER_RETRY_MAX_ATTEMPTS + 1; i++) {
+      await vi.advanceTimersByTimeAsync(UI_TIMEOUTS.blenderReconnectMax);
+    }
+
+    expect((global.fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBeLessThanOrEqual(1);
+    const s = useBlenderMCPStore.getState();
+    expect(s.autoRetrying).toBe(false);
+    expect(s.lastError).toBe(REFUSAL);
+  });
+
+  it('refuses a NaN port without a request and without a retry', async () => {
+    vi.useFakeTimers();
+    mockFetch(failConnection('unused'));
+    useBlenderMCPStore.setState({ autoConnect: true });
+
+    await useBlenderMCPStore.getState().connect('localhost', Number('abc'));
+    await vi.advanceTimersByTimeAsync(UI_TIMEOUTS.blenderReconnectMax * 2);
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(useBlenderMCPStore.getState().lastError).toMatch(/port must be an integer/);
+  });
+});
