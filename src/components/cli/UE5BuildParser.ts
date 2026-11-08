@@ -280,11 +280,3 @@ function normalizePath(filePath: string): string {
   if (lastSlash >= 0 && trimmed.length - lastSlash < 80) return trimmed.slice(lastSlash + 1);
   return trimmed;
 }
-
-/**
- * Check if a log entry's content contains build output.
- * Used to decide whether to show build cards inline.
- */
-export function containsBuildOutput(content: string): boolean {
-  return BUILD_INDICATORS.some((re) => re.test(content));
-}

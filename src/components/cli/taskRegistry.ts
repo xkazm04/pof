@@ -3,7 +3,6 @@
  */
 
 import { apiFetch } from '@/lib/api-utils';
-import { UI_TIMEOUTS } from '@/lib/constants';
 import type { TaskRecord, TaskStatus } from '@/types/cli-task-registry';
 
 interface TaskStatusResponse {
@@ -14,11 +13,6 @@ interface TaskStatusResponse {
   startedAt?: number;
   completedAt?: number;
   isStale?: boolean;
-}
-
-interface SessionTasksResponse {
-  sessionId: string;
-  tasks: TaskRecord[];
 }
 
 interface StartTaskResponse {
@@ -124,32 +118,6 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse>
   } catch (error) {
     console.error('Failed to get task status:', error);
     return { found: false, taskId };
-  }
-}
-
-export async function getSessionTasks(sessionId: string): Promise<SessionTasksResponse> {
-  try {
-    return await apiFetch<SessionTasksResponse>(`${API_BASE}?sessionId=${encodeURIComponent(sessionId)}`);
-  } catch (error) {
-    console.error('Failed to get session tasks:', error);
-    return { sessionId, tasks: [] };
-  }
-}
-
-export async function hasRunningTask(sessionId: string): Promise<{
-  hasRunning: boolean;
-  runningTaskId?: string;
-  isStale?: boolean;
-}> {
-  try {
-    const { tasks } = await getSessionTasks(sessionId);
-    const running = tasks.find(t => t.status === 'running');
-    if (!running) return { hasRunning: false };
-    const isStale = (Date.now() - running.startedAt) > UI_TIMEOUTS.taskTimeout;
-    return { hasRunning: true, runningTaskId: running.taskId, isStale };
-  } catch (error) {
-    console.error('Failed to check running task:', error);
-    return { hasRunning: false };
   }
 }
 
