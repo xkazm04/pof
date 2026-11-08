@@ -52,7 +52,9 @@ function keywordIn(prompt: string): string | undefined {
   const s = prompt.toLowerCase();
   // Whole words only: a substring match refuses "a map of europe" for its final four
   // letters, which is the cheapest way to make a gate look broken.
-  return LINEAR_PROP_SUBJECTS.find((k) => new RegExp(`\\b${k}s?\\b`).test(s));
+  // A trailing hyphen makes the word a modifier ("chain-mail", "rope-dart", "wire-frame"):
+  // the subject is the compound. A leading one only describes it ("steel-cable" is a cable).
+  return LINEAR_PROP_SUBJECTS.find((k) => new RegExp(`\\b${k}s?\\b(?!-)`).test(s));
 }
 
 /** Route one generation prompt. Pure — decided before a credit is spent. */
@@ -63,7 +65,9 @@ export function routePromptShape(prompt: string | undefined): PromptShapeRoute {
   if (!text) return { route: 'generate', reason: 'no prompt to route on' };
 
   const keyword = keywordIn(text);
-  if (!keyword) return { route: 'generate', reason: routeShape(text).reason };
+  // Judged on the empty subject: `routeShape` has no compound rule, so handed this text it
+  // would explain the generate route with a chain it was just told is not there.
+  if (!keyword) return { route: 'generate', reason: routeShape('').reason };
 
   const words = text.split(/\s+/).filter((w) => /[a-z0-9]/i.test(w));
   if (words.length > SCOPE_WORD_LIMIT) {

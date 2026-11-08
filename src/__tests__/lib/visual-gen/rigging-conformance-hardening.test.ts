@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { routePromptShape } from '@/lib/visual-gen/linear-prop-routing';
 import { planConform } from '@/lib/visual-gen/bone-conform';
 import { bindRigToPreset } from '@/lib/visual-gen/rig-binding';
 import { getRigPreset } from '@/lib/visual-gen/rig-presets';
@@ -69,5 +70,19 @@ describe('bone conform: the numbered Mixamo namespace', () => {
     const binding = bindRigToPreset(names.map((n) => `mixamorig1:${n}`), getRigPreset('ue5-mannequin')!);
     expect(binding.unboundRequired).toEqual([]);
     expect(binding.status).toBe('bound');
+  });
+});
+
+describe('linear-prop routing: a hyphenated compound names something else', () => {
+  it('does not refuse chain-mail as a chain', () => {
+    const route = routePromptShape('chain-mail shirt');
+    expect(route.route).toBe('generate');
+    expect(route.keyword).toBeUndefined();
+    expect(route.reason).not.toContain('chain');
+  });
+
+  it('still recognises a rope the hyphen only describes', () => {
+    expect(routePromptShape('steel-cable').route).toBe('procedural');
+    expect(routePromptShape('barbed-wire coil').route).toBe('procedural');
   });
 });
