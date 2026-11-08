@@ -791,7 +791,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       connectToStream(data.streamUrl);
     } catch (e) {
       if (runTokenRef.current !== runToken) return; // aborted: Abort already ended the run
-      dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start task' });
+      const message = e instanceof Error ? e.message : 'Failed to start task';
+      dispatch({ type: 'START_FAILED', error: message });
+      // No host reads the reducer's error: the transcript is where a failed start is seen.
+      addLog({ id: `start-err-${Date.now()}`, type: 'error', content: `Failed to start: ${message}`, timestamp: Date.now() });
       // Latch completion so a later stray path can't double-fire. Uses task.id
       // directly (currentTaskIdRef may not have caught up to the TASK_START yet).
       if (!completedRef.current) {
@@ -853,7 +856,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       connectToStream(data.streamUrl);
     } catch (e) {
       if (runTokenRef.current !== runToken) return; // aborted: Abort already ended the run
-      dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start' });
+      const message = e instanceof Error ? e.message : 'unknown error';
+      dispatch({ type: 'START_FAILED', error: message });
+      addLog({ id: `start-err-${Date.now()}`, type: 'error', content: `Failed to start: ${message}`, timestamp: Date.now() });
       // Release session.isRunning for hosts that latched on SUBMIT_START.
       completeOnce(false);
     }
