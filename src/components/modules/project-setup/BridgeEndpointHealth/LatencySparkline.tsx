@@ -2,28 +2,36 @@ import { STATUS_NEUTRAL } from '@/lib/chart-colors';
 import { SPARK_W, SPARK_H } from './constants';
 import { latencyColor, median } from './helpers';
 
+/** A sample far above the median (a timeout, not a slow ping). */
+const isDropout = (v: number, med: number) => v > med * 4 + 50;
+
 /**
  * Inline 60×16 latency sparkline. Plots the per-endpoint ring buffer as a
  * gradient-filled trend line colored by the latest sample, over a faint dashed
- * baseline at the median so spikes and dropouts read at a glance.
+ * baseline at the median so spikes and dropouts read at a glance. A dropout
+ * (a sample far above the median, such as a 3 s timeout) is clamped to the top
+ * and ringed, so it neither flattens the healthy samples nor goes unseen.
  */
 export function LatencySparkline({ samples, gradientId }: { samples: number[]; gradientId: string }) {
   if (samples.length === 0) return null;
 
   const latest = samples[samples.length - 1];
   const color = latencyColor(latest);
-  const min = Math.min(...samples);
-  const max = Math.max(...samples);
+  const med = median(samples);
+  const body = samples.filter((v) => !isDropout(v, med));
+  const min = Math.min(...body);
+  const max = Math.max(...body);
   const range = max - min || 1;
   const n = samples.length;
 
   // x: spread samples across the width (centered when a single sample exists).
   const xFor = (i: number) => (n <= 1 ? SPARK_W / 2 : (i / (n - 1)) * SPARK_W);
   // y: invert so higher latency sits higher; 1.5px padding keeps the line/dot in-bounds.
-  const yFor = (v: number) => SPARK_H - ((v - min) / range) * (SPARK_H - 3) - 1.5;
+  const yFor = (v: number) => SPARK_H - ((Math.min(v, max) - min) / range) * (SPARK_H - 3) - 1.5;
 
   const linePts = samples.map((v, i) => `${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`).join(' ');
-  const medY = yFor(median(samples)).toFixed(1);
+  const medY = yFor(med).toFixed(1);
+  const dropouts = samples.flatMap((v, i) => (isDropout(v, med) ? [i] : []));
   const lastX = xFor(n - 1).toFixed(1);
   const lastY = yFor(latest).toFixed(1);
 
@@ -34,7 +42,7 @@ export function LatencySparkline({ samples, gradientId }: { samples: number[]; g
       viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
       className="shrink-0 overflow-visible"
       role="img"
-      aria-label={`Latency trend: latest ${latest}ms across last ${n} ping${n === 1 ? '' : 's'}`}
+      aria-label={`Latency trend: latest ${latest}ms across last ${n} ping${n === 1 ? '' : 's'}${dropouts.length > 0 ? `, ${dropouts.length} dropout${dropouts.length === 1 ? '' : 's'}` : ''}`}
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -61,6 +69,12 @@ export function LatencySparkline({ samples, gradientId }: { samples: number[]; g
           />
         </>
       )}
+      {dropouts.map((i) => (
+        <circle
+          key={i} data-dropout cx={xFor(i).toFixed(1)} cy={yFor(samples[i]).toFixed(1)} r={2.5}
+          fill="none" stroke={latencyColor(samples[i])} strokeWidth={1}
+        />
+      ))}
       <circle cx={lastX} cy={lastY} r={1.5} fill={color} />
     </svg>
   );
