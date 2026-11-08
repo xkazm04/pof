@@ -54,9 +54,11 @@ export function useBidirectionalStateSyncPanel() {
     else addLog('outbound', 'info', category, message, detail);
   }, [addLog]);
 
-  // Auto-scroll log
+  // Follow the newest entry inside the log box only: scrollIntoView also scrolls every
+  // ancestor, which yanked the page to the log on each inbound event.
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const box = logEndRef.current?.parentElement;
+    if (box) box.scrollTop = box.scrollHeight;
   }, [syncLog]);
 
   // ── Sections ──

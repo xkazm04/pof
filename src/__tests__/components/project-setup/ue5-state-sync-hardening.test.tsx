@@ -3,10 +3,15 @@
  * the 2026-11-08 sweep. The client runs against a fake socket; no editor is contacted.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, renderHook, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { BidirectionalStateSyncPanel } from '@/components/modules/project-setup/BidirectionalStateSyncPanel';
+import { useBidirectionalStateSyncPanel } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/useBidirectionalStateSyncPanel';
+import { PropertyEditorRow } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/PropertyEditorRow';
+import { outcomeFor } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/conflictResolution';
+import { diffSyncState, type SyncView } from '@/components/modules/project-setup/BidirectionalStateSyncPanel/syncEvents';
 import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
+import { writeKey } from '@/lib/ue5-bridge/sync-ledger';
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;
@@ -64,5 +69,24 @@ describe('connect control during the handshake', () => {
   it('control: offers Connect when disconnected', () => {
     render(<BidirectionalStateSyncPanel />);
     expect(screen.getByRole('button', { name: 'Connect' })).not.toBeNull();
+  });
+});
+
+describe('sync log auto-scroll', () => {
+  afterEach(() => { delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView; });
+
+  it('follows new entries inside the log box and never scrolls the page', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const { ws } = renderLivePanel();
+    const box = screen.getByText('No sync events yet').parentElement!;
+    Object.defineProperty(box, 'scrollHeight', { value: 500, configurable: true });
+
+    act(() => {
+      ws.push({ type: 'property.update', payload: { watchId: 'w1', objectPath: '/Game/A', propertyName: 'Health', value: 1 } });
+    });
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(box.scrollTop).toBe(500);
   });
 });
