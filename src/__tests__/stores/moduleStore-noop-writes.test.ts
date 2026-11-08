@@ -26,3 +26,12 @@ describe('setChecklistItem', () => {
     cancelAutoSave();
   });
 });
+
+describe('addScanFindings', () => {
+  const finding = (id: string) => ({ id, file: 'A.cpp', description: 'same', severity: 'low' }) as never;
+
+  it('dedupes inside one batch, as it does against stored findings', () => {
+    store().addScanFindings('arpg-combat', [finding('1'), finding('2')]);
+    expect(store().scanResults['arpg-combat']).toHaveLength(1);
+  });
+});

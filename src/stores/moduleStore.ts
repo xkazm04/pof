@@ -242,7 +242,12 @@ export const useModuleStore = create<ModuleState>()(
           const existing = state.scanResults[moduleId] ?? [];
           // Deduplicate by description+file to avoid re-adding the same finding
           const existingKeys = new Set(existing.map((f) => `${f.file}::${f.description}`));
-          const novel = findings.filter((f) => !existingKeys.has(`${f.file}::${f.description}`));
+          const novel = findings.filter((f) => {
+            const key = `${f.file}::${f.description}`;
+            if (existingKeys.has(key)) return false;
+            existingKeys.add(key); // a repeat inside this batch is the same finding too
+            return true;
+          });
           // Skip update when no novel findings — avoids creating a new array reference
           if (novel.length === 0) return state;
           const merged = [...existing, ...novel];
