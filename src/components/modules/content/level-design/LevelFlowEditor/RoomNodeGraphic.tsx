@@ -212,7 +212,7 @@ export function RoomNodeGraphic({
 
       {/* Room name */}
       <text x={30} y={18} style={{ fontSize: 11 }} fill={isSelected ? OVERLAY_WHITE : 'var(--text)'} fontFamily="monospace" fontWeight={700} letterSpacing={0.5}>
-        {room.name.length > 14 ? room.name.slice(0, 14) + '...' : room.name.toUpperCase()}
+        {(room.name.length > 14 ? room.name.slice(0, 14) + '...' : room.name).toUpperCase()}
       </text>
 
       {/* Room type label */}

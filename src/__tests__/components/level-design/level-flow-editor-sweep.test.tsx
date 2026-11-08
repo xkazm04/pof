@@ -152,3 +152,17 @@ describe('creating a document is single-flight', () => {
     expect(api.posts()).toHaveLength(1);
   });
 });
+
+describe('room titles on the canvas use one case', () => {
+  it('a name over 14 chars is truncated AND upper-cased like a short one', async () => {
+    installApi([{ ...DOC, rooms: [room('r1', 100, { name: 'Flooded Cathedral Nave' }), room('r2', 300, { name: 'Crypt' })] }]);
+    await openDoc();
+    const texts = await waitFor(() => {
+      const t = Array.from(document.querySelectorAll('[data-room-node] text')).map((e) => e.textContent ?? '');
+      if (t.length === 0) throw new Error('no nodes');
+      return t;
+    });
+    expect(texts).toContain('CRYPT');
+    expect(texts).toContain('FLOODED CATHED...');
+  });
+});
