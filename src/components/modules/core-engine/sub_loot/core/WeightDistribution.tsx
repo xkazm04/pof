@@ -94,6 +94,8 @@ export function WeightDistribution() {
             return (
               <button
                 key={tier.name}
+                type="button"
+                aria-pressed={selected === tier.name}
                 className="flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer"
                 style={{ backgroundColor: isActive ? withOpacity(tier.color, OPACITY_8) : 'transparent' }}
                 onMouseEnter={() => setHovered(tier.name)}

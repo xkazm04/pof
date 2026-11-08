@@ -23,4 +23,11 @@ describe('WeightDistribution drill-down', () => {
     expect(container.textContent).not.toContain('per 100 kills');
   });
 
+  it('marks the selected legend entry pressed', () => {
+    const { container } = render(<WeightDistribution />);
+    const btn = legendButton(container, 'Epic');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(btn);
+    expect(legendButton(container, 'Epic').getAttribute('aria-pressed')).toBe('true');
+  });
 });
