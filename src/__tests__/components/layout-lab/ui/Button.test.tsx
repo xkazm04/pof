@@ -17,6 +17,14 @@ describe('Button', () => {
     render(<Button active>On</Button>);
     expect(screen.getByRole('button', { name: 'On' }).getAttribute('aria-pressed')).toBe('true');
   });
+  it('a toggle that is OFF (active={false}) still announces aria-pressed="false"', () => {
+    render(<Button active={false}>Grid</Button>);
+    expect(screen.getByRole('button', { name: 'Grid' }).getAttribute('aria-pressed')).toBe('false');
+  });
+  it('a plain action button (no `active` prop) is not a toggle', () => {
+    render(<Button>Open</Button>);
+    expect(screen.getByRole('button', { name: 'Open' }).getAttribute('aria-pressed')).toBeNull();
+  });
   it('accent variant uses accent tokens', () => {
     render(<Button variant="accent">A</Button>);
     expect(screen.getByRole('button', { name: 'A' }).style.background).toContain('var(--lab-accent)');

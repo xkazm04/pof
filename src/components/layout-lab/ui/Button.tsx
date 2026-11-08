@@ -10,7 +10,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   ariaLabel?: string;
 }
 
-/** Themed button. `active` reflects a toggled/selected state (aria-pressed + accent fill). */
+/** Themed button. `active` reflects a toggled/selected state (aria-pressed true/false + accent fill). */
 export function Button({ children, onClick, variant = 'ghost', active, mono, disabled, ariaLabel, style, className, 'aria-label': ariaLabelAttr, ...rest }: ButtonProps) {
   const bg =
     active || variant === 'accent' ? 'var(--lab-accent)'
@@ -24,7 +24,9 @@ export function Button({ children, onClick, variant = 'ghost', active, mono, dis
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel ?? ariaLabelAttr}
-      aria-pressed={active ? true : undefined}
+      // A caller that passes `active` (true OR false) declares a toggle, so both states are
+      // announced; omitting it keeps a plain action button (no aria-pressed at all).
+      aria-pressed={active}
       className={`focus-ring${className ? ' ' + className : ''}`}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s2)',

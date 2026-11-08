@@ -5,7 +5,7 @@ interface IconButtonProps { children: ReactNode; onClick?: () => void; ariaLabel
 export function IconButton({ children, onClick, ariaLabel, active, disabled }: IconButtonProps) {
   return (
     <button
-      type="button" onClick={onClick} aria-label={ariaLabel} aria-pressed={active ? true : undefined} disabled={disabled}
+      type="button" onClick={onClick} aria-label={ariaLabel} aria-pressed={active} disabled={disabled}
       className="focus-ring"
       style={{
         width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
