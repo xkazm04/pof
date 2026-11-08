@@ -10,7 +10,7 @@ import {
 import { BlueprintPanel, CornerBrackets } from '@/components/modules/core-engine/unique-tabs/_design';
 import { STAGGER_DEFAULT } from '@/components/modules/core-engine/unique-tabs/_shared';
 import type { ItemGenome, DNARollResult } from '@/types/item-genome';
-import { AXIS_CONFIGS, ACCENT } from './data';
+import { AXIS_CONFIGS, ACCENT, affixDisplayName } from './data';
 
 /* ── Roll Result Card ──────────────────────────────────────────────────── */
 
@@ -55,7 +55,7 @@ export function RollResultCard({ result, genome }: { result: DNARollResult; geno
                 <CornerBrackets color={ra.isMutation ? ACCENT_PINK : cfg?.color ?? ACCENT} size={6} />
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cfg?.color ?? ACCENT }} />
                 <span className="font-mono font-bold" style={{ color: cfg?.color ?? ACCENT }}>
-                  {ra.affix.isPrefix ? ra.affix.name : ''} Item {ra.affix.isPrefix ? '' : ra.affix.name}
+                  {affixDisplayName(ra.affix)}
                 </span>
                 <span className="ml-auto font-mono font-bold text-text">+{ra.rolledValue}</span>
                 <span className="font-mono text-text-muted">{ra.affix.tags[0]?.replace('Stat.', '') ?? ''}</span>
