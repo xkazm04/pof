@@ -6,17 +6,20 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: Variant;
   active?: boolean;
+  /** Single-select member (segmented view switch): the chosen option gets aria-current and the accent fill; the others carry no state. Use `active` only for an independent on/off toggle. */
+  current?: boolean;
   mono?: boolean;
   ariaLabel?: string;
 }
 
 /** Themed button. `active` reflects a toggled/selected state (aria-pressed true/false + accent fill). */
-export function Button({ children, onClick, variant = 'ghost', active, mono, disabled, ariaLabel, style, className, 'aria-label': ariaLabelAttr, ...rest }: ButtonProps) {
+export function Button({ children, onClick, variant = 'ghost', active, mono, disabled, ariaLabel, current, style, className, 'aria-label': ariaLabelAttr, ...rest }: ButtonProps) {
+  const filled = active || current;
   const bg =
-    active || variant === 'accent' ? 'var(--lab-accent)'
+    filled || variant === 'accent' ? 'var(--lab-accent)'
     : variant === 'solid' ? 'var(--lab-accent-bg)'
     : 'transparent';
-  const color = active || variant === 'accent' ? 'var(--lab-on-accent)' : 'var(--lab-ink)';
+  const color = filled || variant === 'accent' ? 'var(--lab-on-accent)' : 'var(--lab-ink)';
   return (
     <button
       {...rest}
@@ -27,6 +30,7 @@ export function Button({ children, onClick, variant = 'ghost', active, mono, dis
       // A caller that passes `active` (true OR false) declares a toggle, so both states are
       // announced; omitting it keeps a plain action button (no aria-pressed at all).
       aria-pressed={active}
+      aria-current={current ? 'true' : undefined}
       className={`focus-ring${className ? ' ' + className : ''}`}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s2)',

@@ -131,10 +131,10 @@ export function LayoutLab() {
           >
             Search <span aria-hidden="true" style={{ color: 'var(--lab-muted)' }}>⌘K</span>
           </Button>
-          <Button active={view === 'catalogs'} onClick={() => nav.view('catalogs')}>Catalogs</Button>
-          <Button active={view === 'matrix'} onClick={() => nav.view('matrix')}>Matrix</Button>
-          <Button active={view === 'canon'} onClick={() => nav.view('canon')}>Canon</Button>
-          <Button active={view === 'game'} onClick={() => nav.view('game')} data-testid="lab-view-game">Game</Button>
+          <Button current={view === 'catalogs'} onClick={() => nav.view('catalogs')}>Catalogs</Button>
+          <Button current={view === 'matrix'} onClick={() => nav.view('matrix')}>Matrix</Button>
+          <Button current={view === 'canon'} onClick={() => nav.view('canon')}>Canon</Button>
+          <Button current={view === 'game'} onClick={() => nav.view('game')} data-testid="lab-view-game">Game</Button>
           <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
           {/* Full-page jumps to the app's other surfaces — derived from NAVIGABLE_SURFACES
               and drawn distinctly from the in-place view toggles above. */}
