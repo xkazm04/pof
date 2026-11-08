@@ -29,6 +29,9 @@ import { moduleLabel } from './helpers';
 import { StatCard, ModuleBubble, FilterChip } from './SummaryParts';
 import { OverlapRow } from './OverlapRow';
 
+/** How many modules the overlap-count heatmap draws before disclosing the rest. */
+const HEATMAP_MODULES = 12;
+
 /** The feature definition a twin key names (null = not a defined feature, so no review). */
 function twinDefinition(key: string) {
   const { moduleId, featureName } = splitTwinKey(key);
@@ -231,9 +234,14 @@ export function CrossModuleOverlapPanel() {
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {data.moduleSummaries.slice(0, 12).map((ms) => (
+          {data.moduleSummaries.slice(0, HEATMAP_MODULES).map((ms) => (
             <ModuleBubble key={ms.moduleId} summary={ms} maxCount={data.moduleSummaries[0]?.overlapCount ?? 1} />
           ))}
+          {data.moduleSummaries.length > HEATMAP_MODULES && (
+            <span className="px-3 py-1.5 text-xs text-text-muted">
+              +{data.moduleSummaries.length - HEATMAP_MODULES} more
+            </span>
+          )}
         </div>
       </SurfaceCard>
 
