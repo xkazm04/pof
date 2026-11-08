@@ -66,6 +66,53 @@ const PROVIDER_COMMANDS: Record<
   },
 };
 
+const JOB_STATUS_WORDS: Record<string, JobStatusResult['status']> = {
+  pending: 'pending',
+  queued: 'pending',
+  waiting: 'pending',
+  submitted: 'pending',
+  processing: 'processing',
+  running: 'processing',
+  started: 'processing',
+  generating: 'processing',
+  in_progress: 'processing',
+  'in-progress': 'processing',
+  completed: 'completed',
+  complete: 'completed',
+  done: 'completed',
+  finished: 'completed',
+  success: 'completed',
+  succeeded: 'completed',
+  failed: 'failed',
+  failure: 'failed',
+  error: 'failed',
+  errored: 'failed',
+  cancelled: 'failed',
+  canceled: 'failed',
+  timeout: 'failed',
+  timed_out: 'failed',
+};
+
+/**
+ * Fold whatever status word the addon relayed into the JobStatus union. A missing status is
+ * `pending`; an unrecognised word is `processing` (never `completed`: a wrong guess must not
+ * grade an unfinished job) and is logged so the vocabulary can be extended.
+ */
+function normalizeJobStatus(raw: unknown, provider: GenerationProvider): JobStatusResult['status'] {
+  if (raw === undefined || raw === null) return 'pending';
+  const known = JOB_STATUS_WORDS[String(raw).trim().toLowerCase()];
+  if (known) return known;
+  logger.warn(`[BlenderMCP] ${provider} poll returned unknown status "${String(raw).slice(0, 40)}"; treating as processing`);
+  return 'processing';
+}
+
+/** A finite 0-100 progress; anything non-numeric reads as 0. */
+function normalizeJobProgress(raw: unknown): number {
+  const n = typeof raw === 'number' || typeof raw === 'string' ? Number(raw) : NaN;
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, n));
+}
+
 class BlenderMCPService {
   private socket: net.Socket | null = null;
   /**
@@ -567,9 +614,8 @@ class BlenderMCPService {
     const data = result.data as Record<string, unknown>;
     return ok({
       jobId,
-      status:
-        (data?.status as JobStatusResult['status']) ?? 'pending',
-      progress: Number(data?.progress ?? 0),
+      status: normalizeJobStatus(data?.status, provider),
+      progress: normalizeJobProgress(data?.progress),
       resultUrl: data?.resultUrl as string | undefined,
     });
   }
