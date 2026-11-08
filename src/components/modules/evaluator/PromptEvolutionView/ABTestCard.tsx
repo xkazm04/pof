@@ -50,7 +50,8 @@ export function ABTestCard({
 
   // Plain-language verdict — the single human-readable answer.
   const verdict = explainTestVerdict(test, variantA?.label, variantB?.label, reading);
-  const winnerVariant = verdict.winnerSlot === 'A' ? variantA : verdict.winnerSlot === 'B' ? variantB : undefined;
+  // A running front-runner has a slot too; only a decided test has a winner to act on.
+  const winnerVariant = !verdict.concluded ? undefined : verdict.winnerSlot === 'A' ? variantA : verdict.winnerSlot === 'B' ? variantB : undefined;
 
   const handleUseWording = useCallback(async () => {
     if (!winnerVariant) return;
@@ -212,7 +213,7 @@ function PlainVerdictBanner({
   adoption?: AdoptionResult;
   onAdopt?: () => Promise<boolean>;
 }) {
-  const hasWinner = verdict.winnerSlot !== null;
+  const hasWinner = verdict.concluded && verdict.winnerSlot !== null;
   const [previewing, setPreviewing] = useState(false);
   const [busy, setBusy] = useState(false);
   const confirm = async () => {

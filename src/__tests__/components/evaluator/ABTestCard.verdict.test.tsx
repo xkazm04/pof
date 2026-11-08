@@ -97,3 +97,18 @@ describe('ABTestCard — adopting the winner', () => {
     expect(screen.getByTestId('adoption-blocked').textContent).toMatch(/already the version in use/);
   });
 });
+
+describe('ABTestCard — a running front-runner is not a winner', () => {
+  const a = {
+    id: 'va', moduleId: 'arpg-combat' as SubModuleId, checklistItemId: 'ac-1', label: 'A', prompt: 'wording a',
+    origin: 'default' as const, style: 'imperative' as const, parentId: null, active: false, createdAt: '',
+  };
+
+  it('shows the lead without a trophy or a copy-the-winner action', () => {
+    render(<ABTestCard test={runningTest(3, 3)} variantA={a} isExpanded onToggle={() => {}} mode="simple" />);
+    const banner = screen.getByTestId('plain-verdict');
+    expect(banner.textContent).toMatch(/is ahead/);
+    expect(banner.querySelector('.lucide-trophy')).toBeNull();
+    expect(screen.queryByRole('button', { name: /copy wording/i })).toBeNull();
+  });
+});
