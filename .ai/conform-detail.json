@@ -7929,7 +7929,7 @@
       "bundle": "game-production",
       "state": "unknown",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T03:45:46.810Z",
+      "evaluatedTs": "2026-11-08T05:32:04.115Z",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
@@ -7981,10 +7981,10 @@
         }
       ],
       "withdrawn": {
-        "worker": "bdc0a94e-03b8-4318-8494-c02d53bfefe0",
+        "worker": "6ff03fc0-4526-4cf4-ad0f-a1cb6d3e9d68",
         "state": "not-applicable",
-        "at": "2026-11-08T03:47:08.796794+00:00",
-        "reason": "reviewer (sonnet): The anchor at index.tsx:13 is a useState line for the active tab. It does not show that the context never installs, launches or connects to a device, so it is incidental."
+        "at": "2026-11-08T05:32:44.665127+00:00",
+        "reason": "reviewer (sonnet): The anchor index.tsx:13 is only an import line (DiffPane). It does not show that the context lacks device deploy or TV-platform code, so the not-applicable claim rests on an incidental line plus a grep."
       }
     },
     "0f8602ad-d98f-4d1d-9644-0467be9e70b9/fire-tv-device-realities": {
@@ -8109,9 +8109,10 @@
       "context": "streaming-zone-planner",
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T03:45:46.810Z",
+      "evaluatedTs": "2026-11-08T05:32:04.115Z",
+      "worker": "6ff03fc0-4526-4cf4-ad0f-a1cb6d3e9d68",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
@@ -8167,13 +8168,7 @@
           "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:81 The grid handles authoring gestures; no streaming-stick launch command was found.",
           "carriedFrom": "2026-10-17"
         }
-      ],
-      "withdrawn": {
-        "worker": "bdc0a94e-03b8-4318-8494-c02d53bfefe0",
-        "state": "not-applicable",
-        "at": "2026-11-08T03:47:08.886895+00:00",
-        "reason": "reviewer (sonnet): The anchor at index.tsx:43 is only the component signature. It does not itself show that 'streaming' means level streaming and not a device, so it is incidental. The claim also rests on a grep for terms that are too narrow."
-      }
+      ]
     },
     "27a34084-b33e-4538-8173-600d5162f922/node-boot-and-declarative-bootstrap": {
       "context": "catalog-gap-analysis",
@@ -16763,16 +16758,11 @@
       "context": "cook-packaging-pipeline",
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T23:58:08.468Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
-        "state": "not-applicable",
-        "at": "2026-10-24T23:59:45.364017+00:00",
-        "reason": "reviewer (sonnet): The anchor CookSettingsPanel.tsx:113 is an 'Iterative cooking' toggle, which is incidental. The context also contains SmokeTest.tsx, which launches the staged build and reads its platform and config, so 'no device launch' is not confirmed."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:32:04.115Z",
+      "worker": "6ff03fc0-4526-4cf4-ad0f-a1cb6d3e9d68",
+      "techniques": []
     },
     "a2f9922b-d729-43f1-8050-27103ff26664/page-load-pipeline": {
       "context": "app-shell-and-chrome",
@@ -23361,13 +23351,13 @@
       "bundle": "game-production",
       "state": "unknown",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T03:45:46.810Z",
+      "evaluatedTs": "2026-11-08T05:32:04.115Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "bdc0a94e-03b8-4318-8494-c02d53bfefe0",
+        "worker": "6ff03fc0-4526-4cf4-ad0f-a1cb6d3e9d68",
         "state": "not-applicable",
-        "at": "2026-11-08T03:47:08.702268+00:00",
-        "reason": "reviewer (sonnet): The anchor at route.ts:101 is a comment about the provider's capability contract. It does not show that the route has no device audio stream, so it is an incidental anchor and the absence search is thin."
+        "at": "2026-11-08T05:32:44.595614+00:00",
+        "reason": "reviewer (sonnet): The anchor route.ts:107 is a comment about enforcing the provider capability contract before billing. It does not show that the context has no device audio stream or stick target, and the claim rests only on a grep."
       }
     },
     "01327ce7-fd73-460c-841a-3cd2466211ba/procedural-level-planning": {

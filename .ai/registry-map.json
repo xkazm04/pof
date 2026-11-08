@@ -12198,7 +12198,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/CookProgress/types.ts:10 The cook console tracks a desktop UAT cook that settles on an executable path and has no install-to-device, wake, display-state or APK-inspection step; a search of src/ for fire tv/firetv/armeabi/KEEP_SCREEN_ON/streaming stick returned zero hits (Android exists only as a phone-targeted build profile outside this context), so no streaming-stick target exists to judge against.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -25450,7 +25454,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:7 Here 'streaming' means UE5 World Partition level streaming planned on a grid in the browser, not a streaming-stick device; a search of src/ for fire tv/firetv/armeabi/KEEP_SCREEN_ON/streaming stick found nothing, so the subject does not govern this context.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         },
         {
           "subject": "chat-transcript",
