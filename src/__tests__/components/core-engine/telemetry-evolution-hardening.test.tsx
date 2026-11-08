@@ -105,3 +105,39 @@ describe('TelemetryEvolution — empty state after scans have run', () => {
     expect(container.textContent ?? '').toContain('Run First Scan');
   });
 });
+
+import { AcceptedGenres } from '@/components/modules/core-engine/TelemetryEvolution/AcceptedGenres';
+import { SuggestionsList } from '@/components/modules/core-engine/TelemetryEvolution/SuggestionsList';
+import type { SubGenreId } from '@/types/telemetry';
+
+describe('TelemetryEvolution — unknown sub-genre fallback style', () => {
+  const legacy = 'legacy-genre' as SubGenreId;
+  // jsdom accepts any value containing var(), so the check is on the authored
+  // string: a CSS variable with a hex-alpha suffix glued on ("var(--x)10") is
+  // invalid at computed-value time in a browser and paints nothing.
+  const VAR_WITH_ALPHA = /var\([^)]*\)[0-9a-fA-F]{2}/;
+  const styleOf = (el: Element | null) => el?.getAttribute('style') ?? '';
+
+  it('AcceptedGenres paints a valid tint for a sub-genre with no style entry', () => {
+    const { container } = render(<AcceptedGenres genres={[legacy]} />);
+    const btn = container.querySelector('button[aria-pressed]');
+    expect(styleOf(btn)).not.toBe('');
+    expect(styleOf(btn)).not.toMatch(VAR_WITH_ALPHA);
+  });
+
+  it('SuggestionsList paints a valid icon tile for a sub-genre with no style entry', () => {
+    const sug = { ...suggestion(), subGenre: legacy };
+    const { container } = render(
+      <SuggestionsList suggestions={[sug]} expandedId={null} onToggle={() => {}} onResolve={() => {}} />,
+    );
+    const tile = container.querySelector('button div');
+    expect(styleOf(tile)).not.toBe('');
+    expect(styleOf(tile)).not.toMatch(VAR_WITH_ALPHA);
+  });
+
+  it('control: the matcher bites on the broken shape', () => {
+    expect('background-color: var(--text-muted)10;').toMatch(VAR_WITH_ALPHA);
+    const { container } = render(<AcceptedGenres genres={['souls-like']} />);
+    expect(styleOf(container.querySelector('button[aria-pressed]'))).not.toMatch(VAR_WITH_ALPHA);
+  });
+});

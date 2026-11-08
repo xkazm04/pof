@@ -3,14 +3,14 @@
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ChevronDown, ChevronRight, CheckCircle2, XCircle,
-  TrendingUp, Sparkles, Layers,
+  TrendingUp, Sparkles,
 } from 'lucide-react';
 import { STATUS_WARNING } from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import type { GenreEvolutionSuggestion } from '@/types/telemetry';
 import { GenreTemplateGallery } from '@/components/modules/core-engine/GenreTemplateGallery';
-import { SUB_GENRE_STYLES } from './constants';
+import { SUB_GENRE_STYLES, FALLBACK_SUB_GENRE_STYLE } from './constants';
 
 export function SuggestionsList({
   suggestions,
@@ -38,7 +38,7 @@ export function SuggestionsList({
       </div>
       <div className="space-y-3">
         {suggestions.map((sug, i) => {
-          const style = SUB_GENRE_STYLES[sug.subGenre] ?? { color: 'var(--text-muted)', icon: Layers };
+          const style = SUB_GENRE_STYLES[sug.subGenre] ?? FALLBACK_SUB_GENRE_STYLE;
           const Icon = style.icon;
           const isExpanded = expandedId === sug.id;
 
