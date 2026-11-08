@@ -119,6 +119,11 @@ async function main() {
       const detected = pre.output.rig_type;
       console.log(`POF_TRIPO_PRERIG=riggable=${riggable} rig_type=${detected ?? 'unknown'}`);
       if (!a['force-rig']) {
+        if (riggable === undefined) {
+          console.log('POF_TRIPO_ERROR=animate_prerigcheck returned no riggable verdict, so the anatomy gate has nothing to read (pass --force-rig to override)');
+          process.exitCode = 1;
+          return;
+        }
         if (riggable === false) {
           console.log('POF_TRIPO_ERROR=model reported NOT riggable by animate_prerigcheck; rigging it anyway returns a rig that silently mis-follows the mesh (pass --force-rig to override)');
           process.exitCode = 1;

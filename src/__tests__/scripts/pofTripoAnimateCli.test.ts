@@ -26,6 +26,18 @@ describe('pof_tripo_animate.mjs', () => {
     expect(r.calls.filter((c) => c.startsWith('POST'))).toHaveLength(3);
   });
 
+  it('a prerigcheck that answers nothing stops before the paid rig', () => {
+    const r = run(OK, rules({}));
+    expect(r.stdout).toContain('POF_TRIPO_ERROR=');
+    expect(r.status).toBe(1);
+    expect(r.calls.filter((c) => c.startsWith('POST'))).toHaveLength(1);
+  });
+
+  it('--force-rig still overrides an unanswered prerigcheck', () => {
+    const r = run([...OK, '--force-rig'], rules({}));
+    expect(r.stdout).toContain('POF_TRIPO_DONE=');
+  });
+
   it.each([
     ['a bare --output', ['--model-task', 'm1', '--output']],
     ['a bare --model-task', ['--output', '{dir}/o.fbx', '--model-task']],
