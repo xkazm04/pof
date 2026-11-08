@@ -82,6 +82,7 @@ export function MilestoneCards({
               <div className="flex items-center gap-1">
                 <input
                   type="date"
+                  aria-label={`Deadline for ${ms.name}`}
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
                   className="flex-1 px-2 py-1 rounded text-xs bg-surface border border-border text-text"
@@ -91,12 +92,14 @@ export function MilestoneCards({
                     if (editDate) saveDeadline(ms.id, parseDateInput(editDate).toISOString());
                     setEditingId(null);
                   }}
+                  aria-label={`Save deadline for ${ms.name}`}
                   className="p-1 text-green-400 hover:bg-surface-hover rounded"
                 >
                   <Check className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setEditingId(null)}
+                  aria-label={`Cancel editing deadline for ${ms.name}`}
                   className="p-1 text-text-muted hover:bg-surface-hover rounded"
                 >
                   <X className="w-3 h-3" />
@@ -119,6 +122,7 @@ export function MilestoneCards({
                 {dl && (
                   <button
                     onClick={() => saveDeadline(ms.id, null)}
+                    aria-label={`Clear deadline for ${ms.name}`}
                     className="p-0.5 text-text-muted hover:text-red-400 transition-colors"
                   >
                     <X className="w-3 h-3" />

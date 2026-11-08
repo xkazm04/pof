@@ -159,3 +159,18 @@ describe('a forecast past a deadline that has not arrived', () => {
     expect(container.textContent).not.toContain('overdue');
   });
 });
+
+describe('icon-only roadmap controls', () => {
+  it('have accessible names', async () => {
+    installFetch();
+    const { findByTestId } = render(<CalendarRoadmapView />);
+    await findByTestId('deadline-marker-ms-1');
+    screen.getByRole('button', { name: 'Show earlier weeks' });
+    screen.getByRole('button', { name: 'Show later weeks' });
+    screen.getByRole('button', { name: 'Clear deadline for Combat' });
+    fireEvent.click(screen.getByRole('button', { name: cardDate(DEADLINE) }));
+    screen.getByLabelText('Deadline for Combat');
+    screen.getByRole('button', { name: 'Save deadline for Combat' });
+    screen.getByRole('button', { name: 'Cancel editing deadline for Combat' });
+  });
+});
