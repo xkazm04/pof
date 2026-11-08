@@ -18,21 +18,22 @@ interface UseUE5SourceSyncResult {
  *
  * Last request wins: an answer that is no longer the newest request for the
  * current project is dropped, and `isLoading` is derived from the project the
- * load was for, so abandoning a load can never leave the spinner on.
+ * load was for, so abandoning a load can never leave the spinner on. Data and
+ * error are held with their project, so another project's are never returned.
  */
 export function useUE5SourceSync(): UseUE5SourceSyncResult {
   const projectPath = useProjectStore((s) => s.projectPath);
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
-  const [data, setData] = useState<ParsedUE5Data | null>(null);
+  const [loaded, setLoaded] = useState<{ path: string; data: ParsedUE5Data } | null>(null);
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ path: string; error: string } | null>(null);
   const fetchedPathRef = useRef<string | null>(null);
   const latestRequestRef = useRef(0);
 
   const load = useCallback(async (path: string) => {
     const requestId = ++latestRequestRef.current;
     setLoadingPath(path);
-    setError(null);
+    setFailure(null);
 
     const result = await tryApiFetch<ParsedUE5Data>('/api/ue5-source/parse', {
       method: 'POST',
@@ -42,10 +43,10 @@ export function useUE5SourceSync(): UseUE5SourceSyncResult {
     if (requestId !== latestRequestRef.current) return;
 
     if (result.ok) {
-      setData(result.data);
+      setLoaded({ path, data: result.data });
       fetchedPathRef.current = path;
     } else {
-      setError(result.error);
+      setFailure({ path, error: result.error });
     }
     setLoadingPath(null);
   }, []);
@@ -70,5 +71,7 @@ export function useUE5SourceSync(): UseUE5SourceSyncResult {
   }, [projectPath, isSetupComplete, load]);
 
   const isLoading = isSetupComplete && loadingPath !== null && loadingPath === projectPath;
+  const data = loaded?.path === projectPath ? loaded.data : null;
+  const error = failure?.path === projectPath ? failure.error : null;
   return { data, isLoading, error, refresh };
 }

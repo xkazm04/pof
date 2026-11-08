@@ -72,4 +72,21 @@ describe('useUE5SourceSync', () => {
     await flush();
     expect(result.current.data).toEqual({ tag: 'B' });
   });
+
+  it('never serves the previous project while another one is selected', async () => {
+    const { result } = renderHook(() => useUE5SourceSync());
+    await flush();
+    pending[0].resolve(parsed('A'));
+    await flush();
+    setPath('B');
+    await flush();
+    expect(result.current.data).toBeNull();
+    pending[1].fail('parse failed');
+    await flush();
+    expect(result.current.data).toBeNull();
+    expect(result.current.error).toBe('parse failed');
+    setPath('');
+    await flush();
+    expect(result.current.error).toBeNull();
+  });
 });
