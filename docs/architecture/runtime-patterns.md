@@ -10,7 +10,7 @@ Cross-cutting infrastructure that every module in the app depends on: the typed 
 |------|---------|
 | `src/lib/event-bus.ts` | Singleton `EventBus` class + exported `eventBus` instance |
 | `src/types/event-bus.ts` | `EventMap` interface (all typed channels), `BusEvent<C>`, handler types |
-| `src/lib/lifecycle.ts` | `Lifecycle<T>` protocol + four factories + `composeLifecycles` |
+| `src/lib/lifecycle.ts` | `Lifecycle<T>` protocol + three factories |
 | `src/hooks/useLifecycle.ts` | `useLifecycle()` / `useGuardedLifecycle()` React hooks |
 | `src/lib/state-emitter.ts` | `createStateEmitter<T>()` — shared subscribe/notify/getState primitive for the bridge singletons |
 | `src/hooks/useSuspend.ts` | `SuspendContext`, `useSuspendableEffect`, `useSuspendableSelector` |
@@ -65,12 +65,11 @@ All three return an `Unsubscribe` function. Pass it to a `Lifecycle` or call it 
 
 ### Replay buffer
 
-The bus keeps the last 200 events in memory (`maxReplaySize = 200`, `src/lib/event-bus.ts:31`). Late subscribers can call:
+The bus keeps the last 200 events in memory (`maxReplaySize = 200`, `src/lib/event-bus.ts:31`). Devtools (`EventBusDevTools`) read it with:
 
 ```ts
 eventBus.getReplayBuffer('cli.task.completed');   // exact channel
 eventBus.getReplayByNamespace('eval');            // namespace prefix
-eventBus.replayTo('cli.task.completed', handler); // push past events to handler
 ```
 
 ### When to use the event bus
@@ -98,11 +97,8 @@ Six resource patterns share this protocol: CLI sessions, file watchers, SSE conn
 | Factory | File:line | Use case |
 |---------|-----------|---------|
 | `createLifecycle(factory, teardown)` | `lifecycle.ts:38` | Single disposable resource with controlled-monopoly: calling `init()` again disposes the previous instance before creating a new one |
-| `createSubscriptionLifecycle(subscribe)` | `lifecycle.ts:71` | A set of unsubscribe functions collected by one `subscribe()` call; `dispose()` calls all unsubs |
-| `createGuardedLifecycle(setup)` | `lifecycle.ts:98` | One-time initialization guard: re-calling `init()` is a no-op while active; must `dispose()` to re-init |
-| `createTimerLifecycle(callback, delayMs)` | `lifecycle.ts:127` | Debounced timer (e.g., auto-save); `init()` starts/restarts, `dispose()` cancels |
-
-`composeLifecycles(...lifecycles)` at `lifecycle.ts:163` groups multiple instances into one: `init()` runs all in order, `dispose()` runs all in reverse.
+| `createGuardedLifecycle(setup)` | `lifecycle.ts:71` | One-time initialization guard: re-calling `init()` is a no-op while active; must `dispose()` to re-init |
+| `createTimerLifecycle(callback, delayMs)` | `lifecycle.ts:100` | Debounced timer (e.g., auto-save); `init()` starts/restarts, `dispose()` cancels |
 
 ### React hooks (`src/hooks/useLifecycle.ts`)
 

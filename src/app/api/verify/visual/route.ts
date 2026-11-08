@@ -4,8 +4,8 @@
  * Host-side half of the agentic visual-verification step (folder-04 §5 / 2a).
  * The dispatched Claude CLI launches the slice, takes a HighResShot, and POSTs
  * the screenshot path here. This route reads the PNG (same machine), runs a
- * routed vision check with a server-owned prompt, records the verdict, and
- * emits `eval.visual`. Advisory — the caller does not block on a fail.
+ * routed vision check with a server-owned prompt and records the verdict (no
+ * bus emit: the server bus has no subscriber for it). Advisory — the caller does not block on a fail.
  *
  * Returns the standard { success, data } envelope.
  */
@@ -14,7 +14,6 @@ import { NextRequest } from 'next/server';
 import { existsSync, readFileSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { recordVisualVerification } from '@/lib/visual-verification-db';
-import { eventBus } from '@/lib/event-bus';
 import { logger } from '@/lib/logger';
 import { recognize } from '@/lib/vision/router';
 import { EFFORT_ORDER, type VisionEffort } from '@/lib/vision/types';
@@ -218,19 +217,6 @@ export async function POST(request: NextRequest) {
     recordError = e instanceof Error ? e.message : 'unknown';
     logger.warn(`[verify/visual] verdict not recorded for ${moduleId}/${itemId}: ${recordError}`);
   }
-
-  eventBus.emit(
-    'eval.visual',
-    {
-      moduleId,
-      itemId,
-      verdict: norm.verdict,
-      anyEmpty: norm.anyEmpty,
-      notes: norm.notes,
-      screenshotPath,
-    },
-    'verify-visual-route',
-  );
 
   // Provenance travels WITH the verdict: which eye answered, at which effort, and whether
   // that effort was the one asked for. A judgement whose author is unrecorded is not

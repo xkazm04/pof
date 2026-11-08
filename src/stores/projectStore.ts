@@ -33,6 +33,8 @@ interface ProjectState {
 
   /** Dynamically scanned project state (classes, plugins, deps) */
   dynamicContext: DynamicProjectContext | null;
+  /** The project path `dynamicContext` was scanned for; the scan cache only serves that path. */
+  scannedPath: string;
   /** Whether a scan is currently in progress */
   isScanning: boolean;
   /** Error message from the last scan attempt */
@@ -72,6 +74,10 @@ function warnRecentFailure(action: string, err: unknown): void {
 let latestScanTicket = 0;
 /** The scan currently running; a second caller awaits it instead of returning early. */
 let inFlightScan: Promise<void> | null = null;
+/** Ticket of the newest switchProject; an older switch never sets the identity. */
+let latestSwitchTicket = 0;
+/** The one follow-up forced scan queued behind a running scan; forced callers share it. */
+let queuedForcedScan: Promise<void> | null = null;
 
 export const useProjectStore = create<ProjectState>()(
   persist(
@@ -84,6 +90,7 @@ export const useProjectStore = create<ProjectState>()(
       setupStep: 0,
 
       dynamicContext: null,
+      scannedPath: '',
       isScanning: false,
       scanError: null,
 
@@ -94,14 +101,18 @@ export const useProjectStore = create<ProjectState>()(
       completeSetup: async () => {
         set({ isSetupComplete: true });
         const { projectPath, isNewProject } = get();
-        // Auto-save to recent when setup completes
-        await get().saveToRecent();
-        // For existing projects, restore saved module progress from SQLite
-        // For new projects, save the (empty) initial state
-        if (isNewProject) {
-          await saveModuleProgress(projectPath);
-        } else {
-          await loadModuleProgress(projectPath);
+        try {
+          // For existing projects, restore saved module progress from SQLite
+          // For new projects, save the (empty) initial state
+          if (isNewProject) {
+            await saveModuleProgress(projectPath);
+          } else {
+            await loadModuleProgress(projectPath);
+          }
+        } finally {
+          // Auto-save to recent AFTER the progress load, so the row records this
+          // project's counts rather than whatever checklist was in memory.
+          await get().saveToRecent();
         }
       },
 
@@ -121,6 +132,7 @@ export const useProjectStore = create<ProjectState>()(
           isNewProject: true,
           setupStep: 0,
           dynamicContext: null,
+          scannedPath: '',
           isScanning: false,
           scanError: null,
         });
@@ -129,13 +141,22 @@ export const useProjectStore = create<ProjectState>()(
       scanProject: async (opts) => {
         // A caller that arrives mid-scan waits for it: returning at once let a
         // dispatch compose its prompt before the scan's context existed.
-        if (get().isScanning && inFlightScan) return inFlightScan;
+        if (get().isScanning && inFlightScan) {
+          if (!opts?.force) return inFlightScan;
+          // A forced caller needs files written after the running scan began, so
+          // the running scan's result is not enough: queue one follow-up for all.
+          queuedForcedScan ??= inFlightScan.then(() => {
+            queuedForcedScan = null;
+            return get().scanProject(opts);
+          });
+          return queuedForcedScan;
+        }
         const run = (async () => {
-        const { projectPath, projectName, isScanning, dynamicContext } = get();
+        const { projectPath, projectName, isScanning, dynamicContext, scannedPath } = get();
         if (!projectPath || !projectName || isScanning) return;
 
         // Return cached if still fresh (a forced re-check skips the cache)
-        if (!opts?.force && dynamicContext?.scannedAt) {
+        if (!opts?.force && dynamicContext?.scannedAt && scannedPath === projectPath) {
           const age = Date.now() - new Date(dynamicContext.scannedAt).getTime();
           if (age < SCAN_CACHE_MS) return;
         }
@@ -174,6 +195,7 @@ export const useProjectStore = create<ProjectState>()(
           set({
             isScanning: false,
             scanError: null,
+            scannedPath: projectPath,
             dynamicContext: {
               scannedAt: data.scannedAt,
               projectType: data.projectType ?? 'ue5',
@@ -247,6 +269,7 @@ export const useProjectStore = create<ProjectState>()(
         const { recentProjects, projectPath, isSetupComplete } = get();
         const target = recentProjects.find((p) => p.id === projectId);
         if (!target) return;
+        const ticket = ++latestSwitchTicket;
 
         // Record the outgoing project in the recent list (reads its progress
         // synchronously), then hand the outgoing teardown to the flip owner:
@@ -273,11 +296,14 @@ export const useProjectStore = create<ProjectState>()(
               }),
             }
           );
+          if (ticket !== latestSwitchTicket) return;
           if (projects) set({ recentProjects: projects });
         } catch (err) {
           // Continue switching even if touch fails
           warnRecentFailure('switchProject touch', err);
         }
+        // A newer click owns the identity: the last project clicked is the one opened.
+        if (ticket !== latestSwitchTicket) return;
 
         // Restore the target project's state
         set({
@@ -288,6 +314,7 @@ export const useProjectStore = create<ProjectState>()(
           isNewProject: false,
           setupStep: 0,
           dynamicContext: null, // Will re-scan
+          scannedPath: '',
           isScanning: false,
           scanError: null,
         });
@@ -326,6 +353,7 @@ export const useProjectStore = create<ProjectState>()(
         isNewProject: state.isNewProject,
         setupStep: state.setupStep,
         dynamicContext: state.dynamicContext,
+        scannedPath: state.scannedPath,
       }),
     }
   )

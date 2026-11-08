@@ -75,7 +75,7 @@ Typed pub/sub in `src/lib/event-bus.ts` with namespaced channels (`cli.*`, `eval
 
 ### Lifecycle Pattern
 
-`src/lib/lifecycle.ts` provides `Lifecycle<T>` protocol (init → isActive → dispose) with factories: `createLifecycle`, `createSubscriptionLifecycle`, `createGuardedLifecycle`, `createTimerLifecycle`. Use `useLifecycle()` hook for guaranteed cleanup.
+`src/lib/lifecycle.ts` provides `Lifecycle<T>` protocol (init → isActive → dispose) with factories: `createLifecycle`, `createGuardedLifecycle`, `createTimerLifecycle`. Use `useLifecycle()` hook for guaranteed cleanup.
 
 ### CLI Terminal & Task System
 
