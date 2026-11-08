@@ -401,7 +401,8 @@ export function getPatternDashboard(): PatternLibraryDashboard {
     ? patterns.reduce((s, p) => s + p.successRate, 0) / patterns.length
     : 0;
 
-  // Top modules by pattern count
+  // Module facet, ranked by pattern count. Uncapped: the Patterns tab's module filter is built
+  // from it, so a cap would hide every module past it (the category facet below is uncapped too).
   const moduleCounts = new Map<string, number>();
   const categoryCounts = new Map<PatternCategory, number>();
   for (const p of patterns) {
@@ -411,8 +412,7 @@ export function getPatternDashboard(): PatternLibraryDashboard {
 
   const topModules = [...moduleCounts.entries()]
     .map(([moduleId, patternCount]) => ({ moduleId: moduleId as SubModuleId, patternCount }))
-    .sort((a, b) => b.patternCount - a.patternCount)
-    .slice(0, 10);
+    .sort((a, b) => b.patternCount - a.patternCount);
 
   const categories = [...categoryCounts.entries()]
     .map(([category, count]) => ({ category, count }))
