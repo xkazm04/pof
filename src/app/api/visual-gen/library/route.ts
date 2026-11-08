@@ -7,6 +7,7 @@
 
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { getLibraryDb } from '@/lib/visual-gen/library-db-conn';
 import { listLibraryAssets, recordAsset, type RecordAssetInput } from '@/lib/visual-gen/asset-library-db';
 import type { LibraryFilter, AssetSource, AssetCategory } from '@/types/asset-library';
@@ -24,7 +25,9 @@ export const GET = withRoute(async (request: NextRequest) => {
 }, 'Failed to list library assets');
 
 export const POST = withRoute(async (request: NextRequest) => {
-  const body = (await request.json()) as Partial<RecordAssetInput>;
+  const raw = await readJsonObject(request);
+  if (!raw) return apiError(MALFORMED_BODY_ERROR, 400);
+  const body = raw as Partial<RecordAssetInput>;
   if (!body.assetId || !body.name || !body.source || !body.category) {
     return apiError('assetId, name, source, and category are required', 400);
   }

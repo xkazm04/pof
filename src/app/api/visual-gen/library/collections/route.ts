@@ -5,6 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { getLibraryDb } from '@/lib/visual-gen/library-db-conn';
 import { listCollections, createCollection } from '@/lib/visual-gen/asset-library-db';
 
@@ -13,8 +14,9 @@ export const GET = withRoute(async () => {
 }, 'Failed to list collections');
 
 export const POST = withRoute(async (request: NextRequest) => {
-  const body = (await request.json()) as { name?: string };
-  const name = body.name?.trim();
+  const body = await readJsonObject(request);
+  if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
   if (!name) return apiError('name is required', 400);
   return apiSuccess(createCollection(getLibraryDb(), name), 201);
 }, 'Failed to create collection');
