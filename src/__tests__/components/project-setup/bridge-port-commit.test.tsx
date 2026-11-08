@@ -13,6 +13,7 @@ function setup() {
       host="127.0.0.1" setHost={vi.fn()}
       pofPort={30040} setPofPort={setPofPort}
       rcPort={30010} setRcPort={setRcPort}
+      wsPort={30041} setWsPort={vi.fn()}
     />,
   );
   return { setPofPort, setRcPort };

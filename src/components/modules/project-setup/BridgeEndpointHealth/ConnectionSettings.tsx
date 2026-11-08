@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ACCENT_CYAN, ACCENT_EMERALD,
+  ACCENT_CYAN, ACCENT_EMERALD, ACCENT_VIOLET,
   OPACITY_8,
 } from '@/lib/chart-colors';
 
@@ -47,10 +47,12 @@ interface ConnectionSettingsProps {
   setPofPort: (v: number) => void;
   rcPort: number;
   setRcPort: (v: number) => void;
+  wsPort: number;
+  setWsPort: (v: number) => void;
 }
 
 export function ConnectionSettings({
-  host, setHost, pofPort, setPofPort, rcPort, setRcPort,
+  host, setHost, pofPort, setPofPort, rcPort, setRcPort, wsPort, setWsPort,
 }: ConnectionSettingsProps) {
   return (
     <div className="px-4 py-3 border-b border-border/40 space-y-3" style={{ backgroundColor: `${ACCENT_CYAN}${OPACITY_8}` }} data-testid="bridge-connection-settings">
@@ -68,8 +70,8 @@ export function ConnectionSettings({
         />
       </div>
 
-      {/* Two-port row */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Port row: PoF HTTP, Remote Control, PoF live WebSocket */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* PoF Bridge Port */}
         <div className="space-y-1" data-testid="bridge-pof-port-field">
           <div className="flex items-center gap-1.5">
@@ -95,6 +97,20 @@ export function ConnectionSettings({
           <PortInput id="beh-rc-port" testId="bridge-rc-port-input" value={rcPort} onCommit={setRcPort} />
           <p className="text-2xs text-text-muted">
             UE5 Web Remote Control &mdash; serves <span className="font-mono text-text">/remote/*</span> routes (default: 30010)
+          </p>
+        </div>
+
+        {/* WebSocket Port */}
+        <div className="space-y-1" data-testid="bridge-ws-port-field">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ACCENT_VIOLET }} />
+            <label htmlFor="beh-ws-port" className="text-xs font-bold uppercase tracking-wider" style={{ color: ACCENT_VIOLET }}>
+              WebSocket Port
+            </label>
+          </div>
+          <PortInput id="beh-ws-port" testId="bridge-ws-port-input" value={wsPort} onCommit={setWsPort} />
+          <p className="text-2xs text-text-muted">
+            PoF live WebSocket &mdash; serves <span className="font-mono text-text">/pof/live</span> (default: 30041)
           </p>
         </div>
       </div>

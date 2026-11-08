@@ -10,7 +10,7 @@ import { SubsystemGroup } from './SubsystemGroup';
 
 export function BridgeEndpointHealth() {
   const {
-    host, rcPort, setHost, setRcPort, pofPort, setPofPort, connectionStatus,
+    host, rcPort, wsPort, setHost, setRcPort, setWsPort, pofPort, setPofPort, connectionStatus,
     collapsed, health, latencyHistory, pinging, showSettings, setShowSettings,
     toggleCollapse, pingAll,
     isDisconnected, healthyCount, checkedCount,
@@ -40,6 +40,8 @@ export function BridgeEndpointHealth() {
           setPofPort={setPofPort}
           rcPort={rcPort}
           setRcPort={setRcPort}
+          wsPort={wsPort}
+          setWsPort={setWsPort}
         />
       )}
 
