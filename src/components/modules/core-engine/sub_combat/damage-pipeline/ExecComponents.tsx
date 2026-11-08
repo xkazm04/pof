@@ -6,7 +6,7 @@ import { OVERLAY_WHITE, withOpacity, OPACITY_2 } from '@/lib/chart-colors';
 /* ── CalcInput ─ Numeric input for the damage calculator ──────────────────── */
 
 /** `min`/`max` on a number input only bound the spinner; a typed value ignores them,
- *  and a negative Armor makes Armor / (Armor + 100) divide by zero. Clamp here. */
+ *  and a negative Armor makes the armour curve divide by zero. Clamp here. */
 function clampInput(raw: string, min?: number, max?: number): number {
   const v = parseFloat(raw) || 0;
   if (min !== undefined && v < min) return min;

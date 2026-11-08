@@ -94,7 +94,7 @@ describe('toggle buttons expose their on/off state, not only a tint', () => {
   it('ability sort keys: exactly the active key is pressed', () => {
     const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
     expect(pressed(container)).toEqual(['true', 'false', 'false']);
-  }, 15000);
+  });
 });
 
 describe('disclosure toggles announce what they expand and whether it is open', () => {
@@ -123,7 +123,7 @@ describe('disclosure toggles announce what they expand and whether it is open', 
   it('ability category groups (4 non-empty) report their collapse state', () => {
     const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
     expect(expanded(container)).toEqual(['true', 'true', 'true', 'true']);
-  }, 15000);
+  });
 });
 
 describe('form controls have an accessible name (placeholder is not one)', () => {
@@ -161,7 +161,7 @@ describe('keyboard map shows every rebound key, not only the drawn layout', () =
     useCharacterBlueprintStore.getState().setBindingOverride('IA_Interact', key);
     const { getByLabelText } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
     expect(getByLabelText(`${key}: IA_Interact`)).toBeTruthy();
-  }, 15000);
+  });
 });
 
 describe('keyboard legend counts what it says it counts', () => {
@@ -171,5 +171,5 @@ describe('keyboard legend counts what it says it counts', () => {
     expect(container.textContent).toContain('16 actions with unique bindings');
     expect(container.textContent).toContain('19 keys bound');
     expect(container.textContent).not.toContain('bindings active');
-  }, 15000);
+  });
 });

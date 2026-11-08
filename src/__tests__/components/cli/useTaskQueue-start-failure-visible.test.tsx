@@ -43,7 +43,7 @@ describe('useTaskQueue — a run that fails to start says so in the transcript',
     expect(onTaskComplete).toHaveBeenCalledWith('interactive', false);
   });
 
-  it('queued: the start error is logged as an error line', { timeout: 10000 }, async () => {
+  it('queued: the start error is logged as an error line', async () => {
     const task = { id: 't1', label: 'Task', prompt: 'do it', status: 'pending' as const };
     const hook = renderHook(() => useTaskQueue({
       instanceId: 'i1', projectPath: '/p', taskQueue: [task as never], autoStart: true, enabledSkills: [], visible: true,

@@ -82,7 +82,7 @@ describe('useTaskQueue — Abort while the run is still starting', () => {
     expect(onTaskComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('queued: a task aborted before its POST returns is killed and never streamed', { timeout: 10000 }, async () => {
+  it('queued: a task aborted before its POST returns is killed and never streamed', async () => {
     const onTaskComplete = vi.fn();
     const task = { id: 't1', label: 'Task', prompt: 'do it', status: 'pending' as const };
     const { result } = renderHook(() => useTaskQueue({

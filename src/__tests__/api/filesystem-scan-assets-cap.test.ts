@@ -44,13 +44,13 @@ describe('scan-assets cap disclosure', () => {
     const data = await scan(project(many(2001)));
     expect(data.assets).toHaveLength(2000);
     expect(data.truncated).toBe(true);
-  }, 30_000);
+  });
 
   it('[guard] exactly the cap is complete, not truncated', async () => {
     const data = await scan(project(many(2000)));
     expect(data.assets).toHaveLength(2000);
     expect(data.truncated).toBe(false);
-  }, 30_000);
+  });
 
   it('[guard] a project with no Content/ is complete', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pof-scan-assets-'));
