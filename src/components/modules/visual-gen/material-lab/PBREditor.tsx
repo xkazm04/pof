@@ -108,7 +108,7 @@ function TextureSlot({
       <motion.label
         data-testid={`texture-slot-${channel}`}
         animate={controls}
-        className="flex items-center justify-center w-10 h-10 rounded border border-border cursor-pointer hover:border-[var(--visual-gen)] transition-colors overflow-hidden"
+        className="flex items-center justify-center w-10 h-10 rounded border border-border cursor-pointer hover:border-[var(--visual-gen)] focus-within:border-[var(--visual-gen)] focus-within:ring-1 focus-within:ring-[var(--visual-gen)] transition-colors overflow-hidden"
       >
         {textureUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -116,7 +116,15 @@ function TextureSlot({
         ) : (
           <Upload size={12} className="text-text-muted" />
         )}
-        <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+        {/* sr-only, not `hidden`: display:none drops the slot's only focusable
+            control from the tab order, so a keyboard user could not load a map. */}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleUpload}
+          aria-label={`Upload ${label} map`}
+          className="sr-only"
+        />
       </motion.label>
       <div className="flex-1 min-w-0">
         <span className="text-xs text-text">{label}</span>
