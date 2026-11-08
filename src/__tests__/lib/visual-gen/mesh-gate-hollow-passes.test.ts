@@ -7,6 +7,7 @@ import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visu
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
 import { planKitAtlas } from '@/lib/visual-gen/texel-density';
+import { startViewGateJob, getViewGateJob } from '@/lib/visual-gen/view-gate-job-store';
 import { critiqueMesh } from '@/lib/visual-gen/mesh-critique';
 import { gradeSheet } from '@/lib/visual-gen/sheet-gate';
 import sharp from 'sharp';
@@ -216,5 +217,21 @@ describe('critiqueMesh says why a run produced no markers', () => {
       env: { POF_TRIPOSR_ROOT: 'C:/r' },
     });
     expect(out.error).toBe('cannot load mesh');
+  });
+});
+
+describe('a view-gate job never stays running after an internal failure', () => {
+  it('ends in error when aggregation throws outside the per-member try', async () => {
+    const id = startViewGateJob(
+      { members: [{ meshPath: 'a.glb' }, { meshPath: 'b.glb' }] },
+      {
+        render: async () => ({ ok: true, views: {} as never }),
+        critique: async () => ({ verdict: 'pass', views: [] }),
+      },
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    const job = getViewGateJob(id);
+    expect(job?.status).toBe('error');
+    expect(job?.error).toBeTruthy();
   });
 });

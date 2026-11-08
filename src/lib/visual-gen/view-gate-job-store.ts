@@ -288,7 +288,11 @@ export function startViewGateJob(spec: ViewGateSpec, deps: ViewGateJobDeps = {})
     } else {
       job.status = 'done';
     }
-  })();
+  })().catch((e: unknown) => {
+    // Per-member failures are caught above; anything else must not leave a poller on 'running'.
+    job.status = 'error';
+    job.error = e instanceof Error ? e.message : String(e);
+  });
 
   return id;
 }
