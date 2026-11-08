@@ -13,6 +13,7 @@ import type { SubModuleId } from '@/types/modules';
 import { useProjectStore } from '@/stores/projectStore';
 import { useDeepEvalStore, projectIdOf } from '@/stores/deepEvalStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { apiFetch, tryApiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import type { PersistedScan } from '@/lib/evaluator/evaluator-results-db';
@@ -239,7 +240,9 @@ export function useDeepEvalResults() {
     return () => { cancelled = true; };
   }, [projectPath, jobUrl, consumeJob]);
 
-  useEffect(() => {
+  // A module the LRU has hidden stops polling (useSuspendableEffect); the job keeps running
+  // server-side and the poll resumes, from the latest snapshot, when the module is shown.
+  useSuspendableEffect(() => {
     if (!attachedScanId) return;
     const timer = setInterval(() => {
       void (async () => {
