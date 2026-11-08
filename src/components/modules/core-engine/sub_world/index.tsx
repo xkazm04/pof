@@ -149,7 +149,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
             <CountUp value={matchingZones.length} />/{ZONES.length} zones
           </span>
         </div>
-        <input type="range" min={1} max={50} value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))}
+        <input type="range" aria-label="Player level filter" min={1} max={50} value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))}
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{ accentColor: ACCENT }} />
         <div className="relative h-4 text-[10px] font-mono text-text-muted mt-1">

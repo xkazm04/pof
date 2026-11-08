@@ -37,9 +37,10 @@ export function TravelProgressionGroup() {
           <div>
             <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-1">Zone A</div>
             <select
+              aria-label="Zone A"
               value={compareA}
               onChange={e => setCompareA(Number(e.target.value))}
-              className="w-full bg-surface-deep border rounded-lg px-3 py-2 text-xs font-mono text-text focus:outline-none"
+              className="w-full bg-surface-deep border rounded-lg px-3 py-2 text-xs font-mono text-text focus-ring"
               style={{ borderColor: withOpacity(ACCENT, OPACITY_25) }}
             >
               {COMPARE_ZONE_NAMES.map((name, i) => (
@@ -50,9 +51,10 @@ export function TravelProgressionGroup() {
           <div>
             <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-1">Zone B</div>
             <select
+              aria-label="Zone B"
               value={compareB}
               onChange={e => setCompareB(Number(e.target.value))}
-              className="w-full bg-surface-deep border rounded-lg px-3 py-2 text-xs font-mono text-text focus:outline-none"
+              className="w-full bg-surface-deep border rounded-lg px-3 py-2 text-xs font-mono text-text focus-ring"
               style={{ borderColor: withOpacity(ACCENT_ORANGE, OPACITY_25) }}
             >
               {COMPARE_ZONE_NAMES.map((name, i) => (
