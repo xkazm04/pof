@@ -333,12 +333,16 @@ export function generateCppFromBlueprint(
     const { returnType, entryNode } = fn;
     sourceLines.push(ufunctionDefinitionSignature(cppClassName, fn));
     sourceLines.push('{');
+    let bodyLogic: string | undefined;
     if (entryNode) {
-      sourceLines.push(generateNodeLogic(fn.graph, entryNode, cppClassName, warnings, ledger));
+      bodyLogic = generateNodeLogic(fn.graph, entryNode, cppClassName, warnings, ledger);
+      sourceLines.push(bodyLogic);
     } else {
       sourceLines.push('\t// TODO: Implement function logic');
     }
-    if (returnType !== 'void') {
+    // A top-level `return <expr>;` from the Result node already ends the body.
+    const returnsFromGraph = bodyLogic !== undefined && /^\treturn .*;$/m.test(bodyLogic);
+    if (returnType !== 'void' && !returnsFromGraph) {
       sourceLines.push(`\treturn ${returnType === 'bool' ? 'false' : returnType.includes('*') ? 'nullptr' : `${returnType}()`};`);
     }
     sourceLines.push('}');
@@ -815,6 +819,22 @@ export function generateNodeLogic(
       stub(node, indent, 'SpawnActor', 'use GetWorld()->SpawnActor<>()');
       recordDisposition(ledger, node.id, 'refused', 'SpawnActor requires manual completion — use GetWorld()->SpawnActor<>()');
       warn({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
+    } else if (node.type.includes('FunctionResult')) {
+      // The result node is where the graph says what the function returns. The
+      // signature already takes its type from the first value pin, so the same
+      // pin supplies the value; an underivable one is refused, never defaulted.
+      const returnPin = valueInputPins(node)[0];
+      if (!returnPin) {
+        recordDisposition(ledger, node.id, 'structural');
+      } else {
+        const value = resolveInputExpression(returnPin, endpointIndex);
+        if (value.ok) {
+          lines.push(`${indent}return ${value.code};`);
+          emitted(node, [value]);
+        } else {
+          untranslated(node, indent, `return value not emitted — ${value.reason}`);
+        }
+      }
     } else if (!node.type.includes('Event') && !node.type.includes('FunctionEntry')) {
       stub(node, indent, `[${node.type}] ${node.name}${node.memberName ? ` — ${node.memberName}` : ''}`);
       recordDisposition(ledger, node.id, 'refused', `no translation rule for node type "${node.type}"`);
