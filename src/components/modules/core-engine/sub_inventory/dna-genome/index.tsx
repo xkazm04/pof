@@ -61,7 +61,8 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
   const [activeTab, setActiveTab] = useState('editor');
   const [rollRarity, setRollRarity] = useState('Rare');
   const [rollLevel, setRollLevel] = useState(10);
-  const [rollResult, setRollResult] = useState<DNARollResult | null>(null);
+  // A roll is only shown for the inputs it was rolled with (see rollKey below).
+  const [roll, setRoll] = useState<{ key: string; result: DNARollResult } | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
@@ -110,16 +111,26 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
     storeImportGenome(g);
   }, [storeImportGenome]);
 
+  // Everything rollAffixesWithDNA reads: switching genome, editing what biases the
+  // roll, or changing rarity / level makes a previous roll stale.
+  const rollKey = selected
+    ? JSON.stringify([
+      selected.id, selected.traits, selected.mutation, selected.minRarity,
+      selected.itemType, selected.evolution?.tier ?? 0, rollRarity, rollLevel,
+    ])
+    : '';
+  const rollResult = roll && roll.key === rollKey ? roll.result : null;
+
   const doRoll = useCallback(() => {
     if (!selected) return;
     const result = rollAffixesWithDNA(selected, rollRarity, rollLevel, DEMO_AFFIX_POOL);
-    setRollResult(result);
-  }, [selected, rollRarity, rollLevel]);
+    setRoll({ key: rollKey, result });
+  }, [selected, rollRarity, rollLevel, rollKey]);
 
   const doEvolve = useCallback(() => {
     if (!selected) return;
-    const tierChanged = storeEvolveById(selected.id, 50 + Math.floor(Math.random() * 100));
-    if (tierChanged) setRollResult(null);
+    // A tier change alters the roll inputs, so rollKey retires the old roll by itself.
+    storeEvolveById(selected.id, 50 + Math.floor(Math.random() * 100));
   }, [selected, storeEvolveById]);
 
   const radarData = useMemo(() => selected ? genomeToRadar(selected) : [], [selected]);
