@@ -24,9 +24,13 @@ export function CodePreview({ code, prevCode }: { code: string; prevCode: string
   useEffect(() => {
     if (html !== null) return;
     let cancelled = false;
-    highlight(code, LANG).then((result) => {
-      if (!cancelled) setHighlighted({ code, html: result });
-    });
+    highlight(code, LANG).then(
+      (result) => {
+        if (!cancelled) setHighlighted({ code, html: result });
+      },
+      // The plain view stays up; a failed grammar load is not an unhandled rejection.
+      () => {},
+    );
     return () => { cancelled = true; };
   }, [code, html]);
 
