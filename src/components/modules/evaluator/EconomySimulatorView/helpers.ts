@@ -44,9 +44,12 @@ export function validateField(raw: string, min: number, max: number): string | n
   return null;
 }
 
+// Band thresholds sit where the DISPLAYED value rolls over, not the raw one:
+// 999.6 rounds to 1000 and 999 960 to 1000.0K, which must read 1.0K / 1.0M.
 export function formatGold(amount: number): string {
-  if (Math.abs(amount) >= 1000000) return `${(amount / 1000000).toFixed(1)}M`;
-  if (Math.abs(amount) >= 1000) return `${(amount / 1000).toFixed(1)}K`;
+  const abs = Math.abs(amount);
+  if (abs >= 999_950) return `${(amount / 1000000).toFixed(1)}M`;
+  if (abs >= 999.5) return `${(amount / 1000).toFixed(1)}K`;
   return `${Math.round(amount)}`;
 }
 
