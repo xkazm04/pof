@@ -6,9 +6,9 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import { SliderParam } from './SliderParam';
 import { ELEMENT_COLORS, ELEMENT_ICONS } from './constants';
-import type { CombatConfig, DamageElement } from './types';
+import type { CombatConfig, WeightedElement } from './types';
 
-const DAMAGE_ELEMENTS: DamageElement[] = ['physical', 'fire', 'ice', 'lightning'];
+const DAMAGE_ELEMENTS: WeightedElement[] = ['physical', 'fire', 'ice', 'lightning'];
 
 export function CombatPanel({ showCombat, setShowCombat, combat, updateCombat }: {
   showCombat: boolean;

@@ -4,6 +4,9 @@
 
 export type DamageElement = 'physical' | 'fire' | 'ice' | 'lightning' | 'heal';
 
+/** Elements with a spawn weight; heals come only from CombatConfig.healPercent. */
+export type WeightedElement = Exclude<DamageElement, 'heal'>;
+
 export type PhysicsMode = 'linear' | 'gravity' | 'fountain' | 'directional';
 export type StackMode = 'none' | 'accumulate' | 'merge';
 
@@ -31,7 +34,7 @@ export interface CombatConfig {
   critMultiplier: number;
   attacksPerSecond: number;
   mobCount: number;
-  elementWeights: Record<DamageElement, number>;
+  elementWeights: Record<WeightedElement, number>;
   healPercent: number;       // 0-1 chance of heal instead of damage
 }
 
@@ -64,7 +67,8 @@ export interface DmgParticle {
 
 export interface ReadabilityMetrics {
   avgOverlaps: number;
-  maxSimultaneous: number;
+  maxSimultaneous: number;   // run peak once folded by foldReadability (a single frame's count from computeReadability)
+  avgSimultaneous?: number;  // windowed mean of the visible count
   avgReadTime: number; // how long a number is readable (opacity > 0.5)
   clutterScore: number; // 0-100, higher = worse
 }

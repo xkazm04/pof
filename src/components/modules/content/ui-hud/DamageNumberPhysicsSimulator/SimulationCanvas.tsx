@@ -144,8 +144,8 @@ export function SimulationCanvas({
       {/* Readability metrics */}
       <div className="grid grid-cols-4 gap-2">
         {[
-          { label: 'Overlaps', value: metrics.avgOverlaps, color: metrics.avgOverlaps > 3 ? STATUS_ERROR : STATUS_SUCCESS },
-          { label: 'Simultaneous', value: metrics.maxSimultaneous, color: metrics.maxSimultaneous > 6 ? STATUS_WARNING : STATUS_SUCCESS },
+          { label: 'Avg Overlaps', value: metrics.avgOverlaps, color: metrics.avgOverlaps > 3 ? STATUS_ERROR : STATUS_SUCCESS },
+          { label: 'Peak Count', value: metrics.maxSimultaneous, color: metrics.maxSimultaneous > 6 ? STATUS_WARNING : STATUS_SUCCESS },
           { label: 'Read Time', value: `${metrics.avgReadTime}s`, color: metrics.avgReadTime < 0.3 ? STATUS_ERROR : STATUS_SUCCESS },
           { label: 'Clutter', value: metrics.clutterScore, color: clutterBand(metrics.clutterScore).color },
         ].map((m) => (
