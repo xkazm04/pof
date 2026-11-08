@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { verifyPackagingAll, defaultPackagingVerifyDeps } from '@/lib/catalog/acceptance/packagingVerify';
 import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
+import { readSweepBody } from '@/app/api/pipeline-artifacts/_lib/sweepBody';
 
 /**
  * Packaging-verify pass — rebuilds each row's package from its SIBLING artifacts
@@ -31,8 +32,9 @@ export async function GET(req: NextRequest) {
  *  otherwise). Body: { catalogId?, entityId? }. */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const summary = verifyPackagingAll(parseSweepFilter(body), defaultPackagingVerifyDeps(), { apply: true });
+    const read = await readSweepBody(req);
+    if (!read.ok) return read.error;
+    const summary = verifyPackagingAll(parseSweepFilter(read.data), defaultPackagingVerifyDeps(), { apply: true });
     return apiSuccess(summary);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'verify-packaging POST failed', 500);

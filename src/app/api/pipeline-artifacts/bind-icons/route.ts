@@ -3,6 +3,7 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { bindIconsAll } from '@/lib/catalog/acceptance/bindIconsAll';
 import { listIconLibrary, makeBindIconsDeps } from '@/lib/catalog/acceptance/bindIconsDeps';
 import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
+import { readSweepBody } from '@/app/api/pipeline-artifacts/_lib/sweepBody';
 import '@/lib/catalog/pipelines/registry.generated';
 
 /**
@@ -38,8 +39,10 @@ export async function GET(req: NextRequest) {
  *  that already carries a real asset is skipped as `already-real`). */
 export async function POST(req: NextRequest) {
   try {
+    const read = await readSweepBody(req);
+    if (!read.ok) return read.error;
+    const body = read.data;
     const icons = listIconLibrary();
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const deps = makeBindIconsDeps(icons);
     const summary = bindIconsAll(parseSweepFilter(body), deps, { apply: true, library: icons.length });
     deps.flushLifecycle(); // each rebound entity's lifecycle re-derived once

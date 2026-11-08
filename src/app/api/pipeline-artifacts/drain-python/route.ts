@@ -6,6 +6,7 @@ import { persistRegrade, realArtifactIO, createTouched, parseSweepFilter } from 
 import { gradeArtifact } from '@/lib/catalog/headless';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { runPython } from '@/lib/bridge/run-python';
+import { readSweepBody } from '@/app/api/pipeline-artifacts/_lib/sweepBody';
 import '@/lib/catalog/pipelines/registry.generated';
 
 /**
@@ -84,10 +85,12 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as {
+    const read = await readSweepBody(req);
+    if (!read.ok) return read.error;
+    const body = read.data as {
       catalogId?: string; entityId?: string; force?: boolean; continueOnFail?: boolean; bridgeUrl?: string; apply?: boolean;
     };
-    const deps = makeDeps(body.bridgeUrl);
+    const deps = makeDeps(typeof body.bridgeUrl === 'string' ? body.bridgeUrl : undefined);
     const summary = await drainPythonAll(
       parseSweepFilter(body),
       deps,
