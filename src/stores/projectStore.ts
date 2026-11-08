@@ -70,6 +70,8 @@ function warnRecentFailure(action: string, err: unknown): void {
 
 /** Ticket of the newest scan; an older one's response never lands. */
 let latestScanTicket = 0;
+/** The scan currently running; a second caller awaits it instead of returning early. */
+let inFlightScan: Promise<void> | null = null;
 
 export const useProjectStore = create<ProjectState>()(
   persist(
@@ -125,6 +127,10 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       scanProject: async (opts) => {
+        // A caller that arrives mid-scan waits for it: returning at once let a
+        // dispatch compose its prompt before the scan's context existed.
+        if (get().isScanning && inFlightScan) return inFlightScan;
+        const run = (async () => {
         const { projectPath, projectName, isScanning, dynamicContext } = get();
         if (!projectPath || !projectName || isScanning) return;
 
@@ -189,6 +195,13 @@ export const useProjectStore = create<ProjectState>()(
             isScanning: false,
             scanError: err instanceof Error ? err.message : 'Failed to scan project',
           });
+        }
+        })();
+        inFlightScan = run;
+        try {
+          await run;
+        } finally {
+          if (inFlightScan === run) inFlightScan = null;
         }
       },
 

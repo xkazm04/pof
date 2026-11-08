@@ -70,3 +70,27 @@ describe('useModuleCLI execute control', () => {
     expect(dispatchPromptWhenReady).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('useModuleCLI execute outcome', () => {
+  it('resolves true when a prompt was dispatched', async () => {
+    const { result } = hook();
+    let out: boolean | undefined;
+    await act(async () => { out = await result.current.execute(review()); });
+    expect(out).toBe(true);
+  });
+
+  it('resolves false when the spend preflight was declined', async () => {
+    requestPreflightConfirm.mockResolvedValue(false);
+    const { result } = hook();
+    let out: boolean | undefined;
+    await act(async () => { out = await result.current.execute(review()); });
+    expect(out).toBe(false);
+  });
+
+  it('resolves false when the host cancelled during the prepare', async () => {
+    const { result } = hook();
+    let out: boolean | undefined;
+    await act(async () => { out = await result.current.execute(review(), { shouldDispatch: () => false }); });
+    expect(out).toBe(false);
+  });
+});

@@ -7,6 +7,7 @@ import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { Milestone } from '@/types/project-health';
 import { toLocalNoon } from '@/lib/roadmap-dates';
 import { tryApiFetch } from '@/lib/api-utils';
+import { readMilestoneDeadlines, invalidateMilestoneDeadlines } from '@/hooks/useMilestoneDeadlines';
 import {
   WEEK_PX, ROW_HEIGHT, HEADER_HEIGHT, LEFT_GUTTER,
 } from './constants';
@@ -48,10 +49,12 @@ export function useCalendarRoadmapView() {
 
   // Fetch deadlines from API
   useEffect(() => {
-    void tryApiFetch<DeadlineMap>('/api/milestone-deadlines').then((result) => {
+    void readMilestoneDeadlines().then((result) => {
       if (result.ok) {
-        settledRef.current = result.data;
-        setDeadlines(result.data);
+        const local: DeadlineMap = {};
+        for (const [id, row] of Object.entries(result.data)) local[id] = { targetDate: row.targetDate, label: row.label ?? '' };
+        settledRef.current = local;
+        setDeadlines(local);
       } else {
         setLoadError(`Deadlines could not be loaded: ${result.error}`);
       }
@@ -79,6 +82,8 @@ export function useCalendarRoadmapView() {
       if (targetDate) settled[milestoneId] = { targetDate, label: '' };
       else delete settled[milestoneId];
       settledRef.current = settled;
+      // The NBA cards hold their own read of the deadlines: tell them this one changed.
+      invalidateMilestoneDeadlines();
       return;
     }
     // Revert only if this write's value is still on screen: a newer edit owns the row now.

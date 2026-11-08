@@ -61,7 +61,8 @@ export interface ExecuteControl {
 
 export interface UseModuleCLIResult {
   sendPrompt: (prompt: string, meta?: DispatchMeta) => void;
-  execute: (task: CLITask, control?: ExecuteControl) => Promise<void>;
+  /** Resolves true when a prompt was dispatched, false when nothing launched (spend preflight declined, or the host cancelled). */
+  execute: (task: CLITask, control?: ExecuteControl) => Promise<boolean>;
   isRunning: boolean;
 }
 
@@ -231,7 +232,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
         const proceed = await requestPreflightConfirm(verdict);
         if (!proceed) {
           control?.onDeclined?.();
-          return;
+          return false;
         }
       }
 
@@ -253,13 +254,14 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // prompt it served as the item's baseline (v1), fire-and-forget, so the
       // A/B rail has an incumbent to challenge. Previews pass no options.
       const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx, { seed: true });
-      if (control?.shouldDispatch && !control.shouldDispatch()) return;
+      if (control?.shouldDispatch && !control.shouldDispatch()) return false;
       sendPrompt(enriched, {
         taskType: task.type,
         label: task.label,
         variantId,
         moduleId: opts.attributeToTaskModule ? task.moduleId : undefined,
       });
+      return true;
     },
     [sendPrompt, opts.sessionKey, opts.attributeToTaskModule],
   );

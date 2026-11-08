@@ -89,14 +89,23 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
     setAssets((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  // execute() resolves false when nothing launched (spend preflight declined): no run
+  // will ever complete the step, so it goes back to idle instead of spinning forever.
+  const revertIfNotDispatched = useCallback((step: 1 | 2 | 3, dispatched: boolean | void) => {
+    if (dispatched !== false || activeStepRef.current !== step) return;
+    activeStepRef.current = null;
+    markStep(step, 'idle');
+  }, [markStep]);
+
   const dispatchEnable = useCallback(() => {
     if (dispatchLockRef.current || isRunning) return;
     dispatchLockRef.current = true;
     activeStepRef.current = 1;
     markStep(1, 'running');
     void execute(TaskFactory.quickAction(moduleId, ENABLE_PROMPT[source], 'Prepare Source'))
+      .then((dispatched) => revertIfNotDispatched(1, dispatched))
       .finally(() => { dispatchLockRef.current = false; });
-  }, [isRunning, execute, moduleId, source, markStep]);
+  }, [isRunning, execute, moduleId, source, markStep, revertIfNotDispatched]);
 
   const dispatchWire = useCallback(() => {
     if (dispatchLockRef.current || isRunning) return;
@@ -104,8 +113,9 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
     activeStepRef.current = 2;
     markStep(2, 'running');
     void execute(TaskFactory.characterSetup(moduleId, { source, ...assets }, appOrigin, 'Wire Character'))
+      .then((dispatched) => revertIfNotDispatched(2, dispatched))
       .finally(() => { dispatchLockRef.current = false; });
-  }, [isRunning, execute, moduleId, source, assets, appOrigin, markStep]);
+  }, [isRunning, execute, moduleId, source, assets, appOrigin, markStep, revertIfNotDispatched]);
 
   const dispatchVerify = useCallback(() => {
     if (dispatchLockRef.current || isRunning) return;
@@ -113,8 +123,9 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
     activeStepRef.current = 3;
     markStep(3, 'running');
     void execute(TaskFactory.checklist(moduleId, 'ac-6', '', 'Verify Locomotes', appOrigin))
+      .then((dispatched) => revertIfNotDispatched(3, dispatched))
       .finally(() => { dispatchLockRef.current = false; });
-  }, [isRunning, execute, moduleId, appOrigin, markStep]);
+  }, [isRunning, execute, moduleId, appOrigin, markStep, revertIfNotDispatched]);
 
   return (
     <div
