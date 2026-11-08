@@ -30,6 +30,8 @@ export function InteractSection({
           return (
             <button
               key={interaction.id}
+              type="button"
+              aria-pressed={enabled}
               onClick={() => toggleInteraction(interaction.id)}
               className="w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 text-left group overflow-hidden relative"
               style={{

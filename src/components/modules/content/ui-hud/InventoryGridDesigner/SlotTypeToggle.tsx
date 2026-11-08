@@ -3,6 +3,8 @@ import type { SlotTypeConfig } from '@/lib/prompts/inventory';
 export function SlotTypeToggle({ slot, onToggle }: { slot: SlotTypeConfig; onToggle: () => void }) {
   return (
     <button
+      type="button"
+      aria-pressed={slot.enabled}
       onClick={onToggle}
       className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left shadow-inner hover:brightness-110"
       style={{

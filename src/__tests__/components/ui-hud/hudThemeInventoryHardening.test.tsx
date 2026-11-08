@@ -178,3 +178,36 @@ describe('every HUD designer control has an accessible name', () => {
     expect(screen.getByRole('button', { name: 'Pause preview' })).toBeTruthy();
   });
 });
+
+describe('Inventory designer toggles expose their on/off state', () => {
+  async function openSection(name: string) {
+    const { InventoryGridDesigner } = await import('@/components/modules/content/ui-hud/InventoryGridDesigner');
+    const { DEFAULT_CONFIG } = await import('@/lib/prompts/inventory');
+    render(<InventoryGridDesigner onGenerate={vi.fn()} isGenerating={false} />);
+    fireEvent.click(screen.getByRole('tab', { name }));
+    return { panel: document.querySelector('[role="tabpanel"]') as HTMLElement, cfg: DEFAULT_CONFIG };
+  }
+  const pressed = (panel: HTMLElement) =>
+    Array.from(panel.querySelectorAll('button')).map((b) => b.getAttribute('aria-pressed'));
+
+  it('slot types: one aria-pressed per type, matching enabled, and it flips on click', async () => {
+    const { panel, cfg } = await openSection('Types');
+    expect(pressed(panel)).toEqual(cfg.slotTypes.map((s) => String(s.enabled)));
+    const first = screen.getByRole('button', { name: cfg.slotTypes[0].label });
+    fireEvent.click(first);
+    expect(first.getAttribute('aria-pressed')).toBe(String(!cfg.slotTypes[0].enabled));
+  });
+
+  it('equipment slots: named by the full slot label, state in aria-pressed', async () => {
+    const { panel, cfg } = await openSection('Equip');
+    const slots = cfg.equipmentSlots;
+    expect(pressed(panel)).toEqual(slots.map((s) => String(s.enabled)));
+    for (const s of slots) expect(screen.getByRole('button', { name: s.label })).toBeTruthy();
+  });
+
+  it('interaction modes: aria-pressed matches the enabled set', async () => {
+    const { panel, cfg } = await openSection('Inputs');
+    const { ALL_INTERACTIONS } = await import('@/lib/prompts/inventory');
+    expect(pressed(panel)).toEqual(ALL_INTERACTIONS.map((i) => String(cfg.interactions.includes(i.id))));
+  });
+});

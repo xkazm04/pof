@@ -51,6 +51,9 @@ export function EquipSection({
             return (
               <button
                 key={slot.id}
+                type="button"
+                aria-pressed={isEnabled}
+                aria-label={slot.label}
                 onClick={() => toggleEquipSlot(slot.id)}
                 className="absolute w-[44px] h-[44px] rounded-lg border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 group overflow-hidden"
                 style={{
