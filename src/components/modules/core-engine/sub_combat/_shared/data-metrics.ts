@@ -203,24 +203,44 @@ export const WEAPON_ROSTER = weaponRoster(WEAPONS, { categoryOrder: WEAPON_GROUP
 export const DMG_TYPES = ['Physical', 'Fire', 'Ice', 'Lightning'];
 export const ARMOR_TYPES = ['Light', 'Medium', 'Heavy', 'Magical'];
 
-export const EFFECTIVENESS_DATA: HeatmapCell[] = [
-  { row: 0, col: 0, value: 0.8, label: '1.2', tooltip: 'Physical vs Light: 1.2x (effective)' },
-  { row: 0, col: 1, value: 0.6, label: '1.0', tooltip: 'Physical vs Medium: 1.0x (neutral)' },
-  { row: 0, col: 2, value: 0.2, label: '0.5', tooltip: 'Physical vs Heavy: 0.5x (resisted)' },
-  { row: 0, col: 3, value: 0.4, label: '0.8', tooltip: 'Physical vs Magical: 0.8x (slightly resisted)' },
-  { row: 1, col: 0, value: 1.0, label: '1.5', tooltip: 'Fire vs Light: 1.5x (very effective)' },
-  { row: 1, col: 1, value: 0.7, label: '1.1', tooltip: 'Fire vs Medium: 1.1x (slightly effective)' },
-  { row: 1, col: 2, value: 0.5, label: '0.9', tooltip: 'Fire vs Heavy: 0.9x (slightly resisted)' },
-  { row: 1, col: 3, value: 0.25, label: '0.7', tooltip: 'Fire vs Magical: 0.7x (resisted)' },
-  { row: 2, col: 0, value: 0.5, label: '0.9', tooltip: 'Ice vs Light: 0.9x (slightly resisted)' },
-  { row: 2, col: 1, value: 0.85, label: '1.3', tooltip: 'Ice vs Medium: 1.3x (effective)' },
-  { row: 2, col: 2, value: 0.7, label: '1.1', tooltip: 'Ice vs Heavy: 1.1x (slightly effective)' },
-  { row: 2, col: 3, value: 0.6, label: '1.0', tooltip: 'Ice vs Magical: 1.0x (neutral)' },
-  { row: 3, col: 0, value: 0.6, label: '1.0', tooltip: 'Lightning vs Light: 1.0x (neutral)' },
-  { row: 3, col: 1, value: 0.5, label: '0.9', tooltip: 'Lightning vs Medium: 0.9x (slightly resisted)' },
-  { row: 3, col: 2, value: 0.3, label: '0.6', tooltip: 'Lightning vs Heavy: 0.6x (resisted)' },
-  { row: 3, col: 3, value: 1.0, label: '1.5', tooltip: 'Lightning vs Magical: 1.5x (very effective)' },
+/**
+ * Damage multiplier per [damage type][armour type] — the one authored table.
+ * Label, tooltip and heatmap intensity are all derived from it, so a cell cannot
+ * paint stronger than a larger multiplier (it did: Fire vs Magical 0.7x painted
+ * lighter than Lightning vs Heavy 0.6x when the three were typed by hand).
+ */
+export const EFFECTIVENESS_MULTIPLIERS: readonly (readonly number[])[] = [
+  /* Physical  */ [1.2, 1.0, 0.5, 0.8],
+  /* Fire      */ [1.5, 1.1, 0.9, 0.7],
+  /* Ice       */ [0.9, 1.3, 1.1, 1.0],
+  /* Lightning */ [1.0, 0.9, 0.6, 1.5],
 ];
+
+/** Heatmap intensity scale: 0.5x -> 0.2, 1.0x -> 0.6, 1.5x -> 1.0 (linear, monotone). */
+const EFF_MIN_MULT = 0.25;
+const EFF_SPAN = 1.25;
+
+function effectivenessVerdict(m: number): string {
+  if (m >= 1.5) return 'very effective';
+  if (m >= 1.2) return 'effective';
+  if (m > 1.0) return 'slightly effective';
+  if (m === 1.0) return 'neutral';
+  if (m >= 0.8) return 'slightly resisted';
+  return 'resisted';
+}
+
+export const EFFECTIVENESS_DATA: HeatmapCell[] = EFFECTIVENESS_MULTIPLIERS.flatMap((cols, row) =>
+  cols.map((m, col) => {
+    const label = m.toFixed(1);
+    return {
+      row,
+      col,
+      value: Math.min(1, Math.max(0, (m - EFF_MIN_MULT) / EFF_SPAN)),
+      label,
+      tooltip: `${DMG_TYPES[row]} vs ${ARMOR_TYPES[col]}: ${label}x (${effectivenessVerdict(m)})`,
+    };
+  }),
+);
 
 /* ── Combat Flow Sankey data ───────────────────────────────────────────── */
 

@@ -1,0 +1,36 @@
+import { describe, it, expect } from 'vitest';
+import {
+  EFFECTIVENESS_DATA, DMG_TYPES, ARMOR_TYPES,
+} from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
+
+// Shared combat-metrics data is internally consistent: what one field says, the
+// others agree with (scan-sweep night 2026-11-08, combat-metrics).
+
+describe('damage-type effectiveness heatmap', () => {
+  const cells = EFFECTIVENESS_DATA.map((c) => ({ ...c, mult: Number(c.label) }));
+
+  it('covers every damage type x armour type exactly once', () => {
+    expect(cells).toHaveLength(DMG_TYPES.length * ARMOR_TYPES.length);
+    const keys = new Set(cells.map((c) => `${c.row}:${c.col}`));
+    expect(keys.size).toBe(cells.length);
+  });
+
+  it('the tooltip names the same pair and multiplier as the label', () => {
+    for (const c of cells) {
+      expect(Number.isFinite(c.mult)).toBe(true);
+      expect(c.tooltip?.startsWith(`${DMG_TYPES[c.row]} vs ${ARMOR_TYPES[c.col]}: ${c.label}x`)).toBe(true);
+    }
+  });
+
+  it('cell intensity is monotone in the multiplier (a weaker multiplier never paints stronger)', () => {
+    const inversions: string[] = [];
+    for (const a of cells) {
+      for (const b of cells) {
+        if (a.mult < b.mult && !(a.value < b.value)) {
+          inversions.push(`${a.tooltip} (${a.value}) vs ${b.tooltip} (${b.value})`);
+        }
+      }
+    }
+    expect(inversions).toEqual([]);
+  });
+});
