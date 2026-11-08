@@ -60,7 +60,10 @@ export function readCouncilFacts(root: string, sources: readonly string[], decla
       runIdBasis = 'inferred';
     }
   }
-  const runAbs = runId ? path.join(councilAbs, runId) : null;
+  // A run id names ONE folder under _council/. A declared id is package data: `..`, `.` or a
+  // separator would resolve outside it (or to _council itself), and the folder would "exist".
+  const inCouncil = !!runId && runId !== '.' && runId !== '..' && !/[\\/]/.test(runId);
+  const runAbs = runId && inCouncil ? path.join(councilAbs, runId) : null;
   const runDirExists = !!runAbs && fs.existsSync(runAbs) && fs.statSync(runAbs).isDirectory();
   return {
     runId,
