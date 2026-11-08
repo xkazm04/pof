@@ -139,7 +139,13 @@ export function critiqueDepsForSpec(spec: TripoSpec | TripoRecoverySpec): Critiq
  * stops the loop: the job errors `recoverable` with that `providerTaskId`, and no further
  * task is bought while the first may still finish.
  */
-export function startTripoJob(spec: TripoSpec, runner: Runner = runTripo, critic: Critic = critiqueMesh): string {
+export function startTripoJob(
+  spec: TripoSpec,
+  runner: Runner = runTripo,
+  critic: Critic = critiqueMesh,
+  /** Runs once the job has settled (done or error) — the caller's hook to drop its temp inputs. */
+  onSettled?: () => void,
+): string {
   const id = `tripo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const job: TripoJob = { id, status: 'running', spec, startedAt: Date.now() };
   jobs.set(id, job);
@@ -152,7 +158,7 @@ export function startTripoJob(spec: TripoSpec, runner: Runner = runTripo, critic
       { ...spec, outputPath: attemptPath(spec.outputPath, attempt) },
       { onTaskCreated: (taskId) => { job.providerTaskId = taskId; } },
     );
-  });
+  }, onSettled);
   return id;
 }
 
@@ -183,6 +189,7 @@ function settleJob(
   maxAttempts: number,
   spent: () => number,
   roll: (attempt: number) => Promise<TripoResult>,
+  onSettled?: () => void,
 ): void {
   const gate = tripoGateRequest(spec);
   const critiqueDeps = gate.deps;
@@ -208,7 +215,8 @@ function settleJob(
       }
       job.error = e instanceof Error ? e.message : String(e);
       job.status = 'error';
-    });
+    })
+    .finally(() => onSettled?.());
 }
 
 function writeOutcome(job: TripoJob, outcome: RetryOutcome<TripoResult>, spent: number): void {

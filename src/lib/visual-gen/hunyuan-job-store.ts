@@ -54,7 +54,13 @@ type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
  * successful mesh it auto-runs the Tier-1 quality gate, graded against the job's own
  * asset class (class-blind, and said so, when none was supplied). `runner`/`critic` are
  * injectable for tests; default to the real `runHunyuan` / `critiqueMesh`. */
-export function startHunyuanJob(spec: HunyuanJobSpec, runner: Runner = runHunyuan, critic: Critic = critiqueMesh): string {
+export function startHunyuanJob(
+  spec: HunyuanJobSpec,
+  runner: Runner = runHunyuan,
+  critic: Critic = critiqueMesh,
+  /** Runs once the job has settled (done or error) — the caller's hook to drop its temp input. */
+  onSettled?: () => void,
+): string {
   const id = `hy3d-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const gate = localCritiqueDeps(spec.assetClass, spec.targetExtentM);
   const job: HunyuanJob = { id, status: 'running', spec, gradedAs: gate.gradedAs, startedAt: Date.now() };
@@ -82,7 +88,8 @@ export function startHunyuanJob(spec: HunyuanJobSpec, runner: Runner = runHunyua
     .catch((e: unknown) => {
       job.error = e instanceof Error ? e.message : String(e);
       job.status = 'error';
-    });
+    })
+    .finally(() => onSettled?.());
   return id;
 }
 

@@ -53,7 +53,13 @@ type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
  * successful mesh it auto-runs the Tier-1 quality gate, graded against the job's own
  * asset class (class-blind, and said so, when none was supplied). `runner`/`critic` are
  * injectable for tests; default to the real `runTriposr` / `critiqueMesh`. */
-export function startTriposrJob(spec: TriposrJobSpec, runner: Runner = runTriposr, critic: Critic = critiqueMesh): string {
+export function startTriposrJob(
+  spec: TriposrJobSpec,
+  runner: Runner = runTriposr,
+  critic: Critic = critiqueMesh,
+  /** Runs once the job has settled (done or error) — the caller's hook to drop its temp input. */
+  onSettled?: () => void,
+): string {
   const id = `tsr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const gate = localCritiqueDeps(spec.assetClass, spec.targetExtentM);
   const job: TriposrJob = { id, status: 'running', spec, gradedAs: gate.gradedAs, startedAt: Date.now() };
@@ -81,7 +87,8 @@ export function startTriposrJob(spec: TriposrJobSpec, runner: Runner = runTripos
     .catch((e: unknown) => {
       job.error = e instanceof Error ? e.message : String(e);
       job.status = 'error';
-    });
+    })
+    .finally(() => onSettled?.());
   return id;
 }
 
