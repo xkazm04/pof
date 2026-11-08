@@ -128,7 +128,8 @@ export function gradeGallerySelection(
   label: string,
 ): AcceptanceResult {
   const idx = data[field];
-  if (typeof idx !== 'number' || !(idx >= 0)) {
+  // A position: 1.5 or Infinity names no candidate.
+  if (typeof idx !== 'number' || !Number.isInteger(idx) || idx < 0) {
     return {
       label,
       tier: L1,
