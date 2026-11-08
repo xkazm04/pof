@@ -7,7 +7,10 @@ import { render, cleanup } from '@testing-library/react';
 import {
   BarChartSimple, LineChartSimple, AreaChartSimple, BurndownChart,
 } from '@/components/modules/evaluator/HolisticHealthView/charts';
-import type { BurnChartPoint } from '@/types/project-health';
+import { VelocityTab } from '@/components/modules/evaluator/HolisticHealthView/VelocityTab';
+import { QualityTab } from '@/components/modules/evaluator/HolisticHealthView/QualityTab';
+import { MilestonesTab } from '@/components/modules/evaluator/HolisticHealthView/MilestonesTab';
+import type { BurnChartPoint, ProjectHealthSummary } from '@/types/project-health';
 
 afterEach(cleanup);
 
@@ -60,5 +63,30 @@ describe('LineChartSimple — gridlines mean a value', () => {
     const g = geometry([55, 60]);
     expect(g.cys[1]).toBeGreaterThan(g.topGrid);
     expect(g.text).toContain('100');
+  });
+});
+
+describe('Project Health tabs — empty series say so', () => {
+  it('every chart/list card has text beyond its heading on empty history (5 cards)', () => {
+    const summary = { totalChecklistItems: 0 } as unknown as ProjectHealthSummary;
+    const views = [
+      <VelocityTab key="v" velocityHistory={[]} burnChart={[]} summary={summary} />,
+      <QualityTab key="q" qualityHistory={[]} />,
+      <MilestonesTab key="m" burnChart={[]} summary={summary} milestones={[]} />,
+    ];
+    let cards = 0;
+    let filled = 0;
+    for (const v of views) {
+      const { container } = render(v);
+      for (const h3 of container.querySelectorAll('h3')) {
+        cards++;
+        const own = h3.textContent ?? '';
+        const all = h3.parentElement?.textContent ?? '';
+        if (all.replace(own, '').trim().length > 0) filled++;
+      }
+      cleanup();
+    }
+    expect(cards).toBe(5);
+    expect(filled).toBe(5);
   });
 });

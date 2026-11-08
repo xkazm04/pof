@@ -5,6 +5,11 @@ import { ACCENT_EMERALD, STATUS_INFO, STATUS_NEUTRAL, OPACITY_20 } from '@/lib/c
 
 type Point = { label: string; value: number };
 
+/** One-line empty state: names what populates the chart, so blank is never mistaken for a render failure. */
+export function ChartEmpty({ children }: { children: string }) {
+  return <p className="text-xs text-text-muted py-4" data-testid="chart-empty">{children}</p>;
+}
+
 /** Text alternative for a series: count, first, last and direction (WCAG 1.1.1). */
 export function describeSeries(title: string, points: Point[]): string {
   if (points.length === 0) return `${title}: no data`;
@@ -16,6 +21,7 @@ export function describeSeries(title: string, points: Point[]): string {
 }
 
 export function BarChartSimple({ data, color, title = 'Weekly velocity' }: { data: Point[]; color: string; title?: string }) {
+  if (data.length === 0) return <ChartEmpty>No weeks recorded yet. Complete checklist items to see weekly velocity.</ChartEmpty>;
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
     <div className="flex items-end gap-1.5 h-32" role="img" aria-label={describeSeries(title, data)}>
@@ -36,7 +42,7 @@ export function BarChartSimple({ data, color, title = 'Weekly velocity' }: { dat
 }
 
 export function LineChartSimple({ data, color, title = 'Quality score trend' }: { data: Point[]; color: string; title?: string }) {
-  if (data.length === 0) return null;
+  if (data.length === 0) return <ChartEmpty>No scans yet. Run a project scan to start the quality trend.</ChartEmpty>;
   // Scores are 0-100: pin the domain so a gridline marks the value it is labelled with,
   // instead of normalising to the series' own max (which made the top line "the latest score").
   const min = 0;
@@ -91,7 +97,7 @@ export function LineChartSimple({ data, color, title = 'Quality score trend' }: 
 }
 
 export function AreaChartSimple({ data, total, title = 'Cumulative progress' }: { data: { label: string; completed: number; ideal: number }[]; total: number; title?: string }) {
-  if (data.length === 0) return null;
+  if (data.length === 0) return <ChartEmpty>No progress history yet. Complete a dated checklist item to start the burnup.</ChartEmpty>;
   const h = 120;
   const w = data.length * 60;
   const safeTotal = total || 1;
@@ -129,7 +135,7 @@ export function AreaChartSimple({ data, total, title = 'Cumulative progress' }: 
 }
 
 export function BurndownChart({ data, total, title = 'Burndown' }: { data: BurnChartPoint[]; total: number; title?: string }) {
-  if (data.length === 0) return null;
+  if (data.length === 0) return <ChartEmpty>No burndown yet. Complete a dated checklist item to start the burndown.</ChartEmpty>;
   const h = 120;
   const w = data.length * 60;
   const safeTotal = total || 1;
