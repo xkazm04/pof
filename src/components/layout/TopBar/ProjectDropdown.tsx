@@ -133,7 +133,8 @@ export function ProjectDropdown({
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleRenameConfirm();
-                      if (e.key === 'Escape') setRenaming(false);
+                      // Escape backs out one level: the dropdown's document listener must not see it.
+                      if (e.key === 'Escape') { e.stopPropagation(); setRenaming(false); }
                     }}
                     className="flex-1 px-2 py-1 bg-background border border-border-bright rounded text-xs text-text outline-none focus:border-accent-strong"
                   />
