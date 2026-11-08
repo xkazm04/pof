@@ -31,7 +31,7 @@ import { getDb } from '@/lib/db';
  * provider receives the prompt byte-identical and the DB is never opened.
  */
 
-/** Image dimensions a provider is ever asked for; the panels send 512 to 1536. */
+/** Sanity bounds on a requested image size; the in-app panels send none and take the 512 default. */
 const DIMENSION_MIN = 64;
 const DIMENSION_MAX = 4096;
 
