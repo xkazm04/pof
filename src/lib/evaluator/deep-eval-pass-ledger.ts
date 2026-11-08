@@ -18,10 +18,8 @@ import type { PassOutcome } from './deep-eval-engine';
 
 let ensured = false;
 
-function ensureTable(): void {
-  if (ensured) return;
-  getDb().exec(`
-    CREATE TABLE IF NOT EXISTS deep_eval_passes (
+const TABLE_DDL = (name: string): string => `
+    CREATE TABLE IF NOT EXISTS ${name} (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       scan_id TEXT NOT NULL,
       project_id TEXT NOT NULL DEFAULT '',
@@ -31,9 +29,33 @@ function ensureTable(): void {
       error TEXT,
       findings_json TEXT NOT NULL DEFAULT '[]',
       finished_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE (scan_id, module_id, pass)
+      UNIQUE (scan_id, project_id, module_id, pass)
     )
-  `);
+  `;
+
+/** The pre-project-key shape: a second project reusing a scanId overwrote the first's rows. */
+const LEGACY_UNIQUE = /UNIQUE\s*\(\s*scan_id\s*,\s*module_id\s*,\s*pass\s*\)/i;
+
+function ensureTable(): void {
+  if (ensured) return;
+  const db = getDb();
+  db.exec(TABLE_DDL('deep_eval_passes'));
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='deep_eval_passes'").get() as
+    { sql: string } | undefined;
+  if (row && LEGACY_UNIQUE.test(row.sql)) {
+    // Table rebuild (SQLite cannot alter a UNIQUE): copy every row, swap, abort if any row would be lost.
+    db.transaction(() => {
+      db.exec('DROP TABLE IF EXISTS deep_eval_passes__rebuild');
+      db.exec(TABLE_DDL('deep_eval_passes__rebuild'));
+      db.exec(`INSERT INTO deep_eval_passes__rebuild (id, scan_id, project_id, module_id, pass, status, error, findings_json, finished_at)
+               SELECT id, scan_id, project_id, module_id, pass, status, error, findings_json, finished_at FROM deep_eval_passes`);
+      const before = (db.prepare('SELECT COUNT(*) AS n FROM deep_eval_passes').get() as { n: number }).n;
+      const after = (db.prepare('SELECT COUNT(*) AS n FROM deep_eval_passes__rebuild').get() as { n: number }).n;
+      if (before !== after) throw new Error(`deep_eval_passes rebuild would lose rows (${before} -> ${after}) - aborted`);
+      db.exec('DROP TABLE deep_eval_passes');
+      db.exec('ALTER TABLE deep_eval_passes__rebuild RENAME TO deep_eval_passes');
+    })();
+  }
   ensured = true;
 }
 
@@ -43,7 +65,7 @@ export function recordPassOutcome(scanId: string, projectId: string, outcome: Pa
   getDb().prepare(`
     INSERT INTO deep_eval_passes (scan_id, project_id, module_id, pass, status, error, findings_json)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (scan_id, module_id, pass) DO UPDATE SET
+    ON CONFLICT (scan_id, project_id, module_id, pass) DO UPDATE SET
       status = excluded.status,
       error = excluded.error,
       findings_json = excluded.findings_json,
