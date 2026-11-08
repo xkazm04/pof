@@ -57,12 +57,25 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as {
+    // An empty body is the documented default; an unreadable one must not become "scaffold everything".
+    const text = await req.text();
+    let parsed: unknown = {};
+    if (text.trim()) {
+      try { parsed = JSON.parse(text); } catch { return apiError('request body must be a JSON object', 400); }
+    }
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return apiError('request body must be a JSON object', 400);
+    }
+    const body = parsed as {
       action?: 'scaffold' | 'authoring-tasks' | 'dispatch';
       testName?: string; claim?: string;
       // Same scope surface as the drain (parsed by `parseDrainFilter`), incl. the entity set.
       tier?: string; catalogId?: string; entityId?: string; entityIds?: string[];
     };
+    if (body.action !== undefined && !['scaffold', 'authoring-tasks', 'dispatch'].includes(body.action)) {
+      return apiError(`Unknown action: ${String(body.action)}`, 400);
+    }
+    if (body.claim !== undefined && typeof body.claim !== 'string') return apiError('claim must be a string', 400);
     const filter: DrainFilter = parseDrainFilter((k) => body[k]);
     const testName = typeof body.testName === 'string' && body.testName.trim() ? body.testName.trim() : undefined;
 
