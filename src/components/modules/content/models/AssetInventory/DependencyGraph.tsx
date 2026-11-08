@@ -96,6 +96,8 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
           const edge = EDGE_STYLE[s.provenance];
           return (
             <g key={`src-${s.key}`}>
+              {/* The label below is cut at 18 chars; the node keeps its full name. */}
+              <title>{`${s.name} (${s.key})`}</title>
               <line x1={160} y1={y} x2={centerX - 60} y2={centerY}
                 stroke={edge.stroke} strokeWidth={1} strokeDasharray={edge.dash} markerEnd={`url(#${markerId})`}>
                 <title>{`${edge.label}: ${s.name} ${s.relation} ${asset.name}`}</title>
@@ -107,13 +109,16 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
           );
         })}
 
-        {/* Center node */}
-        <rect x={centerX - 55} y={centerY - 14} width={110} height={28} rx={6}
-          fill={typeConf.color + '18'} stroke={typeConf.color} strokeWidth={1.5} />
-        <circle cx={centerX - 38} cy={centerY} r={5} fill={typeConf.color} />
-        <text x={centerX - 28} y={centerY + 3.5} fill="var(--text)" fontSize={11} fontWeight="600" fontFamily="monospace">
-          {asset.name.length > 12 ? asset.name.slice(0, 11) + '…' : asset.name}
-        </text>
+        {/* Center node (label cut at 12 chars; the title keeps the full name) */}
+        <g>
+          <title>{`${asset.name} (${asset.relativePath})`}</title>
+          <rect x={centerX - 55} y={centerY - 14} width={110} height={28} rx={6}
+            fill={typeConf.color + '18'} stroke={typeConf.color} strokeWidth={1.5} />
+          <circle cx={centerX - 38} cy={centerY} r={5} fill={typeConf.color} />
+          <text x={centerX - 28} y={centerY + 3.5} fill="var(--text)" fontSize={11} fontWeight="600" fontFamily="monospace">
+            {asset.name.length > 12 ? asset.name.slice(0, 11) + '…' : asset.name}
+          </text>
+        </g>
 
         {/* Target nodes (right) */}
         {targets.map((t, i) => {
@@ -122,6 +127,7 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
           const edge = EDGE_STYLE[t.provenance];
           return (
             <g key={`tgt-${t.key}`}>
+              <title>{`${t.name} (${t.key})`}</title>
               <line x1={centerX + 55} y1={centerY} x2={svgW - 160} y2={y}
                 stroke={edge.stroke} strokeWidth={1} strokeDasharray={edge.dash} markerEnd={`url(#${markerId})`}>
                 <title>{`${edge.label}: ${asset.name} ${t.relation} ${t.name}`}</title>

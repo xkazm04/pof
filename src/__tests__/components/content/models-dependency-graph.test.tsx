@@ -41,3 +41,20 @@ describe('DependencyGraph arrow marker id', () => {
     }
   });
 });
+
+describe('DependencyGraph truncated node names', () => {
+  it('every node whose label is cut keeps its full name and path as a node title', () => {
+    const center = scanned('Meshes/SM_Castle_Gatehouse_Ruined.uasset', 'mesh');
+    const target = scanned('Materials/MI_Castle_Gatehouse_Ruined_Moss.uasset', 'material');
+    const edge: InventoryEdge = { from: center.relativePath, to: target.relativePath, relation: 'uses-material', provenance: 'inferred' };
+    const { container } = render(
+      <DependencyGraph asset={center} allAssets={[center, target]} dependencies={[edge]} ueListed={null} />,
+    );
+    const texts = Array.from(container.querySelectorAll('svg text')).map((t) => t.textContent ?? '');
+    expect(texts.some((t) => t.endsWith('…'))).toBe(true);
+    const nodeTitles = Array.from(container.querySelectorAll('svg g > title, svg > g > title'))
+      .map((t) => t.textContent ?? '');
+    expect(nodeTitles.some((t) => t.includes(target.name) && t.includes(target.relativePath))).toBe(true);
+    expect(nodeTitles.some((t) => t.includes(center.name) && t.includes(center.relativePath))).toBe(true);
+  });
+});
