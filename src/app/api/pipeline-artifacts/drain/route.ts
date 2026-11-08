@@ -48,7 +48,22 @@ export async function POST(req: NextRequest) {
     // `autoCapture` (+ projectPath) is the L4 opt-in: the visual gate renders its OWN frame
     // (headless -game -RenderOffScreen) instead of staying deferred — pair with executor:'spawn'
     // so it doesn't collide with a live editor.
-    const request = parseDrainRequest(await req.json().catch(() => ({})));
+    // An EMPTY body is the explicit global drain. An unparseable or non-object one is refused:
+    // it used to read as `{}` too, so a truncated single-entity body silently became a GLOBAL
+    // drain (every deferred gate, UE editors booted for all of them).
+    const text = await req.text();
+    let rawBody: unknown = {};
+    if (text.trim()) {
+      try {
+        rawBody = JSON.parse(text);
+      } catch {
+        return apiError('drain body is not valid JSON — refusing rather than widening to a global drain', 400);
+      }
+      if (typeof rawBody !== 'object' || rawBody === null || Array.isArray(rawBody)) {
+        return apiError('drain body must be a JSON object', 400);
+      }
+    }
+    const request = parseDrainRequest(rawBody);
     const filter: DrainFilter = request.filter;
 
     // Lease keys: one per requested entity for a batch, else the single (or global) key —
