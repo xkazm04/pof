@@ -141,3 +141,22 @@ describe('TelemetryEvolution — unknown sub-genre fallback style', () => {
     expect(styleOf(container.querySelector('button[aria-pressed]'))).not.toMatch(VAR_WITH_ALPHA);
   });
 });
+
+describe('TelemetryEvolution — suggestions state their (global) scope', () => {
+  beforeEach(() => { hook.renders = 0; useProjectStore.setState({ projectPath: 'C:/fake/PoF' }); });
+
+  it('the suggestion list says it is not project-scoped, like the accepted sub-genres do', () => {
+    hook.stats = stats();
+    const { container } = render(<TelemetryEvolution />);
+    const note = container.querySelector('[data-testid="suggestions-scope"]');
+    expect(note?.textContent ?? '').toMatch(/not project-scoped/);
+  });
+
+  it('the foreign-scan note no longer claims the WHOLE panel uses only this project', () => {
+    hook.stats = stats({ scope: { foreignRows: 2 } } as Partial<TelemetryStats>);
+    const { container } = render(<TelemetryEvolution />);
+    const note = container.querySelector('[data-testid="telemetry-scope-note"]')?.textContent ?? '';
+    expect(note).toContain('2 scans');
+    expect(note).not.toContain('this panel');
+  });
+});

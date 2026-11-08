@@ -140,8 +140,9 @@ export function TelemetryEvolution() {
       {foreignScans > 0 && (
         <p className="text-2xs text-text-muted" data-testid="telemetry-scope-note">
           {foreignScans} scan{foreignScans === 1 ? '' : 's'} on this machine belong to
-          {' '}other project{foreignScans === 1 ? '' : 's'} and are excluded — this panel and the
-          {' '}skill packs the CLI injects use only this project&apos;s scans.
+          {' '}other project{foreignScans === 1 ? '' : 's'} and are excluded — the patterns, scan history
+          {' '}and the skill packs the CLI injects use only this project&apos;s scans. Suggestions and
+          {' '}accepted sub-genres are install-wide (see below).
         </p>
       )}
 

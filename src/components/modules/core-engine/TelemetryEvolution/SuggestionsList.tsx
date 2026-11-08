@@ -36,6 +36,12 @@ export function SuggestionsList({
           Evolution Suggestions
         </span>
       </div>
+      {/* genre_suggestions has no project column: pending suggestions are read
+          install-wide, so a suggestion here may come from another project's scan.
+          Stated, the same way AcceptedGenres states its scope. */}
+      <p className="text-2xs text-text-muted mb-2.5" data-testid="suggestions-scope">
+        From scans of every project in this install — suggestions are not project-scoped.
+      </p>
       <div className="space-y-3">
         {suggestions.map((sug, i) => {
           const style = SUB_GENRE_STYLES[sug.subGenre] ?? FALLBACK_SUB_GENRE_STYLE;
