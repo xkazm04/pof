@@ -123,3 +123,17 @@ describe('metahuman conform: the editor Python', () => {
     expect(lines[guard + 3]).toBe('    _sub.remove_object_to_edit(_char)');
   });
 });
+
+describe('metahuman conform: values embedded in editor Python', () => {
+  it('keeps an apostrophe in a path inside the string literal', () => {
+    const py = buildConformPython("C:/Users/O'Brien/x.glb", { charName: "MH_O'Neil" });
+    expect(py).toContain("task.filename = 'C:/Users/O\\'Brien/x.glb'");
+    expect(py).toContain("create_asset('MH_O\\'Neil'");
+  });
+
+  it('escapes the assemble path and name override', () => {
+    const py = buildAssemblePython("/Game/O'X", { nameOverride: "It's" });
+    expect(py).toContain("unreal.load_asset('/Game/O\\'X')");
+    expect(py).toContain("'name_override', 'It\\'s'");
+  });
+});

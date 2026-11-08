@@ -29,16 +29,21 @@ export interface ConformOptions {
   runExperimentFn?: (spec: ExperimentSpec, deps?: RunnerDeps) => Promise<ExperimentResult>;
 }
 
+/** Escape a value for a single-quoted Python literal, so a path like `O'Brien` stays one string. */
+function pyQuoted(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+}
+
 /**
  * UE editor-Python that imports a .glb, extracts its conform topology, creates a
  * MetaHumanCharacter, and conforms the parametric body to the mesh. Pure (no I/O) so it's
  * unit-testable; the runner wraps it in try/except + DONE and spawns the editor.
  */
 export function buildConformPython(glbPath: string, opts: ConformOptions = {}): string {
-  const glb = glbPath.replace(/\\/g, '/');
-  const dest = opts.destPath ?? '/Game/Generated/MetaHumans';
-  const charName = opts.charName ?? 'MH_Conformed';
-  const meshName = opts.targetMeshName ?? 'ConformTarget';
+  const glb = pyQuoted(glbPath.replace(/\\/g, '/'));
+  const dest = pyQuoted(opts.destPath ?? '/Game/Generated/MetaHumans');
+  const charName = pyQuoted(opts.charName ?? 'MH_Conformed');
+  const meshName = pyQuoted(opts.targetMeshName ?? 'ConformTarget');
   return [
     'task = unreal.AssetImportTask()',
     `task.filename = '${glb}'`,
@@ -134,9 +139,9 @@ export interface AssembleOptions {
  * Pure (no I/O); the runner wraps it in try/except + DONE and spawns the editor.
  */
 export function buildAssemblePython(characterPath: string, opts: AssembleOptions = {}): string {
-  const cp = characterPath.replace(/\\/g, '/');
+  const cp = pyQuoted(characterPath.replace(/\\/g, '/'));
   const nameLine = opts.nameOverride
-    ? [`    _p.set_editor_property('name_override', '${opts.nameOverride}')`]
+    ? [`    _p.set_editor_property('name_override', '${pyQuoted(opts.nameOverride)}')`]
     : [];
   return [
     '_sub = unreal.get_editor_subsystem(unreal.MetaHumanCharacterEditorSubsystem)',
