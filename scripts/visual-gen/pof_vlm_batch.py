@@ -18,6 +18,7 @@ def main() -> int:
     ap.add_argument("--model", required=True)
     ap.add_argument("--max-new-tokens", type=int, default=200)
     args = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a piped Windows stdout is cp1252
     try:
         import time
         import torch

@@ -22,6 +22,7 @@ def main() -> int:
     ap.add_argument("--load-8bit", action="store_true", help="bitsandbytes 8-bit (fallback if 4-bit inference is buggy)")
     ap.add_argument("--max-new-tokens", type=int, default=220)
     args = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a piped Windows stdout is cp1252
     try:
         import time
         import torch

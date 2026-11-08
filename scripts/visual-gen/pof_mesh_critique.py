@@ -17,6 +17,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mesh", required=True)
     args = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a piped Windows stdout is cp1252
     try:
         import numpy as np  # noqa: F401  (trimesh pulls it; kept explicit)
         import trimesh
