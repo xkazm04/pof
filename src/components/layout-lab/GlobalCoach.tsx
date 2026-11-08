@@ -191,7 +191,9 @@ function CoachRow({
       data-priority={c.priority}
       data-step-index={c.stepIndex}
       onClick={() => onJump(c)}
-      aria-label={`${hint.actionWord}: ${c.entityName} in ${c.catalogLabel} — ${c.step}. ${shownHint}`}
+      // The name STARTS with the visible text, in its visible order (WCAG 2.5.3), so a voice
+      // command that reads the row aloud hits it; the generic hint follows only when no reason shows.
+      aria-label={`${hint.actionWord}: ${c.catalogLabel} · ${c.entityName} — ${c.step}${c.reason ? ` · ${c.reason}` : `. ${shownHint}`}`}
       className={`focus-ring ${t.fontBody}`}
       style={{
         flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)',

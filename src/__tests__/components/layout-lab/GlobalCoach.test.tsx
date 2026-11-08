@@ -176,6 +176,22 @@ describe('<GlobalCoach />', () => {
     expect(container.querySelector('[data-testid="global-coach-empty"]')?.textContent).toMatch(/catalogs that could be read/i);
   });
 
+  it('keeps each row\'s visible text inside its accessible name (WCAG 2.5.3 label in name)', () => {
+    coachMock.mockReturnValue([
+      cand({ entityId: 'e1', priority: 'fail', reason: 'price/power 1.43x out of band' }),
+      cand({ entityId: 'e2', catalogId: 'armor', catalogLabel: 'Armor', entityName: 'Shield', priority: 'unproduced' }),
+    ]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
+    const squash = (s: string) => s.replace(/\s+/g, '');
+    for (const id of ['global-coach-item-0', 'global-coach-item-1']) {
+      const btn = container.querySelector(`[data-testid="${id}"]`) as HTMLElement;
+      const clone = btn.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+      expect(squash(btn.getAttribute('aria-label') ?? '')).toContain(squash(clone.textContent ?? ''));
+    }
+  });
+
   it('shows the concrete checker reason on a candidate that carries one (and falls back to the generic hint otherwise)', () => {
     coachMock.mockReturnValue([
       cand({ entityId: 'e1', priority: 'fail', reason: 'price/power 1.43x out of band' }),
