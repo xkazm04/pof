@@ -257,3 +257,14 @@ describe('teleport and row inputs are named', () => {
     expect(screen.getByRole('textbox', { name: 'New value for Health' })).not.toBeNull();
   });
 });
+
+describe('sync log filter state', () => {
+  it('exposes the active filter to assistive tech', () => {
+    renderLivePanel();
+    const sent = screen.getByRole('button', { name: 'Sent' });
+    expect(sent.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(sent);
+    expect(screen.getByRole('button', { name: 'Sent' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('false');
+  });
+});

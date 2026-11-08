@@ -70,6 +70,7 @@ export function SyncLogSection({
                   <button
                     key={f}
                     onClick={() => setLogFilter(f)}
+                    aria-pressed={logFilter === f}
                     className="px-2 py-0.5 rounded text-2xs font-bold transition-colors"
                     style={{
                       color: logFilter === f ? (f === 'outbound' ? ACCENT_ORANGE : f === 'inbound' ? ACCENT_CYAN : ACCENT) : STATUS_NEUTRAL,
