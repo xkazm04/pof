@@ -11,7 +11,7 @@ import { apiFetch } from '@/lib/api-utils';
 import type { SearchResult } from '@/lib/search-index';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { resolveSearchIntents } from './searchIntents';
-import { buildHome } from './paletteHome';
+import { ALERT_ID_PREFIX, buildHome } from './paletteHome';
 import { readRecents, recordRecent } from './recentSelections';
 
 // ── Index freshness ───────────────────────────────────────────────────────────
@@ -50,6 +50,7 @@ export function useGlobalSearchPanel() {
   const projectPath = useProjectStore((s) => s.projectPath);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
   const feedEvents = useActivityFeedStore((s) => s.events);
+  const dismissEvent = useActivityFeedStore((s) => s.dismissEvent);
   const { sendPromptToModule } = useModuleActions();
   const prefersReduced = useReducedMotion();
 
@@ -168,8 +169,11 @@ export function useGlobalSearchPanel() {
     if (!run) { handleSelect(result); return; }
     recordRecent(projectPath, result);
     sendPromptToModule(run.moduleId, run.prompt);
+    // Same rule as the feed card's Fix: a dispatched fix is a read alert, so a
+    // second Shift+Enter cannot start the same paid run again.
+    if (homeRun && result.id.startsWith(ALERT_ID_PREFIX)) dismissEvent(result.id.slice(ALERT_ID_PREFIX.length));
     setOpen(false);
-  }, [checklistProgress, handleSelect, sendPromptToModule, homeRows, projectPath]);
+  }, [checklistProgress, handleSelect, sendPromptToModule, homeRows, projectPath, dismissEvent]);
 
   // ── Keyboard navigation ──
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
