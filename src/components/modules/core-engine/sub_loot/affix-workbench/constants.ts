@@ -58,7 +58,8 @@ export const BREAKPOINT_ILVLS = [1, 10, 25, 40, 60] as const;
 
 /* ── Category Colors ────────────────────────────────────────────────────── */
 
-export const CATEGORY_COLORS: Record<string, string> = {
+/** The one affix-category colour rule; every workbench surface reads it. */
+export const CATEGORY_COLORS: Record<'offensive' | 'defensive' | 'utility', string> = {
   offensive: STATUS_ERROR,
   defensive: ACCENT_EMERALD,
   utility: ACCENT_CYAN,
@@ -66,7 +67,5 @@ export const CATEGORY_COLORS: Record<string, string> = {
 
 /** Get color for an affix category. */
 export function getCategoryColor(category: 'offensive' | 'defensive' | 'utility'): string {
-  if (category === 'offensive') return STATUS_ERROR;
-  if (category === 'defensive') return STATUS_INFO;
-  return ACCENT_EMERALD;
+  return CATEGORY_COLORS[category];
 }

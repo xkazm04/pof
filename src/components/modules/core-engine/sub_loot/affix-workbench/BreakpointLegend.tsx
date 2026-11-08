@@ -3,24 +3,23 @@
 import { AlertTriangle } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_WARNING,
-  ACCENT_EMERALD, ACCENT_CYAN,
   OPACITY_10,
   withOpacity, OPACITY_15,
 } from '@/lib/chart-colors';
-import { ACCENT } from './constants';
+import { ACCENT, CATEGORY_COLORS } from './constants';
 
 export function BreakpointLegend() {
   return (
     <div className="flex flex-wrap items-center gap-4 px-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
       <span className="font-bold">Legend:</span>
       <span className="flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_ERROR }} /> Offensive
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEGORY_COLORS.offensive }} /> Offensive
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_EMERALD }} /> Defensive
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEGORY_COLORS.defensive }} /> Defensive
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_CYAN }} /> Utility
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEGORY_COLORS.utility }} /> Utility
       </span>
       <span className="flex items-center gap-1.5"
         style={{ borderLeft: `1px solid ${withOpacity(ACCENT, OPACITY_15)}`, paddingLeft: '1rem' }}>

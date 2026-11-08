@@ -5,13 +5,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO,
-  ACCENT_ORANGE, ACCENT_CYAN, ACCENT_EMERALD, ACCENT_PURPLE,
+  STATUS_SUCCESS,
+  ACCENT_ORANGE, ACCENT_CYAN, ACCENT_PURPLE,
   OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_37, OPACITY_50,
   withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, NeonBar, CornerBrackets } from '../../unique-tabs/_design';
-import { ACCENT } from './constants';
+import { ACCENT, getCategoryColor } from './constants';
 import { AFFIX_POOL, RARITY_COLORS, getItemLevelScaling } from './data';
 import type { CraftedAffix, ItemBase } from './data';
 
@@ -112,8 +112,7 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
 
   const scaledMag = affix.magnitude * getItemLevelScaling(itemLevel);
   const magPercent = ((affix.magnitude - poolEntry.minValue) / (poolEntry.maxValue - poolEntry.minValue)) * 100;
-  const catColor = affix.category === 'offensive' ? STATUS_ERROR
-    : affix.category === 'defensive' ? STATUS_INFO : ACCENT_EMERALD;
+  const catColor = getCategoryColor(affix.category);
 
   return (
     <motion.div layout

@@ -1,7 +1,5 @@
-import {
-  STATUS_ERROR,
-  ACCENT_EMERALD, ACCENT_CYAN,
-} from '@/lib/chart-colors';
+import { ACCENT_EMERALD } from '@/lib/chart-colors';
+import { CATEGORY_COLORS } from './constants';
 import type { AffixPoolEntry, Rarity, SynergyRule } from './data';
 import { RARITY_AFFIX_COUNTS, SYNERGY_RULES } from './data';
 import { eligiblePool } from './craftingKernel';
@@ -17,12 +15,6 @@ export interface RarityArchetype {
   affixTags: string[];
   synergies: string[];
 }
-
-const CATEGORY_COLORS: Record<string, string> = {
-  offensive: STATUS_ERROR,
-  defensive: ACCENT_EMERALD,
-  utility: ACCENT_CYAN,
-};
 
 const ARCHETYPE_NAMES: Record<string, Record<string, string>> = {
   offensive: { broken: 'Glass Cannon', strong: 'DPS Specialist', default: 'Striker' },
@@ -88,7 +80,7 @@ export function detectArchetypes(pool: AffixPoolEntry[], rarity: Rarity): Rarity
     archetypes.push({
       id: `arch-${root}`, name,
       description: `${clusterRules.size} synergies, ${cluster.size} affixes, ${cat}-focused`,
-      rarity, color: CATEGORY_COLORS[cat] ?? ACCENT_EMERALD,
+      rarity, color: CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS] ?? ACCENT_EMERALD,
       affixTags: [...cluster], synergies: [...clusterRules],
     });
     for (const tag of cluster) visited.add(tag);
