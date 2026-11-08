@@ -141,7 +141,8 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
   function dispatch() {
     if (dispatching) return; // guard against double-dispatch while in flight
     const err = validate?.(direction);
-    if (err) { setResult({ ok: false, msg: err }); return; }
+    // A refusal is not a failed dispatch: Retry would re-send the previous prompt past `validate`.
+    if (err) { setResult({ ok: false, msg: err }); setRetryable(false); return; }
     const ctx = { direction, prompt: buildPrompt(direction) };
     setLastCtx(ctx);
 

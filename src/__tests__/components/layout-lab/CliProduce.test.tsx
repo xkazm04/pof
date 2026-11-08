@@ -132,3 +132,21 @@ describe('CliProduce dispatching state', () => {
     expect(screen.getByTestId('cli-produce-result').textContent).toContain('Recorded');
   });
 });
+
+describe('CliProduce refusal after a failed dispatch', () => {
+  afterEach(cleanup);
+
+  it('withdraws the retry when validation refuses the next dispatch', async () => {
+    const onComplete = vi.fn(() => { throw new Error('transport down'); });
+    render(<CliProduce t={t} label="Run It" buildPrompt={(d) => `do ${d}`} onComplete={onComplete}
+      validate={(d) => (d === 'bad' ? 'direction refused' : null)} />);
+    fireEvent.click(screen.getByTestId('cli-produce-run'));
+    await screen.findByTestId('cli-produce-retry');
+
+    fireEvent.change(screen.getByTestId('cli-produce-direction'), { target: { value: 'bad' } });
+    fireEvent.click(screen.getByTestId('cli-produce-run'));
+
+    await waitFor(() => expect(screen.getByTestId('cli-produce-result').textContent).toContain('direction refused'));
+    expect(screen.queryByTestId('cli-produce-retry')).toBeNull();
+  });
+});
