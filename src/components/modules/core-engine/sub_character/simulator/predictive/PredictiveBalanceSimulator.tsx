@@ -9,6 +9,7 @@ import { OPACITY_20,
 import {
   ACCENT,
   DEFAULT_PREDICTIVE_CONFIG,
+  boundSweepConfig,
   type BalanceReport,
   type PredictiveBalanceConfig,
 } from './data';
@@ -78,7 +79,10 @@ export function PredictiveBalanceSimulator() {
 
   const runSim = useCallback(() => {
     if (isRunning) return;
-    startRun({ config, enemies: { registry: enemies.registry, provenance: enemies.provenance } }, null);
+    // Typed values are reconciled here (the commit), and the inputs then show what ran.
+    const bounded = boundSweepConfig(config);
+    if (bounded !== config) setConfig(bounded);
+    startRun({ config: bounded, enemies: { registry: enemies.registry, provenance: enemies.provenance } }, null);
   }, [isRunning, startRun, config, enemies.registry, enemies.provenance]);
 
   const cancelRun = useCallback(() => {
