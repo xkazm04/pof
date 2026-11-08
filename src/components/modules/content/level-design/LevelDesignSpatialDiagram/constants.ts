@@ -1,6 +1,13 @@
 import { Dice5, ArrowLeftRight, Target } from 'lucide-react';
 import type { SystemNode } from './types';
 
+/**
+ * Node ids ARE level-design checklist ids: a confirmed run ticks
+ * `checklistProgress['level-design'][id]`, so each id must be the checklist item
+ * for the same system (ld-3 = 'Implement level streaming', ld-2 = 'Place spawn
+ * points and triggers'). ld-1 ('Create blockout geometry') is the nearest item
+ * to procedural room layout; the checklist has no procgen item of its own.
+ */
 export const NODES: SystemNode[] = [
   {
     id: 'ld-1',
@@ -14,7 +21,7 @@ export const NODES: SystemNode[] = [
     dependencies: [],
   },
   {
-    id: 'ld-2',
+    id: 'ld-3',
     label: 'Level Streaming',
     subtitle: 'Spatial',
     description: 'Load/unload, seamless transitions',
@@ -25,7 +32,7 @@ export const NODES: SystemNode[] = [
     dependencies: ['ld-1'],
   },
   {
-    id: 'ld-3',
+    id: 'ld-2',
     label: 'Spawn System',
     subtitle: 'Entities',
     description: 'Spawn points, waves, scaling',
@@ -33,16 +40,14 @@ export const NODES: SystemNode[] = [
     prompt: 'Create a flexible spawn system with spawn points, waves, difficulty scaling, and spawn rules.',
     x: 82,
     y: 72,
-    dependencies: ['ld-1', 'ld-2'],
+    dependencies: ['ld-1', 'ld-3'],
   },
 ];
 
-/** SVG arrow dependency paths */
-export const DEPENDENCY_ARROWS: { from: string; to: string }[] = [
-  { from: 'ld-1', to: 'ld-2' },
-  { from: 'ld-1', to: 'ld-3' },
-  { from: 'ld-2', to: 'ld-3' },
-];
+/** SVG arrow dependency paths - derived from each node's `dependencies`, never a second list. */
+export const DEPENDENCY_ARROWS: { from: string; to: string }[] = NODES.flatMap((n) =>
+  n.dependencies.map((from) => ({ from, to: n.id })),
+);
 
 export const EMPTY_PROGRESS: Record<string, boolean> = {};
 
