@@ -272,7 +272,6 @@ const RECURSIVE_LOOPS: { file: string; gated: boolean; why: string }[] = [
   { file: 'core-engine/sub_combat/choreography/index.tsx', gated: true, why: 'playback for a whole encounter (tens of seconds)' },
   { file: 'core-engine/sub_ability/gas-balance/index.tsx', gated: false, why: 'finite chunked compute the user is waiting on' },
   { file: 'core-engine/sub_ability/index.tsx', gated: false, why: 'deadline-bounded (2s) scroll-into-view retry' },
-  { file: 'core-engine/sub_combat/dodge-timeline/index.tsx', gated: false, why: 'sub-second self-terminating playback' },
 ];
 
 describe('recursive rAF audit under components/modules', () => {
@@ -285,14 +284,15 @@ describe('recursive rAF audit under components/modules', () => {
 
   it('holds the measured callsite inventory (comment- and string-safe)', () => {
     const total = sites.reduce((s, x) => s + x.count, 0);
-    // 8 self-rescheduling loops (kickoff + re-entry = 2 sites each) + 10 one-shots.
+    // 7 self-rescheduling loops (kickoff + re-entry = 2 sites each) + 9 one-shots.
     // (ProjectHealthDashboard's one-shot left 2026-09-28: its regressions are now
     // derived from the scan history, not set from an effect behind a frame.
     // PredictiveBalanceSimulator's left 2026-09-29: the sweep is a yielding job
-    // (usePredictiveSweep), not one synchronous block behind a frame.)
-    expect(RECURSIVE_LOOPS.length * 2 + 10).toBe(26);
-    expect(total).toBe(26);
-    expect(sites.length).toBe(15);
+    // (usePredictiveSweep), not one synchronous block behind a frame.
+    // The unmounted dodge-timeline loop was deleted 2026-11-08.)
+    expect(RECURSIVE_LOOPS.length * 2 + 9).toBe(23);
+    expect(total).toBe(23);
+    expect(sites.length).toBe(14);
   });
 
   it('every file with a recursive loop is accounted for in the classification', () => {

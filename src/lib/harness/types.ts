@@ -59,7 +59,7 @@ export interface PlannedFeature {
 /**
  * A module area groups related features into a single executor session scope.
  * Larger than individual checklist items, smaller than entire modules.
- * Examples: "AbilitySpellbook", "project-setup", "DodgeTimelineEditor"
+ * Examples: "AbilitySpellbook", "project-setup"
  */
 export interface ModuleArea {
   id: string;
