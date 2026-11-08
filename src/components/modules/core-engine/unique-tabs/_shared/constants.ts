@@ -25,13 +25,3 @@ export const STATUS_COLORS: Record<FeatureStatus, { dot: string; bg: string; lab
   missing: { dot: STATUS_ERROR, bg: withOpacity(STATUS_ERROR, OPACITY_8), label: 'Missing' },
   unknown: { dot: STATUS_SUBDUED, bg: withOpacity(STATUS_SUBDUED, OPACITY_10), label: 'Unknown' },
 };
-
-/* ── Safe status lookup ───────────────────────────────────────────────────── */
-
-const FALLBACK_STATUS = STATUS_COLORS.unknown;
-
-/** Returns dot color + label for a FeatureStatus, falling back to 'unknown' for unrecognized values. */
-export function statusInfo(status: FeatureStatus | undefined): { color: string; label: string } {
-  const sc = (status && STATUS_COLORS[status]) || FALLBACK_STATUS;
-  return { color: sc.dot, label: sc.label };
-}
