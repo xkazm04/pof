@@ -9,6 +9,17 @@ interface ParametersSectionProps {
   setParam: (name: string, value: number) => void;
 }
 
+/**
+ * Readout precision follows the step: whole numbers for a unit-or-larger step,
+ * otherwise at least two decimals and as many as the step itself carries (a
+ * live parent's 0 – 0.07 scalar steps by 0.0007 and must not read "0.00").
+ */
+function readoutDecimals(step: number): number {
+  if (step >= 1) return 0;
+  const frac = String(step).split('.')[1] ?? '';
+  return Math.min(6, Math.max(2, frac.length));
+}
+
 export function ParametersSection({ applicableParams, paramValues, explainMode, surfaceDef, setParam }: ParametersSectionProps) {
   return (
     <div className="space-y-3">
@@ -20,7 +31,7 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
         {applicableParams.map((p) => {
           const val = paramValues[p.name] ?? p.defaultValue;
           const normalized = (val - p.min) / (p.max - p.min || 1);
-          const display = val.toFixed(p.step < 1 ? 2 : 0);
+          const display = val.toFixed(readoutDecimals(p.step));
           // Screen readers otherwise hear a bare number with no scale or unit —
           // mirror what the visible min/max captions say under the track.
           const valueText = explainMode
