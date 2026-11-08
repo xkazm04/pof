@@ -215,8 +215,8 @@ export const Z_LAYERS: ZLayer[] = zLayers();
 
 export const LANGUAGES: LangExpansion[] = [
   { code: 'EN', label: 'English', expansion: 100, overflowWidgets: [] },
-  { code: 'DE', label: 'German', expansion: 135, overflowWidgets: ['AbilityTooltip', 'QuestDescription'] },
-  { code: 'FR', label: 'French', expansion: 125, overflowWidgets: ['AbilityTooltip'] },
+  { code: 'DE', label: 'German', expansion: 135, overflowWidgets: ['Tooltip', 'QuestTracker'] },
+  { code: 'FR', label: 'French', expansion: 125, overflowWidgets: ['Tooltip'] },
   { code: 'JA', label: 'Japanese', expansion: 90, overflowWidgets: [] },
   { code: 'ZH', label: 'Chinese', expansion: 85, overflowWidgets: [] },
 ];

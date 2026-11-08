@@ -5,7 +5,7 @@ import {
 } from '@/components/modules/core-engine/sub_ui/_shared/hudRegistry';
 import {
   Z_LAYERS, Z_DEPTH_LABELS, WIDGET_PLACEMENTS, WIDGET_Z_COLOR, HUD_OVERLAYS, FLOW_EDGES,
-  PERFORMANCE_BUDGETS, HUD_CONTEXTS,
+  PERFORMANCE_BUDGETS, HUD_CONTEXTS, LANGUAGES,
 } from '@/components/modules/core-engine/sub_ui/_shared/data';
 import { STATUS_ERROR } from '@/lib/chart-colors';
 
@@ -131,5 +131,14 @@ describe('projections', () => {
     for (const ctx of HUD_CONTEXTS) {
       for (const w of [...ctx.visible, ...ctx.hidden]) expect(ids.has(w), `${ctx.name}:${w}`).toBe(true);
     }
+  });
+});
+
+describe('localization overflow widgets (game-ui-hud)', () => {
+  it('every LANGUAGES overflow name is a canonical registry widget id', () => {
+    const names = [...new Set(LANGUAGES.flatMap(l => l.overflowWidgets))];
+    expect(names.length).toBeGreaterThan(0);
+    const unresolved = names.filter(n => resolveWidgetId(n) !== n);
+    expect(unresolved).toEqual([]);
   });
 });
