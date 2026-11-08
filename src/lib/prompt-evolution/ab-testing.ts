@@ -150,7 +150,9 @@ export function evaluateTestWithBasis(
     test: {
       ...test,
       status: 'concluded',
-      winnerId: decideWinner(test, reading),
+      // Ceiling reached below the weakest band is "no difference detected at this
+      // sample size" - recorded as such, never as a crowned coin flip.
+      winnerId: confidence >= 0.8 ? decideWinner(test, reading) : null,
       confidence,
       concludedAt: new Date().toISOString(),
     },

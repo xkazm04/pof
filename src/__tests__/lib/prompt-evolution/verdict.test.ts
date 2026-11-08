@@ -94,7 +94,7 @@ describe('readTestVerdict — the decide-now floor', () => {
 
 // ── [guard] auto-conclude is byte-identical ─────────────────────────────────
 
-/** Today's `evaluateTestWithBasis(test).test`, frozen verbatim as the reference. */
+/** Today's `evaluateTestWithBasis(test).test`, frozen as the reference (ceiling at band none: no winner). */
 function legacyEvaluate(test: ABTest, judged?: JudgeScores): ABTest {
   const reading = readFitness(test, judged);
   if (test.status !== 'running') return test;
@@ -109,7 +109,7 @@ function legacyEvaluate(test: ABTest, judged?: JudgeScores): ABTest {
   const confidence = zScore >= 1.96 ? 0.95 : zScore >= 1.65 ? 0.9 : zScore >= 1.28 ? 0.8 : zScore * 0.5;
   const totalTrials = trialsA + trialsB;
   if (!(confidence >= 0.8 || totalTrials >= test.minTrials * 4)) return test;
-  let winnerId: string;
+  let winnerId: string | null;
   if (Math.abs(rateA - rateB) < 0.05) {
     const avgA = test.variantATotalDurationMs / test.variantATrials;
     const avgB = test.variantBTotalDurationMs / test.variantBTrials;
@@ -117,6 +117,8 @@ function legacyEvaluate(test: ABTest, judged?: JudgeScores): ABTest {
   } else {
     winnerId = rateA > rateB ? test.variantAId : test.variantBId;
   }
+  // Ceiling reached below the weakest band: concluded with no winner.
+  if (confidence < 0.8) winnerId = null;
   return { ...test, status: 'concluded', winnerId, confidence, concludedAt: new Date().toISOString() };
 }
 
