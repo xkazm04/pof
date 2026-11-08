@@ -29,7 +29,7 @@ function priorityColor(p: CoachPriority, t: LabTheme): string {
  *
  * Unobtrusive by default: one slim row showing the single most-urgent move, with a
  * disclosure that expands the next few (up to `GLOBAL_COACH_TOP_N`) and, when more
- * blockers exist beyond that cut, a "show all N blockers" expansion — the list is
+ * candidates exist beyond that cut, a "show all N next steps" expansion — the list is
  * never silently truncated. Clicking any entry navigates through the existing
  * one-shot `pendingNavigation` mechanism (LayoutLab's store subscription drives
  * catalog + entity + the flagged `stepIndex`).
@@ -55,7 +55,9 @@ export function GlobalCoach({ t }: Props) {
   const [top, ...rest] = candidates;
   const failedNames = failedCatalogs.map((f) => f.label).join(', ');
   // Collapsed disclosure shows the rest of the top-N; everything past it is reachable
-  // through the explicit "show all blockers" control (so the cap is stated, not hidden).
+  // through the explicit "show all" control (so the cap is stated, not hidden). It counts NEXT
+  // STEPS, not blockers: most candidates are pending/deferred/unproduced, and "blocked" is the
+  // Matrix's word for a failed gate.
   const shown = showAll ? rest : rest.slice(0, GLOBAL_COACH_TOP_N - 1);
   const beyond = rest.length - shown.length;
   const moreCount = Math.min(rest.length, GLOBAL_COACH_TOP_N - 1);
@@ -158,7 +160,7 @@ export function GlobalCoach({ t }: Props) {
               >
                 {showAll
                   ? `Show top ${Math.min(candidates.length, GLOBAL_COACH_TOP_N)} only`
-                  : `Show all ${candidates.length} blockers (${beyond} more)`}
+                  : `Show all ${candidates.length} next steps (${beyond} more)`}
               </button>
             </li>
           )}

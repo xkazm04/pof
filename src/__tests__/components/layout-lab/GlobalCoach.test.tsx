@@ -65,7 +65,7 @@ describe('<GlobalCoach />', () => {
     expect(Array.from(items).map((n) => n.getAttribute('data-priority'))).toEqual(['drift', 'pending']);
   });
 
-  it('caps the expanded list at the top-N and offers a show-all-blockers expansion', () => {
+  it('caps the expanded list at the top-N and offers a show-all expansion', () => {
     // 9 candidates → top row + 4 in the disclosure (TOP_N = 5) + 4 behind "show all".
     coachMock.mockReturnValue(
       Array.from({ length: 9 }, (_, i) => cand({ entityId: `e${i}`, entityName: `E${i}`, priority: 'pending' })),
@@ -77,7 +77,10 @@ describe('<GlobalCoach />', () => {
     expect(shown()).toHaveLength(4); // rows 1..4 — the rest are behind the expansion
 
     const showAll = container.querySelector('[data-testid="global-coach-show-all"]') as HTMLElement;
-    expect(showAll.textContent).toContain('Show all 9 blockers');
+    // Nine PENDING candidates: none is a failed gate, so none is a blocker (the Matrix's
+    // own word for 'at least one failed gate'). The control counts next steps.
+    expect(showAll.textContent).toContain('Show all 9 next steps');
+    expect(showAll.textContent).not.toMatch(/blocker/i);
     expect(showAll.textContent).toContain('4 more');
 
     fireEvent.click(showAll);
