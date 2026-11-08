@@ -30,6 +30,21 @@ interface CanonState {
   undoAdopt: (ids: string[]) => Promise<void>;
   /** Why the last review act failed (e.g. 403 from requireOperator); null after a success. */
   reviewError: string | null;
+  /** The profile `reviewError` happened on (looked up from the acted ids), so only that profile's review shows it; null = unattributable, shown everywhere. */
+  reviewErrorProfile: string | null;
+}
+
+/** The profile a review act ran on: the profile of the first acted id in the drift read, else null. */
+function profileOfIds(drift: CanonDrift | null, ids: string[]): string | null {
+  if (!drift) return null;
+  for (const id of ids) {
+    const adopted = drift.adopted.find((a) => a.id === id);
+    if (adopted) return adopted.profile;
+    for (const [profile, byVerdict] of Object.entries(drift.byProfile)) {
+      if (Object.values(byVerdict).some((fs) => fs?.some((f) => f.id === id))) return profile;
+    }
+  }
+  return null;
 }
 
 const postIds = (action: string, ids: string[]) => tryApiFetch(`/api/project-rules?action=${action}`, {
@@ -40,8 +55,9 @@ const postIds = (action: string, ids: string[]) => tryApiFetch(`/api/project-rul
  *  (and injectable) offline; hydrate() replaces it from the server when reachable. */
 export const useCanonStore = create<CanonState>((set, get) => {
   const review = (action: string) => async (ids: string[]) => {
+    const profile = profileOfIds(get().drift, ids);
     const r = await postIds(action, ids);
-    set({ reviewError: r.ok ? null : `${action} failed: ${r.error}` });
+    set({ reviewError: r.ok ? null : `${action} failed: ${r.error}`, reviewErrorProfile: r.ok ? null : profile });
     await Promise.all([get().hydrate(), get().loadDrift()]);
   };
   return {
@@ -70,6 +86,7 @@ export const useCanonStore = create<CanonState>((set, get) => {
     },
     drift: null,
     reviewError: null,
+    reviewErrorProfile: null,
     loadDrift: async () => {
       const r = await tryApiFetch<CanonDrift>('/api/project-rules?view=drift');
       if (r.ok) set({ drift: r.data });
