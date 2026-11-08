@@ -154,6 +154,16 @@ export async function POST(request: NextRequest) {
       shapeRoute = linearPropOverridden(promptRoute);
     }
 
+    // One table, one refusal vocabulary. A miss (no runner, or a mode the runner cannot
+    // serve — e.g. multiview on the single-image local providers, which would otherwise
+    // mesh only the front view and report a multiview run that never happened) refuses
+    // with the same sentence the forge button shows. Ahead of the Tier-0 gate on purpose:
+    // that gate is a paid vision call, and a submit no runner can start must not buy one.
+    const dispatch = runnerDispatchFor(providerId);
+    if (!dispatch || !dispatch.modes.includes(mode as RunnerMode)) {
+      return apiError(runnerRefusal(providerId, mode), 400);
+    }
+
     /**
      * Tier-0 INPUT gate — the symmetric twin of the Tier-1 mesh critique, and the ONE
      * place the input-gate lib's "a bad input caught here saves the generation credits"
@@ -186,14 +196,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // One table, one refusal vocabulary. A miss (no runner, or a mode the runner cannot
-    // serve — e.g. multiview on the single-image local providers, which would otherwise
-    // mesh only the front view and report a multiview run that never happened) refuses
-    // with the same sentence the forge button shows.
-    const dispatch = runnerDispatchFor(providerId);
-    if (!dispatch || !dispatch.modes.includes(mode as RunnerMode)) {
-      return apiError(runnerRefusal(providerId, mode), 400);
-    }
     // The craft pack is composed here, after shape routing saw the RAW prompt, so the runner still
     // receives one prompt string. No pack for the class (or no prompt) leaves the prompt untouched.
     const sentPrompt = mode === 'text-to-3d' && prompt?.trim()
