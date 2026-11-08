@@ -61,3 +61,5 @@ signal in the file.
   `node scripts/gen-pipeline-registry.mjs`, and `rmdir` the junction BEFORE `git worktree remove`)
   instead of classifying it by hand. Also: every builder merged test+build into one commit because
   a red test-only commit would break the tree's suite; that is the norm here, not a deviation.
+- 2026-11-08 — **`vitest --changed` per wave misses repo-wide source-scan guards.** Across 29 waves it stayed green while `no-sub-budget-test-timeouts` (8 new timeouts), `ue-damage-execution` (a comment matching a raw scan) and pof-mcp's harness parity test went red; only the closing full suite and `tools/pof-mcp` gate saw them. Run `src/__tests__/infra` and the pof-mcp gate at every integration.
+- 2026-11-08 — **A shared checkout's `.git/index.lock` makes pathspec commits fail silently** when output is discarded, and the next commit can sweep the staged files (seen 3 times). Round agents must assert the commit's exit code and read `git show --stat HEAD`; ban `--amend` outright, since HEAD may be a sibling's by then.
