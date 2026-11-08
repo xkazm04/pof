@@ -125,6 +125,12 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
             startedAt: taskStartRef.current,
             promptVariantId: lastVariantIdRef.current,
           });
+          // The context belongs to THAT dispatch. A later run in this session the
+          // hook did not dispatch (a follow-up typed in the terminal, an Activity
+          // feed prompt routed into the tab) must not be recorded again under the
+          // old prompt and an inflated duration from the old start.
+          lastPromptRef.current = '';
+          taskStartRef.current = '';
         }
 
         onCompleteRef.current?.(success, callbackStatus);
