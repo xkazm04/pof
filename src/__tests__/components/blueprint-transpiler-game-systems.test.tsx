@@ -265,3 +265,14 @@ describe('status hues use the STATUS_* tokens, not raw palette classes', () => {
     expect(hits).toEqual([]);
   });
 });
+
+describe('ChangeCard - the conflict level is a glyph with a name, not a hue-only dot', () => {
+  it('exposes the conflict label per card', () => {
+    const { container } = render(<ChangeCard change={change({ conflictLevel: 'conflict' })} />);
+    const mark = container.querySelector('svg[role="img"]');
+    expect(mark?.getAttribute('aria-label')).toBe('Conflicts Detected');
+    cleanup();
+    const again = render(<ChangeCard change={change({ conflictLevel: 'compatible' })} />);
+    expect(again.container.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toBe('Compatible Changes');
+  });
+});
