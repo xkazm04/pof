@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { getDb } from '@/lib/db';
 import { parseVisionImage } from '@/lib/visual-gen/input-gate';
 import { getActiveStyleDna, listStyleDna, setActiveStyleDna } from '@/lib/visual-gen/style-dna-db';
@@ -24,16 +25,19 @@ import { startStyleDnaJob } from '@/lib/visual-gen/style-dna-job-store';
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { images?: string[]; name?: string };
-    if (!body.images?.length) return apiError('Missing required field: images (data URLs)', 400);
-    const parsed = body.images.map(parseVisionImage);
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+    const { images, name } = body;
+    if (!Array.isArray(images) || images.length === 0) return apiError('Missing required field: images (data URLs)', 400);
+    if (name !== undefined && typeof name !== 'string') return apiError('name must be a string', 400);
+    const parsed = images.map((image: unknown) => (typeof image === 'string' ? parseVisionImage(image) : null));
     if (parsed.some((p) => p === null)) return apiError('every image must be a base64 image data URL', 400);
 
     // Validation happens BEFORE the job starts, so a typo comes back as a 400 the caller can
     // act on rather than as a job that fails a minute later.
     const jobId = startStyleDnaJob({
       images: parsed.map((p) => p!),
-      ...(body.name?.trim() ? { name: body.name.trim() } : {}),
+      ...(name?.trim() ? { name: name.trim() } : {}),
     });
     return apiSuccess({ jobId, images: parsed.length }, 202);
   } catch (e) {
@@ -52,8 +56,9 @@ export async function GET() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body = (await request.json()) as { id?: string };
-    if (!body.id) return apiError('Missing required field: id', 400);
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+    if (typeof body.id !== 'string' || !body.id) return apiError('Missing required field: id', 400);
     if (!setActiveStyleDna(getDb(), body.id)) return apiError(`no style-dna profile with id ${body.id}`, 404);
     return apiSuccess({ active: getActiveStyleDna(getDb()) });
   } catch (e) {
