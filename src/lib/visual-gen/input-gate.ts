@@ -50,6 +50,10 @@ export interface GateReply {
 export function parseGateReply(text: string): GateReply {
   const score = text.match(/SCORE=\s*(\d+)/);
   if (!score) return { ok: false, error: 'no SCORE marker in the vision reply' };
+  // The protocol is 0-10. A grader answering on another scale (SCORE=40 meaning 40/100) is
+  // outside its own schema: read as-is it clears passAt and sends a rejected image to a paid
+  // generation, so it is unparseable (gate unavailable), never a verdict.
+  if (Number(score[1]) > 10) return { ok: false, error: `SCORE=${score[1]} is outside the 0-10 protocol` };
   const defectsRaw = text.match(/DEFECTS=\s*([^;\n]+)/)?.[1]?.trim() ?? '';
   const defects = /^(none|n\/a|-)?$/i.test(defectsRaw)
     ? []
