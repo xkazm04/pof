@@ -47,7 +47,11 @@ export function DeriveMapsButton() {
         <p className="text-2xs text-text-muted">Load an albedo to derive a normal and roughness map from it, free.</p>
       )}
       {error && <TileError error={error} onRetry={handleClick} testId="derive-maps-error" />}
-      {outcome && <DeriveReport outcome={outcome} />}
+      {/* Always mounted: a live region announces only what changes inside it
+          after it is in the tree, so a report that mounts its own region is silent. */}
+      <div role="status" aria-live="polite">
+        {outcome && <DeriveReport outcome={outcome} />}
+      </div>
     </div>
   );
 }
