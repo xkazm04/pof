@@ -115,6 +115,18 @@ describe('Combat lab', () => {
     await waitFor(() => expect(fn.mock.calls.some(([u]) => String(u).endsWith('combat-lab?source=gunplay'))).toBe(true));
   });
 
+  it('a switch to a failing source shows no tables of the previous source, and keeps the picker', async () => {
+    stubFetch((url) => (url.endsWith('source=gunplay') ? { success: false, error: 'lane down' } : { success: true, data: read() }));
+    room();
+    const sel = (await screen.findByTestId('combat-source')) as HTMLSelectElement;
+    await screen.findByTestId('combat-grid-weapons');
+    fireEvent.change(sel, { target: { value: 'gunplay' } });
+    await screen.findByText(/combat lab unavailable \(lane down\)/);
+    expect(screen.queryByTestId('combat-grid-weapons')).toBeNull();
+    expect(screen.queryByText(/Showing the last read/)).toBeNull();
+    expect(screen.getByTestId('combat-source')).toBeTruthy();
+  });
+
   it('shows an unconfigured game, a failed read, and rejects a malformed response', async () => {
     stubFetch(() => ({ success: true, data: read({ configured: false, reason: 'x declares no combat lab', tables: [] }) }));
     room();

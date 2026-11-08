@@ -40,6 +40,8 @@ export function CanonView({ t }: { t: LabTheme }) {
   const remove = useCanonStore((s) => s.remove);
   const drift = useCanonStore((s) => s.drift);
   const loadDrift = useCanonStore((s) => s.loadDrift);
+  const hydrate = useCanonStore((s) => s.hydrate);
+  const hydrateError = useCanonStore((s) => s.hydrateError);
   const [reviewOpen, setReviewOpen] = useState(false);
   useEffect(() => { void loadDrift(); }, [loadDrift]);
   // The active game decides the profile the view opens on (its authoring profile; PoF → `pof`, as
@@ -103,6 +105,15 @@ export function CanonView({ t }: { t: LabTheme }) {
           ariaLabel="Canon profile"
           className="mb-7"
         />
+
+        {hydrateError && (
+          <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: `1px solid ${t.bad}`, borderRadius: t.glass ? 10 : 0, padding: '10px 14px', marginBottom: 16 }}>
+            <span className={t.fontMono} style={{ fontSize: 14, color: t.bad, flex: 1, minWidth: 220 }}>
+              {`The canon database could not be read (${hydrateError}); these are the shipped seed laws, not what produce prompts carry.`}
+            </span>
+            <LabButton t={t} onClick={() => { void hydrate(); }}>Retry</LabButton>
+          </div>
+        )}
 
         {GAMES[activeGame]?.designDir && <CanonIntakePanel key={activeGame} t={t} gameId={activeGame} />}
 

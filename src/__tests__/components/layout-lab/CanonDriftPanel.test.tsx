@@ -76,3 +76,22 @@ describe('CanonDriftPanel', () => {
     expect(screen.getByText('shipped text of d1-a')).toBeTruthy();
   });
 });
+
+describe('CanonDriftPanel review error scope', () => {
+  it('a failed adopt on one profile is not shown in another profile panel', async () => {
+    const other = (id: string): CanonFinding => ({ ...finding(id, 'unrecorded'), profile: 'pof' });
+    useCanonStore.setState({
+      drift: { total: 3, adopted: [], byProfile: { diablo1: { unrecorded: [finding('d1-a', 'unrecorded')] }, pof: { unrecorded: [other('p-a')] } } },
+      adopt: useCanonStore.getInitialState().adopt, hydrate: vi.fn(async () => {}), reviewError: null, reviewErrorProfile: null,
+    });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: false, error: 'forbidden' }), { status: 403, headers: { 'Content-Type': 'application/json' } })));
+    await useCanonStore.getState().adopt(['d1-a']);
+    vi.unstubAllGlobals();
+    const a = render(<CanonDriftPanel t={LIGHT} profileId="diablo1" />);
+    expect(a.container.querySelector('[role="alert"]')?.textContent).toContain('forbidden');
+    cleanup();
+    const b = render(<CanonDriftPanel t={LIGHT} profileId="pof" />);
+    expect(b.container.querySelector('[role="alert"]')).toBeNull();
+    useCanonStore.setState({ reviewError: null, reviewErrorProfile: null });
+  });
+});

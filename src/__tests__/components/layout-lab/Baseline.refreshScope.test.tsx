@@ -70,3 +70,18 @@ describe('Baseline — a refresh report belongs to the entity it ran on', () => 
     expect(screen.getByTestId('refresh-outcome').textContent).toMatch(/1 kept/);
   });
 });
+
+describe('Baseline — a refresh in flight belongs to the entity it ran on', () => {
+  it('leaves the refresh button enabled on item-2 while item-1 is in flight', async () => {
+    const { rerender } = render(view('item-1'));
+    let answer!: (v: unknown) => void;
+    fetchArtifactsResult.mockImplementationOnce(() => new Promise((r) => { answer = r; }));
+    fireEvent.click(screen.getByTestId('refresh-from-server'));
+    await waitFor(() => expect(answer).toBeTypeOf('function'));
+    expect((screen.getByTestId('refresh-from-server') as HTMLButtonElement).disabled).toBe(true);
+
+    rerender(view('item-2'));
+    expect((screen.getByTestId('refresh-from-server') as HTMLButtonElement).disabled).toBe(false);
+    await act(async () => { answer({ ok: true, data: [] }); });
+  });
+});
