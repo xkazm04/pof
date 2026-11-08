@@ -4,10 +4,14 @@ import { GenerativeStepFrame } from './GenerativeStepFrame';
 import { GeneratedAssetCaption, AssetTarget } from './shared/assetHonesty';
 import { iconCandidates, meshCandidates, materialCandidates } from './shared/itemGenCandidates';
 import { itemPaths } from './itemsSteps';
+import { REQUIRED_PBR_MAPS } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
 import { iconTierFor, itemRarity } from '@/lib/catalog/itemAssetPaths';
 import type { GenCandidate } from './shared/genHistory';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
+
+/** Maps a look may declare beyond the required set; shown unmarked. */
+const OPTIONAL_PBR_MAPS = ['Height'] as const;
 
 /**
  * The three generative Items steps ride the shared {@link GenerativeStepFrame}, which wraps
@@ -145,15 +149,16 @@ export function ItemMaterial({ t, entity, step }: StepProps) {
           { label: 'Texture maps declared', node: (
             <div style={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8 }}>
-                {['Albedo', 'Normal', 'ORM', 'Height'].map((name) => {
+                {[...REQUIRED_PBR_MAPS, ...OPTIONAL_PBR_MAPS.filter((n) => !(REQUIRED_PBR_MAPS as readonly string[]).includes(n))].map((name) => {
                   const on = maps.includes(name);
+                  const required = (REQUIRED_PBR_MAPS as readonly string[]).includes(name);
                   return (
                     <div key={name} className={t.fontMono} style={{
                       display: 'flex', alignItems: 'center', gap: 8, fontSize: 14,
                       padding: '8px 10px', borderRadius: t.glass ? 8 : 2,
                       border: `1px solid ${t.line}`, color: on ? t.text : t.muted,
                     }}>
-                      <span style={{ color: on ? t.ok : t.muted }}>{on ? '✓' : '·'}</span>{name}
+                      <span style={{ color: on ? t.ok : t.muted }}>{on ? '✓' : '·'}</span>{name}{required ? ' (required)' : ''}
                     </div>
                   );
                 })}
