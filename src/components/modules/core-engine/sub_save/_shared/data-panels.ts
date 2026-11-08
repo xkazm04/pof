@@ -89,12 +89,12 @@ export const AUTO_SAVE_TRIGGERS: AutoSaveTrigger[] = [
   { id: 'boss', label: 'Boss Kill', enabled: true, description: 'Save after defeating a boss' },
   { id: 'quest', label: 'Quest Complete', enabled: true, description: 'Save on quest completion' },
   { id: 'timer', label: 'Timer Interval', enabled: true, description: 'Periodic auto-save on timer' },
-  { id: 'levelup', label: 'Level Up', enabled: false, description: 'Save on character level up' },
+  { id: 'levelup', label: 'Level Up', enabled: true, description: 'Save on character level up' },
   { id: 'merchant', label: 'Merchant Close', enabled: false, description: 'Save after closing merchant UI' },
 ];
 
 export const AUTO_SAVE_CONFIG = {
-  intervalSeconds: 120, maxAutoSaves: 5,
+  intervalSeconds: 120, maxAutoSaves: 1,
   combatSaveEnabled: false, compressionEnabled: true,
 };
 

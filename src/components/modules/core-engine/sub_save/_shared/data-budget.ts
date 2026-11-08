@@ -1,7 +1,8 @@
 import {
   MODULE_COLORS,
-  ACCENT_CYAN, ACCENT_EMERALD, STATUS_SUBDUED,
+  ACCENT_CYAN, STATUS_SUBDUED,
 } from '@/lib/chart-colors';
+import { SAVE_SCHEMA_VERSION } from '@/lib/save-schema/fields';
 import type { DiffEntry } from '@/types/unique-tab-improvements';
 
 /* ── Budget Alerting ─────────────────────────────────────────────────────── */
@@ -11,22 +12,23 @@ export interface SectionBudget {
 }
 
 export const SECTION_BUDGETS: SectionBudget[] = [
-  { sectionLabel: 'InventoryItems', budgetBytes: 204800, color: MODULE_COLORS.content },
-  { sectionLabel: 'PlayerProgression', budgetBytes: 65536, color: ACCENT_CYAN },
-  { sectionLabel: 'WorldState', budgetBytes: 51200, color: MODULE_COLORS.systems },
-  { sectionLabel: 'Settings', budgetBytes: 16384, color: ACCENT_EMERALD },
-  { sectionLabel: 'Metadata', budgetBytes: 8192, color: STATUS_SUBDUED },
+  { sectionLabel: 'character', budgetBytes: 65536, color: MODULE_COLORS.content },
+  { sectionLabel: 'inventory', budgetBytes: 204800, color: ACCENT_CYAN },
+  { sectionLabel: 'world', budgetBytes: 51200, color: MODULE_COLORS.systems },
+  { sectionLabel: 'meta', budgetBytes: 8192, color: STATUS_SUBDUED },
 ];
 
 export interface GrowthSnapshot {
   version: string; sectionBytes: Record<string, number>;
 }
 
+/**
+ * One entry per generation in SCHEMA_VERSIONS (the schema has shipped once).
+ * A SAVE_SCHEMA_VERSION bump adds the next snapshot; until two exist there is
+ * no trend and no projection.
+ */
 export const GROWTH_HISTORY: GrowthSnapshot[] = [
-  { version: 'V1.0', sectionBytes: { InventoryItems: 32768, PlayerProgression: 16384, WorldState: 0, Settings: 6144, Metadata: 2048 } },
-  { version: 'V1.1', sectionBytes: { InventoryItems: 65536, PlayerProgression: 24576, WorldState: 0, Settings: 6144, Metadata: 3072 } },
-  { version: 'V1.2', sectionBytes: { InventoryItems: 98304, PlayerProgression: 32768, WorldState: 16384, Settings: 8192, Metadata: 4096 } },
-  { version: 'V2.0', sectionBytes: { InventoryItems: 131072, PlayerProgression: 46080, WorldState: 32768, Settings: 8192, Metadata: 4096 } },
+  { version: `V${SAVE_SCHEMA_VERSION}.0`, sectionBytes: { character: 2096, inventory: 131588, world: 13888, meta: 16 } },
 ];
 
 export function getBudgetStatus(current: number, budget: number): 'ok' | 'amber' | 'red' {
