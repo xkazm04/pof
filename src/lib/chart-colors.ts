@@ -309,13 +309,18 @@ export const HEATMAP_STEP_5 = '#065f46';
 
 const HEATMAP_STOPS = [HEATMAP_STEP_1, HEATMAP_STEP_2, HEATMAP_STEP_3, HEATMAP_STEP_4, HEATMAP_STEP_5];
 
+/** Clamp to 0..1, reading NaN as 0 (`Math.min`/`Math.max` pass NaN straight through). */
+function clamp01(t: number): number {
+  return Number.isNaN(t) ? 0 : Math.max(0, Math.min(1, t));
+}
+
 /**
  * Linearly interpolate between two `#rrggbb` hex colors (`t` clamped to 0..1).
  * Single source of the channel-mixing math for every gradient/heatmap helper —
  * use instead of hand-rolling `parseInt(hex.slice(...))` color lerps in views.
  */
 export function lerpHexColor(from: string, to: string, t: number): string {
-  const c = Math.max(0, Math.min(1, t));
+  const c = clamp01(t);
   const channel = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
   const mix = (i: number) => Math.round(channel(from, i) + (channel(to, i) - channel(from, i)) * c);
   const hex = (n: number) => n.toString(16).padStart(2, '0');
@@ -327,13 +332,13 @@ export function lerpHexColor(from: string, to: string, t: number): string {
  * `t` (0..1) maps low→mid, the upper half mid→high.
  */
 function lerp3Hex(t: number, low: string, mid: string, high: string): string {
-  const c = Math.max(0, Math.min(1, t));
+  const c = clamp01(t);
   return c < 0.5 ? lerpHexColor(low, mid, c / 0.5) : lerpHexColor(mid, high, (c - 0.5) / 0.5);
 }
 
 /** Interpolate a 0-1 value to a 5-stop heatmap color. */
 export function heatmapScale(t: number): string {
-  const clamped = Math.max(0, Math.min(1, t));
+  const clamped = clamp01(t);
   if (clamped <= 0) return HEATMAP_STOPS[0];
   if (clamped >= 1) return HEATMAP_STOPS[4];
   const segment = clamped * 4;
