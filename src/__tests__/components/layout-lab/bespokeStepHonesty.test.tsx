@@ -96,6 +96,19 @@ describe('bespoke Items steps ride the fleet honesty rails', () => {
     }
   });
 
+  it('every bespoke-OWNED step offers previous versions under its raw artifact (static and generative frames)', () => {
+    const owned = ITEM_STEP_NAMES.filter((s) => itemsLabelOwner(s) === 'bespoke');
+    seedAll();
+    let withHistory = 0;
+    for (const step of owned) {
+      const Step = getStepComponent('items', step)!;
+      const { unmount } = render(<Step t={t} entity={entity} step={step} />);
+      if (screen.queryByTestId('step-history-toggle')) withHistory += 1;
+      unmount();
+    }
+    expect(withHistory).toBe(owned.length);
+  });
+
   it('the raw-artifact disclosure shows exactly what the step stored', () => {
     seedAll();
     const Step = getStepComponent('items', 'Attributes')!;

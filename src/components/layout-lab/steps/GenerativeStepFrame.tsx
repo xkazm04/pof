@@ -5,6 +5,7 @@ import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
+import { StepHistoryPanel } from './shared/StepHistoryPanel';
 import { PanelCrashBoundary } from '../StepCrashBoundary';
 import { selectedCandidate, selectionSource, type GenCandidate, type GenHistory } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
@@ -120,7 +121,11 @@ export function GenerativeStepFrame({
             onComplete={(ctx) => run(ctx?.direction, ctx?.prompt)} />
         ) },
         { label: 'Raw artifact', node: (
-          <RawArtifactDisclosure t={t} data={art?.data ?? {}} ueAssets={art?.ueAssets} verdict={art} />
+          <>
+            <RawArtifactDisclosure t={t} data={art?.data ?? {}} ueAssets={art?.ueAssets} verdict={art} />
+            {/* Prior versions a re-produce superseded; loaded on demand, as in ArchetypeStep. */}
+            <StepHistoryPanel t={t} catalogId="items" entityId={entity.id} step={step} />
+          </>
         ) },
       ]} />
   );

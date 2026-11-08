@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from 'react';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
+import { StepHistoryPanel } from './shared/StepHistoryPanel';
 import { useStepAcceptance } from './shared/useStepAcceptance';
 import { withItemFixCopy } from './shared/itemFixCopy';
 import { useStaticStep } from './useStaticStep';
@@ -96,7 +97,11 @@ export function StaticStepFrame({ t, entity, step, panels }: {
       panels={[
         ...panels({ art, runProduce, liveEligible, live, stepPrompt }),
         { label: 'Raw artifact', node: (
-          <RawArtifactDisclosure t={t} data={art?.data ?? {}} ueAssets={art?.ueAssets} verdict={art} />
+          <>
+            <RawArtifactDisclosure t={t} data={art?.data ?? {}} ueAssets={art?.ueAssets} verdict={art} />
+            {/* Prior versions a re-produce superseded; loaded on demand, as in ArchetypeStep. */}
+            <StepHistoryPanel t={t} catalogId="items" entityId={entity.id} step={step} />
+          </>
         ) },
       ]} />
   );
