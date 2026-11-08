@@ -5,6 +5,11 @@ import { AFFIX_DEFS } from '../../_shared/data';
 import type { AffixDef } from '../../_shared/data';
 import { CATEGORY_COLORS, REEL_STOP_MS, REEL_CYCLE_MS } from './constants';
 
+/** The single godroll rule: all three slots land a tier-3 affix. Drives both the odds line and the win cue. */
+export const GODROLL_TIER = 3;
+export const isGodroll = (picks: AffixDef[]): boolean =>
+  picks.length === 3 && picks.every(p => p.tier === GODROLL_TIER);
+
 export function useAffixRollSimulator() {
   // reelText is what each slot shows: '?' before a spin, a fast-cycling random
   // affix name while spinning, then the resolved pick once that reel lands.
@@ -50,13 +55,13 @@ export function useAffixRollSimulator() {
   );
 
   // Godroll odds, computed from the SAME weighted distribution spinAffixes rolls (not a
-  // uniform 1/N): probability that all 3 slots land the rarest (lowest-weight) affix.
+  // uniform 1/N) and the SAME rule as the win cue (isGodroll): all 3 slots land a tier-3 affix.
   const godrollPct = useMemo(() => {
     if (activePool.length === 0) return 0;
     const total = activePool.reduce((s, a) => s + a.weight, 0);
     if (total <= 0) return 0;
-    const minWeight = activePool.reduce((m, a) => Math.min(m, a.weight), Infinity);
-    return Math.pow(minWeight / total, 3) * 100;
+    const tierWeight = activePool.reduce((s, a) => (a.tier === GODROLL_TIER ? s + a.weight : s), 0);
+    return Math.pow(tierWeight / total, 3) * 100;
   }, [activePool]);
 
   const spinAffixes = useCallback(() => {
@@ -77,6 +82,7 @@ export function useAffixRollSimulator() {
       picks.push(chosen);
     }
     const names = picks.map(p => p.name);
+    const godroll = isGodroll(picks);
 
     const commit = () => {
       setAffixSpinning(false);
@@ -92,7 +98,7 @@ export function useAffixRollSimulator() {
     if (prefersReducedMotion) {
       setReelText(names);
       setSpinningSlots([false, false, false]);
-      setWinSlots(picks.map(p => p.tier === 3));
+      setWinSlots(picks.map(() => godroll));
       commit();
       return;
     }
@@ -113,13 +119,13 @@ export function useAffixRollSimulator() {
     }, REEL_CYCLE_MS);
 
     // Stagger the stops left-to-right; each reel settles onto its pick, and a
-    // tier-3 (godroll) landing flags the slot for the scale-pop + glow win cue.
+    // godroll (all three slots tier 3) flags every slot for the scale-pop + glow win cue.
     REEL_STOP_MS.forEach((ms, i) => {
       const handle = setTimeout(() => {
         stillSpinning[i] = false;
         setReelText((prev) => { const n = [...prev]; n[i] = names[i]; return n; });
         setSpinningSlots((prev) => { const n = [...prev]; n[i] = false; return n; });
-        if (picks[i].tier === 3) {
+        if (godroll) {
           setWinSlots((prev) => { const n = [...prev]; n[i] = true; return n; });
         }
         if (i === REEL_STOP_MS.length - 1) {
