@@ -433,7 +433,7 @@ export function buildEvalPrompt(params: EvalPromptParams): string {
 
   const passLabel = PASS_LABELS[pass];
 
-  return `You are evaluating the "${moduleId}" module of UE5 project "${projectName}".
+  return `You are evaluating the "${moduleId}" module of UE5 project "${projectName || moduleName}".
 
 ## Focus Area
 ${focus}
