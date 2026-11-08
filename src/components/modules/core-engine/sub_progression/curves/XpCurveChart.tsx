@@ -95,6 +95,9 @@ export function XpCurveChart({
             </filter>
           </defs>
 
+          {/* The paths are authored in 0..100 chart space, so they need this viewBox to span
+              the plot; the dots stay outside it, placed in %, so they remain round. */}
+          <svg className="overflow-visible" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
           {/* Filled area: fades in once, then morphs its `d` with the params. */}
           <motion.path
             initial={{ opacity: 0 }}
@@ -118,6 +121,8 @@ export function XpCurveChart({
             vectorEffect="non-scaling-stroke"
             style={{ filter: `url(#${filterId})` }}
           />
+
+          </svg>
 
           {data.map((d, i) => {
             const x = pointX(i, data.length);

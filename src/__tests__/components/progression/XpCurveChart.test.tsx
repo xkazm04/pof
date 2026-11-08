@@ -146,3 +146,21 @@ describe('XpCurveChart', () => {
     expect(container.querySelector('circle[data-animate]')).toBeNull();
   });
 });
+
+describe('XpCurveChart geometry', () => {
+  it('draws the curve in a 0..100 viewBox so it spans the plot like the % placed dots', () => {
+    motionState.reduced = false;
+    const { data, maxXp } = sampleData();
+    const { container } = render(<XpCurveChart data={data} maxXp={maxXp} />);
+    const paths = Array.from(container.querySelectorAll('path[data-animate]'));
+    expect(paths.length).toBe(2);
+    for (const path of paths) {
+      const svg = path.closest('svg');
+      expect(svg?.getAttribute('viewBox')).toBe('0 0 100 100');
+      expect(svg?.getAttribute('preserveAspectRatio')).toBe('none');
+    }
+    // The dots are placed in %, and a stretched viewBox would turn them into ovals.
+    const dot = container.querySelector('circle[data-animate]');
+    expect(dot?.closest('svg')?.getAttribute('viewBox')).toBeNull();
+  });
+});
