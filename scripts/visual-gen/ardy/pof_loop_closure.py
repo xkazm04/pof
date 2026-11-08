@@ -30,6 +30,15 @@ def root_relative(joints: np.ndarray, root: np.ndarray) -> np.ndarray:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a piped Windows stdout is cp1252
+    try:
+        return measure()
+    except Exception as e:  # noqa: BLE001 - the parser takes the cause from this marker
+        print(f"POF_LOOP_ERROR=could not measure: {e!r}")
+        return 2
+
+
+def measure() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("npz")
     ap.add_argument("--joints-key", default="posed_joints")
