@@ -61,7 +61,7 @@ export function CSVImportPanel({ onImport, isImporting }: {
         </div>
       )}
       <p className="text-2xs text-text-muted/60">
-        Paste or upload a UE5 stat dump CSV (stat dumpframe, Unreal Insights CSV export)
+        Choose a UE5 stat dump CSV or .txt file (stat dumpframe, Unreal Insights CSV export)
       </p>
     </SurfaceCard>
   );
