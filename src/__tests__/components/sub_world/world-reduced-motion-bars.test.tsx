@@ -11,7 +11,6 @@ vi.mock('framer-motion', async (importOriginal) => {
 import { DensityLevelGroup } from '@/components/modules/core-engine/sub_world/density/DensityLevelGroup';
 import { PlaytimeBreakdownTable } from '@/components/modules/core-engine/sub_world/playtime/PlaytimeBreakdownTable';
 import { ProgressionTimeline } from '@/components/modules/core-engine/sub_world/travel/ProgressionTimeline';
-import { ZoneMapCanvas } from '@/components/modules/core-engine/sub_world/map/MapCanvas';
 import { ZONES, STATIC_WORLD } from '@/components/modules/core-engine/sub_world/_shared/data';
 
 const widths = (c: HTMLElement) =>

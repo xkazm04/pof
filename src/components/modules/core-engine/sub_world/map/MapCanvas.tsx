@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useRef, useState } from 'react';
+import { memo, useId, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { motionSafe } from '@/lib/motion';
@@ -39,6 +39,11 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
   // freezes the scale for a motion-sensitive user but keeps the opacity fading,
   // which leaves a perpetually blinking ring — so gate the whole loop here.
   const prefersReduced = useReducedMotion();
+  /* Two canvases share the Map tab (world map + generator preview), so the SVG
+     defs need per-instance ids. */
+  const defsId = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const glowId = `zone-glow-${defsId}`;
+  const lineGradId = `zone-line-${defsId}`;
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
   /* Keyboard operability: the node list is a roving-tabindex listbox — Tab
@@ -83,11 +88,11 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
   return (
     <svg className="w-full h-full absolute inset-0 text-text cursor-crosshair">
       <defs>
-        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+        <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="3" result="blur" />
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
-        <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={lineGradId} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor={ACCENT} stopOpacity="0.8" />
           <stop offset="100%" stopColor={ACCENT} stopOpacity="0.1" />
         </linearGradient>
@@ -111,7 +116,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
               y1={`${zone.cy}%`}
               x2={`${target.cx}%`}
               y2={`${target.cy}%`}
-              stroke="url(#lineGrad)"
+              stroke={`url(#${lineGradId})`}
               strokeWidth="2"
               strokeDasharray="4 4"
               className={edgeInRange ? 'opacity-50' : 'opacity-15'}
@@ -174,7 +179,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
               stroke={isSelected ? color : 'transparent'}
               strokeWidth={1}
               className="opacity-50 group-hover:stroke-text-muted transition-colors duration-300"
-              style={{ filter: isSelected ? 'url(#glow)' : 'none' }}
+              style={{ filter: isSelected ? `url(#${glowId})` : 'none' }}
             />
 
             {/* Pulsing ring for active zone */}
@@ -232,7 +237,7 @@ function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZon
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
                 strokeDasharray={statusDash}
-                style={{ filter: hasFilter && inRange ? glowFilter : (zone.status !== 'locked' ? 'url(#glow)' : 'none') }}
+                style={{ filter: hasFilter && inRange ? glowFilter : (zone.status !== 'locked' ? `url(#${glowId})` : 'none') }}
               />
             )}
 
