@@ -202,9 +202,10 @@ export const useModuleStore = create<ModuleState>()(
       },
 
       setChecklistItem: (subModuleId, itemId, checked) => {
+        // Disk checks and the file watcher re-assert ticks; a no-op must not POST.
+        if (get().checklistProgress[subModuleId]?.[itemId] === checked) return;
         set((state) => {
           const moduleProgress = state.checklistProgress[subModuleId] ?? {};
-          if (moduleProgress[itemId] === checked) return state;
           return {
             checklistProgress: {
               ...state.checklistProgress,
