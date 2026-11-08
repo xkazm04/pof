@@ -150,7 +150,8 @@ export function useAffixWorkbench() {
   const [priced, setPriced] = useState<{ report: CraftGoalReport; affixes: CraftedAffix[]; base: ItemBase } | null>(null);
   const priceCurrentItem = useCallback(() => {
     const report = priceCraftGoal({
-      rarity: selectedBase.rarity, targetTags: craftedAffixes.map((a) => a.tag), start: [],
+      rarity: selectedBase.rarity, targetTags: craftedAffixes.map((a) => a.tag),
+      minMagnitude: Object.fromEntries(craftedAffixes.map((a) => [a.tag, a.magnitude])), start: [],
       wallet: defaultWallet(), runs: PRICE_RUNS, rng: createRNG(PRICE_SEED),
     });
     setPriced({ report, affixes: craftedAffixes, base: selectedBase });
