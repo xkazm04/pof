@@ -61,6 +61,7 @@ export function SceneExporter() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <select
+          aria-label="Export format"
           value={format}
           onChange={(e) => setFormat(e.target.value as 'fbx' | 'gltf')}
           className="bg-surface-tertiary border border-border rounded px-2 py-1 text-xs text-text"
@@ -70,6 +71,7 @@ export function SceneExporter() {
         </select>
         <input
           type="text"
+          aria-label="Output file path"
           value={outputPath}
           onChange={(e) => setOutputPath(e.target.value)}
           placeholder="Output file path..."
