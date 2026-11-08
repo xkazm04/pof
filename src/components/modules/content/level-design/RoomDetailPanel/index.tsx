@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import {
   FileCode, ChevronDown, ChevronRight, Zap,
 } from 'lucide-react';
@@ -34,6 +34,9 @@ export function RoomDetailPanel({
 }: RoomDetailPanelProps) {
   const [showSpawns, setShowSpawns] = useState(true);
   const [showFiles, setShowFiles] = useState(false);
+  // Every visible label is tied to its control - they used to be sibling text a
+  // screen reader never announced (8 anonymous controls in one room).
+  const fid = useId();
 
   const cfg = ROOM_TYPE_CONFIG[room.type];
   const Icon = cfg.icon;
@@ -87,8 +90,9 @@ export function RoomDetailPanel({
             <Icon className="w-6 h-6" style={{ color: cfg.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <label className="text-[11px] font-bold text-violet-400 block mb-0.5">Node Name</label>
+            <label htmlFor={`${fid}-name`} className="text-[11px] font-bold text-violet-400 block mb-0.5">Node Name</label>
             <input
+              id={`${fid}-name`}
               type="text"
               value={room.name}
               onChange={(e) => editText('name', e.target.value)}
@@ -137,8 +141,9 @@ export function RoomDetailPanel({
           <div className="bg-black/40 rounded-xl border border-violet-900/30 p-1 relative group">
             <div className="absolute -left-px top-4 bottom-4 w-[2px] bg-violet-500/30 group-focus-within:bg-violet-400 transition-colors" />
             <div className="px-3 pt-2 pb-1">
-              <label className="text-[11px] font-bold text-violet-400 block mb-1">Narrative Role</label>
+              <label htmlFor={`${fid}-description`} className="text-[11px] font-bold text-violet-400 block mb-1">Narrative Role</label>
               <textarea
+                id={`${fid}-description`}
                 value={room.description}
                 onChange={(e) => editText('description', e.target.value)}
                 onBlur={flush}
@@ -152,8 +157,9 @@ export function RoomDetailPanel({
           <div className="bg-black/40 rounded-xl border border-violet-900/30 p-1 relative group">
             <div className="absolute -left-px top-4 bottom-4 w-[2px] bg-amber-500/30 group-focus-within:bg-amber-400 transition-colors" />
             <div className="px-3 pt-2 pb-1">
-              <label className="text-[11px] font-bold text-amber-500/80 block mb-1">Encounter Design</label>
+              <label htmlFor={`${fid}-encounter`} className="text-[11px] font-bold text-amber-500/80 block mb-1">Encounter Design</label>
               <textarea
+                id={`${fid}-encounter`}
                 value={room.encounterDesign}
                 onChange={(e) => editText('encounterDesign', e.target.value)}
                 onBlur={flush}
@@ -168,8 +174,8 @@ export function RoomDetailPanel({
         {/* Difficulty + Pacing row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[11px] font-bold text-violet-400 block mb-2">Threat Level</label>
-            <div className="flex h-8 rounded-lg overflow-hidden border border-violet-900/40 bg-black/60">
+            <span id={`${fid}-threat`} className="text-[11px] font-bold text-violet-400 block mb-2">Threat Level</span>
+            <div role="group" aria-labelledby={`${fid}-threat`} className="flex h-8 rounded-lg overflow-hidden border border-violet-900/40 bg-black/60">
               {ALL_DIFFICULTIES.map((d) => {
                 const active = room.difficulty === d;
                 const dColor = DIFFICULTY_COLORS[d];
@@ -177,6 +183,7 @@ export function RoomDetailPanel({
                   <button
                     key={d}
                     onClick={() => updateField('difficulty', d)}
+                    aria-pressed={active}
                     className="flex-1 text-xs font-bold transition-all relative"
                     style={{
                       backgroundColor: active ? `${dColor}25` : 'transparent',
@@ -193,9 +200,10 @@ export function RoomDetailPanel({
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-violet-400 block mb-2">Pacing Curve</label>
+            <label htmlFor={`${fid}-pacing`} className="text-[11px] font-bold text-violet-400 block mb-2">Pacing Curve</label>
             <div className="relative h-8">
               <select
+                id={`${fid}-pacing`}
                 value={room.pacing}
                 onChange={(e) => updateField('pacing', e.target.value as PacingCurve)}
                 className="w-full h-full px-3 bg-black/60 border border-violet-900/40 rounded-lg text-xs font-mono text-violet-200 outline-none focus:border-violet-500 transition-colors appearance-none uppercase tracking-wider"

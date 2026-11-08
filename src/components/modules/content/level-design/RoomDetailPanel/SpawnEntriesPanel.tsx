@@ -46,7 +46,7 @@ export function SpawnEntriesPanel({
         <div className="p-3 space-y-2 relative">
           <div className="absolute left-4 top-4 bottom-4 w-px bg-violet-900/40" />
 
-          {spawnEntries.map((entry) => (
+          {spawnEntries.map((entry, i) => (
             <div
               key={entry.id}
               className="relative pl-6 flex items-center gap-2 group"
@@ -58,6 +58,7 @@ export function SpawnEntriesPanel({
                 <input
                   type="text"
                   value={entry.enemyClass}
+                  aria-label={`Spawn ${i + 1} enemy class`}
                   onChange={(e) => updateSpawn(entry.id, { enemyClass: e.target.value }, 'debounce')}
                   onBlur={onFlush}
                   className="bg-transparent text-xs text-violet-100 outline-none font-mono placeholder-violet-500/40 px-2 uppercase"
@@ -68,6 +69,7 @@ export function SpawnEntriesPanel({
                   <input
                     type="number"
                     value={entry.count}
+                    aria-label={`Spawn ${i + 1} count`}
                     onChange={(e) => updateSpawn(entry.id, { count: Number(e.target.value) }, 'debounce')}
                     onBlur={onFlush}
                     className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
@@ -79,6 +81,7 @@ export function SpawnEntriesPanel({
                   <input
                     type="number"
                     value={entry.wave}
+                    aria-label={`Spawn ${i + 1} wave`}
                     onChange={(e) => updateSpawn(entry.id, { wave: Number(e.target.value) }, 'debounce')}
                     onBlur={onFlush}
                     className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
@@ -88,9 +91,10 @@ export function SpawnEntriesPanel({
               </div>
               <button
                 onClick={() => removeSpawn(entry.id)}
+                aria-label={`Remove spawn ${i + 1} (${entry.enemyClass || 'no class'})`}
                 className="w-6 h-6 rounded flex items-center justify-center bg-black/60 border border-violet-900/30 text-violet-500 hover:text-red-400 hover:border-red-500/30 transition-colors flex-shrink-0"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3 h-3" aria-hidden="true" />
               </button>
             </div>
           ))}

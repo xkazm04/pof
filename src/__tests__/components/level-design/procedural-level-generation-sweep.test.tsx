@@ -96,3 +96,42 @@ describe('PacingReportPanel filters survive a doc edit', () => {
     expect(view.queryByText('No findings match the current filter.')).toBeNull();
   });
 });
+
+// ── Room detail: every control has an accessible name ──
+
+import { RoomDetailPanel } from '@/components/modules/content/level-design/RoomDetailPanel';
+
+/** Name sources a screen reader uses here: aria-label, aria-labelledby, <label for>, wrapping <label>, button text. */
+function hasName(el: Element, root: HTMLElement): boolean {
+  if (el.getAttribute('aria-label')?.trim()) return true;
+  const by = el.getAttribute('aria-labelledby');
+  if (by && by.split(' ').some((id) => root.ownerDocument.getElementById(id)?.textContent?.trim())) return true;
+  if (el.id && root.querySelector(`label[for="${el.id}"]`)?.textContent?.trim()) return true;
+  if (el.closest('label')?.textContent?.trim()) return true;
+  return el.tagName === 'BUTTON' && !!el.textContent?.trim();
+}
+
+describe('RoomDetailPanel controls are named', () => {
+  it('no input, textarea, select or button is anonymous', () => {
+    const room = pacingRoom('r1', {
+      name: 'Crypt', difficulty: 3,
+      spawnEntries: [{ id: 's1', enemyClass: 'BP_Skel', count: 3, spawnDelay: 0, wave: 1 }],
+    });
+    const { container } = render(
+      <RoomDetailPanel room={room} onUpdate={vi.fn()} onGenerateCode={vi.fn()} accentColor="var(--text)" isGenerating={false} />,
+    );
+    const controls = [...container.querySelectorAll('input, textarea, select, button')];
+    expect(controls.length).toBeGreaterThan(10);
+    const anonymous = controls.filter((el) => !hasName(el, container)).map((el) => el.outerHTML.slice(0, 60));
+    expect(anonymous).toEqual([]);
+  });
+
+  it('the threat-level buttons say which one is selected without colour', () => {
+    const room = pacingRoom('r1', { difficulty: 3 });
+    const { container } = render(
+      <RoomDetailPanel room={room} onUpdate={vi.fn()} onGenerateCode={vi.fn()} accentColor="var(--text)" isGenerating={false} />,
+    );
+    const pressed = [...container.querySelectorAll('button[aria-pressed="true"]')].map((b) => b.textContent?.trim());
+    expect(pressed).toContain('3');
+  });
+});
