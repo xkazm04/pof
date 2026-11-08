@@ -3,6 +3,8 @@ import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import '@/lib/catalog/gap-analysis/plugins'; // ensure registration side effects
 import { pluginFor } from '@/lib/catalog/gap-analysis/plugins';
+import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
+import { codeSeededEntities } from '@/lib/catalog/seed';
 
 describe('gap-analysis plugins', () => {
   it.each([
@@ -71,5 +73,24 @@ describe('gap-analysis plugin contract (derived from plugins/*.ts)', () => {
       expect(Math.abs(sum - 1)).toBeLessThanOrEqual(0.02);
       expect(Object.values(shares).every((v) => v > 0)).toBe(true);
     }
+  });
+});
+
+describe('plugin summarize never hands the proposal prompt an empty sample line', () => {
+  it('every code-seeded entity of a plugin catalog summarizes to non-empty text', () => {
+    const empty = CATALOG_SECTIONS.flatMap((sec) => {
+      const p = pluginFor(sec.catalogId);
+      if (!p) return [];
+      return codeSeededEntities(sec.catalogId).filter((e) => !p.summarize(e.data)).map((e) => `${sec.catalogId}/${e.id}`);
+    });
+    expect(empty).toEqual([]);
+  });
+
+  it('falls back to a bounded description when the declared fields are absent', () => {
+    const long = 'x'.repeat(200);
+    const out = pluginFor('quests')!.summarize({ description: long });
+    expect(out.length).toBeLessThanOrEqual(81);
+    expect(out.startsWith('xxx')).toBe(true);
+    expect(pluginFor('items')!.summarize({ rarity: 'Rare', description: 'ignored' })).toBe('Rare');
   });
 });
