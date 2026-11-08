@@ -106,12 +106,16 @@ function currentHash(value: unknown): string | null {
   return out;
 }
 
-const recomputed = new WeakMap<object, WalkSummary>();
-/** One walk of the CURRENT graph per graph object, however many renders / graders read it. */
+const recomputed = new WeakMap<object, Map<number, WalkSummary>>();
+/** One walk of the CURRENT graph per (graph object, seed), however many renders / graders read it. */
 function currentWalk(value: unknown, graph: StoryGraph, seed: number): WalkSummary {
-  if (value !== null && typeof value === 'object' && recomputed.has(value)) return recomputed.get(value)!;
+  const bySeed = value !== null && typeof value === 'object'
+    ? recomputed.get(value) ?? recomputed.set(value, new Map()).get(value)!
+    : null;
+  const hit = bySeed?.get(seed);
+  if (hit) return hit;
   const out = walkSummary(graph, `seed ${seed}`);
-  if (value !== null && typeof value === 'object') recomputed.set(value, out);
+  bySeed?.set(seed, out);
   return out;
 }
 
