@@ -60,7 +60,7 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
     );
   }
   if (state.kind === 'loading') {
-    return <Shell t={t}><span data-testid="changes-loading">Reading what moved…</span></Shell>;
+    return <Shell t={t} busy><span data-testid="changes-loading">Reading what moved…</span></Shell>;
   }
   if (state.kind === 'error') {
     return (
@@ -79,18 +79,18 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
 
   return (
     <Shell t={t}>
-      <span data-testid="changes-headline" style={{ color: ready.rows.length ? t.ink : t.muted }}>
+      <span data-testid="changes-headline" role="status" style={{ color: ready.rows.length ? t.ink : t.muted }}>
         {describeChanges(ready)}
       </span>
       {onOpenQueue && queue && queue.items.length > 0 && (
         <button type="button" data-testid="changes-work-regressions" onClick={() => onOpenQueue(queue)}
           className={`focus-ring ${t.fontMono}`}
-          style={{ alignSelf: 'flex-start', fontSize: 12, padding: '2px 8px', margin: '4px 0', background: 'transparent', border: `1px solid ${t.bad}`, borderRadius: 4, color: t.bad, cursor: 'pointer' }}>
+          style={{ alignSelf: 'flex-start', fontSize: 'var(--lab-fs-xs)', padding: 'var(--lab-s1) var(--lab-s3)', margin: '4px 0', background: 'transparent', border: `1px solid ${t.bad}`, borderRadius: 'var(--lab-r-sm)', color: t.bad, cursor: 'pointer' }}>
           {`▼ Work through ${queue.items.length} that stopped passing`}
         </button>
       )}
       {ready.rows.length > 0 && (
-        <ul data-testid="changes-list" style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <ul data-testid="changes-list" style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 'var(--lab-s1)' }}>
           {shown.map((row) => {
             const idx = stepIndexOf(row.entityId, row.step);
             const label = `${nameOf(row.entityId) ?? row.entityId} · ${row.step}`;
@@ -110,7 +110,7 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
                     className={`focus-ring ${t.fontMono}`}
                     style={{
                       display: 'block', textAlign: 'left', width: '100%', padding: 0,
-                      background: 'transparent', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 12,
+                      background: 'transparent', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 'var(--lab-fs-xs)',
                     }}
                   >
                     <span style={{ color: t.inkDeep, fontWeight: 600 }}>{label}</span>{lead}{` — ${detail}`}
@@ -118,7 +118,7 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
                 ) : (
                   // A step this entity's current pipeline does not list: report it, but never
                   // fabricate an index to jump to.
-                  <span className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
+                  <span className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
                     <span style={{ color: t.inkDeep, fontWeight: 600 }}>{label}</span>{lead}
                     {` — ${detail} (this step is not in this entity's current pipeline)`}
                   </span>
@@ -135,8 +135,8 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
                 data-testid="changes-toggle"
                 className={`focus-ring ${t.fontMono}`}
                 style={{
-                  fontSize: 12, padding: '2px 6px', background: 'transparent',
-                  border: `1px dashed ${t.line}`, borderRadius: 4, color: t.muted, cursor: 'pointer',
+                  fontSize: 'var(--lab-fs-xs)', padding: 'var(--lab-s1) var(--lab-s2)', background: 'transparent',
+                  border: `1px dashed ${t.line}`, borderRadius: 'var(--lab-r-sm)', color: t.muted, cursor: 'pointer',
                 }}
               >
                 {expanded ? `Show ${MAX_ROWS} only` : `Show all ${ranked.length} (${beyond} more)`}
@@ -146,7 +146,7 @@ export function CatalogChangesDigest({ t, state, stepIndexOf, nameOf, onOpenStep
         </ul>
       )}
       {/* The store's own blind spots, stated once — not per row, and never omitted. */}
-      <span data-testid="changes-blind-spot" style={{ color: t.warn, fontSize: 12 }}>
+      <span data-testid="changes-blind-spot" style={{ color: t.warn, fontSize: 'var(--lab-fs-xs)' }}>
         {blindSpotNote(ready.truncated, ready.cap)}
         {` Baseline: ${describeSince(ready.since)}.`}
       </span>
@@ -162,15 +162,16 @@ function blindSpotNote(truncated: number, cap: number): string {
     : base;
 }
 
-function Shell({ t, children }: { t: LabTheme; children: React.ReactNode }) {
+function Shell({ t, busy, children }: { t: LabTheme; busy?: boolean; children: React.ReactNode }) {
   return (
     <div
       data-testid="catalog-changes-digest"
+      aria-busy={busy ? true : undefined}
       className={t.fontMono}
       style={{
-        display: 'flex', flexDirection: 'column', gap: 2,
-        padding: '10px 28px', borderBottom: `1px solid ${t.line}`,
-        fontSize: 12, color: t.muted,
+        display: 'flex', flexDirection: 'column', gap: 'var(--lab-s1)',
+        padding: 'var(--lab-s3) var(--lab-s6)', borderBottom: `1px solid ${t.line}`,
+        fontSize: 'var(--lab-fs-xs)', color: t.muted,
       }}
     >
       {children}

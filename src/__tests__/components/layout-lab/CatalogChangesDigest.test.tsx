@@ -47,6 +47,16 @@ const ready = (rows: CatalogChangeRow[], truncated = 0, catalogId = 'items'): Ca
 afterEach(cleanup);
 
 describe('CatalogChangesDigest', () => {
+  it('announces its async states: busy while reading, headline in a polite status region on arrival', () => {
+    const loading = renderDigest({ kind: 'loading' });
+    expect(loading.getByTestId('catalog-changes-digest').getAttribute('aria-busy')).toBe('true');
+    cleanup();
+    const done = renderDigest(ready([row({ revisionsSince: 1 })]));
+    const shell = done.getByTestId('catalog-changes-digest');
+    expect(shell.getAttribute('aria-busy')).not.toBe('true');
+    expect(done.getByTestId('changes-headline').closest('[role="status"]')).not.toBeNull();
+  });
+
   it('says "no baseline yet" on a first visit — never "everything changed"', () => {
     const { getByTestId } = renderDigest({ kind: 'no-baseline' });
     expect(getByTestId('changes-no-baseline').textContent).toContain('No baseline yet');

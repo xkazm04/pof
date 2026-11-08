@@ -12,7 +12,7 @@
  * per-step status array Baseline computes, plus the optional drift map.
  */
 
-import { pickLadderIssue, type CoachPriority } from './coachLadder';
+import { COACH_HINT, pickLadderIssue, type CoachPriority } from './coachLadder';
 import type { StepDrift } from './hooks/useEntityArtifacts';
 import { coachActionFor, ladderStatusOf, type CoachCta } from './coachSettlement';
 import { settlementOf, type Settlement, type SettleSpec, type SettleVerdict } from '@/lib/catalog/stepSettlement';
@@ -36,21 +36,30 @@ export interface NextActionableStep {
   settlement?: Settlement;
 }
 
-/** Per-entity phrasing for each ladder rung. `index === 0` gets the friendlier
- *  "Start here" for the two not-yet-finished rungs (nothing precedes it). */
+/** The rung's hint as a sentence — `COACH_HINT` is the ONE copy both coaches print. */
+function sentence(hint: string): string {
+  return `${hint.charAt(0).toUpperCase()}${hint.slice(1)}.`;
+}
+
+/** Per-entity phrasing for each ladder rung. The action word is `COACH_HINT`'s (one verb per rung
+ *  across both coaches); `index === 0` keeps the declared friendlier "Start here" variant for the
+ *  two not-yet-finished rungs (nothing precedes it). */
 function present(priority: CoachPriority, index: number): { actionWord: string; plainHint: string } {
   // No verdict known → the rung's own copy (the pre-settlement wording, kept for verdict-free callers).
+  const actionWord = (priority === 'pending' || priority === 'unproduced') && index === 0
+    ? 'Start here'
+    : COACH_HINT[priority].actionWord;
   switch (priority) {
     case 'fail':
-      return { actionWord: 'Fix', plainHint: 'This step ran but did not pass — open it to see what to change.' };
+      return { actionWord, plainHint: 'This step ran but did not pass — open it to see what to change.' };
     case 'drift':
-      return { actionWord: 'Review', plainHint: 'The local and server verdicts disagree here — reconcile them before trusting the rest.' };
+      return { actionWord, plainHint: 'The local and server verdicts disagree here — reconcile them before trusting the rest.' };
     case 'deferred':
-      return { actionWord: 'Run live test', plainHint: 'Waiting on a live Unreal run — use “Run deferred gates” to send it.' };
+      return { actionWord, plainHint: 'Waiting on a live Unreal run — use “Run deferred gates” to send it.' };
     case 'pending':
-      return { actionWord: index === 0 ? 'Start here' : 'Do next', plainHint: 'This step is produced — its acceptance is still resolving.' };
+      return { actionWord, plainHint: sentence(COACH_HINT.pending.hint) };
     case 'unproduced':
-      return { actionWord: index === 0 ? 'Start here' : 'Do next', plainHint: 'This step has not been produced yet.' };
+      return { actionWord, plainHint: 'This step has not been produced yet.' };
   }
 }
 
