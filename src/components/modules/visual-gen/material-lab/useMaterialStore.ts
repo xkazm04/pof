@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 import { getAppOrigin } from '@/lib/constants';
 import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
 import { hexToLinearRgb, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
@@ -237,7 +238,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ albedoBase64, persist: true }),
     });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      logger.warn(`[material-lab] derive maps: ${result.error}`);
+      return result;
+    }
 
     const outcome: DeriveMapsOutcome = { filled: [], skipped: [], refused: result.data.refused };
     for (const map of result.data.maps) {
@@ -263,6 +267,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       // reads as "you have no presets", which is a lie. The caller renders the
       // error with a retry instead.
       set({ presetsLoading: false });
+      logger.warn(`[material-lab] load presets: ${result.error}`);
       return result;
     }
     const presets = result.data.map(toPreset);
@@ -284,7 +289,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     });
     // The preset joins the list only once the row exists — an optimistic entry
     // that vanished on the next reload would be exactly the bug being fixed.
-    if (!result.ok) return result;
+    if (!result.ok) {
+      logger.warn(`[material-lab] save preset: ${result.error}`);
+      return result;
+    }
 
     const preset = toPreset(result.data);
     set((s) => ({ presets: [preset, ...s.presets], activePresetId: preset.id }));
@@ -303,7 +311,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      logger.warn(`[material-lab] delete preset: ${result.error}`);
+      return result;
+    }
 
     set((s) => ({
       presets: s.presets.filter((p) => p.id !== id),
@@ -367,7 +378,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
     });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      logger.warn(`[material-lab] send to Blender: ${result.error}`);
+      return result;
+    }
     return ok({ name, plan });
   },
 }));
