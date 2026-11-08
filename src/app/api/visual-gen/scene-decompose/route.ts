@@ -58,7 +58,22 @@ interface Body {
 
 type CropGate = SceneDecomposeCropGate;
 
-/** Gate every prop crop. One vision call per prop, so it is opt-in at the route boundary. */
+const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/** The refusal for the first field that is the wrong shape, or null. Pure. */
+function invalidField(body: Record<string, unknown>): string | null {
+  const { imageDataUrl, hint, gateCrops, seed, areaExtent, jitterDegrees } = body;
+  if (imageDataUrl !== undefined && typeof imageDataUrl !== 'string') return 'imageDataUrl must be a string';
+  if (hint !== undefined && typeof hint !== 'string') return 'hint must be a string';
+  if (gateCrops !== undefined && typeof gateCrops !== 'boolean') return 'gateCrops must be a boolean';
+  if (seed !== undefined && !isFiniteNumber(seed)) return 'seed must be a number';
+  // A non-numeric extent or jitter turns every placement into NaN, reported as a success.
+  if (areaExtent !== undefined && !(isFiniteNumber(areaExtent) && areaExtent > 0)) return 'areaExtent must be a positive number of cm';
+  if (jitterDegrees !== undefined && !(isFiniteNumber(jitterDegrees) && jitterDegrees >= 0)) return 'jitterDegrees must be a non-negative number';
+  return null;
+}
+
+/** Gate every prop crop. One vision call per prop; on unless the caller sends `gateCrops: false`. */
 async function gateCropsOf(
   scene: Buffer,
   props: readonly DecomposedProp[],
@@ -90,6 +105,8 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const invalid = invalidField(parsed);
+    if (invalid) return apiError(invalid, 400);
     const body = parsed as Body;
     if (!body.imageDataUrl) return apiError('Missing required field: imageDataUrl', 400);
     const image = parseVisionImage(body.imageDataUrl);

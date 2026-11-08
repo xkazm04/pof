@@ -272,4 +272,37 @@ describe('ue-import fields', () => {
   });
 });
 
+describe('remediate fields', () => {
+  for (const [field, value] of [['name', 7], ['assetClass', 7]] as const) {
+    it(`refuses a non-string ${field} with a 400, not a TypeError 500`, async () => {
+      const res = await remediate(json({ name: 'crate.glb', dir: 'meshes', [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+});
+
+describe('scene-decompose fields', () => {
+  const IMAGE = 'data:image/png;base64,aGVsbG8=';
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['imageDataUrl', 7],
+    ['hint', 7],
+    ['gateCrops', 'yes'],
+    ['seed', 'x'],
+    ['areaExtent', 0],
+    ['areaExtent', 'wide'],
+    ['jitterDegrees', -1],
+    ['jitterDegrees', 'x'],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)} before any vision call`, async () => {
+      const res = await decompose(json({ imageDataUrl: IMAGE, [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+});
+
 // FINDINGS-APPEND
