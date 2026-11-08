@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  Play, Trash2, CheckCircle2, Loader2, ChevronDown, ChevronRight,
+  Play, Trash2, CheckCircle2, ChevronDown, ChevronRight,
   Clock, Crosshair, Eye, Layers,
 } from 'lucide-react';
 import {
@@ -38,9 +38,11 @@ export function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, 
       style={{ borderColor: `${STATUS_NEUTRAL}30` }}
     >
       {/* Scenario header */}
+      <div className="flex items-center hover:bg-surface-2 transition-colors">
       <button
-        className="flex items-center gap-2 w-full text-left px-3 py-2 hover:bg-surface-2 transition-colors"
+        className="flex items-center gap-2 flex-1 min-w-0 text-left px-3 py-2"
         onClick={onToggle}
+        aria-expanded={isExpanded}
       >
         {isExpanded ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
         <span className="text-xs font-mono text-text-muted">#{index + 1}</span>
@@ -48,14 +50,16 @@ export function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, 
         <span className="text-xs text-text-muted">
           {scenario.setup.length} spawn · {scenario.actions.length} action · {scenario.assertions.length} assert
         </span>
-        <button
-          className="p-0.5 rounded hover:bg-surface-3 shrink-0"
-          style={{ color: STATUS_ERROR }}
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
       </button>
+      <button
+        className="p-0.5 mr-3 rounded hover:bg-surface-3 shrink-0"
+        style={{ color: STATUS_ERROR }}
+        aria-label={`Remove scenario ${index + 1}`}
+        onClick={onRemove}
+      >
+        <Trash2 className="w-3 h-3" aria-hidden="true" />
+      </button>
+      </div>
 
       {/* Expanded editor */}
       {isExpanded && (

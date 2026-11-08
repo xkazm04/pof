@@ -22,6 +22,7 @@ import { useTestHarnessPanel } from '@/components/modules/project-setup/TestHarn
 import { parseScenariosDraft } from '@/components/modules/project-setup/TestHarnessPanel/helpers';
 import { TEMPLATE_SCENARIO } from '@/components/modules/project-setup/TestHarnessPanel/constants';
 import { SuitesTab } from '@/components/modules/project-setup/TestHarnessPanel/SuitesTab';
+import { ScenarioCard } from '@/components/modules/project-setup/TestHarnessPanel/ScenarioCard';
 import type { TestSuite } from '@/components/modules/project-setup/TestHarnessPanel/types';
 
 afterEach(() => cleanup());
@@ -88,6 +89,26 @@ describe('editing a scenario in place', () => {
     fireEvent.change(input, { target: { value: 'renamed' } });
     expect(input.isConnected).toBe(true);
     expect(input.value).toBe('renamed');
+  });
+});
+
+describe('the scenario card header', () => {
+  it('keeps Remove a separate, named control that does not toggle the card', () => {
+    const onToggle = vi.fn();
+    const onRemove = vi.fn();
+    const { container } = render(
+      <ScenarioCard scenario={TEMPLATE_SCENARIO} index={0} isExpanded={false} onToggle={onToggle} onUpdate={() => {}} onRemove={onRemove} />,
+    );
+    expect(container.querySelector('button button')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove scenario 1' }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('exposes the expanded state on its toggle', () => {
+    render(<ScenarioCard scenario={TEMPLATE_SCENARIO} index={0} isExpanded onToggle={() => {}} onUpdate={() => {}} onRemove={() => {}} />);
+    const toggle = screen.getByRole('button', { name: new RegExp(TEMPLATE_SCENARIO.description) });
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
   });
 });
 
