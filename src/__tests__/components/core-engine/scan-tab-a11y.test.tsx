@@ -11,10 +11,10 @@ afterEach(cleanup);
 
 function finding(): ScanFinding {
   return {
-    id: 'f1', moduleId: 'arpg-combat', pass: 'quality', category: 'Null guard', severity: 'high',
+    id: 'f1', pass: 'quality', category: 'Null guard', severity: 'high',
     file: 'Source/Combat.cpp', line: 12, description: 'Missing null check', suggestedFix: 'Guard it',
-    effort: 'small', createdAt: '2026-11-08T00:00:00Z',
-  } as ScanFinding;
+    effort: 'small', foundAt: '2026-11-08T00:00:00Z',
+  };
 }
 
 describe('FindingRow — selection and disclosure semantics', () => {
