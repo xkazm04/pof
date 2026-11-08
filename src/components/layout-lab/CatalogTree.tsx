@@ -276,10 +276,16 @@ function CatalogRow({
                   e.stopPropagation();
                   // Remove the SERVER rows first, then the local cache: the counts come back
                   // from the deletes themselves, so the report can never be a guess.
+                  // A failed delete KEEPS the draft: this row is the only handle on the server
+                  // rows left behind, so dropping it would leave nothing to retry from.
                   void discardDraftEntity(catalog.catalogId, entity.id).then((r) => {
-                    useCatalogStore.getState().removeDraft(catalog.catalogId, entity.id);
                     const msg = describeDiscard(entity.name, r);
-                    if (r.errors.length) toast.error(msg); else toast.success(msg);
+                    if (r.errors.length) {
+                      toast.error(`${msg} — kept in the tree so you can retry the discard.`);
+                      return;
+                    }
+                    useCatalogStore.getState().removeDraft(catalog.catalogId, entity.id);
+                    toast.success(msg);
                   });
                 }}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 14, padding: '0 4px' }}
