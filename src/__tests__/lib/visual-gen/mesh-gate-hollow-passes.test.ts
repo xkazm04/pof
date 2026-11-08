@@ -7,6 +7,7 @@ import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visu
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
 import { planKitAtlas } from '@/lib/visual-gen/texel-density';
+import { gradeSheet } from '@/lib/visual-gen/sheet-gate';
 import sharp from 'sharp';
 import { detectSeams, detectSeamsSafe } from '@/lib/visual-gen/seam-check';
 import { fetchMeshForGrading } from '@/lib/visual-gen/mesh-fetch';
@@ -177,5 +178,19 @@ describe('the seam check says nothing when it compared nothing', () => {
     const img = await sharp({ create: { width: 16, height: 16, channels: 3, background: { r: 255, g: 255, b: 255 } } })
       .composite([{ input: left, left: 0, top: 0 }]).png().toBuffer();
     expect((await detectSeams(img, { threshold: NaN })).hasSeam).toBe(true);
+  });
+});
+
+describe('gradeSheet does not grade an unreadable seam measurement', () => {
+  const input = { cols: 1, rows: 1, deliveredWidth: 64, deliveredHeight: 64, cells: [{ index: 0, id: 'a', stdev: 12 }] };
+
+  it.each([[[NaN], 4], [[3], NaN], [[Infinity], 4]])('seams %j over interior %j reads as not measured', (seamContrasts, interiorContrast) => {
+    const v = gradeSheet({ ...input, seamContrasts: seamContrasts as number[], interiorContrast: interiorContrast as number });
+    expect(v.seamRatio).toBeNull();
+    expect(v.seamNote).toMatch(/not measured/);
+  });
+
+  it('still computes a real ratio', () => {
+    expect(gradeSheet({ ...input, seamContrasts: [2], interiorContrast: 4 }).seamRatio).toBe(0.5);
   });
 });
