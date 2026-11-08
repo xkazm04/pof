@@ -113,7 +113,7 @@ const NOT_A_TOOL_INPUT: Record<string, string> = {
 
 function httpStartBodyFields(): string[] {
   const src = fs.readFileSync(ROUTE_PATH, 'utf-8');
-  const m = src.match(/const body = await request\.json\(\) as \{([\s\S]*?)\n {2}\};/);
+  const m = src.match(/const body = raw as \{([\s\S]*?)\r?\n {2}\};/);
   assert.ok(m, 'could not locate the POST body type in the harness route — update this parity test');
   return [...m![1].matchAll(/^\s{4}(\w+)\??:/gm)].map((x) => x[1]);
 }
