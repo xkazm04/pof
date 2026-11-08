@@ -335,6 +335,8 @@ export const useModuleStore = create<ModuleState>()(
             checklistVerification: Record<string, Record<string, VerificationInfo>>;
             moduleHistory: Record<string, TaskHistoryEntry[]>;
           }>(`/api/project-progress?path=${encodeURIComponent(projectPath)}`);
+          // A newer load (or clearProgress) took over while this one was in flight.
+          if (get().progressLoadPath !== projectPath) return;
 
           const checklistProgress = data.checklistProgress ?? {};
           // The ledger is held by the project_progress row (a project switch clears
@@ -360,6 +362,7 @@ export const useModuleStore = create<ModuleState>()(
             isLoadingProgress: false,
           });
         } catch (err) {
+          if (get().progressLoadPath !== projectPath) return;
           const reason = err instanceof Error ? err.message : 'unknown error';
           const owner = get().progressProjectPath;
           // Whatever is in memory is ANOTHER project's progress. Rendering it as
