@@ -14,19 +14,40 @@
 
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { ue5Connection } from '@/lib/ue5-bridge/connection-manager';
 import type { InjectItemRequest } from '@/types/ue5-bridge';
 
+/** A well-formed affix; `null` here used to throw into the 500 path. */
+function isAffix(a: unknown): boolean {
+  if (typeof a !== 'object' || a === null) return false;
+  const { tag, displayName, magnitude, bIsPrefix } = a as Record<string, unknown>;
+  return typeof tag === 'string' && typeof displayName === 'string'
+    && typeof magnitude === 'number' && typeof bIsPrefix === 'boolean';
+}
+
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = (await request.json()) as InjectItemRequest;
+    const raw = await readJsonObject(request);
+    if (!raw) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = raw as unknown as InjectItemRequest;
 
     // ── Validate payload ──
     if (!body.definitionAsset || !body.affixes || !Array.isArray(body.affixes)) {
       return apiError('definitionAsset and affixes[] are required', 400);
     }
-    if (typeof body.itemLevel !== 'number' || body.itemLevel < 1) {
-      return apiError('itemLevel must be a positive number', 400);
+    // It lands after `/Game/Items/`, so a separator or `..` would name some other asset.
+    if (typeof body.definitionAsset !== 'string' || /[\\/]|\.\./.test(body.definitionAsset)) {
+      return apiError('definitionAsset must be an asset name, not a path', 400);
+    }
+    if (!Number.isInteger(body.itemLevel) || body.itemLevel < 1) {
+      return apiError('itemLevel must be a positive integer', 400);
+    }
+    if (!body.affixes.every(isAffix)) {
+      return apiError('each affix needs tag, displayName, magnitude and bIsPrefix', 400);
     }
 
     // ── Require active UE5 connection ──
