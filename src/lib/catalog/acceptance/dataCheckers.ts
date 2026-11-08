@@ -294,7 +294,15 @@ export function maxWordsPerEntry(field: string, label: string, max: number): Che
 
     let worst = 0;
     for (let i = 0; i < arr.length; i++) {
-      const raw = typeof arr[i] === 'string' ? (arr[i] as string) : String(arr[i] ?? '');
+      // A non-string entry is not a line: `String({...})` is "[object Object]" (2 words), which
+      // passed any cap. And a declared gap is not a spoken line, so it is unpopulated, not short.
+      if (typeof arr[i] !== 'string') {
+        return { label, tier: 'L0', status: 'fail', detail: `entry ${i} is not text`, reason: `field "${field}"[${i}] must be a line of text (KEY: "spoken text"), got ${Array.isArray(arr[i]) ? 'a list' : arr[i] === null ? 'null' : `a ${typeof arr[i]}`}` };
+      }
+      const raw = arr[i] as string;
+      if (isDeclaredGap(raw)) {
+        return { label, tier: 'L0', status: 'pending', detail: `entry ${i} declares a gap`, reason: `field "${field}"[${i}] is a declared gap ("${REFERENCE_GAP}"), not a spoken line` };
+      }
       // Prefer the quoted spoken half; fall back to the whole entry.
       const quoted = raw.match(/"([^"]*)"/);
       const spoken = quoted ? quoted[1] : raw;
