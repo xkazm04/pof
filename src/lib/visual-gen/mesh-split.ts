@@ -42,7 +42,7 @@
  * A part's `_NN` is its face-count rank, not its identity - two barrels swap ranks on
  * a re-generation, and after the re-centre both sit at the origin.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { BLENDER_CANDIDATES } from './mesh-finish';
 import { blenderNotFound, locateBlender, type BlenderSeams } from './blender-locate';
@@ -242,6 +242,8 @@ type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<Process
 export interface MeshSplitDeps extends BlenderSeams {
   run?: RunFn;
   fileExists?: (p: string) => boolean;
+  /** Last-modified time of a file, or undefined when unknown (default `statSync`). */
+  mtimeMs?: (p: string) => number | undefined;
   now?: () => number;
   env?: Record<string, string | undefined>;
 }
@@ -254,6 +256,7 @@ function err(message: string): MeshSplitResult {
 export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}): Promise<MeshSplitResult> {
   const env = deps.env ?? process.env;
   const fileExists = deps.fileExists ?? existsSync;
+  const mtimeMs = deps.mtimeMs ?? defaultMtimeMs;
   const now = deps.now ?? (() => Date.now());
   const run = deps.run ?? defaultRun;
 
@@ -265,6 +268,15 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
   const script = spec.scriptPath ?? join(process.cwd(), 'scripts', 'visual-gen', 'pof_mesh_split.py');
   if (!fileExists(script)) return err(`pof_mesh_split.py not found at ${script}`);
 
+  // Part names are prefix + rank in a caller-owned directory, so a rerun finds the earlier
+  // run's files. Snapshot their mtimes first: a part whose file did not change is a leftover.
+  const before = new Map<string, number>();
+  for (let i = 1; i <= (spec.maxParts ?? DEFAULT_MAX_PARTS); i++) {
+    const name = `${spec.prefix}_${String(i).padStart(2, '0')}.glb`;
+    const p = join(spec.outputDir, name);
+    const m = fileExists(p) ? mtimeMs(p) : undefined;
+    if (m !== undefined) before.set(name, m);
+  }
   const start = now();
   const timeoutMs = spec.timeoutMs ?? 600_000;
   const outcome = await run(blender, buildMeshSplitArgs(script, spec), timeoutMs);
@@ -278,8 +290,15 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
 
   // A part is only a part if the file is there. The script announcing one it did not
   // write would otherwise become an asset URL that 404s at the viewer.
-  const written = parsed.parts.filter((p) => fileExists(p.path));
-  const missing = parsed.parts.filter((p) => !fileExists(p.path)).map((p) => p.name);
+  // A file left by an earlier run (unchanged mtime) does not count as this run's output.
+  const isFresh = (p: SplitPart) => {
+    if (!fileExists(p.path)) return false;
+    const was = before.get(basename(p.path));
+    const now_ = mtimeMs(p.path);
+    return was === undefined || now_ === undefined || now_ > was;
+  };
+  const written = parsed.parts.filter(isFresh);
+  const missing = parsed.parts.filter((p) => !isFresh(p)).map((p) => p.name);
 
   return {
     ...parsed,
@@ -289,6 +308,10 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
       ?? (missing.length ? `the split announced ${missing.length} part(s) that were not written: ${missing.join(', ')}` : undefined),
     durationMs: now() - start,
   };
+}
+
+function defaultMtimeMs(p: string): number | undefined {
+  try { return statSync(p).mtimeMs; } catch { return undefined; }
 }
 
 // ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──

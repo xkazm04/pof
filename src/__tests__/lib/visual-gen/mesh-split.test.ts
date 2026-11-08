@@ -137,6 +137,35 @@ describe('runMeshSplit', () => {
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/input mesh not found/);
   });
+
+  // The output dir is caller-owned and part names are prefix + rank, so a rerun sees the
+  // earlier run's files. A simulated disk: the run itself rewrites whatever it exports.
+  const rerun = (exported: string[]) => {
+    const mtimes = new Map<string, number>([
+      ['/g/mesh-split/props_01.glb', 100], ['/g/mesh-split/props_02.glb', 100], ['/g/mesh-split/props_03.glb', 100],
+    ]);
+    const norm = (p: string) => p.split(String.fromCharCode(92)).join('/');
+    return {
+      run: async () => { for (const n of exported) mtimes.set(`/g/mesh-split/${n}`, 200); return { stdout: OUT, code: 0 }; },
+      fileExists: (p: string) => p === '/g/props.glb' || p.endsWith('pof_mesh_split.py') || /blender/i.test(p) || mtimes.has(norm(p)),
+      mtimeMs: (p: string) => mtimes.get(norm(p)),
+      now: () => 0,
+      env: { POF_BLENDER: '/bin/blender' },
+    };
+  };
+
+  it('refuses a part file left by an earlier run when the script did not write it again', async () => {
+    const r = await runMeshSplit(spec(), rerun(['props_01.glb', 'props_03.glb']));
+    expect(r.ok).toBe(false);
+    expect(r.parts.map((x) => x.name)).toEqual(['props_01.glb', 'props_03.glb']);
+    expect(r.error).toMatch(/props_02\.glb/);
+  });
+
+  it('accepts the same names when this run rewrote every one of them', async () => {
+    const r = await runMeshSplit(spec(), rerun(['props_01.glb', 'props_02.glb', 'props_03.glb']));
+    expect(r.ok).toBe(true);
+    expect(r.parts).toHaveLength(3);
+  });
 });
 
 /**
