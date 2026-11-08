@@ -33,3 +33,4 @@ import './input-schemes';
 import './tutorial-beats';
 import './currencies';
 import './characters';
+import './affixes';

@@ -33,7 +33,7 @@ const EMPTY_SEED_ALLOWLIST = ['animation-assets', 'audio'].sort();
  * the two lists above filter them out, so without this pin a new section could ship with no
  * plugin and no ratchet would see it (absence is never exemption). Shrink only.
  */
-const NO_PLUGIN_ALLOWLIST = ['affixes', 'character-pipeline', 'contracts', 'player-movement', 'story-arcs'].sort();
+const NO_PLUGIN_ALLOWLIST = ['character-pipeline', 'contracts', 'player-movement', 'story-arcs'].sort();
 
 /**
  * Plugin catalogs with a declared dimension that is DEGENERATE on its code seed (every value
