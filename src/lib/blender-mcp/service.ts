@@ -341,6 +341,8 @@ class BlenderMCPService {
       let escaped = false;
       let sawStructure = false;
       let scanPos = 0;
+      // The ceiling is in BYTES; `buffer.length` counts UTF-16 units and undercounts multi-byte text.
+      let receivedBytes = 0;
       const settle = (result: Result<unknown, string>) => {
         if (settled) return;
         settled = true;
@@ -375,6 +377,7 @@ class BlenderMCPService {
 
       const onData = (chunk: Buffer) => {
         buffer += decoder.write(chunk);
+        receivedBytes += chunk.length;
 
         // Bounded receive buffer. A wedged/garbage response (never closes its
         // top-level value, so the brace-depth gate below never trips) would
@@ -384,7 +387,7 @@ class BlenderMCPService {
         // with the socket instead of desyncing the next command. The cap is far
         // above any legitimate screenshot/asset payload, so valid large
         // responses are unaffected.
-        if (buffer.length > MAX_RESPONSE_BYTES) {
+        if (receivedBytes > MAX_RESPONSE_BYTES) {
           settle(
             err(
               `Response exceeded ${MAX_RESPONSE_BYTES} bytes without a complete value — connection reset to avoid a wedged buffer; reconnect to continue`,
@@ -471,7 +474,7 @@ class BlenderMCPService {
 
   async executeCode(code: string): Promise<Result<ExecuteOutput, string>> {
     if (!code.trim()) return err('Code cannot be empty');
-    if (code.length > 100_000) return err('Code exceeds 100KB limit');
+    if (Buffer.byteLength(code, 'utf8') > 100_000) return err('Code exceeds 100KB limit');
     const result = await this.sendCommand({
       type: 'execute_code',
       params: { code },
