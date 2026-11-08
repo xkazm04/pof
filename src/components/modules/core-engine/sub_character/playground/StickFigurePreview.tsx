@@ -26,6 +26,61 @@ interface RunSnapshot {
   phase: number;
 }
 
+/** Mutable-by-copy walk-cycle state integrated each frame. */
+export type PreviewState = Omit<RunSnapshot, 'key'>;
+
+export interface PreviewParams {
+  targetSpeed: number;
+  accelRate: number;
+  dodgeDist: number;
+  dodgeDur: number;
+  /** Canvas width, for the wrap-around. */
+  width: number;
+}
+
+/** A fresh run's schedule is rebased on the preview clock `t` — `t` accumulates
+ *  across runs, so an absolute 2-4 s would already be in the past after a pause. */
+export function freshRun(t: number, rand: () => number = Math.random): PreviewState {
+  return {
+    currentSpeed: 0, posX: 60, isDodging: false, dodgeTimer: 0, dodgeStartX: 0,
+    nextDodgeAt: t + 2 + rand() * 2, phase: 0,
+  };
+}
+
+/** One frame of the preview integrator: dodge scheduling, ramp, wrap, gait phase. */
+export function stepPreview(
+  prev: PreviewState, t: number, dt: number, p: PreviewParams, rand: () => number = Math.random,
+): PreviewState {
+  const s = { ...prev };
+  if (!s.isDodging && t > s.nextDodgeAt) {
+    s.isDodging = true;
+    s.dodgeTimer = 0;
+    s.dodgeStartX = s.posX;
+    s.nextDodgeAt = t + 3 + rand() * 2;
+  }
+  if (s.isDodging) {
+    s.dodgeTimer += dt;
+    const dodgeProgress = Math.min(s.dodgeTimer / p.dodgeDur, 1);
+    const eased = 1 - Math.pow(1 - dodgeProgress, 3);
+    s.posX = s.dodgeStartX + p.dodgeDist * eased;
+    if (dodgeProgress >= 1) {
+      s.isDodging = false;
+      s.currentSpeed = p.targetSpeed * 0.5;
+    }
+  } else {
+    if (s.currentSpeed < p.targetSpeed) {
+      s.currentSpeed = Math.min(s.currentSpeed + p.accelRate * dt, p.targetSpeed);
+    }
+    s.posX += s.currentSpeed * dt;
+  }
+  if (s.posX > p.width + 20) {
+    s.posX = -20;
+    s.currentSpeed = 0;
+  }
+  s.phase += s.currentSpeed * dt * 0.15;
+  return s;
+}
+
 export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -68,17 +123,15 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
     const groundY = H - 20;
 
     const resumed = snapshotRef.current?.key === runKey ? snapshotRef.current : null;
-    let currentSpeed = resumed?.currentSpeed ?? 0;
-    let posX = resumed?.posX ?? 60;
-    let isDodging = resumed?.isDodging ?? false;
-    let dodgeTimer = resumed?.dodgeTimer ?? 0;
-    let dodgeStartX = resumed?.dodgeStartX ?? 0;
-    const targetSpeed = 40 + speedFactor * 60;
-    const accelRate = 30 + accelFactor * 120;
-    const dodgeDist = 40 + dodgeDistFactor * 80;
-    const dodgeDur = 0.2 + dodgeDurFactor * 0.6;
-    let nextDodgeAt = resumed?.nextDodgeAt ?? 2 + Math.random() * 2;
-    let phase = resumed?.phase ?? 0;
+    let state: PreviewState = resumed ?? freshRun(timeRef.current);
+    const params: PreviewParams = {
+      targetSpeed: 40 + speedFactor * 60,
+      accelRate: 30 + accelFactor * 120,
+      dodgeDist: 40 + dodgeDistFactor * 80,
+      dodgeDur: 0.2 + dodgeDurFactor * 0.6,
+      width: W,
+    };
+    const { targetSpeed } = params;
 
     function frame(ts: number) {
       if (!ctx || !isPlaying) return;
@@ -100,37 +153,8 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
         ctx.stroke();
       });
 
-      // Dodge logic
-      if (!isDodging && t > nextDodgeAt) {
-        isDodging = true;
-        dodgeTimer = 0;
-        dodgeStartX = posX;
-        nextDodgeAt = t + 3 + Math.random() * 2;
-      }
-
-      if (isDodging) {
-        dodgeTimer += dt;
-        const dodgeProgress = Math.min(dodgeTimer / dodgeDur, 1);
-        const eased = 1 - Math.pow(1 - dodgeProgress, 3);
-        posX = dodgeStartX + dodgeDist * eased;
-        if (dodgeProgress >= 1) {
-          isDodging = false;
-          currentSpeed = targetSpeed * 0.5;
-        }
-      } else {
-        if (currentSpeed < targetSpeed) {
-          currentSpeed = Math.min(currentSpeed + accelRate * dt, targetSpeed);
-        }
-        posX += currentSpeed * dt;
-      }
-
-      // Wrap position
-      if (posX > W + 20) {
-        posX = -20;
-        currentSpeed = 0;
-      }
-
-      phase += currentSpeed * dt * 0.15;
+      state = stepPreview(state, t, dt, params);
+      const { currentSpeed, posX, isDodging, phase } = state;
 
       // Draw afterimages during dodge
       if (isDodging) {
@@ -164,7 +188,7 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
 
     return () => {
       snapshotRef.current = {
-        key: runKey, currentSpeed, posX, isDodging, dodgeTimer, dodgeStartX, nextDodgeAt, phase,
+        key: runKey, ...state,
       };
       cancelAnimationFrame(animRef.current);
     };
