@@ -74,6 +74,17 @@ export interface ProceduralState {
   exportVegetationToBlender: () => Promise<void>;
 }
 
+/**
+ * Keep min <= max so the two overlapping sliders cannot express a config in which
+ * `placeRooms` rejects every leaf. The bound just moved wins; the other follows it.
+ */
+function orderRoomBounds(next: DungeonConfig, changed: Partial<DungeonConfig>): DungeonConfig {
+  if (next.minRoomSize <= next.maxRoomSize) return next;
+  return changed.maxRoomSize !== undefined
+    ? { ...next, minRoomSize: next.maxRoomSize }
+    : { ...next, maxRoomSize: next.minRoomSize };
+}
+
 const CONFIG_KEY = {
   terrain: 'terrainConfig',
   dungeon: 'dungeonConfig',
@@ -165,7 +176,7 @@ export const useProceduralStore = create<ProceduralState>((set, get) => {
       set((s) => ({ terrainConfig: { ...s.terrainConfig, ...config } })),
 
     setDungeonConfig: (config) =>
-      set((s) => ({ dungeonConfig: { ...s.dungeonConfig, ...config } })),
+      set((s) => ({ dungeonConfig: orderRoomBounds({ ...s.dungeonConfig, ...config }, config) })),
 
     setVegetationConfig: (config) =>
       set((s) => ({ vegetationConfig: { ...s.vegetationConfig, ...config } })),
