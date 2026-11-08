@@ -137,7 +137,10 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
 
   runSimulation: async (config: SimulationConfig) => {
     const runToken = ++simRunCounter;
-    set({ isSimulating: true, error: null, config });
+    // Generated code belongs to the run it came from: drop it, and invalidate any generate still
+    // in flight, so the codegen panel never shows a previous run's files under this one.
+    ++codeGenCounter;
+    set({ isSimulating: true, error: null, config, codeGenResult: null, isGenerating: false });
     try {
       const data = await apiFetch<{ result: SimulationResult }>(
         '/api/economy-simulator',
