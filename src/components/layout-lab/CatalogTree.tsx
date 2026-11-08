@@ -170,7 +170,7 @@ function CatalogRow({
           {catalog.label}
           {catalog.notInGame && (
             <span data-testid={`catalog-not-in-game-${catalog.catalogId}`} className={t.fontMono}
-              style={{ marginLeft: 8, fontSize: 12, color: t.muted, fontStyle: 'italic' }}>
+              style={{ marginLeft: 8, fontSize: 'var(--lab-fs-xs)', color: t.muted, fontStyle: 'italic' }}>
               not in {catalog.notInGame}
             </span>
           )}
@@ -180,7 +180,7 @@ function CatalogRow({
           data-testid={`catalog-verified-${catalog.catalogId}`}
           data-derived={verified === null ? 'unknown' : 'derived'}
           title={verified === null ? UNKNOWN_VERIFIED_TITLE : verifiedTitle(verified, catalog.total)}
-          style={{ fontSize: 12, color: t.muted, flexShrink: 0, marginLeft: 8 }}
+          style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, flexShrink: 0, marginLeft: 8 }}
         >
           {verified === null ? '—' : verified}/{catalog.total}
         </span>
@@ -236,7 +236,7 @@ function CatalogRow({
                   border: isPass ? 'none' : `1px solid ${dotColor}`,
                   color: dotColor,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700, lineHeight: 1,
+                  fontSize: 'var(--lab-fs-xs)', fontWeight: 700, lineHeight: 1,
                 }}
               >{isPass ? '' : STATUS_GLYPH[status]}</span>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -249,7 +249,7 @@ function CatalogRow({
                 title={draft?.persistError ? `${BROWSER_ONLY_TITLE} (${draft.persistError})` : BROWSER_ONLY_TITLE}
                 className={t.fontMono}
                 style={{
-                  flexShrink: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
+                  flexShrink: 0, fontSize: 'var(--lab-fs-xs)', fontWeight: 700, letterSpacing: 0.4,
                   color: t.bad, border: `1px solid ${t.bad}`, borderRadius: 3, padding: '0 3px',
                 }}
               >
@@ -262,7 +262,7 @@ function CatalogRow({
                 title={ingestTitle(draft.provenance)}
                 className={t.fontMono}
                 style={{
-                  flexShrink: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, marginRight: 8,
+                  flexShrink: 0, fontSize: 'var(--lab-fs-xs)', fontWeight: 700, letterSpacing: 0.4, marginRight: 8,
                   color: t.muted, border: `1px solid ${t.muted}`, borderRadius: 3, padding: '0 3px',
                 }}
               >
