@@ -83,10 +83,14 @@ export function useDebugSnapshot(): DebugSnapshotState {
       const provenance: DebugProvenance = { kind: 'session', source: session.source, name: session.name, importedAt: session.importedAt };
       setLoaded({ id: session.id, snapshot: projectDebugSnapshot(session, res.data.triage), provenance, latest: LOADING });
 
+      let triageError: string | undefined;
       const [triaged, compared] = await Promise.all([
         res.data.triage
           ? Promise.resolve(res.data.triage)
-          : postProfiling<{ triage: TriageResult }>({ action: 'triage', sessionId: session.id }).then((r) => (r.ok ? r.data.triage ?? null : null)),
+          : postProfiling<{ triage: TriageResult }>({ action: 'triage', sessionId: session.id }).then((r) => {
+            if (!r.ok) { triageError = r.error; return null; }
+            return r.data.triage ?? null;
+          }),
         baseId
           ? postProfiling<SessionComparisonResponse>({ action: 'compare', baseId, headId: session.id })
           : Promise.resolve(null),
@@ -102,7 +106,7 @@ export function useDebugSnapshot(): DebugSnapshotState {
         id: session.id,
         snapshot: projectDebugSnapshot(session, triaged),
         provenance,
-        latest: { kind: 'ready', session: head, triage: triaged, comparison, ...(compareError ? { compareError } : {}) },
+        latest: { kind: 'ready', session: head, triage: triaged, comparison, ...(compareError ? { compareError } : {}), ...(triageError ? { triageError } : {}) },
       });
     })();
     return () => { live = false; };

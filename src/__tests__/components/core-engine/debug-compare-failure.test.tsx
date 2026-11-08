@@ -76,3 +76,37 @@ describe('compare failure', () => {
     expect(container.textContent).toMatch(/No earlier real capture/);
   });
 });
+
+describe('triage failure', () => {
+  function mockTriageFailure() {
+    const ok = (data: unknown) => ({ json: async () => ({ success: true, data }) });
+    global.fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, string>;
+      if (body.action === 'list-sessions') {
+        return ok({ sessions: [{ id: 's2', name: 's2', source: 'csv-stats', importedAt: '2026-11-02T00:00:00.000Z', frameCount: 1, avgFPS: 60, hasTriage: false, overallScore: null, bottleneck: null }] });
+      }
+      if (body.action === 'get-session') return ok({ session: { ...SAMPLE_SESSION, id: 's2', name: 's2', source: 'csv-stats' }, triage: null });
+      if (body.action === 'triage') return { json: async () => ({ success: false, error: 'profiling db locked' }) };
+      return ok(null);
+    }) as unknown as typeof fetch;
+  }
+
+  it('hook: a failed triage request -> triageError carries the route reason', async () => {
+    mockTriageFailure();
+    const { result } = renderHook(() => useDebugSnapshot());
+    await waitFor(() => expect(result.current.latest.kind).toBe('ready'));
+    const latest = result.current.latest;
+    if (latest.kind !== 'ready') throw new Error('not ready');
+    expect(latest.triage).toBeNull();
+    expect(latest.triageError).toBe('profiling db locked');
+  });
+
+  it('queue: the note names the cause; without one it keeps the plain sentence', () => {
+    const session = { id: 's2', name: 'boss arena', source: 'csv-stats' as const, importedAt: 'x' };
+    const withErr = render(<OptimizationQueue latest={{ kind: 'ready', session, triage: null, comparison: null, triageError: 'profiling db locked' }} />);
+    expect(withErr.container.textContent).toMatch(/Triage could not be run for boss arena: profiling db locked/);
+    cleanup();
+    const plain = render(<OptimizationQueue latest={{ kind: 'ready', session, triage: null, comparison: null }} />);
+    expect(plain.container.textContent).toMatch(/Triage could not be run for boss arena\./);
+  });
+});

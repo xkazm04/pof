@@ -129,7 +129,7 @@ export function OptimizationQueue({ latest }: { latest: LatestTriage }) {
   if (latest.kind === 'loading') body = <Note>Reading the newest profiler session&apos;s triage…</Note>;
   else if (latest.kind === 'no-capture') body = <Note>No profiler capture yet. {PROFILER_HINT}</Note>;
   else if (latest.kind === 'unavailable') body = <Note>Could not read the newest profiler session: {latest.reason}</Note>;
-  else if (!latest.triage) body = <Note>Triage could not be run for {latest.session.name}.</Note>;
+  else if (!latest.triage) body = <Note>Triage could not be run for {latest.session.name}{latest.triageError ? `: ${latest.triageError}` : '.'}</Note>;
   else {
     body = (
       <>
