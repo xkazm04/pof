@@ -6,6 +6,7 @@ import { ChevronRight, X } from 'lucide-react';
 import { ACCENT_GREEN, ACCENT_RED, OVERLAY_WHITE, OPACITY_25, OPACITY_30, OPACITY_50, GLOW_MD, withOpacity,
   OPACITY_8, OPACITY_10, OPACITY_20, STATUS_WARNING,
 } from '@/lib/chart-colors';
+import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
 import { TIMELINE_PX_PER_SEC } from './helpers';
 import type { ScheduledCast } from './schedule';
 
@@ -56,12 +57,15 @@ export function TimelineBlock({
       transition={{ delay: index * 0.06 }}
     >
       {/* Remove button */}
+      {/* Icon-only and hover-revealed: name it, and reveal it on keyboard focus too. */}
       <button
+        type="button"
         onClick={() => onRemove(index)}
-        className="absolute -top-1.5 -right-1.5 z-20 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-        style={{ backgroundColor: ACCENT_RED, color: OVERLAY_WHITE }}
+        aria-label={`Remove ${ability.name} from the combo (step ${index + 1})`}
+        className={`absolute -top-1.5 -right-1.5 z-20 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer ${FOCUS_RING_CLASS}`}
+        style={{ backgroundColor: ACCENT_RED, color: OVERLAY_WHITE, ...focusRingStyle(ACCENT_RED) }}
       >
-        <X className="w-2.5 h-2.5" />
+        <X className="w-2.5 h-2.5" aria-hidden="true" />
       </button>
 
       {/* Block body */}

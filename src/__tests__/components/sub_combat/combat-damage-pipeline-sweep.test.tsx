@@ -6,6 +6,8 @@ import { ExecutionBreakdownPanel } from '@/components/modules/core-engine/sub_co
 import { DirectHealthFlow } from '@/components/modules/core-engine/sub_combat/damage-pipeline/DirectHealthFlow';
 import { FeedbackTab } from '@/components/modules/core-engine/sub_combat/polish/FeedbackTab';
 import { FEEDBACK_PARAMS } from '@/components/modules/core-engine/sub_combat/_shared/data';
+import { ComboChainBuilder } from '@/components/modules/core-engine/sub_combat/combos';
+import { PRESET_COMBOS } from '@/components/modules/core-engine/sub_ability/_shared/data';
 import { DIRECT_PIPELINE } from '@/components/modules/core-engine/sub_combat/damage-pipeline/pipeline-data';
 
 // scan-sweep night 2026-11-08, combat-damage-pipeline: one block per landed finding.
@@ -109,5 +111,17 @@ describe('FeedbackTab "Copy Python" reports what the clipboard actually did', ()
     const label = screen.getByTestId('combat-feel-export').textContent ?? '';
     expect(label).not.toMatch(/^Copied$/);
     expect(label).toMatch(/fail/i);
+  });
+});
+
+describe('combo timeline remove buttons are reachable without a mouse', () => {
+  it('each block has a named remove button that becomes visible on keyboard focus', () => {
+    render(<ComboChainBuilder />);
+    const removes = screen.queryAllByRole('button', { name: /^Remove .+ from the combo/ });
+    expect(removes.length).toBe(PRESET_COMBOS[0].abilities.length);
+    for (const b of removes) {
+      expect(b.getAttribute('type')).toBe('button');
+      expect(b.className).toMatch(/focus-visible:opacity-100/);
+    }
   });
 });
