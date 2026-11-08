@@ -31,6 +31,11 @@ def main() -> int:
     # A native crash or a timeout kill must not take the markers already printed with it.
     sys.stdout.reconfigure(line_buffering=True)
 
+    # Before any import: a wrong path should not cost a model load to discover.
+    if not os.path.isfile(args.image):
+        print("POF_TRIPOSR_ERROR=input image not found: " + args.image)
+        return 1
+
     sys.path.insert(0, args.triposr_root)
     try:
         import numpy as np

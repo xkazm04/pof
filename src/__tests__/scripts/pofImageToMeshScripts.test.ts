@@ -36,11 +36,19 @@ const CASES = [
   { script: 'pof_triposr.py', root: '--triposr-root', extra: ['--no-remove-bg'], progress: 'POF_TRIPOSR_DEVICE=', error: 'POF_TRIPOSR_ERROR=' },
 ];
 
-describe.skipIf(!pythonAvailable).each(CASES)('$script', ({ script, root, extra, progress }) => {
+describe.skipIf(!pythonAvailable).each(CASES)('$script', ({ script, root, extra, progress, error }) => {
   it('progress already printed survives a process that dies without flushing', () => {
     const dir = tempTree({ ...FAKES, 'in.png': 'x' });
     const r = runPy([scriptPath(script), '--image', join(dir, 'in.png'), '--output', join(dir, 'o.glb'), root, dir, ...extra]);
     expect(r.status).toBe(9);
     expect(r.stdout).toContain(progress);
+  });
+
+  it('a missing input image is reported before any import or model load', () => {
+    // An empty root: if the script reaches `import torch` the error names torch instead.
+    const dir = tempTree({ 'empty.txt': '' });
+    const r = runPy([scriptPath(script), '--image', join(dir, 'nope.png'), '--output', join(dir, 'o.glb'), root, dir, ...extra]);
+    expect(r.status).toBe(1);
+    expect(r.stdout).toContain(`${error}input image not found`);
   });
 });
