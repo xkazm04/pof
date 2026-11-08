@@ -21,6 +21,7 @@ export function RestXpSystem() {
     <BlueprintPanel color={ACCENT_CYAN} className="p-5">
       <SectionHeader icon={Zap} label="Rest XP System" color={ACCENT_CYAN} />
 
+      <p data-testid="basis-rest-xp" className="mt-2 text-2xs font-mono text-text-muted">Illustrative sample figures, not derived from your curve or project state.</p>
       <div className="mt-2.5 space-y-4">
         <div>
           <div className="flex justify-between text-xs font-mono mb-1.5">
