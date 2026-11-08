@@ -1,4 +1,4 @@
-import { seedSpellbookEntries } from './seed-spellbook';
+import { spellbookIdForName } from './seed-spellbook';
 import type { CatalogLink, CharacterEntry } from './types';
 
 /**
@@ -7,26 +7,26 @@ import type { CatalogLink, CharacterEntry } from './types';
  * end-to-end so the design `data` is the single source the UE artifacts
  * (AARPGNPCActor config + DT_AttributeDefaults row + VSCharacterVaelTest) mirror.
  *
- * Ability names resolve to real `spellbook` ids (case-insensitive, like
- * seed-bestiary.ts) so a missing ability is dropped rather than faked.
+ * Ability names resolve to real `spellbook` ids through the shared `spellbookIdForName`
+ * (the bestiary uses the same one) so a missing ability is dropped rather than faked.
+ * The spellbook links are DERIVED from `data.abilities` by `withAbilityLinks` — one list,
+ * never a second hand copy in `links` that could drift from it.
  */
-function buildSpellbookNameIndex(): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const e of seedSpellbookEntries()) map.set(e.data.name.toLowerCase(), e.id);
-  return map;
-}
-const SPELLBOOK_BY_NAME = buildSpellbookNameIndex();
-
-function abilityLinks(abilityNames: string[]): CatalogLink[] {
+function abilityLinks(abilityNames: readonly string[]): CatalogLink[] {
   const links: CatalogLink[] = [];
   for (const name of abilityNames) {
-    const id = SPELLBOOK_BY_NAME.get(name.toLowerCase());
+    const id = spellbookIdForName(name);
     if (id) links.push({ catalogId: 'spellbook', entityId: id, role: 'ability' });
   }
   return links;
 }
 
-const CAPTAIN_VAEL: CharacterEntry = {
+/** Prepend the spellbook links derived from the entry's own `data.abilities`. */
+function withAbilityLinks(entry: CharacterEntry): CharacterEntry {
+  return { ...entry, links: [...abilityLinks(entry.data.abilities), ...(entry.links ?? [])] };
+}
+
+const CAPTAIN_VAEL: CharacterEntry = withAbilityLinks({
   id: 'char-captain-vael',
   catalogId: 'characters',
   name: 'Captain Vael',
@@ -58,10 +58,10 @@ const CAPTAIN_VAEL: CharacterEntry = {
       animClass: '/MoverTests/Characters/Mannequins/Animations/ABP_Manny.ABP_Manny_C',
     },
   },
-  // spellbook ability links resolved below; dialogue is a planned cross-catalog
-  // dependency on `dialog-trees` (owned by that row) — see plan.md Session Findings.
-  links: abilityLinks(['Melee Attack', 'Heavy Attack']),
-};
+  // spellbook ability links are derived from data.abilities (withAbilityLinks); dialogue is a
+  // planned cross-catalog dependency on `dialog-trees` (owned by that row) — see plan.md Session Findings.
+  links: [],
+});
 
 /**
  * The duel's named Sith Lord — the browser realization's boss and the target of
@@ -69,7 +69,7 @@ const CAPTAIN_VAEL: CharacterEntry = {
  * the bestiary ARCHETYPE he wears (bestiary-sith-lord), single-sourced so the two rows
  * cannot drift. What lives here is the individual: identity, role, outfit, VO.
  */
-const DARTH_MALGRAVE: CharacterEntry = {
+const DARTH_MALGRAVE: CharacterEntry = withAbilityLinks({
   id: 'char-darth-malgrave',
   catalogId: 'characters',
   name: 'Darth Malgrave',
@@ -107,12 +107,11 @@ const DARTH_MALGRAVE: CharacterEntry = {
     },
   },
   links: [
-    ...abilityLinks(['Melee Attack', 'Heavy Attack']),
     { catalogId: 'bestiary', entityId: 'bestiary-sith-lord', role: 'archetype' },
     { catalogId: 'dialog-trees', entityId: 'dialog-duel-intro', role: 'host' },
     { catalogId: 'quests', entityId: 'quest-lords-challenge', role: 'target' },
   ],
-};
+});
 
 /** Seed the characters catalog (currently the single designed target asset). */
 export function seedCharacterEntries(): CharacterEntry[] {

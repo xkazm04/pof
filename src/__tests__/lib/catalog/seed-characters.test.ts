@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { seedCharacterEntries } from '@/lib/catalog/seed-characters';
+import { seedSpellbookEntries, spellbookIdForName } from '@/lib/catalog/seed-spellbook';
 
 describe('seedCharacterEntries — Captain Vael target asset', () => {
   const entries = seedCharacterEntries();
@@ -38,5 +39,27 @@ describe('seedCharacterEntries — Captain Vael target asset', () => {
     // Both 'Melee Attack' (off-phy-01) and 'Heavy Attack' (off-phy-02) exist.
     expect(abilityLinks.map((l) => l.entityId).sort()).toEqual(['off-phy-01', 'off-phy-02']);
     for (const link of abilityLinks) expect(link.role).toBe('ability');
+  });
+});
+
+describe('seedCharacterEntries — ability links are derived, never a second hand copy', () => {
+  const sb = new Map(seedSpellbookEntries().map((e) => [e.data.name.toLowerCase(), e.id]));
+
+  it('every character spellbook links are exactly its data.abilities, resolved', () => {
+    for (const c of seedCharacterEntries()) {
+      const linked = (c.links ?? []).filter((l) => l.catalogId === 'spellbook').map((l) => l.entityId);
+      const declared = c.data.abilities.map((n) => sb.get(n.toLowerCase()));
+      expect({ id: c.id, linked }).toEqual({ id: c.id, linked: declared });
+    }
+  });
+
+  it('every declared ability names a real spellbook entry (none silently dropped)', () => {
+    const unresolved = seedCharacterEntries().flatMap((c) => c.data.abilities.filter((n) => !sb.has(n.toLowerCase())).map((n) => `${c.id}:${n}`));
+    expect(unresolved).toEqual([]);
+  });
+
+  it('spellbookIdForName is the one case-insensitive resolver', () => {
+    expect(spellbookIdForName('MELEE attack')).toBe('off-phy-01');
+    expect(spellbookIdForName('No Such Ability')).toBeUndefined();
   });
 });
