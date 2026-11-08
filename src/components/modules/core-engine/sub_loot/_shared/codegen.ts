@@ -48,11 +48,17 @@ function finiteNonNeg(raw: unknown, fallback: number): number {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
 export function parseUE5LootTable(
   json: UE5LootTableJson,
 ): { entries: (LootEditorEntry & { source: LootSource })[]; nothingWeight: number } {
-  const props = json.Properties ?? json;
-  const rawEntries = props.Entries ?? [];
+  // Valid JSON of the wrong shape (null, an array, a non-array Entries, a null row) imports
+  // as "no entries" instead of throwing into the caller's "Failed to parse JSON" catch.
+  const root: Record<string, unknown> = isRecord(json) ? json : {};
+  const props = isRecord(root.Properties) ? root.Properties : root;
+  const rawEntries = (Array.isArray(props.Entries) ? props.Entries : []).filter(isRecord) as UE5LootEntry[];
   const nothingWeight = finiteNonNeg(props.NothingWeight, 0);
 
   const entries = rawEntries.map((entry, i) => {
