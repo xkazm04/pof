@@ -34,6 +34,17 @@ function StaggerItem({ index, children }: { index: number; children: ReactNode }
   );
 }
 
+/** A level no agent reached: an explicit unsampled stub, not a measured zero. */
+function UnsampledBar({ level }: { level: number }) {
+  return (
+    <div
+      data-sampled="false"
+      className="flex-1 h-[2%] border-t border-dashed border-text-muted/50"
+      title={`Lv${level}: unsampled (no agent reached it)`}
+    />
+  );
+}
+
 /* ── Power Curves Tab ─────────────────────────────────────────────────── */
 
 export function PowerTab({ result, config }: {
@@ -64,9 +75,11 @@ export function PowerTab({ result, config }: {
             {result.brackets.map((b) => {
               const maxR = Math.max(...result.brackets.map((br) => br.gearReplacementCount), 1);
               const h = (b.gearReplacementCount / maxR) * 80;
+              if (b.agents === 0) return <UnsampledBar key={b.level} level={b.level} />;
               return (
                 <div
                   key={b.level}
+                  data-sampled="true"
                   className="flex-1 rounded-t-sm transition-all hover:opacity-80"
                   style={{
                     height: `${Math.max(h, 2)}%`,
@@ -92,9 +105,11 @@ export function PowerTab({ result, config }: {
             {result.brackets.map((b) => {
               const maxG = Math.max(...result.brackets.map((br) => br.avgGold), 1);
               const h = (b.avgGold / maxG) * 80;
+              if (b.agents === 0) return <UnsampledBar key={b.level} level={b.level} />;
               return (
                 <div
                   key={b.level}
+                  data-sampled="true"
                   className="flex-1 rounded-t-sm"
                   style={{ height: `${Math.max(h, 2)}%`, backgroundColor: ACCENT_ORANGE, opacity: 0.6 }}
                   title={`Lv${b.level}: ${b.avgGold}g avg`}
