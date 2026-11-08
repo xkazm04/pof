@@ -233,7 +233,11 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
 ): Promise<RetryOutcome<R>> {
   const critic = deps.critic ?? critiqueMesh;
   const stage: MeshStage = deps.stage ?? 'raw';
-  const maxAttempts = Math.max(1, deps.maxAttempts ?? DEFAULT_MAX_ATTEMPTS);
+  // Every attempt is a paid roll, so the budget is a whole, finite number. An unreadable one
+  // (NaN from a non-numeric request field, Infinity) buys exactly ONE roll — never zero rolls
+  // reported as "in NaN attempts", never an unbounded loop; a fraction is floored.
+  const requested = deps.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+  const maxAttempts = Number.isFinite(requested) ? Math.max(1, Math.floor(requested)) : 1;
   const isAcceptable = deps.isAcceptable ?? ((c) => c?.ok === true && c.verdict !== undefined && c.verdict !== 'fail');
 
   const attempts: RollAttempt<R>[] = [];
