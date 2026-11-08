@@ -143,6 +143,17 @@ describe('classifyCookLogLine', () => {
     expect(classifyCookLogLine('LogInit: Display: starting cook commandlet')).toBe('info');
     expect(classifyCookLogLine('')).toBe('info');
   });
+
+  it('does not flag a summary that reports ZERO errors/warnings', () => {
+    // UAT's closing summary on a clean cook — a count of zero is not an error.
+    expect(classifyCookLogLine('LogInit: Display: Success - 0 error(s), 0 warning(s)')).toBe('info');
+    expect(classifyCookLogLine('LogPakFile: Display: Finished with 0 errors and 0 warnings')).toBe('info');
+    expect(classifyCookLogLine('Cook complete: 0 failures')).toBe('info');
+    // A nonzero count on the same line still classifies by what it reports.
+    expect(classifyCookLogLine('LogInit: Display: Success - 0 error(s), 3 warning(s)')).toBe('warning');
+    expect(classifyCookLogLine('LogInit: Display: Failure - 2 error(s), 0 warning(s)')).toBe('error');
+    expect(classifyCookLogLine('LogCook: Error: 10 errors in asset')).toBe('error');
+  });
 });
 
 describe('appendCookLog', () => {

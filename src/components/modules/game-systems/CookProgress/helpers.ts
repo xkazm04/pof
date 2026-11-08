@@ -6,8 +6,15 @@ import type { CookLogSeverity, CookLogLine } from './types';
  * the UE cook commandlet print verbosity inline (`LogFoo: Error:`, `Warning:`),
  * so a word-boundary keyword match is enough — errors win over warnings, and
  * everything else is muted info. Pure + exported so the coloring is unit-tested.
+ *
+ * A summary that reports a count of ZERO (`Success - 0 error(s), 0 warning(s)`) is
+ * not a defect, so those count phrases are removed before matching
+ * (ai-registry ship-pipeline-gating / validator-log-classification, step 3).
  */
-export function classifyCookLogLine(line: string): CookLogSeverity {
+const ZERO_COUNT_PHRASE = /\b0\s+(?:errors?|warnings?|failures?|error\(s\)|warning\(s\)|failure\(s\))/gi;
+
+export function classifyCookLogLine(raw: string): CookLogSeverity {
+  const line = raw.replace(ZERO_COUNT_PHRASE, '');
   if (/\b(error|errors|fail|failed|failure|fatal|exception|crash|crashed|abort|aborted)\b/i.test(line)) {
     return 'error';
   }
