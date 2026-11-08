@@ -86,7 +86,7 @@ function BarsChart({ t, rows, max, labelWidth = 90, ariaLabel, staggerSec }: Ext
             <div style={{ flex: 1, height: 16, background: t.line, opacity: 0.4 }}>
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${scale(r.value)}%` }}
+                animate={{ width: `${Math.min(100, Math.max(0, scale(r.value)))}%` }}
                 transition={{ duration: 0.55, delay: i * staggerSec, ease: 'easeOut' }}
                 style={{ height: '100%', background: fill, opacity: r.highlight ? 1 : 0.85 }}
               />
@@ -155,7 +155,7 @@ function HistogramChart({ t, bars, max, height = 130, ariaLabel, staggerSec }: E
   return (
     <svg role="img" aria-label={ariaLabel ?? 'histogram'} viewBox={`0 0 ${width} ${height}`} width="100%" height={height} style={{ marginTop: 8 }}>
       {bars.map((b, i) => {
-        const h = sy(b.value);
+        const h = Math.min(height - 20, Math.max(0, sy(b.value)));
         const fill = b.highlight ? t.ink : t.line;
         return (
           <motion.rect
