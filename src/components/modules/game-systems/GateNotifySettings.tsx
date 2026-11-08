@@ -48,6 +48,8 @@ export function GateNotifySettings() {
   const [urlDraft, setUrlDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
+  // A failed read or a refused save SAYS so — never a silent snap-back.
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -55,13 +57,16 @@ export function GateNotifySettings() {
       setConfig(data.config);
       setState(data.state);
       setUrlDraft(data.config.webhookUrl);
-    } catch { /* keep last-known config */ }
+    } catch (e) {
+      setError(`Could not load notification settings: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   const save = useCallback(async (patch: Partial<GateNotifyConfig>) => {
     setBusy(true);
+    setError(null);
     try {
       const data = await apiFetch<{ config: GateNotifyConfig }>('/api/notify/gate', {
         method: 'POST',
@@ -70,10 +75,14 @@ export function GateNotifySettings() {
       });
       setConfig(data.config);
       setUrlDraft(data.config.webhookUrl);
-    } catch { /* surfaced by stale config */ } finally {
+    } catch (e) {
+      setError(`Save failed: ${e instanceof Error ? e.message : String(e)}`);
+      // The field shows only what the server holds, not a value it refused.
+      setUrlDraft(config.webhookUrl);
+    } finally {
       setBusy(false);
     }
-  }, []);
+  }, [config.webhookUrl]);
 
   const sendTest = useCallback(async () => {
     setBusy(true);
@@ -126,6 +135,7 @@ export function GateNotifySettings() {
       {/* Webhook URL */}
       <input
         type="url"
+        aria-label="Webhook URL"
         value={urlDraft}
         disabled={busy}
         placeholder={URL_PLACEHOLDER[config.target]}
@@ -177,6 +187,12 @@ export function GateNotifySettings() {
           {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Send test
         </button>
       </div>
+
+      {error && (
+        <div className="text-2xs" style={{ color: STATUS_ERROR }} role="alert" data-testid="pof-gate-notify-error">
+          {error}
+        </div>
+      )}
 
       {/* Status row */}
       <div className="flex items-center justify-between gap-3 text-2xs text-text-muted flex-wrap border-t border-border pt-2">

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { mockFetchRoutes } from '@/__tests__/setup';
 import { GateNotifySettings } from '@/components/modules/game-systems/GateNotifySettings';
@@ -60,5 +60,36 @@ describe('GateNotifySettings', () => {
     });
     // outcome surfaces in the status row
     await waitFor(() => expect(screen.getByTestId('pof-gate-notify-testmsg').textContent).toContain('sent'));
+  });
+
+  it('a refused save says so and puts the saved URL back', async () => {
+    const ok = body();
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      const refused = init?.method === 'POST';
+      const b = refused ? { success: false, error: 'invalid notify config fields' } : ok;
+      return Promise.resolve({ ok: !refused, status: refused ? 400 : 200, json: () => Promise.resolve(b), text: () => Promise.resolve(JSON.stringify(b)) });
+    }) as unknown as typeof fetch;
+    render(<GateNotifySettings />);
+    const url = screen.getByTestId('pof-gate-notify-url') as HTMLInputElement;
+    await waitFor(() => expect(url.value).toBe('https://hooks.slack.com/services/T/B/X'));
+
+    fireEvent.change(url, { target: { value: 'not a url' } });
+    fireEvent.blur(url);
+
+    const err = await screen.findByTestId('pof-gate-notify-error');
+    expect(err.textContent).toContain('invalid notify config fields');
+    // The field must not keep showing a value the server never accepted.
+    expect(url.value).toBe('https://hooks.slack.com/services/T/B/X');
+  });
+
+  it('a failed config read says so', async () => {
+    mockFetchRoutes([{ match: '/api/notify/gate', response: { status: 500, body: { success: false, error: 'db locked' } } }]);
+    render(<GateNotifySettings />);
+    expect((await screen.findByTestId('pof-gate-notify-error')).textContent).toContain('db locked');
+  });
+
+  it('gives the webhook URL field an accessible name', async () => {
+    render(<GateNotifySettings />);
+    expect(screen.getByLabelText('Webhook URL')).toBe(screen.getByTestId('pof-gate-notify-url'));
   });
 });
