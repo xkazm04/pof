@@ -15,6 +15,8 @@ import { StringTableCard } from '@/components/modules/evaluator/LocalizationPipe
 import { TranslationCard } from '@/components/modules/evaluator/LocalizationPipelineView/TranslationCard';
 import { OverviewTab } from '@/components/modules/evaluator/LocalizationPipelineView/OverviewTab';
 import { QATab } from '@/components/modules/evaluator/LocalizationPipelineView/QATab';
+import { LocalizationPipelineView } from '@/components/modules/evaluator/LocalizationPipelineView';
+import { useLocalizationPipelineStore } from '@/stores/localizationPipelineStore';
 import { ExpansionFactorBars } from '@/components/modules/evaluator/LocalizationPipelineView/ExpansionFactorBars';
 import type {
   LocalizationHazard,
@@ -23,6 +25,8 @@ import type {
   StringTable,
   TranslationEntry,
   ScanResult,
+  LocalizableString,
+  LocalizationConfig,
 } from '@/types/localization-pipeline';
 
 afterEach(() => {
@@ -184,5 +188,46 @@ describe('QA tab never claims every locale ships when one has no data', () => {
   it('says every locale is clear only when each target locale is ready', () => {
     render(<QATab findings={[]} byLocale={{ de: ready, fr: { ...ready, locale: 'fr' } }} targetLocales={['de', 'fr']} hasTranslations />);
     expect(document.body.textContent).toContain('Every locale is clear to ship');
+  });
+});
+
+// ── Whole-view fixtures (store seeded directly; no route, no provider) ──────
+const BASE_STR: LocalizableString = {
+  id: 'str-1', sourceText: 'Press start', context: 'ui_label', currentUsage: 'hardcoded',
+  locNamespace: 'UI', locKey: 'PressStart',
+  locations: [{ filePath: 'Source/UI/Menu.cpp', lineNumber: 42, columnStart: 1, columnEnd: 10, codeSnippet: 'x' }],
+  sourceModule: 'arpg-ui', detectionConfidence: 0.95,
+};
+const entryFor = (stringId: string, locale: string): TranslationEntry => ({
+  stringId, locale, translatedText: `${locale}:${stringId}`, status: 'translated',
+  translatorNotes: '', backTranslation: '', confidence: 0.9, expansionWarning: false, charDelta: 0,
+});
+const VIEW_CONFIG: LocalizationConfig = {
+  rootNamespace: 'PoF', targetLocales: ['de', 'fr'], scanModules: ['arpg-ui'], glossary: [], autoApplyThreshold: 0.85,
+};
+
+function seedView(strings: LocalizableString[], entries: TranslationEntry[]) {
+  useLocalizationPipelineStore.setState({
+    config: VIEW_CONFIG,
+    scanResult: {
+      totalFilesScanned: 1, totalStringsFound: strings.length, hardcodedCount: strings.length,
+      ftextFromStringCount: 0, alreadyLocalizedCount: 0, strings, hazards: [], moduleBreakdown: {},
+    },
+    strings, hazards: [], entries, qaFindings: [], qaByLocale: {}, isLoading: false, error: null,
+    fetchDefaults: async () => {},
+  });
+}
+
+describe('the shared search box means the same thing on Strings and Translations', () => {
+  it('a LOCTEXT-key query that matches a string also matches its translations', () => {
+    const other = { ...BASE_STR, id: 'str-2', sourceText: 'Inventory', locKey: 'Inventory' };
+    seedView([BASE_STR, other], [entryFor('str-1', 'de'), entryFor('str-1', 'fr'), entryFor('str-2', 'de')]);
+    render(<LocalizationPipelineView />);
+    fireEvent.click(screen.getByRole('tab', { name: /strings/i }));
+    fireEvent.change(screen.getByLabelText(/search strings/i), { target: { value: 'pressstart' } });
+    expect(document.body.textContent).toContain('1 strings shown');
+
+    fireEvent.click(screen.getByRole('tab', { name: /translations/i }));
+    expect(document.body.textContent).toContain('2 translations shown');
   });
 });

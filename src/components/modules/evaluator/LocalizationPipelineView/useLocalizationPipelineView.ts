@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocalizationPipelineStore } from '@/stores/localizationPipelineStore';
 import { useProjectStore } from '@/stores/projectStore';
-import type { StringContext } from '@/types/localization-pipeline';
+import type { StringContext, LocalizableString } from '@/types/localization-pipeline';
 import { LOW_CONFIDENCE } from '@/lib/localization/definitions';
 import { DEFAULT_PSEUDO_KNOBS } from '@/lib/localization/pseudo-locale';
 import type { PseudoKnobs } from '@/lib/localization/pseudo-locale';
 import { assessReadiness } from '@/lib/localization/readiness';
 import type { ViewTab, StringPreset, TranslationPreset } from './types';
+
+/** One search rule for both tabs (they share the query): source text or LOCTEXT key. */
+function matchesQuery(s: LocalizableString, q: string): boolean {
+  return s.sourceText.toLowerCase().includes(q) || s.locKey.toLowerCase().includes(q);
+}
 
 export function useLocalizationPipelineView() {
   const config = useLocalizationPipelineStore((s) => s.config);
@@ -89,9 +94,7 @@ export function useLocalizationPipelineView() {
     let result = strings;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (s) => s.sourceText.toLowerCase().includes(q) || s.locKey.toLowerCase().includes(q),
-      );
+      result = result.filter((s) => matchesQuery(s, q));
     }
     if (contextFilter !== 'all') {
       result = result.filter((s) => s.context === contextFilter);
@@ -121,7 +124,7 @@ export function useLocalizationPipelineView() {
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      const matchIds = new Set(strings.filter((s) => s.sourceText.toLowerCase().includes(q)).map((s) => s.id));
+      const matchIds = new Set(strings.filter((s) => matchesQuery(s, q)).map((s) => s.id));
       result = result.filter((e) => matchIds.has(e.stringId));
     }
     if (translationPresets.has('low-confidence')) {
