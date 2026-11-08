@@ -72,6 +72,7 @@ export function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
             <button
               className="flex items-center gap-2 w-full text-left px-3 py-2 hover:bg-surface-2 transition-colors"
               onClick={() => setExpandedRunKey(isOpen ? null : key)}
+              aria-expanded={isOpen}
             >
               {isOpen ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
               <StatusIcon className="w-3.5 h-3.5" style={{ color: statusColor }} />
@@ -113,6 +114,7 @@ function TestResultCard({ result }: { result: PofTestResult }) {
       <button
         className="flex items-center gap-2 w-full text-left px-2.5 py-1.5"
         onClick={() => setExpanded((p) => !p)}
+        aria-expanded={expanded}
       >
         {React.createElement(iconType, {
           className: `w-3.5 h-3.5 shrink-0 ${result.status === 'running' ? 'animate-spin' : ''}`,

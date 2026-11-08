@@ -188,6 +188,7 @@ function ScenarioSection({
         className="flex items-center gap-1.5 w-full text-left text-xs uppercase tracking-wider font-medium mb-1"
         style={{ color }}
         onClick={() => setOpen((p) => !p)}
+        aria-expanded={open}
       >
         <Icon className="w-3 h-3" style={{ color }} />
         {label} ({count})

@@ -49,6 +49,7 @@ export function TestHarnessPanel() {
       <button
         className="flex items-center gap-2 w-full text-left px-4 py-3"
         onClick={() => setExpanded((p) => !p)}
+        aria-expanded={expanded}
       >
         {expanded ? <ChevronDown className="w-4 h-4 text-text-muted" /> : <ChevronRight className="w-4 h-4 text-text-muted" />}
         <FlaskConical className="w-4 h-4" style={{ color: ACCENT_VIOLET }} />

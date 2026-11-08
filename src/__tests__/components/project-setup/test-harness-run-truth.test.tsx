@@ -27,6 +27,11 @@ vi.mock('@/hooks/useSnapshots', () => ({
   }),
 }));
 
+vi.mock('@/components/modules/project-setup/TestHarnessPanel/WaitingTestsTab', () => ({ WaitingTestsTab: () => null }));
+
+import { TestHarnessPanel } from '@/components/modules/project-setup/TestHarnessPanel';
+import { ScenarioCard } from '@/components/modules/project-setup/TestHarnessPanel/ScenarioCard';
+import { TEMPLATE_SCENARIO } from '@/components/modules/project-setup/TestHarnessPanel/constants';
 import { useTestHarnessPanel } from '@/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel';
 import { ResultsTab } from '@/components/modules/project-setup/TestHarnessPanel/ResultsTab';
 
@@ -95,6 +100,27 @@ describe('the run detail rows', () => {
   it("shows the plugin's failure reason when it gives one", () => {
     render(<ResultsTab isRunning={false} onClear={() => {}} history={[run('S', 1000, [failing('actor never spawned')])]} />);
     expect(screen.getByText(/actor never spawned/)).toBeTruthy();
+  });
+});
+
+describe('disclosure state is exposed to assistive tech', () => {
+  it('the panel header', () => {
+    render(<TestHarnessPanel />);
+    const header = screen.getByRole('button', { name: /Test Harness/ });
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(header);
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('a run row and its test row', () => {
+    render(<ResultsTab isRunning={false} onClear={() => {}} history={[run('Suite', 1000, [result('t1', 'failed')])]} />);
+    expect(screen.getByRole('button', { name: /Suite/ }).getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('button', { name: /t1/ }).getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('a scenario section', () => {
+    render(<ScenarioCard scenario={TEMPLATE_SCENARIO} index={0} isExpanded onToggle={() => {}} onUpdate={() => {}} onRemove={() => {}} />);
+    expect(screen.getByRole('button', { name: /Assertions \(1\)/ }).getAttribute('aria-expanded')).toBe('true');
   });
 });
 
