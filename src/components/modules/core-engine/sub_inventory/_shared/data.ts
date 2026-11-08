@@ -292,6 +292,7 @@ export const SLOT_SUBTYPES: Record<string, string[]> = {
   Head: ['Helm'], Chest: ['Chestplate'], Legs: ['Greaves'], Feet: ['Boots'],
   Hands: ['Gauntlets'], MainHand: ['Sword', 'Bow', 'Staff', 'Dagger', 'Axe', 'Mace', 'Polearm', 'Baton'],
   OffHand: ['Shield', 'Dagger'], Ring: ['Ring'], Amulet: ['Amulet'], Belt: ['Belt'],
+  Back: ['Cape'], Trinket: ['Trinket'],
 };
 
 /* ── All item types (for dynamic filters) ────────────────────────────────── */
@@ -307,6 +308,8 @@ export const LOADOUT_SLOTS: LoadoutSlot[] = [
   { slotId: 'Feet', slotName: 'Feet', isEmpty: true },
   { slotId: 'MainHand', slotName: 'Main Hand', item: { name: 'Void Daggers', rarity: 'Legendary', stats: { Damage: 40, Speed: 8 } }, isEmpty: false },
   { slotId: 'OffHand', slotName: 'Off Hand', isEmpty: true },
+  { slotId: 'Back', slotName: 'Back', isEmpty: true },
+  { slotId: 'Trinket', slotName: 'Trinket', isEmpty: true },
 ];
 
 export const LOADOUT_SLOT_POSITIONS: Record<string, { x: number; y: number }> = {
@@ -316,6 +319,8 @@ export const LOADOUT_SLOT_POSITIONS: Record<string, { x: number; y: number }> = 
   Feet: { x: 85, y: 155 },
   MainHand: { x: 15, y: 80 },
   OffHand: { x: 155, y: 80 },
+  Back: { x: 15, y: 10 },
+  Trinket: { x: 155, y: 10 },
 };
 
 /* ── 6.8 Set Bonus Data ──────────────────────────────────────────────── */
