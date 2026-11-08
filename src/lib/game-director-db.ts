@@ -692,11 +692,15 @@ export function getDirectorStats(): DirectorStats {
   // Counts exclude findings the user has triaged out so noise doesn't inflate the
   // health score. All three finding counts read the same (triage-filtered) table, so
   // collapse them into one row of conditional aggregates instead of three scans.
+  // openCritHigh additionally skips a snooze that has not lapsed (mirrors the
+  // read-time derivation in rowToFinding, so the nav pill matches the open list).
   const findAgg = db.prepare(
     `SELECT
        COUNT(*) as total,
        SUM(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) as critical,
-       SUM(CASE WHEN severity IN ('critical','high') THEN 1 ELSE 0 END) as openCritHigh
+       SUM(CASE WHEN severity IN ('critical','high') AND NOT (
+         triage_status = 'snooze' AND COALESCE(datetime(snoozed_until) > datetime('now'), 1)
+       ) THEN 1 ELSE 0 END) as openCritHigh
      FROM game_director_findings WHERE ${TRIAGE_EXCLUDED_SQL}`
   ).get() as { total: number; critical: number | null; openCritHigh: number | null };
 
