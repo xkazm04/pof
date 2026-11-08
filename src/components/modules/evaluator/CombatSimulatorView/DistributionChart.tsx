@@ -27,11 +27,14 @@ export function DistributionChart({
   const frac = (v: number) => Math.max(0, Math.min(1, (v - lo) / range));
   const p50 = percentileFromBuckets(buckets, 0.5);
   const p95 = percentileFromBuckets(buckets, 0.95);
+  const summaryLabel = describeDistribution(title, buckets, unit, p50, p95);
 
   return (
     <SurfaceCard className="p-3">
       <div className="text-2xs text-text-muted font-medium mb-2">{title}</div>
-      <div className="relative flex items-end gap-px h-16">
+      {/* The bars are one rendering of the data; the label is its text body, so the
+          values reach keyboard, touch and screen-reader users, not hover alone. */}
+      <div className="relative flex items-end gap-px h-16" role="img" aria-label={summaryLabel}>
         {buckets.map((b, i) => {
           const h = (b.count / maxCount) * 100;
           return (
@@ -54,6 +57,27 @@ export function DistributionChart({
       </div>
     </SurfaceCard>
   );
+}
+
+/** Text alternative for a distribution: sample size, range, p50/p95, peak bucket, every bucket. */
+function describeDistribution(
+  title: string,
+  buckets: { min: number; max: number; count: number }[],
+  unit: string,
+  p50: number | null,
+  p95: number | null,
+): string {
+  const fmt = (v: number) => `${v.toFixed(0)}${unit}`;
+  const total = buckets.reduce((s, b) => s + b.count, 0);
+  const peak = buckets.reduce((a, b) => (b.count > a.count ? b : a), buckets[0]);
+  const parts = [
+    `${title}: ${total} fights from ${fmt(buckets[0].min)} to ${fmt(buckets[buckets.length - 1].max)}`,
+    p50 != null ? `median (p50) ${fmt(p50)}` : null,
+    p95 != null ? `p95 ${fmt(p95)}` : null,
+    `most common ${fmt(peak.min)}-${fmt(peak.max)} (${peak.count})`,
+    `buckets ${buckets.map((b) => `${fmt(b.min)}-${fmt(b.max)}: ${b.count}`).join(', ')}`,
+  ];
+  return parts.filter(Boolean).join('; ');
 }
 
 /** A labeled vertical percentile line overlaid on a distribution's bars. */
