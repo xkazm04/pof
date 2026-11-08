@@ -3,7 +3,7 @@ import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes } from 'rea
 export function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) {
   return (
     <label htmlFor={htmlFor} style={{ display: 'block' }}>
-      <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--lab-muted)', display: 'block', marginBottom: 'var(--lab-s1)' }}>{label}</span>
+      <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-subtle)', display: 'block', marginBottom: 'var(--lab-s1)' }}>{label}</span>
       {children}
     </label>
   );
