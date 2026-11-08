@@ -26742,7 +26742,11 @@
           "revision": 14,
           "changedAt": "2026-09-25",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/ConflictSection.tsx:31 In-place conflict resolution (Keep mine / Take UE5 / Revert to base), the WriteOutcomeChip labels and the syncEvents reducer shipped on 2026-10-19 (ce9c5a58, 7df4a335) with no doc change, and docs/ still has no mention of planResolution, Keep mine or write-outcome; the coupled runtime-patterns.md:141 ledger paragraph therefore describes the panel without its user-visible resolution flow.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:fd96220db75846a1",
+          "evaluatedRevision": 14
         },
         {
           "subject": "sync-replication",

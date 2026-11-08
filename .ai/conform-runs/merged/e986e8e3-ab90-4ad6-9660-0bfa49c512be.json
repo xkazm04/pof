@@ -1,0 +1,63 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e986e8e3-ab90-4ad6-9660-0bfa49c512be",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-11-08T00:54:06.394238+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ue5-state-sync",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/ConflictSection.tsx:31 In-place conflict resolution (Keep mine / Take UE5 / Revert to base), the WriteOutcomeChip labels and the syncEvents reducer shipped on 2026-10-19 (ce9c5a58, 7df4a335) with no doc change, and docs/ still has no mention of planResolution, Keep mine or write-outcome; the coupled runtime-patterns.md:141 ledger paragraph therefore describes the panel without its user-visible resolution flow.",
+   "techniques": [
+    {
+     "technique": "same-change-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/ConflictSection.tsx:31 ce9c5a58 'resolve sync conflicts in place' touched 8 files and no docs/ path, and no later docs commit covers it. The earlier ledger change (78dd1483) did get its doc (33fc0bd7) on the same day, so the obligation is met only when someone remembers it."
+    },
+    {
+     "technique": "negative-claims-are-pinned",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/project-setup/live-state-sync-mount.test.tsx:128 module-system.md:220 makes a negative claim: mounting LiveStateSyncPanel opens no socket. This test pins it, and the doc names the test."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "gdd-compliance",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "project-setup-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "ue5-filesystem",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T00:54:06.394238+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "negative-claims-are-pinned",
+    "same-change-enforcement"
+   ],
+   "deviations": 1,
+   "context": "ue5-state-sync",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

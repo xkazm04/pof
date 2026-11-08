@@ -22785,6 +22785,27 @@
         "at": "2026-11-08T00:14:20.571044+00:00",
         "reason": "reviewer (sonnet): The not-applicable anchors are incidental. The audio one is a description paragraph and the materials one is a fetch call for image analysis, and neither shows that no code scanning exists. The grep terms (finding, antiPattern, codebase, detector) are narrow for this subject, and I couldn't confirm "
       }
+    },
+    "0b31785f-a922-4da7-ac3f-bcf06c56f97f/docs-sync": {
+      "context": "ue5-state-sync",
+      "subject": "docs-sync",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:54:06.394Z",
+      "worker": "e986e8e3-ab90-4ad6-9660-0bfa49c512be",
+      "techniques": [
+        {
+          "technique": "same-change-enforcement",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/ConflictSection.tsx:31 ce9c5a58 'resolve sync conflicts in place' touched 8 files and no docs/ path, and no later docs commit covers it. The earlier ledger change (78dd1483) did get its doc (33fc0bd7) on the same day, so the obligation is met only when someone remembers it."
+        },
+        {
+          "technique": "negative-claims-are-pinned",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/project-setup/live-state-sync-mount.test.tsx:128 module-system.md:220 makes a negative claim: mounting LiveStateSyncPanel opens no socket. This test pins it, and the doc names the test."
+        }
+      ]
     }
   }
 }
