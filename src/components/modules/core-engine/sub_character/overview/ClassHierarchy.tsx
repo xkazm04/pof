@@ -10,6 +10,7 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { MOTION_CONFIG, motionSafe } from '@/lib/motion';
+import { useNavigationStore } from '@/stores/navigationStore';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '../_shared/design';
 import { CLASS_TREE, type ClassNode } from '../_shared/data';
 
@@ -32,6 +33,7 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
   // The junction dot pulses opacity only — non-positional, so the root
   // MotionConfig would keep it looping for a motion-sensitive user.
   const prefersReduced = useReducedMotion();
+  const navigateToModule = useNavigationStore((s) => s.navigateToModule);
 
   return (
     <motion.div
@@ -125,12 +127,15 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
 
           {/* Cross-reference link */}
           {node.crossRef && (
-            <span
+            <button
+              type="button"
+              onClick={() => navigateToModule(node.crossRef!)}
+              title={`Open the ${node.crossRef} module`}
               className="flex items-center gap-1 text-xs font-mono font-bold px-2 py-0.5 rounded border cursor-pointer hover:brightness-125 transition-all"
               style={{ backgroundColor: withOpacity(STATUS_ERROR, OPACITY_8), color: STATUS_ERROR, borderColor: withOpacity(STATUS_ERROR, OPACITY_20) }}>
               <ExternalLink className="w-2.5 h-2.5" />
               {node.crossRef}
-            </span>
+            </button>
           )}
 
           {/* Hover tooltip */}

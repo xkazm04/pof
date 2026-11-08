@@ -17,6 +17,7 @@ import { InputTab } from '@/components/modules/core-engine/sub_character/input/I
 import { ClassHierarchy } from '@/components/modules/core-engine/sub_character/overview/ClassHierarchy';
 import { PropertyInspector } from '@/components/modules/core-engine/sub_character/overview/PropertyInspector';
 import { CharacterScalingPreview } from '@/components/modules/core-engine/sub_character/overview/CharacterScalingPreview';
+import { useNavigationStore } from '@/stores/navigationStore';
 import type { SubModuleId } from '@/types/modules';
 import { buildBindingsApplyPrompt } from '@/components/modules/core-engine/sub_character/input/build-bindings-apply-prompt';
 
@@ -141,5 +142,13 @@ describe('form controls have an accessible name (placeholder is not one)', () =>
       expect(named(container)).toBe(container.querySelectorAll('input').length);
       unmount();
     }
+  });
+});
+
+describe('class-tree cross-reference chip does what its link styling promises', () => {
+  it('clicking the arpg-enemy-ai chip navigates to that module', () => {
+    const { getByRole } = render(<ClassHierarchy />);
+    fireEvent.click(getByRole('button', { name: /arpg-enemy-ai/ }));
+    expect(useNavigationStore.getState().activeSubModule).toBe('arpg-enemy-ai');
   });
 });
