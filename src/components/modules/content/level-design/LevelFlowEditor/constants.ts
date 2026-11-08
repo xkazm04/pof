@@ -21,6 +21,16 @@ export const ROOM_TYPE_CONFIG: Record<RoomType, { color: string; label: string }
   hub: { color: ACCENT_CYAN_LIGHT, label: 'Hub' },
 };
 
+/**
+ * Never index blind: `rooms` is a free-form JSON blob that CLI runs and older
+ * schemas write too, so a type outside `RoomType` must render (named by its raw
+ * value), not throw and take the whole canvas down.
+ */
+export function roomTypeConfig(type: string): { color: string; label: string } {
+  return (ROOM_TYPE_CONFIG as Record<string, { color: string; label: string } | undefined>)[type]
+    ?? { color: STATUS_SUBDUED, label: type || 'Unknown' };
+}
+
 export const DIFFICULTY_COLORS: Record<DifficultyLevel, string> = {
   1: STATUS_SUCCESS,
   2: STATUS_LIME,

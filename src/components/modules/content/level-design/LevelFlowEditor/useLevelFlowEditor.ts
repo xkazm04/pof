@@ -6,7 +6,7 @@ import { levelBlockoutScript } from '@/lib/blender-mcp/scripts/level-blockout';
 import type { BlockoutRoom } from '@/lib/blender-mcp/scripts/level-blockout';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
-import { ROOM_W, ROOM_H, ROOM_TYPE_CONFIG } from './constants';
+import { ROOM_W, ROOM_H, roomTypeConfig } from './constants';
 import type { LevelFlowEditorProps } from './types';
 
 export function useLevelFlowEditor({
@@ -246,7 +246,7 @@ export function useLevelFlowEditor({
         ];
       };
       const blockoutRooms: BlockoutRoom[] = rooms.map((room) => {
-        const cfg = ROOM_TYPE_CONFIG[room.type];
+        const cfg = roomTypeConfig(room.type);
         return {
           id: room.id,
           name: room.name,

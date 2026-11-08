@@ -121,3 +121,18 @@ describe('deleting a whole design document is confirmed', () => {
     expect(api.deletes()).toHaveLength(0);
   });
 });
+
+describe('a room type the editor does not know degrades instead of crashing the canvas', () => {
+  it("a stored room typed 'treasure' renders as a node (label 'treasure'), next to a known one", async () => {
+    const odd = room('r2', 300, { type: 'treasure' as RoomNode['type'] });
+    installApi([{ ...DOC, rooms: [room('r1', 100), odd] }]);
+    await openDoc();
+    const node = await waitFor(() => {
+      const el = document.querySelector('[data-room-node="r2"]');
+      if (!el) throw new Error('r2 not rendered');
+      return el;
+    });
+    expect(node.getAttribute('aria-label')).toContain('treasure');
+    expect(document.querySelector('[data-room-node="r1"]')).not.toBeNull();
+  });
+});
