@@ -1,6 +1,8 @@
 // ── Node types for the visual level flow editor ──
 
-export type RoomType = 'combat' | 'puzzle' | 'exploration' | 'boss' | 'safe' | 'transition' | 'cutscene' | 'hub';
+/** The one runtime list of room types; `RoomType` derives from it. */
+export const ROOM_TYPES = ['combat', 'puzzle', 'exploration', 'boss', 'safe', 'transition', 'cutscene', 'hub'] as const;
+export type RoomType = (typeof ROOM_TYPES)[number];
 export type DifficultyLevel = 1 | 2 | 3 | 4 | 5;
 export type SyncStatus = 'synced' | 'doc-ahead' | 'code-ahead' | 'diverged' | 'unlinked';
 export type PacingCurve = 'rising' | 'falling' | 'peak' | 'rest' | 'buildup';
