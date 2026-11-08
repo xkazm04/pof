@@ -7,8 +7,9 @@ import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_desig
 import { ScalableSelector } from '@/components/shared/ScalableSelector';
 import {
   ACCENT, RARITY_COLORS, LOADOUT_SLOTS, LOADOUT_SLOT_POSITIONS,
-  DUMMY_ITEMS, SLOT_SUBTYPES,
+  SLOT_SUBTYPES,
 } from '../_shared/data';
+import { useInventoryItems } from '../_shared/useInventoryItems';
 import { SpatialStashSection } from './spatial-stash/SpatialStashSection';
 import type { ItemData } from '../_shared/data';
 import type { LoadoutSlot } from '@/types/unique-tab-improvements';
@@ -19,6 +20,13 @@ import { STATUS_SUBDUED, STATUS_LOCKED_STROKE, OVERLAY_WHITE,
 /* ── SelectableItem for ScalableSelector ─────────────────────────────────── */
 
 type SelectableItem = ItemData & { [key: string]: unknown };
+
+/** Items that fit a loadout slot, from the catalog store's item list (not the static seed). */
+export function pickerItemsFor(slotId: string | null, items: readonly ItemData[]): SelectableItem[] {
+  if (!slotId) return [];
+  const validSubs = SLOT_SUBTYPES[slotId] ?? [];
+  return items.filter(i => validSubs.includes(i.subtype)) as SelectableItem[];
+}
 
 function renderSlotItem(item: SelectableItem, selected: boolean) {
   const color = RARITY_COLORS[item.rarity] ?? STATUS_SUBDUED;
@@ -91,11 +99,8 @@ export function EquipmentLoadoutSection() {
   const [loadout, setLoadout] = useState<LoadoutSlot[]>(LOADOUT_SLOTS);
   const [pickerSlot, setPickerSlot] = useState<string | null>(null);
 
-  const pickerItems = useMemo<SelectableItem[]>(() => {
-    if (!pickerSlot) return [];
-    const validSubs = SLOT_SUBTYPES[pickerSlot] ?? [];
-    return DUMMY_ITEMS.filter(i => validSubs.includes(i.subtype)) as SelectableItem[];
-  }, [pickerSlot]);
+  const catalogItems = useInventoryItems();
+  const pickerItems = useMemo(() => pickerItemsFor(pickerSlot, catalogItems), [pickerSlot, catalogItems]);
 
   const handleSelect = useCallback((selected: SelectableItem[]) => {
     if (selected.length === 0 || !pickerSlot) return;
