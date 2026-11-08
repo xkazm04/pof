@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Dna, Scan, Loader2, AlertCircle } from 'lucide-react';
 import { motionSafe } from '@/lib/motion';
@@ -24,6 +24,10 @@ export function TelemetryEvolution() {
   const dynamicContext = useProjectStore((s) => s.dynamicContext);
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  // One resolve per suggestion at a time: the UPDATE is a blind last-write-wins, so an
+  // Accept followed by a quick Dismiss would leave 'dismissed' after the UI showed acceptance.
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const pendingRef = useRef<string | null>(null);
   const prefersReduced = useReducedMotion();
 
   const handleScan = async () => {
@@ -35,6 +39,9 @@ export function TelemetryEvolution() {
   // Accept/Dismiss is a POST that can fail; the hook rethrows, so the failure is
   // caught HERE and stated — not left as an unhandled rejection with no feedback.
   const handleResolve = async (id: string, action: 'accept' | 'dismiss') => {
+    if (pendingRef.current) return;
+    pendingRef.current = id;
+    setPendingId(id);
     setResolveError(null);
     try {
       await resolveSuggestion(id, action);
@@ -42,6 +49,9 @@ export function TelemetryEvolution() {
       const message = error instanceof Error && error.message ? error.message : 'the request failed';
       logger.warn(`[TelemetryEvolution] ${action} suggestion ${id} failed: ${message}`);
       setResolveError(`${action === 'accept' ? 'Accept' : 'Dismiss'} not saved: ${message}`);
+    } finally {
+      pendingRef.current = null;
+      setPendingId(null);
     }
   };
 
@@ -169,6 +179,7 @@ export function TelemetryEvolution() {
         <SuggestionsList
           suggestions={suggestions}
           expandedId={expandedSuggestion}
+          pendingId={pendingId}
           onToggle={(id) => setExpandedSuggestion(prev => prev === id ? null : id)}
           onResolve={(id, action) => { void handleResolve(id, action); }}
         />
