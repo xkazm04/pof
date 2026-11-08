@@ -146,6 +146,14 @@ export function AssetInventory() {
         </button>
       </div>
 
+      {/* The route stops at its file cap: a capped scan must not read as the whole project. */}
+      {scanResult.truncated && (
+        <p role="status" className="text-xs text-amber-400 rounded-md px-3 py-2 border border-amber-400/30">
+          Partial scan: it stopped at its file limit after {scanResult.assets.length} assets, so
+          the totals and dependencies here cover only part of Content/.
+        </p>
+      )}
+
       {/* Bridge Assets summary */}
       {bridgeConnected && bridgeSummary && (
         <BridgeManifestCard
