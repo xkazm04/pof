@@ -26,6 +26,14 @@ import { TargetRow } from './TargetRow';
 import { RecurringErrorRow } from './RecurringErrorRow';
 import { BuildNowBar } from './BuildNowBar';
 
+/** An aborted build has no verdict, so it never counts toward "all passing". */
+function totalBuildsVerdict(failed: number, aborted: number): string {
+  const parts: string[] = [];
+  if (failed > 0) parts.push(`${failed} failed`);
+  if (aborted > 0) parts.push(`${aborted} aborted`);
+  return parts.length > 0 ? parts.join(' · ') : 'all passing';
+}
+
 export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProps) {
   const projectPath = useProjectStore((s) => s.projectPath);
   const projectName = useProjectStore((s) => s.projectName);
@@ -156,7 +164,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
           icon={<ListChecks className="w-3.5 h-3.5" style={{ color: STATUS_STALE }} />}
           label="Total Builds"
           value={<span data-stat="total-builds">{summary.totalBuilds}</span>}
-          sub={summary.failedCount > 0 ? `${summary.failedCount} failed` : 'all passing'}
+          sub={totalBuildsVerdict(summary.failedCount, summary.abortedCount)}
         />
         <KPICard
           layout="vertical"
