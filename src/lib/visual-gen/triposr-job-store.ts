@@ -5,7 +5,8 @@
  * mirrors the Experiment Lab's job store. Ephemeral — the durable artifact is the .glb.
  */
 import { runTriposr, type TriposrSpec, type TriposrResult } from './triposr-runner';
-import { critiqueMesh, summarizeGate, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
+import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
+import { settleLocalJob } from './local-job-settle';
 import { localCritiqueDeps } from './polycount-presets';
 
 /**
@@ -76,31 +77,7 @@ export function startTriposrJob(
   const job: TriposrJob = { id, status: 'running', spec, gradedAs: gate.gradedAs, startedAt: Date.now() };
   jobs.set(id, job);
   evictSettledJobs();
-  runner(spec)
-    .then(async (result) => {
-      job.result = result;
-      if (result.ok && result.meshPath) {
-        // Best-effort, but a throw is still reported: with no card the gate summary would
-        // claim "no mesh was produced" about a mesh that was.
-        try { job.critique = await critic(result.meshPath, gate.deps); } catch (e) {
-          job.critique = { ok: false, error: e instanceof Error ? e.message : String(e) };
-        }
-      }
-      // A produced mesh always reports HOW it was gated — including "nothing gated it".
-      if (result.ok) {
-        const summary = summarizeGate(job.critique, 'raw');
-        job.accepted = summary.accepted;
-        job.ungated = summary.ungated;
-        job.gateReason = summary.note ? `${summary.reason} — note: ${summary.note}` : summary.reason;
-      }
-      job.status = result.ok ? 'done' : 'error';
-      if (!result.ok) job.error = result.error;
-    })
-    .catch((e: unknown) => {
-      job.error = e instanceof Error ? e.message : String(e);
-      job.status = 'error';
-    })
-    .finally(() => onSettled?.());
+  settleLocalJob(job, () => runner(spec), critic, gate.deps, onSettled);
   return id;
 }
 
