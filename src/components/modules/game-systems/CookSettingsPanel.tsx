@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Flame, Package, Lock, Zap, Map, Puzzle, Image, AlertTriangle } from 'lucide-react';
 import type { CookSettings } from '@/lib/packaging/build-profiles';
 import { COOK_SETTING_APPLICATION } from '@/lib/packaging/uat-command-generator';
@@ -33,6 +34,34 @@ function NotAppliedNote({ settingKey }: { settingKey: keyof CookSettings }) {
         {entry.reason}
       </span>
     </div>
+  );
+}
+
+const parseLines = (text: string) => text.split('\n').filter((l) => l.trim());
+
+/**
+ * A one-entry-per-line list field. The textarea holds its own DRAFT text, so a just
+ * typed Enter (an empty last line) survives; the parent only ever receives the
+ * parsed, non-empty entries. Parsing on every keystroke and rendering the parsed
+ * list back used to swallow the newline, so a second entry could not be typed.
+ * A list changed from outside (another profile loaded) replaces the draft.
+ */
+function ListTextarea({ value, onChange, placeholder, className }: {
+  value: string[]; onChange: (v: string[]) => void; placeholder: string; className: string;
+}) {
+  const [draft, setDraft] = useState(() => value.join('\n'));
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    if (parseLines(draft).join('\n') !== value.join('\n')) setDraft(value.join('\n'));
+  }
+  return (
+    <textarea
+      value={draft}
+      onChange={(e) => { setDraft(e.target.value); onChange(parseLines(e.target.value)); }}
+      placeholder={placeholder}
+      className={className}
+    />
   );
 }
 
@@ -142,9 +171,9 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
             <Map className="w-3 h-3" />
             Maps to include
           </label>
-          <textarea
-            value={settings.mapsToInclude.join('\n')}
-            onChange={(e) => update('mapsToInclude', e.target.value.split('\n').filter((m) => m.trim()))}
+          <ListTextarea
+            value={settings.mapsToInclude}
+            onChange={(v) => update('mapsToInclude', v)}
             placeholder="Leave empty to include all maps.&#10;One map per line, e.g.:&#10;/Game/Maps/MainMenu&#10;/Game/Maps/Level1"
             className={`${inputClass} mt-1 h-16 resize-none`}
           />
@@ -158,9 +187,9 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
             <Puzzle className="w-3 h-3" />
             Plugins to disable
           </label>
-          <textarea
-            value={settings.pluginsToDisable.join('\n')}
-            onChange={(e) => update('pluginsToDisable', e.target.value.split('\n').filter((p) => p.trim()))}
+          <ListTextarea
+            value={settings.pluginsToDisable}
+            onChange={(v) => update('pluginsToDisable', v)}
             placeholder="Recorded here; NOT excluded by the generated command.&#10;One per line, e.g.:&#10;OnlineSubsystemSteam"
             className={`${inputClass} mt-1 h-12 resize-none`}
           />
