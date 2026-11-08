@@ -42,3 +42,16 @@ describe('SessionRail: deleting a capture asks first', () => {
     expect(deleteSession).not.toHaveBeenCalled();
   });
 });
+
+describe('SessionRail: captures from different days are distinguishable', () => {
+  it('renders different meta text for two captures 24h apart at the same clock time', () => {
+    seed([
+      row('s1', 'before', '2026-11-06T10:02:00Z'),
+      row('s2', 'after', '2026-11-07T10:02:00Z'),
+    ]);
+    const { getByLabelText } = render(<SessionRail />);
+    const meta = (name: string) => getByLabelText(`Open session ${name}`).querySelectorAll('span')[1]?.textContent ?? '';
+    expect(meta('before')).not.toBe('');
+    expect(meta('before').split(' · ')[0]).not.toBe(meta('after').split(' · ')[0]);
+  });
+});

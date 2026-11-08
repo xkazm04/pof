@@ -92,7 +92,7 @@ export function SessionRail() {
               >
                 <span className="truncate text-xs text-text">{row.name}</span>
                 <span className="flex-shrink-0 text-2xs text-text-muted">
-                  {new Date(row.importedAt).toLocaleTimeString()} · {row.avgFPS.toFixed(0)} fps
+                  {new Date(row.importedAt).toLocaleString()} · {row.avgFPS.toFixed(0)} fps
                   {' · '}
                   {row.overallScore === null ? 'untriaged' : `score ${row.overallScore}`}
                 </span>
