@@ -14,13 +14,13 @@ interface ErrorBannerProps {
 export function ErrorBanner({ message, className, ...rest }: ErrorBannerProps) {
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${className ?? ''}`}
+      className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs ${className ?? ''}`}
       style={{ background: `${STATUS_ERROR}${OPACITY_10}`, color: STATUS_ERROR }}
       role="alert"
       {...rest}
     >
-      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-      <span className="truncate">{message}</span>
+      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+      <span className="min-w-0 break-words">{message}</span>
     </div>
   );
 }
