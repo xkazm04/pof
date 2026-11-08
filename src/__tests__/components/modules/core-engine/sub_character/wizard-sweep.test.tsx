@@ -34,3 +34,14 @@ describe('CharacterSourceWizard — step state is per step', () => {
     expect(spinning[0].textContent).toContain('Prepare Source');
   });
 });
+
+describe('CharacterSourceWizard — locked steps are out of reach for keyboard too', () => {
+  it('a locked step is inert, so its inputs cannot be tabbed into or edited', () => {
+    render(<CharacterSourceWizard moduleId={MODULE} />);
+    const locked = screen.getByLabelText('Player skeletal mesh').closest('[inert]');
+    expect(locked).not.toBeNull();
+    expect(locked!.querySelectorAll('input')).toHaveLength(4);
+    // Step 1 is reachable, so it must stay interactive.
+    expect(screen.getByText('Prepare Source').closest('[inert]')).toBeNull();
+  });
+});

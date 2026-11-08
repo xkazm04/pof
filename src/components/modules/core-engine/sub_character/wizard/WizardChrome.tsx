@@ -49,9 +49,12 @@ export function Step({
         </span>
         <span className="text-xs font-semibold text-text">{title}</span>
       </div>
+      {/* `inert` blocks keyboard focus and editing too — pointer-events alone
+          left a locked step's inputs reachable by Tab. */}
       <div
         className="flex flex-col gap-2 pl-7"
         style={locked ? { pointerEvents: 'none' } : undefined}
+        inert={locked || undefined}
       >
         {children}
       </div>
