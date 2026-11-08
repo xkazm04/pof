@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { getLibraryDb } from '@/lib/visual-gen/library-db-conn';
-import { addAssetToCollection, removeAssetFromCollection } from '@/lib/visual-gen/asset-library-db';
+import { addAssetToCollection, getLibraryAsset, removeAssetFromCollection } from '@/lib/visual-gen/asset-library-db';
 
 interface RouteCtx { params: Promise<{ id: string }> }
 
@@ -17,7 +17,14 @@ export const POST = withRoute(async (request: NextRequest, ctx: RouteCtx) => {
   if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
   const { assetId } = body;
   if (typeof assetId !== 'string' || !assetId) return apiError('assetId is required', 400);
-  const added = addAssetToCollection(getLibraryDb(), id, assetId);
+  const db = getLibraryDb();
+  let added: boolean;
+  try {
+    added = addAssetToCollection(db, id, assetId);
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'SQLITE_CONSTRAINT_FOREIGNKEY') throw error;
+    return apiError(getLibraryAsset(db, assetId) ? `Collection not found: ${id}` : `Asset not found: ${assetId}`, 404);
+  }
   return apiSuccess({ collectionId: id, assetId, added });
 }, 'Failed to add asset to collection');
 
