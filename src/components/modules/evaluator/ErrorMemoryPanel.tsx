@@ -9,6 +9,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { CATEGORY_LABELS } from '@/lib/prompt-context';
 import { SEVERITY_TOKENS, type SeverityLevel } from '@/lib/chart-colors';
 import type { ErrorMemoryStats } from '@/lib/error-memory-db';
+import type { ErrorCategory } from '@/types/error-memory';
 
 /**
  * Plain-language Error Memory dashboard — turns the silent learning loop
@@ -21,9 +22,10 @@ import type { ErrorMemoryStats } from '@/lib/error-memory-db';
  */
 
 // Maps the raw category key (from error_memory.category) to a severity bucket
-// so the frequency bar gets a consistent canonical hue. Unknown categories fall
-// back to "medium" amber.
-const CATEGORY_SEVERITY: Record<string, SeverityLevel> = {
+// so the frequency bar gets a consistent canonical hue. Keyed by ErrorCategory,
+// so a category added to the fingerprinter without a severity fails typecheck;
+// a legacy row's category outside the union falls back to "medium" amber.
+const CATEGORY_SEVERITY: Record<ErrorCategory, SeverityLevel> = {
   'unresolved-external': 'critical',
   'linker-duplicate': 'critical',
   'gc-issue': 'critical',
@@ -35,12 +37,11 @@ const CATEGORY_SEVERITY: Record<string, SeverityLevel> = {
   'access-specifier': 'medium',
   'generated-header': 'medium',
   'syntax': 'low',
-  'msvc-version': 'low',
   'other': 'low',
 };
 
 function severityFor(category: string): SeverityLevel {
-  return CATEGORY_SEVERITY[category] ?? 'medium';
+  return (CATEGORY_SEVERITY as Partial<Record<string, SeverityLevel>>)[category] ?? 'medium';
 }
 
 function labelFor(category: string): string {
