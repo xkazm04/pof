@@ -73,3 +73,33 @@ describe('palette alert rows', () => {
     expect(readRecents('/proj').map((r) => r.id)).toEqual([]);
   });
 });
+
+describe('search failure', () => {
+  it('a failed search reports the failure, never "No results"', async () => {
+    apiFetch.mockImplementation(async (url: string) => {
+      if (url.includes('rebuild')) return { indexed: 1 };
+      throw new Error('boom');
+    });
+    const input = await openPalette();
+    fireEvent.change(input, { target: { value: 'dodge' } });
+    await screen.findByRole('alert');
+    expect(screen.queryByText(/No results for/)).toBeNull();
+    expect(screen.getByRole('status').textContent).toMatch(/failed/i);
+  });
+
+  it('Retry re-runs the same query and shows its hits', async () => {
+    let fail = true;
+    apiFetch.mockImplementation(async (url: string) => {
+      if (url.includes('rebuild')) return { indexed: 1 };
+      if (fail) throw new Error('boom');
+      return { results: [{ id: 'cl-arpg-combat-x', type: 'checklist', moduleId: 'arpg-combat', moduleLabel: 'Combat', title: 'Dodge hit', snippet: '', rank: 0 }], count: 1, lastRebuilt: null };
+    });
+    const input = await openPalette();
+    fireEvent.change(input, { target: { value: 'dodge' } });
+    await screen.findByRole('alert');
+    fail = false;
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    await screen.findByText('Dodge hit');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});

@@ -43,6 +43,9 @@ export function useGlobalSearchPanel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lastRebuilt, setLastRebuilt] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [searchFailed, setSearchFailed] = useState(false);
+  // Bumped to re-run the current query without changing it (Retry).
+  const [searchNonce, setSearchNonce] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -90,6 +93,7 @@ export function useGlobalSearchPanel() {
     if (!query.trim()) {
       setResults([]);
       setActiveIndex(0);
+      setSearchFailed(false);
       return;
     }
 
@@ -107,11 +111,13 @@ export function useGlobalSearchPanel() {
         const data = await apiFetch<{ results: SearchResult[]; count: number; lastRebuilt: string | null }>(`/api/search?${params.toString()}`);
         if (seq !== searchSeqRef.current) return; // superseded by a newer search
         setResults(data.results ?? []);
+        setSearchFailed(false);
         setLastRebuilt(data.lastRebuilt ?? null);
         setActiveIndex(0);
       } catch {
         if (seq !== searchSeqRef.current) return; // superseded by a newer search
         setResults([]);
+        setSearchFailed(true);
       } finally {
         if (seq === searchSeqRef.current) setLoading(false);
       }
@@ -120,9 +126,11 @@ export function useGlobalSearchPanel() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, activeFilter]);
+  }, [query, activeFilter, searchNonce]);
 
   // ── Rebuild index ──
+  const retrySearch = useCallback(() => setSearchNonce((n) => n + 1), []);
+
   const handleRebuild = useCallback(async (silent = false) => {
     if (!silent) setRebuilding(true);
     try {
@@ -220,6 +228,8 @@ export function useGlobalSearchPanel() {
     intents,
     homeKinds,
     loading,
+    searchFailed,
+    retrySearch,
     rebuilding,
     activeIndex, setActiveIndex,
     lastRebuilt,

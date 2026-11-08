@@ -5,6 +5,7 @@ import {
   Search, X, RefreshCw, Loader2,
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { TYPE_META } from './constants';
 import { SearchResultRow } from './SearchResultRow';
 import { useGlobalSearchPanel } from './useGlobalSearchPanel';
@@ -19,6 +20,8 @@ export function GlobalSearchPanel() {
     intents,
     homeKinds,
     loading,
+    searchFailed,
+    retrySearch,
     rebuilding,
     activeIndex, setActiveIndex,
     activeFilter, setActiveFilter,
@@ -148,6 +151,10 @@ export function GlobalSearchPanel() {
                     <kbd className="px-1 py-0.5 bg-background border border-border rounded font-mono text-2xs">Ctrl+K</kbd> to toggle
                   </p>
                 </div>
+              ) : searchFailed && !loading ? (
+                <div className="px-4 py-3">
+                  <InlineErrorRetry message="Search failed. Try again, or rebuild the index." onRetry={retrySearch} />
+                </div>
               ) : results.length === 0 && !loading ? (
                 <div className="px-4 py-8 text-center">
                   <p className="text-xs text-text-muted">No results for &ldquo;{query}&rdquo;</p>
@@ -178,6 +185,8 @@ export function GlobalSearchPanel() {
               <span role="status" aria-live="polite" aria-atomic="true">
                 {loading
                   ? 'Searching…'
+                  : searchFailed
+                    ? 'Search failed'
                   : results.length > 0
                     ? !query.trim()
                       ? 'Alerts and recent'
