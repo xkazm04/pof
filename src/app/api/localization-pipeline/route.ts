@@ -54,6 +54,30 @@ async function resolveScan(body: Record<string, unknown>, config: LocalizationCo
 
 /* ---- POST: actions ----------------------------------------------- */
 
+const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string');
+
+/**
+ * The caller's config over the defaults, key by key. It used to be taken whole
+ * (`body.config ?? DEFAULT_CONFIG`), so a partial config dropped `targetLocales` and
+ * the translate stages crashed with a 500. An absent key takes its default; a present
+ * key of the wrong type is refused, naming the field.
+ */
+function resolveConfig(raw: unknown): Result<LocalizationConfig, string> {
+  if (raw === undefined || raw === null) return ok(DEFAULT_CONFIG);
+  if (typeof raw !== 'object' || Array.isArray(raw)) return err('config must be a JSON object');
+  const c = raw as Partial<Record<keyof LocalizationConfig, unknown>>;
+  if (c.rootNamespace !== undefined && typeof c.rootNamespace !== 'string') return err('config.rootNamespace must be a string');
+  if (c.targetLocales !== undefined && !isStringArray(c.targetLocales)) return err('config.targetLocales must be an array of locale strings');
+  if (c.scanModules !== undefined && !isStringArray(c.scanModules)) return err('config.scanModules must be an array of module ids');
+  if (c.glossary !== undefined && !(Array.isArray(c.glossary) && c.glossary.every((g) => g && typeof g === 'object' && typeof (g as { sourceTerm?: unknown }).sourceTerm === 'string'))) {
+    return err('config.glossary must be an array of { sourceTerm, … } entries');
+  }
+  if (c.autoApplyThreshold !== undefined && !(typeof c.autoApplyThreshold === 'number' && Number.isFinite(c.autoApplyThreshold))) {
+    return err('config.autoApplyThreshold must be a finite number');
+  }
+  return ok({ ...DEFAULT_CONFIG, ...(c as Partial<LocalizationConfig>) });
+}
+
 const ACTIONS = new Set(['scan', 'replacements', 'string-tables', 'translate', 'validate', 'full-pipeline']);
 
 export async function POST(req: NextRequest) {
@@ -66,7 +90,9 @@ export async function POST(req: NextRequest) {
     const action = body.action as string;
     if (!ACTIONS.has(action)) return apiError('Unknown action', 400);
 
-    const config = (body.config as LocalizationConfig) ?? DEFAULT_CONFIG;
+    const configResult = resolveConfig(body.config);
+    if (!configResult.ok) return apiError(configResult.error, 400);
+    const config = configResult.data;
     const resolved = await resolveScan(body, config);
     if (!resolved.ok) return apiError(resolved.error, 400);
     const { scan, provenance } = resolved.data;
