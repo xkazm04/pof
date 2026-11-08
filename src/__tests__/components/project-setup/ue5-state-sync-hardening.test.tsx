@@ -310,3 +310,23 @@ describe('adding a watch that already exists', () => {
     expect(subscribes(ws)).toHaveLength(1);
   });
 });
+
+describe('direct write form after a dropped frame', () => {
+  function pushDirect(open: boolean) {
+    const { ws } = renderLivePanel();
+    if (!open) ws.readyState = FakeWebSocket.CLOSING;
+    fireEvent.change(screen.getByLabelText('Object Path'), { target: { value: '/Game/A' } });
+    fireEvent.change(screen.getByLabelText('Property'), { target: { value: 'Health' } });
+    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '7' } });
+    fireEvent.click(screen.getByTitle('Push to UE5'));
+    return (screen.getByLabelText('Value') as HTMLInputElement).value;
+  }
+
+  it('keeps what the user typed when the frame never left', () => {
+    expect(pushDirect(false)).toBe('7');
+  });
+
+  it('control: clears after a delivered write', () => {
+    expect(pushDirect(true)).toBe('');
+  });
+});

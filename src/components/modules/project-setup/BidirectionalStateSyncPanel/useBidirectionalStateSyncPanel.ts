@@ -80,7 +80,7 @@ export function useBidirectionalStateSyncPanel() {
     }
     const receipt = setProperty(propEdit.objectPath.trim(), propEdit.propertyName.trim(), parsed);
     logWrite([receipt], 'SET', `${propEdit.propertyName} = ${truncate(propEdit.value, 40)}`, propEdit.objectPath);
-    setPropEdit({ objectPath: '', propertyName: '', value: '' });
+    if (receipt.sent) setPropEdit({ objectPath: '', propertyName: '', value: '' }); // a dropped write stays editable
   }, [propEdit, setProperty, logWrite]);
 
   // ── Watched property push-back ──
