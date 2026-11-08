@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   GitBranch, Play, Pause, Square,
   CheckCircle2, XCircle, ChevronRight, ChevronDown,
@@ -85,10 +85,9 @@ export function ActiveWorkflowPanel({
     ? Math.round(((execution.completedNodes + execution.failedNodes) / execution.totalNodes) * 100)
     : 0;
 
-  const groups = useMemo(
-    () => groupByModule(execution.nodeStates),
-    [execution.nodeStates],
-  );
+  // Not memoized on nodeStates: the orchestrator mutates that object in place and
+  // getExecution() is a shallow copy, so its identity never changes during a run.
+  const groups = groupByModule(execution.nodeStates);
   const isMultiModule = groups.length > 1;
 
   return (
