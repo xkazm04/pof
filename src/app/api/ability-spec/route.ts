@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getSpec, upsertSpec } from '@/lib/ability/ability-spec-db';
 import type { AttrRelationship, SpecProvenance, SpecWrite } from '@/lib/ability/spec';
 import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
@@ -16,6 +17,29 @@ function optionalSlice<T>(body: Record<string, unknown>, key: string): T[] | nul
   if (value === null) return null;
   return Array.isArray(value) ? (value as T[]) : undefined;
 }
+
+/**
+ * Index of the first element that is not an object carrying every named string field,
+ * or -1. The codegen / preflight consumers dereference exactly these fields, so a
+ * `null` or primitive element persisted here is a crash on the next read.
+ */
+function firstBadElement(items: unknown, stringFields: readonly string[]): number {
+  if (!Array.isArray(items)) return -1;
+  return items.findIndex((el) => {
+    if (typeof el !== 'object' || el === null || Array.isArray(el)) return true;
+    const rec = el as Record<string, unknown>;
+    return stringFields.some((k) => typeof rec[k] !== 'string');
+  });
+}
+
+/** Per-slice minimal shape: the string fields each consumer reads. */
+const SLICE_FIELDS: Record<string, readonly string[]> = {
+  effects: ['id', 'name'],
+  tagRules: ['id', 'sourceTag', 'targetTag'],
+  attributes: ['id', 'name'],
+  relationships: ['id', 'sourceId', 'targetId'],
+  loadout: ['id', 'abilityName'],
+};
 
 /** Same absent/null/replace rule for the adoption provenance object. */
 function optionalProvenance(body: Record<string, unknown>): SpecProvenance | null | undefined {
@@ -45,6 +69,8 @@ export async function GET(req: NextRequest) {
  * left OFF the write so upsertSpec can tell them from an explicit null.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const body = await req.json().catch(() => undefined);
     // A body that is not a JSON object is the caller's error (400), not a server fault.
@@ -56,6 +82,10 @@ export async function POST(req: NextRequest) {
     if (!catalogId || !entityId) return apiError('catalogId and entityId are required', 400);
     if (!Array.isArray(body.effects) || !Array.isArray(body.tagRules)) {
       return apiError('effects and tagRules (arrays) are required', 400);
+    }
+    for (const [key, fields] of Object.entries(SLICE_FIELDS)) {
+      const bad = firstBadElement(body[key], fields);
+      if (bad >= 0) return apiError(`${key}[${bad}] must be an object with string ${fields.join(', ')}`, 400);
     }
     const write: SpecWrite = {
       catalogId,

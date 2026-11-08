@@ -1,4 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   createSession,
   listSessions,
@@ -20,6 +21,7 @@ import {
 import type {
   CreateSessionPayload,
   PlaytestFinding,
+  FindingSeverity,
   PlaytestSummary,
   DirectorEvent,
   PlaytestStatus,
@@ -59,6 +61,37 @@ const PLAYTEST_STATUS_SET: Record<PlaytestStatus, true> = {
 
 function isPlaytestStatus(value: unknown): value is PlaytestStatus {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLAYTEST_STATUS_SET, value);
+}
+
+/** Closed sets mirrored from the tables' CHECKs; the `Record`s fail to compile if a type member is unlisted. */
+const FINDING_SEVERITY_SET: Record<FindingSeverity, true> = { critical: true, high: true, medium: true, low: true, positive: true };
+const EVENT_TYPE_SET: Record<DirectorEvent['type'], true> = {
+  action: true, observation: true, screenshot: true, finding: true, 'system-test': true, error: true,
+};
+const isMember = (set: object, v: unknown): boolean => typeof v === 'string' && Object.prototype.hasOwnProperty.call(set, v);
+const nonEmptyString = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
+
+/** A caller error for an `add-finding` body (400), or null when it can reach SQL. */
+function findingBodyError(f: unknown): string | null {
+  if (typeof f !== 'object' || f === null || Array.isArray(f)) return 'finding must be an object';
+  const r = f as Record<string, unknown>;
+  if (!nonEmptyString(r.id)) return 'finding.id (non-empty string) required';
+  if (!nonEmptyString(r.sessionId)) return 'finding.sessionId (non-empty string) required';
+  if (!isMember(FINDING_SEVERITY_SET, r.severity)) return `Unknown finding severity: ${String(r.severity)}`;
+  if (!nonEmptyString(r.category)) return 'finding.category (non-empty string) required';
+  if (typeof r.title !== 'string' || typeof r.description !== 'string') return 'finding.title and finding.description (strings) required';
+  return null;
+}
+
+/** A caller error for an `add-event` body (400), or null when it can reach SQL. */
+function eventBodyError(e: unknown): string | null {
+  if (typeof e !== 'object' || e === null || Array.isArray(e)) return 'event must be an object';
+  const r = e as Record<string, unknown>;
+  if (!nonEmptyString(r.id)) return 'event.id (non-empty string) required';
+  if (!nonEmptyString(r.sessionId)) return 'event.sessionId (non-empty string) required';
+  if (!isMember(EVENT_TYPE_SET, r.type)) return `Unknown event type: ${String(r.type)}`;
+  if (typeof r.timestamp !== 'string' || typeof r.message !== 'string') return 'event.timestamp and event.message (strings) required';
+  return null;
 }
 
 /** Append one completion-pipeline disclosure to a session's timeline. */
@@ -243,6 +276,8 @@ export async function GET(req: Request) {
 
 // ─── POST: create session, start session, add finding, add event, run analysis
 export async function POST(req: Request) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const body = await req.json().catch(() => undefined);
     // A body that is not a JSON object is the caller's error (400), not a server fault.
@@ -302,6 +337,10 @@ export async function POST(req: Request) {
 
       case 'add-finding': {
         const { finding } = body as { action: string; finding: PlaytestFinding };
+        const findingError = findingBodyError(finding);
+        if (findingError) return apiError(findingError, 400);
+        // An unknown session would trip the FOREIGN KEY as a 500 - refuse it like `simulate` does.
+        if (!getSession(finding.sessionId)) return apiError('Session not found', 404);
         addFinding(finding);
         return apiSuccess({ ok: true });
       }
@@ -339,6 +378,9 @@ export async function POST(req: Request) {
 
       case 'add-event': {
         const { event } = body as { action: string; event: DirectorEvent };
+        const eventError = eventBodyError(event);
+        if (eventError) return apiError(eventError, 400);
+        if (!getSession(event.sessionId)) return apiError('Session not found', 404);
         addEvent(event);
         return apiSuccess({ ok: true });
       }
@@ -432,6 +474,8 @@ export async function POST(req: Request) {
 
 // ─── DELETE: remove session
 export async function DELETE(req: Request) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId');

@@ -13,16 +13,19 @@
 
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { parseCodegenReport } from '@/lib/ability/codegen-report';
 import { setCodegenReport } from '@/lib/ability/ability-spec-db';
 
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   const parsedBody = await readJsonObject(req);
   if (!parsedBody.ok) return parsedBody.error;
   const body = parsedBody.data;
 
   // catalogId/entityId arrive as callback staticFields (server-controlled), but
-  // they are still checked — the route is a public POST endpoint.
+  // they are still checked — the route is operator-guarded (cross-site 403).
   const catalogId = typeof body.catalogId === 'string' ? body.catalogId : '';
   const entityId = typeof body.entityId === 'string' ? body.entityId : '';
   if (!catalogId || !entityId) return apiError('catalogId and entityId are required', 400);

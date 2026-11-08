@@ -6,6 +6,7 @@ import { TaskFactory, buildTaskPrompt, resolveCallback } from '@/lib/cli-task';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { DEFAULT_UE_VERSION } from '@/lib/engine-facts';
 import { getOriginFromRequest, UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import type { BatchReviewAbortRequest, BatchReviewStartRequest, BatchReviewState } from '@/types/batch-review';
@@ -149,7 +150,9 @@ export async function POST(request: NextRequest) {
     const body = raw as BatchReviewStartRequest;
     const projectPath = body.projectPath;
     const projectName = body.projectName || '';
-    const ueVersion = body.ueVersion || '5.5';
+    // The shared engine default (engine-facts), the same one the prompt path falls back to -
+    // never a literal that can drift from the project's engine version.
+    const ueVersion = body.ueVersion || DEFAULT_UE_VERSION;
 
     if (!projectPath) {
       return apiError('Project path not configured', 400);

@@ -79,7 +79,8 @@ export async function POST(req: NextRequest) {
 
     if (action === 'generate') {
       const gdd = synthesizeGDD(
-        body.projectName ?? 'Untitled Project',
+        // A number/object would render as "[object Object]" in the title and every export.
+        typeof body.projectName === 'string' && body.projectName.trim() ? body.projectName : 'Untitled Project',
         asChecklist(body.checklist),
         bodyProjectId(body),
       );
