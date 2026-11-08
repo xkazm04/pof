@@ -14,6 +14,7 @@ vi.mock('@/components/layout-lab/labArtifactCache', () => ({
 
 import { useBatchDrain, type BatchEntity } from '@/components/layout-lab/hooks/useBatchDrain';
 import { useLabRunnerStore, batchRunId } from '@/components/layout-lab/labRunnerStore';
+const EV = { kind: 'scenario' as const, at: '2026-01-01T00:00:00.000Z' };
 
 function deferred<T>() {
   let resolve!: (v: T) => void;
@@ -25,7 +26,7 @@ const okOutcome = (over: Partial<DrainSummary> = {}): DrainOutcome => ({
 });
 const failResult = (entityId: string, step: string, reason: string) => ({
   job: { catalogId: 'c', entityId, step, tier: 'L3' as const },
-  verdict: { status: 'fail' as const, detail: reason },
+  verdict: { status: 'fail' as const, detail: reason, evidence: EV },
 });
 const ents: BatchEntity[] = [{ id: 'e1', name: 'One' }, { id: 'e2', name: 'Two' }, { id: 'e3', name: 'Three' }];
 

@@ -6,10 +6,11 @@ import {
   type BatchEntityRef,
 } from '@/components/layout-lab/batchDrainModel';
 import type { DrainSummary } from '@/lib/test-gate-runner/types';
+const EV = { kind: 'scenario' as const, at: '2026-01-01T00:00:00.000Z' };
 
 const failResult = (entityId: string, step: string, reason: string) => ({
   job: { catalogId: 'c', entityId, step, tier: 'L3' as const },
-  verdict: { status: 'fail' as const, detail: reason },
+  verdict: { status: 'fail' as const, detail: reason, evidence: EV },
 });
 const deferredResult = (entityId: string, step: string, reason: string) => ({
   job: { catalogId: 'c', entityId, step, tier: 'L3' as const },
@@ -17,7 +18,7 @@ const deferredResult = (entityId: string, step: string, reason: string) => ({
 });
 const passResult = (entityId: string, step: string) => ({
   job: { catalogId: 'c', entityId, step, tier: 'L3' as const },
-  verdict: { status: 'pass' as const, detail: 'ok' },
+  verdict: { status: 'pass' as const, detail: 'ok', evidence: EV },
 });
 const okOutcome = (over: Partial<DrainSummary> = {}): DrainOutcome => ({
   kind: 'ok',
@@ -112,7 +113,7 @@ describe('summarizeBatchDrain — derives the catalog-wide summary from ONE batc
     const acc = summarizeBatchDrain(entities, okOutcome({
       ran: 2, failed: 1, deferred: 1,
       results: [
-        { job: { catalogId: 'c', entityId: 'e1', step: 'A', tier: 'L3' as const }, verdict: { status: 'fail' as const, detail: '' } },
+        { job: { catalogId: 'c', entityId: 'e1', step: 'A', tier: 'L3' as const }, verdict: { status: 'fail' as const, detail: '', evidence: EV } },
         { job: { catalogId: 'c', entityId: 'e2', step: 'B', tier: 'L3' as const }, verdict: { status: 'deferred' as const, detail: '' } },
       ],
     }));

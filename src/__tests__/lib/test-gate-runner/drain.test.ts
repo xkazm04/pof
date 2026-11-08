@@ -20,6 +20,7 @@ vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), info: vi.fn(), warn: 
 import { collectDeferred, drainOne, drainAll, applyVerdict } from '@/lib/test-gate-runner/drain';
 import { readEvidence } from '@/lib/test-gate-runner/evidenceAudit';
 import type { GateExecutor, GateJob, GateVerdict } from '@/lib/test-gate-runner/types';
+const EV = { kind: 'scenario' as const, at: '2026-01-01T00:00:00.000Z' };
 
 function seed(a: Partial<PipelineArtifact> & { catalogId: string; entityId: string; step: string }) {
   const full = { data: {}, ueAssets: [], status: 'deferred', ...a } as PipelineArtifact;
@@ -35,7 +36,7 @@ function fakeExec(opts: {
     id: `fake-${opts.tier}`,
     tier: opts.tier,
     available: async () => opts.available ?? true,
-    run: opts.runFn ?? (async () => ({ status: 'pass', detail: 'ok' })),
+    run: opts.runFn ?? (async (): Promise<GateVerdict> => ({ status: 'pass', detail: 'ok', evidence: EV })),
   };
 }
 
@@ -67,13 +68,13 @@ describe('drainOne', () => {
   it('writes the verdict back, flipping deferred→pass and preserving data/assets/tier', async () => {
     seed({ catalogId: 'items', entityId: 'item-1', step: 'Test Gate', tier: 'L3', data: { foo: 1 }, ueAssets: ['/Game/X'], reason: 'live-UE runner not yet run: VSItemsTest' });
     const job: GateJob = { catalogId: 'items', entityId: 'item-1', step: 'Test Gate', tier: 'L3', testName: 'VSItemsTest' };
-    await drainOne(job, fakeExec({ tier: 'L3', runFn: async () => ({ status: 'pass', detail: 'VSItemsTest: 19 passed' }) }));
+    await drainOne(job, fakeExec({ tier: 'L3', runFn: async () => ({ status: 'pass', detail: 'VSItemsTest: 19 passed', evidence: EV }) }));
 
     const row = store.get(key('items', 'item-1', 'Test Gate'))!;
     expect(row.status).toBe('pass');
     expect(row.tier).toBe('L3');
     expect(row.reason).toBe('VSItemsTest: 19 passed');
-    expect(row.data).toEqual({ foo: 1 }); // preserved
+    expect(row.data).toEqual({ foo: 1, evidence: EV }); // prior data preserved, verdict evidence merged
     expect(row.ueAssets).toEqual(['/Game/X']);
   });
 });
@@ -97,7 +98,7 @@ describe('drainOne — evidence', () => {
 
   it('leaves prior data untouched when the verdict carries no evidence', async () => {
     seed({ catalogId: 'items', entityId: 'i2', step: 'g', tier: 'L3', data: { genHistory: { batches: [] } }, reason: 'live-UE runner not yet run: T' });
-    await drainOne({ catalogId: 'items', entityId: 'i2', step: 'g', tier: 'L3', testName: 'T' }, fakeExec({ tier: 'L3', runFn: async () => ({ status: 'pass', detail: 'ok' }) }));
+    await drainOne({ catalogId: 'items', entityId: 'i2', step: 'g', tier: 'L3', testName: 'T' }, fakeExec({ tier: 'L3', runFn: async () => ({ status: 'pass', detail: 'ok' } as GateVerdict) }));
     const row = store.get(key('items', 'i2', 'g'))!;
     expect(row.data).toEqual({ genHistory: { batches: [] } }); // no `evidence` key added
   });
@@ -106,7 +107,7 @@ describe('drainOne — evidence', () => {
     const old = { kind: 'scenario' as const, at: '2026-07-01T00:00:00Z', stats: { distance: 412 } };
     seed({ catalogId: 'items', entityId: 'i3', step: 'g', tier: 'L3', status: 'pass', data: { foo: 1, evidence: old }, reason: 'old' });
     const job: GateJob = { catalogId: 'items', entityId: 'i3', step: 'g', tier: 'L3', testName: 'T' };
-    applyVerdict(job, { status: 'fail', detail: 'no proof this time' });
+    applyVerdict(job, { status: 'fail', detail: 'no proof this time' } as GateVerdict);
     const row = store.get(key('items', 'i3', 'g'))!;
     expect(row.status).toBe('fail');
     expect(readEvidence(row)).toBeNull();
@@ -138,7 +139,7 @@ describe('drainAll', () => {
   it('runs matched jobs and tallies pass/fail', async () => {
     seed({ catalogId: 'items', entityId: 'a', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TPass' });
     seed({ catalogId: 'items', entityId: 'b', step: 'g', tier: 'L3', reason: 'live-UE runner not yet run: TFail' });
-    const exec = fakeExec({ tier: 'L3', runFn: async (j) => ({ status: j.testName === 'TFail' ? 'fail' : 'pass', detail: j.testName! }) });
+    const exec = fakeExec({ tier: 'L3', runFn: async (j) => ({ status: j.testName === 'TFail' ? 'fail' : 'pass', detail: j.testName!, evidence: EV }) });
 
     const sum = await drainAll([exec]);
     expect(sum).toMatchObject({ ran: 2, passed: 1, failed: 1, skipped: 0 });
@@ -215,13 +216,13 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
       async prepareBatch(jobs) {
         prepareCalls++;
         boots++; // ONE boot for the whole batch
-        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: `${j.testName}: report: 1 passed` });
+        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: `${j.testName}: report: 1 passed`, evidence: EV });
       },
       async run(job) {
         const cached = cache.get(job.testName!);
         if (cached) return cached;
         boots++; // any per-job boot would bump this — must stay 1
-        return { status: 'fail', detail: 'unexpected per-job boot' };
+        return { status: 'fail', detail: 'unexpected per-job boot', evidence: EV };
       },
     };
 
@@ -246,10 +247,10 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
       available: async () => true,
       async prepareBatch(jobs) {
         batched = jobs.map((j) => j.testName!);
-        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: 'ok' });
+        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: 'ok', evidence: EV });
       },
       async run(job) {
-        return cache.get(job.testName!) ?? { status: 'fail', detail: 'not batched' };
+        return cache.get(job.testName!) ?? { status: 'fail', detail: 'not batched', evidence: EV };
       },
     };
 
@@ -267,7 +268,7 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
       id: 'fake-batch', tier: 'L3',
       available: async () => true,
       async prepareBatch(jobs) { batched = jobs.length; },
-      async run() { return { status: 'pass', detail: 'ok' }; },
+      async run() { return { status: 'pass', detail: 'ok', evidence: EV }; },
     };
     await drainAll([exec]);
     expect(batched).toBe(2);
@@ -283,7 +284,7 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
       tier: 'L3',
       available: async () => true,
       async prepareBatch() { prepareCalls++; throw new Error('grouped boot exploded'); },
-      async run(job) { perJobRuns.push(job.entityId); return { status: 'pass', detail: job.testName! }; },
+      async run(job) { perJobRuns.push(job.entityId); return { status: 'pass', detail: job.testName!, evidence: EV }; },
     };
     const sum = await drainAll([ex]);
     expect(prepareCalls).toBe(2); // one attempt + one retry (both threw), then degraded
@@ -303,12 +304,12 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
       async prepareBatch(jobs) {
         prepareCalls++;
         if (prepareCalls === 1) throw new Error('transient boot failure');
-        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: `${j.testName}: cached` });
+        for (const j of jobs) cache.set(j.testName!, { status: 'pass', detail: `${j.testName}: cached`, evidence: EV });
       },
       async run(job) {
         const cached = cache.get(job.testName!);
         if (cached) return cached;
-        return { status: 'fail', detail: 'unexpected per-job boot' };
+        return { status: 'fail', detail: 'unexpected per-job boot', evidence: EV };
       },
     };
     const sum = await drainAll([ex]);
@@ -324,7 +325,7 @@ describe('drainJobs — grouped boot (prepareBatch) integration', () => {
       id: 'fake', tier: 'L3',
       available: async () => false,
       async prepareBatch() { prepareCalls++; },
-      run: async () => ({ status: 'pass', detail: 'ok' }),
+      run: async () => ({ status: 'pass', detail: 'ok', evidence: EV }),
     };
     const sum = await drainAll([ex]);
     expect(prepareCalls).toBe(0);
