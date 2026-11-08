@@ -5,6 +5,7 @@
  *   - POST /api/packaging/preflight  → UnrealBuildTool / the DataValidation commandlet
  *   - POST /api/packaging/smoke-test → launches the recorded game exe
  *   - POST /api/packaging/schedule   → run-now starts a cook; save re-targets the nightly
+ *   - DELETE /api/packaging/cook-jobs → cancels a running cook (kills the UAT process tree)
  * A cross-site browser request is refused (403) and, when POF_OPERATOR_TOKEN is set, a
  * call without it is refused (401) — both before anything is spawned. Same-origin and
  * header-less (pof-mcp, CLI callback) calls keep working while no token is configured.
@@ -20,6 +21,9 @@ vi.hoisted(() => {
 const spawned = vi.fn();
 vi.mock('@/lib/packaging/cook-jobs', () => ({
   startCookJob: () => { spawned('cook'); return { ok: false, error: 'mocked busy' }; },
+  cancelCookJob: () => { spawned('cancel'); return { ok: false, error: 'mocked unknown' }; },
+  activeCookJob: () => null,
+  getCookJob: () => null,
   cookJobEventStream: () => null,
   COOK_SSE_HEADERS: {},
 }));
@@ -56,6 +60,7 @@ import { POST as executePOST } from '@/app/api/packaging/execute/route';
 import { POST as preflightPOST } from '@/app/api/packaging/preflight/route';
 import { POST as smokePOST } from '@/app/api/packaging/smoke-test/route';
 import { POST as schedulePOST } from '@/app/api/packaging/schedule/route';
+import { DELETE as cookCancelDELETE } from '@/app/api/packaging/cook-jobs/route';
 
 type Handler = (req: NextRequest) => Promise<Response>;
 
@@ -71,6 +76,13 @@ const req = (path: string, body: unknown, headers: Record<string, string> = {}) 
     method: 'POST',
     headers: { 'Content-Type': 'application/json', host: 'localhost:3001', ...headers },
     body: JSON.stringify(body),
+  });
+
+/** DELETE carries its target in the query string, not a body. */
+const delReq = (path: string, headers: Record<string, string> = {}) =>
+  new NextRequest(`http://localhost:3001/api/${path}?jobId=job-1`, {
+    method: 'DELETE',
+    headers: { host: 'localhost:3001', ...headers },
   });
 
 const savedToken = process.env.POF_OPERATOR_TOKEN;
@@ -97,5 +109,27 @@ describe.each(ROUTES)('POST /api/$path — operator guard', ({ path, handler, bo
   it('lets a same-origin call through to the work', async () => {
     await handler(req(path, body, { origin: 'http://localhost:3001' }));
     expect(spawned).toHaveBeenCalled();
+  });
+});
+
+describe('DELETE /api/packaging/cook-jobs - operator guard', () => {
+  const path = 'packaging/cook-jobs';
+
+  it('refuses a cross-site Origin with 403 and cancels nothing', async () => {
+    const res = await cookCancelDELETE(delReq(path, { origin: 'https://evil.example' }));
+    expect(res.status).toBe(403);
+    expect(spawned).not.toHaveBeenCalled();
+  });
+
+  it('refuses a call without the operator token when one is configured', async () => {
+    process.env.POF_OPERATOR_TOKEN = 'secret';
+    const res = await cookCancelDELETE(delReq(path));
+    expect(res.status).toBe(401);
+    expect(spawned).not.toHaveBeenCalled();
+  });
+
+  it('lets a same-origin call through to the cancel', async () => {
+    await cookCancelDELETE(delReq(path, { origin: 'http://localhost:3001' }));
+    expect(spawned).toHaveBeenCalledWith('cancel');
   });
 });
