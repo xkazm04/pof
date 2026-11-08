@@ -25,6 +25,7 @@ import { entitiesInGame } from '@/lib/games/scope';
 import { useAllJudgeVerdicts } from './useStepJudgeVerdicts';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
+import type { CatalogEntityBase } from '@/lib/catalog/types';
 
 /** How many next-step candidates the coach surfaces before "show all blockers". */
 export const GLOBAL_COACH_TOP_N = 5;
@@ -102,13 +103,25 @@ function sameDeps(a: unknown[] | undefined, b: unknown[]): boolean {
 
 export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResult {
   const allEntitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
-  // The ACTIVE game only: its catalogs and its entities (PoF: every catalog, every seed — unchanged).
+  const allDraftsByCatalog = useCatalogStore((s) => s.draftEntitiesByCatalog);
+  // The ACTIVE game only: its catalogs and its entities. The entity set is the one the tree
+  // LISTS (`labEntitiesOf`: code seeds, then persisted rows) — a non-default game has no code
+  // seeds at all, so a seeds-only coach never coached it. A catalog with only seeds (or only
+  // persisted rows) keeps its original inner object, so the per-catalog memo below still hits.
   const { gameId, scope } = useGameCatalogScope();
   const entitiesByCatalog = useMemo(() => {
     const visible = new Set(scope.visible);
-    const inGame = entitiesInGame(allEntitiesByCatalog, gameId);
-    return Object.fromEntries(Object.entries(inGame).filter(([c]) => visible.has(c)));
-  }, [allEntitiesByCatalog, gameId, scope]);
+    const seeds = entitiesInGame(allEntitiesByCatalog, gameId);
+    const drafts = entitiesInGame(allDraftsByCatalog, gameId);
+    const out: Record<string, Readonly<Record<string, CatalogEntityBase>>> = {};
+    for (const c of new Set([...Object.keys(seeds), ...Object.keys(drafts)])) {
+      if (!visible.has(c)) continue;
+      const s = seeds[c];
+      const d = drafts[c];
+      out[c] = s && d ? { ...s, ...d } : (s ?? d);
+    }
+    return out;
+  }, [allEntitiesByCatalog, allDraftsByCatalog, gameId, scope]);
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
   const version = useArtifactCacheVersion();
   // Cross-catalog judge verdicts (ONE unscoped cached read) so a coach candidate speaks the
