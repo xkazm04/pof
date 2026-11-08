@@ -674,6 +674,15 @@ export interface HealthTrendPoint {
   source: SessionSource;
 }
 
+/**
+ * A completed session HAS a score only when its summary carries a numeric
+ * `overallScore` — the writer API's `complete` action stores the caller's summary
+ * as sent. Every score reader filters on this one predicate so the average, its
+ * denominator, its provenance and the trend all describe the same sessions.
+ */
+const SCORED_SESSION_SQL =
+  `status = 'complete' AND summary IS NOT NULL AND json_type(summary, '$.overallScore') IN ('integer','real')`;
+
 export function getDirectorStats(): DirectorStats {
   ensureTables();
   const db = getDb();
@@ -704,12 +713,12 @@ export function getDirectorStats(): DirectorStats {
   // rows it averages — a score and the answer to "was any of this measured?"
   // are read together or the number is not interpretable.
   const avgRow = db.prepare(
-    "SELECT AVG(json_extract(summary, '$.overallScore')) as avg FROM game_director_sessions WHERE status = 'complete' AND summary IS NOT NULL"
+    `SELECT AVG(json_extract(summary, '$.overallScore')) as avg FROM game_director_sessions WHERE ${SCORED_SESSION_SQL}`
   ).get() as { avg: number | null };
 
   const sourceRows = db.prepare(
     `SELECT source, COUNT(*) as c FROM game_director_sessions
-     WHERE status = 'complete' AND summary IS NOT NULL GROUP BY source`
+     WHERE ${SCORED_SESSION_SQL} GROUP BY source`
   ).all() as Array<{ source: string | null; c: number }>;
   let externalScored = 0;
   let simulatedScored = 0;
@@ -762,7 +771,7 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
   const rows = (db.prepare(`
     SELECT id, name, created_at, summary, findings_count, source
     FROM game_director_sessions
-    WHERE status = 'complete' AND summary IS NOT NULL
+    WHERE ${SCORED_SESSION_SQL}
     ORDER BY ${SESSION_CHRONOLOGY_DESC}
     LIMIT ?
   `).all(limit) as Array<{
