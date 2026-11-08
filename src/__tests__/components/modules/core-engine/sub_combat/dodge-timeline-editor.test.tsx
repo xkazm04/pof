@@ -115,7 +115,7 @@ describe('DodgeTimelineEditor Optimize (local)', () => {
 });
 
 describe('DodgeTimelineEditor param edits keep the cross-field invariants', () => {
-  it.skip('shrinking the dodge duration clamps the i-frame window inside it', () => {
+  it('shrinking the dodge duration clamps the i-frame window inside it', () => {
     const { container } = render(<DodgeTimelineEditor />);
     const toggle = container.querySelector('button[title="Toggle parameter editor"]') as HTMLButtonElement;
     fireEvent.click(toggle);

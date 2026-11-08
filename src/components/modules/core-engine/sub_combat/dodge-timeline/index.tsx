@@ -6,7 +6,7 @@ import { ACCENT_CYAN } from '@/lib/chart-colors';
 import { useCharacterHeuristicStore } from '@/stores/heuristicTuningStore';
 import type { DodgeParams, HitMarker, DodgeChainEntry } from '../_shared/dodge-types';
 import { DEFAULT_PARAMS } from '../_shared/dodge-types';
-import { computePhases, getChainEndTime } from '../_shared/dodge-math';
+import { computePhases, getChainEndTime, clampDodgeParams } from '../_shared/dodge-math';
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import type { HapticEffect } from './types';
 import { TimelineBar } from './TimelineBar';
@@ -69,8 +69,12 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
 
   const phases = useMemo(() => computePhases(params), [params]);
   const updateParam = useCallback((key: keyof DodgeParams, value: number) => {
-    setParams((prev) => ({ ...prev, [key]: value }));
+    // Cross-field invariants (i-frames and cancel window inside the dodge) are
+    // enforced on every edit, not only by the slider ranges of each field alone.
+    setParams((prev) => clampDodgeParams({ ...prev, [key]: value }));
   }, []);
+
+  const applyParams = useCallback((p: DodgeParams) => setParams(clampDodgeParams(p)), []);
 
   const stats = usePlayheadStats(playhead, params, phases, hitMarkers);
 
@@ -153,7 +157,7 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
       {/* Header + Controls */}
       <BlueprintPanel color={ACCENT_CYAN} className="p-3">
         <HeaderToolbar
-          cliStore={cliStore} params={params} onApplyParams={setParams}
+          cliStore={cliStore} params={params} onApplyParams={applyParams}
           showFrameData={showFrameData} setShowFrameData={setShowFrameData}
           showParams={showParams} setShowParams={setShowParams}
           showHitEditor={showHitEditor} setShowHitEditor={setShowHitEditor}
