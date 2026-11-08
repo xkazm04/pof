@@ -56,8 +56,9 @@ export function diffSyncState(prev: SyncView, next: SyncView): SyncLogEntry[] {
   for (const [key, now] of next.writes) {
     const was = prev.writes.get(key);
     if (!was || was.seq !== now.seq || was.outcome === now.outcome) continue;
-    if (was.outcome !== 'unobserved' && was.outcome !== 'pending') continue;
-    if (now.outcome === 'confirmed') {
+    if (now.outcome === 'rejected') {
+      events.push(inbound('warn', 'ACK', `${now.propertyName} refused: ${truncate(now.error ?? 'no reason given', 120)}`, now.objectPath));
+    } else if (now.outcome === 'confirmed') {
       events.push(inbound('info', 'ACK', `${now.propertyName} = ${truncate(show(now.written), 30)} confirmed`, now.objectPath));
     } else if (now.outcome === 'diverged') {
       events.push(inbound(

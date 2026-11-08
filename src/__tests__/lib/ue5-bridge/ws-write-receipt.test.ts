@@ -4,7 +4,8 @@
  *
  * Before: `send()` silently no-oped unless the socket was OPEN and
  * `setProperty` returned void, so no caller could know a write was dropped.
- * The wire frame the UE plugin consumes must stay byte-identical (guard).
+ * The wire frame carries the write's seq as requestId so the plugin's set.ack
+ * can correlate to exactly this write (guard).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -24,7 +25,8 @@ class FakeWebSocket {
   onopen: (() => void) | null = null;
   onclose: (() => void) | null = null;
   onerror: ((e: unknown) => void) | null = null;
-  onmessage: ((e: { data: string }) => void) | null = null;
+  onmessage: ((e: { data: string | ArrayBuffer }) => void) | null = null;
+  binaryType = 'blob';
   sent: string[] = [];
 
   constructor(public url: string) { FakeWebSocket.instances.push(this); }
@@ -62,13 +64,29 @@ describe('setProperty delivery receipt', () => {
     expect(ue5LiveState.getState().writes.get('/Game/A::Health')?.outcome).toBe('dropped');
   });
 
-  it('case 2 [guard]: socket OPEN -> exactly the unchanged set.property frame goes out', () => {
+  it('case 2 [guard]: socket OPEN -> exactly one set.property frame goes out, carrying its seq as requestId', () => {
     const ws = openSocket();
     const before = ws.sent.length;
-    ue5LiveState.setProperty('/Game/A', 'Health', 100);
+    const { seq } = ue5LiveState.setProperty('/Game/A', 'Health', 100);
     expect(ws.sent.slice(before)).toEqual([
-      '{"type":"set.property","payload":{"objectPath":"/Game/A","propertyName":"Health","value":100}}',
+      `{"type":"set.property","payload":{"objectPath":"/Game/A","propertyName":"Health","value":100,"requestId":${seq}}}`,
     ]);
+  });
+
+  it('reads binary frames from the plugin: the engine socket only ever sends LWS_WRITE_BINARY', () => {
+    const ws = openSocket();
+    expect(ws.binaryType).toBe('arraybuffer');
+    const { seq } = ue5LiveState.setProperty('/Game/A', 'Health', 100);
+    const frame = JSON.stringify({ type: 'set.ack', payload: { requestId: seq, objectPath: '/Game/A', propertyName: 'Health', ok: true, value: '100.000000' } });
+    ws.onmessage?.({ data: new TextEncoder().encode(frame).buffer as ArrayBuffer });
+    expect(ue5LiveState.getState().writes.get('/Game/A::Health')?.outcome).toBe('confirmed');
+  });
+
+  it('a set.ack frame settles the matching write', () => {
+    const ws = openSocket();
+    const { seq } = ue5LiveState.setProperty('/Game/A', 'Health', 100);
+    ws.push({ type: 'set.ack', payload: { requestId: seq, objectPath: '/Game/A', propertyName: 'Health', ok: false, error: 'Health is not editable' } });
+    expect(ue5LiveState.getState().writes.get('/Game/A::Health')).toMatchObject({ outcome: 'rejected', error: 'Health is not editable' });
   });
 
   it('an OPEN socket yields { sent: true } and an unobserved ledger entry', () => {

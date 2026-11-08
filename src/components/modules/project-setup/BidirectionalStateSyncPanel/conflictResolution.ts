@@ -22,7 +22,7 @@ export function planResolution(conflict: SyncConflict, choice: ConflictChoice): 
   }
 }
 
-export type WriteOutcomeLabel = 'sent' | 'applying' | 'applied' | 'conflict' | 'not sent';
+export type WriteOutcomeLabel = 'sent' | 'applying' | 'applied' | 'conflict' | 'not sent' | 'refused';
 
 const LABELS: Record<SyncWriteOutcome, WriteOutcomeLabel> = {
   unobserved: 'sent',
@@ -30,6 +30,7 @@ const LABELS: Record<SyncWriteOutcome, WriteOutcomeLabel> = {
   confirmed: 'applied',
   diverged: 'conflict',
   dropped: 'not sent',
+  rejected: 'refused',
 };
 
 /** The row-facing outcome of the latest write on one property; null when none was made. */

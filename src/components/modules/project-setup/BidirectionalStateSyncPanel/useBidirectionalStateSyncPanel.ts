@@ -94,7 +94,7 @@ export function useBidirectionalStateSyncPanel() {
 
   // ── PIE control ──
   const handlePIE = useCallback((action: 'play' | 'pause' | 'stop') => {
-    // PIE control uses set.property on the editor subsystem
+    // The plugin routes this reserved key to its PIE command handler and acks it
     const receipt = setProperty('/Script/UnrealEd.Default__UnrealEditorSubsystem', 'PIECommand', action);
     logWrite([receipt], 'PIE', `PIE ${action}`, 'EditorSubsystem');
   }, [setProperty, logWrite]);

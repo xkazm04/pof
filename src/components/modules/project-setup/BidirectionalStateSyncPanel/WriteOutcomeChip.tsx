@@ -7,6 +7,7 @@ const COLOR: Record<WriteOutcomeLabel, string> = {
   applied: STATUS_SUCCESS,
   conflict: STATUS_ERROR,
   'not sent': STATUS_ERROR,
+  refused: STATUS_ERROR,
 };
 
 /** Where the last write on this property stands: text, not colour alone. */
