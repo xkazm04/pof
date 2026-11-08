@@ -75,6 +75,26 @@ describe('analyzeCatalog facet fallback', () => {
   });
 });
 
+describe('no-plugin inference never histograms identity or prose', () => {
+  it.each(['story-arcs', 'contracts', 'player-movement', 'character-pipeline'])(
+    '%s (seed carries only description) falls back to facets, not a description histogram',
+    (catalogId) => {
+      const out = analyzeCatalog(catalogId, codeSeededEntities(catalogId));
+      expect(out.byAttribute).not.toHaveProperty('description');
+      expect(Object.keys(out.byAttribute).length).toBeGreaterThan(0);
+      expect(Object.keys(out.byAttribute).every((k) => k.startsWith('@'))).toBe(true);
+    },
+  );
+
+  it('skips id/name/displayName/label/title/description and non-scalar keys', () => {
+    const ents = [1, 2].map((i) => mk(`x${i}`, 'no-such-catalog', {
+      id: `x${i}`, name: `X ${i}`, displayName: `X ${i}`, label: 'l', title: 't', description: 'd',
+      stats: { a: 1 }, tiers: [1, 2], group: 'G', isPrefix: true,
+    }));
+    expect(Object.keys(analyzeCatalog('no-such-catalog', ents).byAttribute).sort()).toEqual(['group', 'isPrefix']);
+  });
+});
+
 describe('proposalLanding and the ratchet', () => {
   it('skips @ dimensions but lands data dimensions', () => {
     const d = analyzeCatalog('quests', [mk('q1', 'quests', { description: 'x' })]);
