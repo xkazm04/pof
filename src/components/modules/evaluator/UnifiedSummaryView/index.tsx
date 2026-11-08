@@ -20,10 +20,10 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, ACCENT_VIOLE
 import { WEIGHTS } from '@/lib/evaluator/combined-health';
 import type { Props } from './types';
 import { useUnifiedSummaryView } from './useUnifiedSummaryView';
-import { ViewModeToggle } from './ViewModeToggle';
+import { ViewModeToggle, SUMMARY_PANEL_ID, summaryTabId } from './ViewModeToggle';
 import { CombinedHealthGauge } from './CombinedHealthGauge';
 import { DimensionBar } from './DimensionBar';
-import { SourceBadge } from './SourceBadge';
+import { SourceBadge, sourceState } from './SourceBadge';
 import { ModuleHealthCell } from './ModuleHealthCell';
 import { QuickNavCard } from './QuickNavCard';
 import { ModuleLiftList, ProjectLeverStrip } from './ModuleLiftList';
@@ -49,6 +49,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
     health,
     brief,
     sourceStatus,
+    sourceFailed,
     activeSources,
     scope,
     scopedRows,
@@ -106,6 +107,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
         )}
       </div>
 
+      <div role="tabpanel" id={SUMMARY_PANEL_ID} aria-labelledby={summaryTabId(viewMode)} className="space-y-5">
       {viewMode === 'brief' ? (
         <BriefView brief={brief} />
       ) : (
@@ -152,10 +154,10 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
             <RefreshCw className="w-4 h-4" aria-hidden="true" />
           </button>
           <div className="flex items-center gap-1">
-            <SourceBadge label="Q" active={sourceStatus.quality} icon={Activity} />
-            <SourceBadge label="D" active={sourceStatus.dependencies} icon={Link2} />
-            <SourceBadge label="A" active={sourceStatus.analytics} icon={BarChart3} />
-            <SourceBadge label="S" active={sourceStatus.scanner} icon={Radar} />
+            <SourceBadge label="Q" name="Quality" state={sourceState(sourceStatus.quality, sourceFailed.quality)} icon={Activity} />
+            <SourceBadge label="D" name="Dependencies" state={sourceState(sourceStatus.dependencies, sourceFailed.dependencies)} icon={Link2} />
+            <SourceBadge label="A" name="Analytics" state={sourceState(sourceStatus.analytics, sourceFailed.analytics)} icon={BarChart3} />
+            <SourceBadge label="S" name="Scanner" state={sourceState(sourceStatus.scanner, false)} icon={Radar} />
           </div>
           <span className="text-2xs text-text-muted">{activeSources}/4 sources</span>
         </div>
@@ -243,21 +245,21 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
           label="Quality Dashboard"
           icon={Activity}
           color={STATUS_ERROR}
-          sub={aggregates.length > 0 ? `${aggregates.length} modules` : 'No data'}
+          sub={aggregates.length > 0 ? `${aggregates.length} modules` : sourceFailed.quality ? 'Load failed' : 'No data'}
           onClick={() => onNavigateTab('quality')}
         />
         <QuickNavCard
           label="Dependencies"
           icon={Link2}
           color={STATUS_INFO}
-          sub={statusMap.size > 0 ? `${statusMap.size} tracked` : 'No data'}
+          sub={statusMap.size > 0 ? `${statusMap.size} tracked` : sourceFailed.dependencies ? 'Load failed' : 'No data'}
           onClick={() => onNavigateTab('dependencies')}
         />
         <QuickNavCard
           label="Session Analytics"
           icon={BarChart3}
           color={ACCENT_VIOLET}
-          sub={analytics ? `${analytics.totalSessions} sessions` : 'No data'}
+          sub={analytics ? `${analytics.totalSessions} sessions` : sourceFailed.analytics ? 'Load failed' : 'No data'}
           onClick={() => onNavigateTab('analytics')}
         />
         <QuickNavCard
@@ -283,6 +285,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       )}
       </>
       )}
+      </div>
     </div>
   );
 }

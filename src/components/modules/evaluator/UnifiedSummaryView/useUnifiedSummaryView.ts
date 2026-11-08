@@ -177,6 +177,13 @@ export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
 
   const activeSources = Object.values(sourceStatus).filter(Boolean).length;
 
+  // A source whose read FAILED is not an empty one: the badges and quick-nav cards say so.
+  const sourceFailed = useMemo(() => ({
+    quality: aggError != null,
+    dependencies: statusesError != null,
+    analytics: analyticsError != null,
+  }), [aggError, statusesError, analyticsError]);
+
   return {
     aggregates,
     analytics,
@@ -192,6 +199,7 @@ export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
     health,
     brief,
     sourceStatus,
+    sourceFailed,
     activeSources,
     /** Per scored module: its ranked lifts (dimensions losing points, with remedies). */
     liftsByModule,

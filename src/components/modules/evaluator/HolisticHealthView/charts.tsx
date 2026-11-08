@@ -3,10 +3,28 @@ import { ACCENT_EMERALD, STATUS_INFO, STATUS_NEUTRAL, OPACITY_20 } from '@/lib/c
 
 // ── Simple Chart Components (CSS-based, no chart library) ───────────────────
 
-export function BarChartSimple({ data, color }: { data: { label: string; value: number }[]; color: string }) {
+type Point = { label: string; value: number };
+
+/** One-line empty state: names what populates the chart, so blank is never mistaken for a render failure. */
+export function ChartEmpty({ children }: { children: string }) {
+  return <p className="text-xs text-text-muted py-4" data-testid="chart-empty">{children}</p>;
+}
+
+/** Text alternative for a series: count, first, last and direction (WCAG 1.1.1). */
+export function describeSeries(title: string, points: Point[]): string {
+  if (points.length === 0) return `${title}: no data`;
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (points.length === 1) return `${title}: 1 point, ${last.label} ${last.value}`;
+  const trend = last.value > first.value ? 'rising' : last.value < first.value ? 'falling' : 'flat';
+  return `${title}: ${points.length} points, first ${first.label} ${first.value}, last ${last.label} ${last.value}, ${trend}`;
+}
+
+export function BarChartSimple({ data, color, title = 'Weekly velocity' }: { data: Point[]; color: string; title?: string }) {
+  if (data.length === 0) return <ChartEmpty>No weeks recorded yet. Complete checklist items to see weekly velocity.</ChartEmpty>;
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
-    <div className="flex items-end gap-1.5 h-32">
+    <div className="flex items-end gap-1.5 h-32" role="img" aria-label={describeSeries(title, data)}>
       {data.map((d) => (
         <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
           <span className="text-xs text-text-muted">{d.value}</span>
@@ -23,32 +41,38 @@ export function BarChartSimple({ data, color }: { data: { label: string; value: 
   );
 }
 
-export function LineChartSimple({ data, color }: { data: { label: string; value: number }[]; color: string }) {
-  if (data.length === 0) return null;
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const min = Math.min(...data.map((d) => d.value), 0);
-  const range = max - min || 1;
+export function LineChartSimple({ data, color, title = 'Quality score trend' }: { data: Point[]; color: string; title?: string }) {
+  if (data.length === 0) return <ChartEmpty>No scans yet. Run a project scan to start the quality trend.</ChartEmpty>;
+  // Scores are 0-100: pin the domain so a gridline marks the value it is labelled with,
+  // instead of normalising to the series' own max (which made the top line "the latest score").
+  const min = 0;
+  const max = 100;
+  const range = max - min;
   const h = 120;
+  const yOf = (v: number) => h - ((v - min) / range) * (h - 16) - 8;
 
   return (
-    <div className="relative" style={{ height: h + 24 }}>
+    <div className="relative" style={{ height: h + 24 }} role="img" aria-label={describeSeries(title, data)}>
       {/* Grid lines */}
       {[0, 25, 50, 75, 100].map((pct) => (
         <div
           key={pct}
+          data-gridline={pct}
           className="absolute left-0 right-0 border-t border-border/30"
-          style={{ top: h - (pct / 100) * h }}
-        />
+          style={{ top: yOf(pct) }}
+        >
+          <span className="absolute left-0 -top-3.5 text-2xs text-text-muted" aria-hidden="true">{pct}</span>
+        </div>
       ))}
       {/* Points and lines */}
-      <svg className="absolute inset-0" viewBox={`0 0 ${data.length * 60} ${h}`} preserveAspectRatio="none">
+      <svg className="absolute left-0 top-0 w-full" style={{ height: h }} viewBox={`0 0 ${data.length * 60} ${h}`} preserveAspectRatio="none">
         {/* Line */}
         <polyline
           fill="none"
           stroke={color}
           strokeWidth="2"
           points={data
-            .map((d, i) => `${i * 60 + 30},${h - ((d.value - min) / range) * (h - 16) - 8}`)
+            .map((d, i) => `${i * 60 + 30},${yOf(d.value)}`)
             .join(' ')}
         />
         {/* Dots */}
@@ -56,7 +80,7 @@ export function LineChartSimple({ data, color }: { data: { label: string; value:
           <circle
             key={i}
             cx={i * 60 + 30}
-            cy={h - ((d.value - min) / range) * (h - 16) - 8}
+            cy={yOf(d.value)}
             r="3"
             fill={color}
           />
@@ -72,14 +96,14 @@ export function LineChartSimple({ data, color }: { data: { label: string; value:
   );
 }
 
-export function AreaChartSimple({ data, total }: { data: { label: string; completed: number; ideal: number }[]; total: number }) {
-  if (data.length === 0) return null;
+export function AreaChartSimple({ data, total, title = 'Cumulative progress' }: { data: { label: string; completed: number; ideal: number }[]; total: number; title?: string }) {
+  if (data.length === 0) return <ChartEmpty>No progress history yet. Complete a dated checklist item to start the burnup.</ChartEmpty>;
   const h = 120;
   const w = data.length * 60;
   const safeTotal = total || 1;
 
   return (
-    <div className="relative" style={{ height: h + 24 }}>
+    <div className="relative" style={{ height: h + 24 }} role="img" aria-label={`${describeSeries(title, data.map((d) => ({ label: d.label, value: d.completed })))} of ${total} items`}>
       <svg className="absolute inset-0" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
         {/* Ideal line (dashed) */}
         <polyline
@@ -110,14 +134,14 @@ export function AreaChartSimple({ data, total }: { data: { label: string; comple
   );
 }
 
-export function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: number }) {
-  if (data.length === 0) return null;
+export function BurndownChart({ data, total, title = 'Burndown' }: { data: BurnChartPoint[]; total: number; title?: string }) {
+  if (data.length === 0) return <ChartEmpty>No burndown yet. Complete a dated checklist item to start the burndown.</ChartEmpty>;
   const h = 120;
   const w = data.length * 60;
   const safeTotal = total || 1;
 
   return (
-    <div className="relative" style={{ height: h + 24 }}>
+    <div className="relative" style={{ height: h + 24 }} role="img" aria-label={`${describeSeries(title, data.map((d) => ({ label: d.weekLabel, value: d.remaining })))} remaining of ${total} items`}>
       <svg className="absolute inset-0" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
         {/* Ideal burndown (dashed) */}
         <polyline
