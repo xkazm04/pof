@@ -43,6 +43,110 @@ const slug = (e: LabEntity) => itemSlug(e);
  *  • Realizes to DT_Items row + DA_<slug> data asset + equip GE on UARPGAttributeSet.
  *  • Verification: VSItemsDefinitionsTest (functional test, L3 deferred).
  */
+/**
+ * The Damage / Implicit step's produce body, hoisted so the Tooltip states the SAME numbers
+ * for the same entity (one authority per quantity) instead of a hand-typed sword block.
+ */
+function damageStepProduce(e: LabEntity) {
+  const entityData = (e.data as Record<string, unknown> | null) ?? {};
+  const effective = entityData.effective as Record<string, { value?: unknown }> | undefined;
+  if (effective) {
+    const value = <T,>(field: string): T | undefined => effective[field]?.value as T | undefined;
+    const slot = value<string>('slot') ?? 'Unequippable';
+    const itemClass = value<string>('itemClass') ?? 'Misc';
+    const damage = value<{ min: number; max: number }>('effectiveDamage');
+    const armor = value<{ min: number; max: number }>('effectiveArmor');
+    const armorSlot = ['Chest', 'Helm', 'OffHand'].includes(slot);
+    return {
+      data: {
+        damage: {
+          baseType: e.name,
+          slot,
+          itemClass,
+          implicit: armor && armorSlot
+            ? { type: 'Armor', minimum: armor.min, maximum: armor.max }
+            : 'none',
+          ...(armor && armorSlot ? { armor: { minimum: armor.min, maximum: armor.max } } : {}),
+          ...(slot === 'Weapon' && damage
+            ? { damageType: 'Physical', damageMin: damage.min, damageMax: damage.max }
+            : {}),
+        },
+      },
+    };
+  }
+  // Iron Longsword (item-1) base stat block — a canonical tier-1 1H sword.
+  // ARPG-LAWS §1c: baseDPS = ((dmgMin+dmgMax)/2) × APS.
+  // Damage range sourced from the entity seed (DUMMY_ITEMS item-1: Damage 12-18).
+  // Attack speed derived from the entity's Speed stat: Speed = swing-time in seconds;
+  //   APS = 1 / swingTime.  item-1 Speed = 1.2s → APS = 1/1.2 ≈ 0.83.
+  // crit 5–6.5%; crit multi base +150% (×2.5).
+  const damageMin = 12;
+  const damageMax = 18;
+  // Derive swing-time from entity Speed stat (value: '1.2s'); strip 's' and invert to APS.
+  const entityStats = (e.data as Record<string, unknown> | null)?.stats as
+    Array<{ label: string; value: string }> | undefined;
+  const speedStat = entityStats?.find((s) => s.label === 'Speed');
+  const swingTimeSec = speedStat
+    ? parseFloat(speedStat.value.replace('s', ''))
+    : 1.2;                          // item-1 default: 1.2 s (Speed stat in DUMMY_ITEMS)
+  // Round APS to 4 decimal places for stability.
+  const attackSpeed = Math.round((1 / swingTimeSec) * 10000) / 10000; // 1/1.2 ≈ 0.8333
+  const critChance = 0.055;         // 5.5%, within 5–6.5% band
+  const critMulti = 2.5;            // base +150% = ×2.5 (ARPG-LAWS §1c + §3)
+  const baseDPS = Math.round(((damageMin + damageMax) / 2) * attackSpeed * 10000) / 10000;
+  // item-1: ((12+18)/2) × 0.8333 = 15 × 0.8333 = 12.4995 ≈ 12.5
+  return {
+    data: {
+      damage: {
+        // Weapon base stats (no affixes applied)
+        baseType: e.name,
+        slot: 'Weapon',
+        itemClass: 'Weapon',
+        damageType: 'Physical',      // matches UE damage-type enum
+        damageMin,                   // 12
+        damageMax,                   // 18
+        attackSpeed,                 // derived from entity Speed stat (1.2 s → 0.8333 APS)
+        attackSpeedNote: `Derived from entity Speed stat (${swingTimeSec}s swing-time → ${attackSpeed} APS = 1 / ${swingTimeSec}).`,
+        critChance,                  // 5.5%
+        critMulti,                   // ×2.5 (base; affixes add "increased crit multi")
+        baseDPS,                     // ≈ 12.5 (no affixes)
+        dpsNote:
+          `baseDPS = ((${damageMin}+${damageMax})/2) × ${attackSpeed} = ${(damageMin + damageMax) / 2} × ${attackSpeed} = ${baseDPS}. ` +
+          'Affixes compound via added → increased → more (canon arpg-damage-model): ' +
+          'AddedPhysicalDamage T3 (+17 flat) → new base 22–35 → avg 28.5 × 0.8333 ≈ 23.7 DPS; ' +
+          'IncreasedAttackSpeed T3 (+10% increased) → ×1.1 on APS → 26.1 DPS; ' +
+          'effective crit overlay: 5.5% × (1+0.25 increased) × ×2.5 → avgCritMult ≈ 1.103 → ~28.8 effective DPS with crit. ' +
+          'Sits below the tier-100 DPS ceiling (baseline is tier-1, ilvl 1–10 zone); ' +
+          'endgame items at ilvl 80+ reach 200–400+ DPS via T1 affixes.',
+        implicit: {
+          type: 'Accuracy',
+          value: 30,
+          label: '+30 to Accuracy Rating',
+          ueGE: 'GE_Implicit_SwordAccuracy',
+          note: 'Sword slot identity implicit — +accuracy is outside the prefix/suffix budget.',
+        },
+        mathLaw: 'ARPG-LAWS §3: base+added → ×(1+Σincreased%) → ×each more%. Crit: effectiveCrit = baseCrit × (1+increasedCrit), capped 95%; on crit ×critMulti (base 2.5 = +150%).',
+      },
+      // top-level field for withinPercent checker — base DPS for item-1 derived at runtime
+      baseDPS,
+    },
+  };
+}
+
+/** The tooltip's stat + implicit lines, formatted from {@link damageStepProduce} for the same
+ *  entity. A line is present only when the Damage step derived its value. */
+function tooltipStatsFromDamage(e: LabEntity): { statLines: string[]; implicitLine?: string } {
+  const d = damageStepProduce(e).data.damage as {
+    damageMin?: number; damageMax?: number; attackSpeed?: number; critChance?: number; implicit?: unknown;
+  };
+  const statLines: string[] = [];
+  if (d.damageMin != null && d.damageMax != null) statLines.push(`Physical Damage: ${d.damageMin}–${d.damageMax}`);
+  if (d.attackSpeed != null) statLines.push(`Attacks per Second: ${d.attackSpeed.toFixed(2)}`);
+  if (d.critChance != null) statLines.push(`Critical Strike Chance: ${Math.round(d.critChance * 1000) / 10}%`);
+  const label = typeof d.implicit === 'object' && d.implicit !== null ? (d.implicit as { label?: string }).label : undefined;
+  return label ? { statLines, implicitLine: label } : { statLines };
+}
+
 registerCatalogPipeline({
   catalogId: 'items',
   steps: [
@@ -500,91 +604,7 @@ registerCatalogPipeline({
           { key: 'baseDPS' },
         ],
       },
-      produce: (e: LabEntity) => {
-        const entityData = (e.data as Record<string, unknown> | null) ?? {};
-        const effective = entityData.effective as Record<string, { value?: unknown }> | undefined;
-        if (effective) {
-          const value = <T,>(field: string): T | undefined => effective[field]?.value as T | undefined;
-          const slot = value<string>('slot') ?? 'Unequippable';
-          const itemClass = value<string>('itemClass') ?? 'Misc';
-          const damage = value<{ min: number; max: number }>('effectiveDamage');
-          const armor = value<{ min: number; max: number }>('effectiveArmor');
-          const armorSlot = ['Chest', 'Helm', 'OffHand'].includes(slot);
-          return {
-            data: {
-              damage: {
-                baseType: e.name,
-                slot,
-                itemClass,
-                implicit: armor && armorSlot
-                  ? { type: 'Armor', minimum: armor.min, maximum: armor.max }
-                  : 'none',
-                ...(armor && armorSlot ? { armor: { minimum: armor.min, maximum: armor.max } } : {}),
-                ...(slot === 'Weapon' && damage
-                  ? { damageType: 'Physical', damageMin: damage.min, damageMax: damage.max }
-                  : {}),
-              },
-            },
-          };
-        }
-        // Iron Longsword (item-1) base stat block — a canonical tier-1 1H sword.
-        // ARPG-LAWS §1c: baseDPS = ((dmgMin+dmgMax)/2) × APS.
-        // Damage range sourced from the entity seed (DUMMY_ITEMS item-1: Damage 12-18).
-        // Attack speed derived from the entity's Speed stat: Speed = swing-time in seconds;
-        //   APS = 1 / swingTime.  item-1 Speed = 1.2s → APS = 1/1.2 ≈ 0.83.
-        // crit 5–6.5%; crit multi base +150% (×2.5).
-        const damageMin = 12;
-        const damageMax = 18;
-        // Derive swing-time from entity Speed stat (value: '1.2s'); strip 's' and invert to APS.
-        const entityStats = (e.data as Record<string, unknown> | null)?.stats as
-          Array<{ label: string; value: string }> | undefined;
-        const speedStat = entityStats?.find((s) => s.label === 'Speed');
-        const swingTimeSec = speedStat
-          ? parseFloat(speedStat.value.replace('s', ''))
-          : 1.2;                          // item-1 default: 1.2 s (Speed stat in DUMMY_ITEMS)
-        // Round APS to 4 decimal places for stability.
-        const attackSpeed = Math.round((1 / swingTimeSec) * 10000) / 10000; // 1/1.2 ≈ 0.8333
-        const critChance = 0.055;         // 5.5%, within 5–6.5% band
-        const critMulti = 2.5;            // base +150% = ×2.5 (ARPG-LAWS §1c + §3)
-        const baseDPS = Math.round(((damageMin + damageMax) / 2) * attackSpeed * 10000) / 10000;
-        // item-1: ((12+18)/2) × 0.8333 = 15 × 0.8333 = 12.4995 ≈ 12.5
-        return {
-          data: {
-            damage: {
-              // Weapon base stats (no affixes applied)
-              baseType: e.name,
-              slot: 'Weapon',
-              itemClass: 'Weapon',
-              damageType: 'Physical',      // matches UE damage-type enum
-              damageMin,                   // 12
-              damageMax,                   // 18
-              attackSpeed,                 // derived from entity Speed stat (1.2 s → 0.8333 APS)
-              attackSpeedNote: `Derived from entity Speed stat (${swingTimeSec}s swing-time → ${attackSpeed} APS = 1 / ${swingTimeSec}).`,
-              critChance,                  // 5.5%
-              critMulti,                   // ×2.5 (base; affixes add "increased crit multi")
-              baseDPS,                     // ≈ 12.5 (no affixes)
-              dpsNote:
-                `baseDPS = ((${damageMin}+${damageMax})/2) × ${attackSpeed} = ${(damageMin + damageMax) / 2} × ${attackSpeed} = ${baseDPS}. ` +
-                'Affixes compound via added → increased → more (canon arpg-damage-model): ' +
-                'AddedPhysicalDamage T3 (+17 flat) → new base 22–35 → avg 28.5 × 0.8333 ≈ 23.7 DPS; ' +
-                'IncreasedAttackSpeed T3 (+10% increased) → ×1.1 on APS → 26.1 DPS; ' +
-                'effective crit overlay: 5.5% × (1+0.25 increased) × ×2.5 → avgCritMult ≈ 1.103 → ~28.8 effective DPS with crit. ' +
-                'Sits below the tier-100 DPS ceiling (baseline is tier-1, ilvl 1–10 zone); ' +
-                'endgame items at ilvl 80+ reach 200–400+ DPS via T1 affixes.',
-              implicit: {
-                type: 'Accuracy',
-                value: 30,
-                label: '+30 to Accuracy Rating',
-                ueGE: 'GE_Implicit_SwordAccuracy',
-                note: 'Sword slot identity implicit — +accuracy is outside the prefix/suffix budget.',
-              },
-              mathLaw: 'ARPG-LAWS §3: base+added → ×(1+Σincreased%) → ×each more%. Crit: effectiveCrit = baseCrit × (1+increasedCrit), capped 95%; on crit ×critMulti (base 2.5 = +150%).',
-            },
-            // top-level field for withinPercent checker — base DPS for item-1 derived at runtime
-            baseDPS,
-          },
-        };
-      },
+      produce: damageStepProduce,
       // Tier-AGNOSTIC: verify baseDPS is internally consistent with the weapon's own
       // damage × APS (item-1: 15 × 0.8333 ≈ 12.5; a Legendary lightsaber: 38 × 1.0 ≈ 38).
       // Power-budget belongs to the Economy step (pricePowerRatio), so this step must not
@@ -781,13 +801,14 @@ registerCatalogPipeline({
               'Reliable and unremarkable — a weapon that outlasts the hands that wield it.',
             headerLine: e.name,
             subHeaderLine: 'One-Handed Sword',
-            implicitLine: '+30 Accuracy Rating',
+            ...tooltipStatsFromDamage(e),
             separatorAfterImplicit: true,
             // Judge-refleet fix 2026-07-07: this item's authoritative rarity is COMMON
             // (seed + the Affixes step: Common = 0 explicit affixes per ARPG-LAWS §1).
             // The old tooltip showed 6 affix lines + a Rare border — a direct law
             // contradiction. A Common tooltip carries base stats + implicit ONLY.
-            statLines: ['Physical Damage: 8–12', 'Attacks per Second: 1.25', 'Critical Strike Chance: 5%'],
+            // statLines / implicitLine come from the Damage / Implicit step's own derivation
+            // (tooltipStatsFromDamage) — a hand-typed '8–12 · 1.25 APS · 5%' contradicted it.
             affixLines: [],               // Common: zero explicit affixes (§1)
             rarityColorBorder: 'Common',  // white/grey border in HUD per rarity
             compareFields: ['damageMin', 'damageMax', 'attackSpeed', 'critChance', 'MaxHealth', 'FireResistance', 'LightningResistance'],
