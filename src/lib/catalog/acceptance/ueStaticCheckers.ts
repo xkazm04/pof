@@ -60,7 +60,12 @@ export function resolveUeRoot(): string | null {
   const { fs } = serverModules();
   const env = process.env.POF_UE_ROOT;
   if (env && fs.existsSync(env)) return env;
-  const fallback = 'C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF';
+  // No per-user literal: the Unreal Launcher's default project folder under the CURRENT user's home.
+  // Anywhere else, set POF_UE_ROOT (a null here is reported by the callers as "UE root not found").
+  const { path } = serverModules();
+  const home = process.env.USERPROFILE || process.env.HOME;
+  if (!home) return null;
+  const fallback = path.join(home, 'Documents', 'Unreal Projects', 'PoF');
   return fs.existsSync(fallback) ? fallback : null;
 }
 
