@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { assembleMetaHuman, buildAssemblePython, buildConformPython, conformMeshToMetaHuman } from '@/lib/visual-gen/metahuman-conform';
+import type { ExperimentResult } from '@/lib/ue-experiment/runner';
 import { routePromptShape } from '@/lib/visual-gen/linear-prop-routing';
 import { planConform } from '@/lib/visual-gen/bone-conform';
 import { bindRigToPreset } from '@/lib/visual-gen/rig-binding';
@@ -84,5 +86,29 @@ describe('linear-prop routing: a hyphenated compound names something else', () =
   it('still recognises a rope the hyphen only describes', () => {
     expect(routePromptShape('steel-cable').route).toBe('procedural');
     expect(routePromptShape('barbed-wire coil').route).toBe('procedural');
+  });
+});
+
+const experiment = (markers: Record<string, string>): (() => Promise<ExperimentResult>) => async () => ({
+  ok: true, logs: [], markers, durationMs: 1, binary: 'b', args: [],
+});
+
+describe('metahuman conform: a failure names what actually failed', () => {
+  it('does not blame the conform call when no character was ever created', async () => {
+    const res = await conformMeshToMetaHuman('C:/gen/x.glb', {
+      runExperimentFn: experiment({ POF_MH_IMPORT: '/Game/X/T.T', POF_MH_VERTS: '0', POF_MH_CHAR: 'NONE', POF_MH_CONFORMED: 'False' }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.error).not.toContain('returned False');
+    expect(res.error).toContain('no MetaHumanCharacter');
+  });
+
+  it('does not send the operator to the Launcher for a character that did not load', async () => {
+    const res = await assembleMetaHuman('/Game/X/Missing', {
+      runExperimentFn: experiment({ POF_MH_CHAR: 'NONE', POF_MH_ASSEMBLED: 'False' }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.error).not.toContain('Optional Content');
+    expect(res.error).toContain('/Game/X/Missing');
   });
 });

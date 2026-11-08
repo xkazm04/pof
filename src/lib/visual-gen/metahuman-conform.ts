@@ -102,7 +102,11 @@ export async function conformMeshToMetaHuman(glbPath: string, opts: ConformOptio
     characterPath: hasChar ? charPath : undefined,
     targetMeshPath: hasImport ? imported : undefined,
     vertexCount,
-    error: res.error ?? (!hasImport ? 'glb import produced no asset' : !conformed ? 'conform_body_to_target returned False' : undefined),
+    error: res.error ?? (
+      !hasImport ? 'glb import produced no asset'
+      : !hasChar ? `no MetaHumanCharacter was created, so the conform never ran (${vertexCount} vertices extracted from the target mesh)`
+      : !conformed ? 'conform_body_to_target returned False'
+      : undefined),
     logs: res.logs,
   };
 }
@@ -174,13 +178,17 @@ export async function assembleMetaHuman(characterPath: string, opts: AssembleOpt
     capture: false,
     settleMs: opts.settleMs ?? 300_000,
   });
+  const charPath = res.markers['POF_MH_CHAR'];
+  const hasChar = !!charPath && charPath !== 'NONE';
   const canBuild = res.markers['POF_MH_CAN_BUILD'] === 'True';
   const assembled = res.markers['POF_MH_ASSEMBLED'] === 'True';
   return {
     ok: res.ok && assembled,
     canBuild,
     assembled,
-    error: res.error ?? (!canBuild
+    error: res.error ?? (!hasChar
+      ? `no MetaHumanCharacter could be loaded at ${characterPath}, so assemble-readiness was never checked`
+      : !canBuild
       ? 'not assemble-ready (can_build_meta_human=False) — install the MetaHuman Optional Content (Epic Launcher → UE 5.8 → Options → "MetaHuman Creator Core Data"); see logs for the exact reason'
       : !assembled ? 'build_meta_human did not complete' : undefined),
     logs: res.logs,
