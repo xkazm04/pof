@@ -32,4 +32,11 @@ describe('gap-analysis plugins', () => {
   ])('%s plugin is registered', (catalogId) => {
     expect(pluginFor(catalogId)).toBeDefined();
   });
+
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+    'an Object.prototype key (%s) is not a registered plugin',
+    (catalogId) => {
+      expect(pluginFor(catalogId)).toBeUndefined();
+    },
+  );
 });

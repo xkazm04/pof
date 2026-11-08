@@ -1,11 +1,13 @@
 import type { GapAnalysisPlugin } from './types';
 
-const PLUGINS: Record<string, GapAnalysisPlugin> = {};
+// A Map, not an object literal: `pluginFor('constructor')` must not resolve Object.prototype
+// members as plugins (catalogId arrives from request bodies).
+const PLUGINS = new Map<string, GapAnalysisPlugin>();
 
 export function pluginFor(catalogId: string): GapAnalysisPlugin | undefined {
-  return PLUGINS[catalogId];
+  return PLUGINS.get(catalogId);
 }
 
 export function register(catalogId: string, plugin: GapAnalysisPlugin): void {
-  PLUGINS[catalogId] = plugin;
+  PLUGINS.set(catalogId, plugin);
 }
