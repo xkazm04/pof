@@ -66,3 +66,14 @@ describe('CSVImportPanel re-picks the same file', () => {
     expect(value).toBe('');
   });
 });
+
+describe('CSVImportPanel line readout', () => {
+  it('does not count the trailing newline as a line', () => {
+    vi.stubGlobal('FileReader', okReader('a\nb\n'));
+    const { container } = render(<CSVImportPanel onImport={noop} isImporting={false} />);
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['a\nb\n'], 'capture.csv', { type: 'text/csv' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    expect(container.textContent ?? '').toContain('Loaded 2 lines');
+  });
+});

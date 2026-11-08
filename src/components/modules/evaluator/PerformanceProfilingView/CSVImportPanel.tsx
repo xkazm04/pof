@@ -75,7 +75,7 @@ export function CSVImportPanel({ onImport, isImporting }: {
       )}
       {csvText && (
         <div className="text-2xs text-text-muted">
-          Loaded {csvText.split('\n').length} lines · {(csvText.length / 1024).toFixed(1)}KB
+          Loaded {csvText.replace(/\r?\n$/, '').split('\n').length} lines · {(csvText.length / 1024).toFixed(1)}KB
         </div>
       )}
       <p className="text-2xs text-text-muted/60">
