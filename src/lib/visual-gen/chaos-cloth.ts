@@ -94,6 +94,10 @@ export function buildClothGraphPython(opts: ClothOptions): string {
     // 1) garment mesh
     ...garmentLines,
     "unreal.log('POF_CLOTH_GARMENT=' + _garment)",
+    // A garment that never imported leaves nothing to author around: stop here so no Dataflow
+    // or ClothAsset is created and saved under /Game. The marker above is already logged, and
+    // the runner's try/except turns this raise into its ERROR marker.
+    "if _garment == 'NONE': raise RuntimeError('garment import produced no asset')",
     // 2) Dataflow asset to author into
     `_udf = _at.create_asset('${dfName}', '${dest}', None, unreal.DataflowAssetFactory())`,
     "unreal.log('POF_CLOTH_DATAFLOW=' + (_udf.get_path_name() if _udf else 'NONE'))",
