@@ -42,6 +42,17 @@ describe('usePofBridge retarget on settings edit', () => {
     expect(mgr.connect.mock.calls[1]).toEqual([expect.any(String), 30011, undefined]);
   });
 
+  it('reconnects once with the new port when the edit lands while connected', () => {
+    for (let i = 0; i < 3; i++) renderHook(() => usePofBridge());
+    mgr.state.status = 'connected';
+    expect(mgr.connect).toHaveBeenCalledTimes(1);
+
+    act(() => { usePofBridgeStore.setState({ pofPort: 30011 }); });
+
+    expect(mgr.connect).toHaveBeenCalledTimes(2);
+    expect(mgr.connect.mock.calls[1]).toEqual([expect.any(String), 30011, undefined]);
+  });
+
   it('does not reconnect when nothing changed', () => {
     for (let i = 0; i < 3; i++) renderHook(() => usePofBridge());
     act(() => { usePofBridgeStore.setState({ pofPort: 30010 }); });

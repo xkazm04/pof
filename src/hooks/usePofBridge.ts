@@ -83,11 +83,11 @@ export function usePofBridge(): UsePofBridgeResult {
       lastTargetKey = key;
       pofBridgeConnection.connect(host, pofPort, pofAuthToken || undefined);
     } else if (
-      (current.status === 'error' || current.status === 'reconnecting') &&
+      (current.status === 'connected' || current.status === 'error' || current.status === 'reconnecting') &&
       lastTargetKey !== null &&
       lastTargetKey !== key
     ) {
-      // A settings edit while retrying: retarget once. The module-level key makes the
+      // A settings edit while connected or retrying: retarget once. The module-level key makes the
       // first mounted instance win, so N mounts never fire N connects.
       lastTargetKey = key;
       pofBridgeConnection.connect(host, pofPort, pofAuthToken || undefined);
