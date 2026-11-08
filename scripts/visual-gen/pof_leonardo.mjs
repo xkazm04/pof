@@ -54,6 +54,21 @@ async function main() {
   if (a.style) params.style = a.style;
 
   let genId;
+  // Idempotent: the `finally` below and a signal can both reach it.
+  async function deleteGeneration() {
+    if (!genId || a['no-cleanup']) return;
+    const id = genId;
+    genId = undefined;
+    try { await req('DELETE', `${V1}/generations/${id}`); console.log('POF_LEO_CLEANED=' + id); }
+    catch { console.log('POF_LEO_CLEANUP_FAILED=' + id); }
+  }
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.once(sig, () => {
+      console.log('POF_LEO_ERROR=interrupted by ' + sig);
+      deleteGeneration().finally(() => process.exit(sig === 'SIGINT' ? 130 : 143));
+    });
+  }
+
   try {
     const sub = await req('POST', `${V2}/generations`, { public: false, model: a.model || 'gpt-image-2', parameters: params });
     genId = sub.generate?.generationId;
@@ -80,10 +95,7 @@ async function main() {
   } catch (e) {
     console.log('POF_LEO_ERROR=' + String(e.message || e).slice(0, 300));
   } finally {
-    if (genId && !a['no-cleanup']) {
-      try { await req('DELETE', `${V1}/generations/${genId}`); console.log('POF_LEO_CLEANED=' + genId); }
-      catch { console.log('POF_LEO_CLEANUP_FAILED=' + genId); }
-    }
+    await deleteGeneration();
   }
 }
 main();

@@ -35,4 +35,11 @@ describe('pof_leonardo.mjs', () => {
     expect(existsSync(join(r.dir, 'o.png'))).toBe(false);
     expect(deletes(r.calls)).toHaveLength(1);
   });
+
+  it('an interrupt while polling still deletes the generation, once', () => {
+    const r = run(rules({ poll: [{ emit: 'SIGINT', body: { generations_by_pk: { status: 'PENDING' } } }] }));
+    expect(r.status).toBe(130);
+    expect(r.stdout).toContain('POF_LEO_ERROR=interrupted');
+    expect(deletes(r.calls)).toHaveLength(1);
+  });
 });
