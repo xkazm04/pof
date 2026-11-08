@@ -34,6 +34,8 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 interface PlatformProfileCardProps {
   profile: BuildProfile;
   uatCommand?: string;
+  /** Why `uatCommand` is missing when the generator threw. */
+  uatError?: string;
   onEdit: (profile: BuildProfile) => void;
   onDelete: (id: string) => void | Promise<unknown>;
   onSetDefault: (id: string) => void;
@@ -41,7 +43,7 @@ interface PlatformProfileCardProps {
 }
 
 export function PlatformProfileCard({
-  profile, uatCommand, onEdit, onDelete, onSetDefault, onPackage,
+  profile, uatCommand, uatError, onEdit, onDelete, onSetDefault, onPackage,
 }: PlatformProfileCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [cmdCopied, setCmdCopied] = useState(false);
@@ -185,6 +187,13 @@ export function PlatformProfileCard({
                   <pre className="mt-1 text-2xs font-mono text-text-muted bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
                     {uatCommand}
                   </pre>
+                </div>
+              )}
+
+              {!uatCommand && uatError && (
+                <div role="note" className="text-2xs flex items-start gap-1" style={{ color: STATUS_WARNING }}>
+                  <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0 mt-px" />
+                  <span>UAT command unavailable: {uatError}</span>
                 </div>
               )}
 

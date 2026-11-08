@@ -43,14 +43,19 @@ export function BuildConfigSelector() {
   // UAT commands are a pure, deterministic function of (profile, projectPath,
   // projectName, ueVersion) — the same generator the server used to run per
   // profile over a chatty POST loop. Computed client-side; identical output.
-  const uatCommands = useMemo(() => {
+  // A profile the generator rejects keeps its reason: a card with no command section
+  // must not look the same as one that has no command.
+  const { uatCommands, uatErrors } = useMemo(() => {
     const cmds: Record<string, string> = {};
+    const errors: Record<string, string> = {};
     for (const p of profiles) {
       try {
         cmds[p.id] = generateUATCommand(p, projectPath, projectName, ueVersion);
-      } catch { /* skip command generation failures */ }
+      } catch (e) {
+        errors[p.id] = e instanceof Error ? e.message : String(e);
+      }
     }
-    return cmds;
+    return { uatCommands: cmds, uatErrors: errors };
   }, [profiles, projectPath, projectName, ueVersion]);
 
   const [cookRequest, setCookRequest] = useState<{
@@ -309,6 +314,7 @@ export function BuildConfigSelector() {
               key={p.id}
               profile={p}
               uatCommand={uatCommands[p.id]}
+              uatError={uatErrors[p.id]}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onSetDefault={handleSetDefault}
