@@ -193,7 +193,7 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
       // derived from blobs and from its projection must not share a memo slot.
       // `localByEntity` is keyed by entity, so only this catalog's entity rows matter — a
       // produce elsewhere must not invalidate this catalog.
-      const deps: unknown[] = [useFull, useFull ? full.arts : summary.rows, catalogVerdicts, entMap];
+      const deps: unknown[] = [useFull, useFull ? full.arts : summary.rows, catalogVerdicts, entMap, allEntitiesByCatalog];
       for (const id of Object.keys(entMap)) deps.push(localByEntity[id]);
 
       const hit = cache.get(section.catalogId);
@@ -209,6 +209,7 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
         steps: resolveCatalogSteps(section.catalogId),
         entities,
         localByEntity,
+        entitiesByCatalog: allEntitiesByCatalog, // the rail's index, so link-aware steps grade the same here
       };
       let fresh: CoachCandidate[];
       if (useFull) {
@@ -237,5 +238,5 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
     // list `buildGlobalCoach` would have assembled in one pass.
     return { candidates: rankCoachCandidates(candidates, topN), loading, failedCatalogs };
     // `version` is the "cache changed" signal — recompute as each catalog's fetch resolves.
-  }, [entitiesByCatalog, localByEntity, version, topN, verdictsByCatalog]);
+  }, [entitiesByCatalog, allEntitiesByCatalog, localByEntity, version, topN, verdictsByCatalog]);
 }

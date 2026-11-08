@@ -75,6 +75,8 @@ export interface CoachCatalogInput {
   serverByEntity: Map<string, Map<string, PipelineArtifact>>;
   /** Local produced steps by entity id (add-only overlay; local wins). */
   localByEntity: Record<string, Record<string, LabStepArtifact>>;
+  /** Live entity index for the CheckerContext's `has` (link-aware steps); absent → nothing resolves. */
+  entitiesByCatalog?: Record<string, Record<string, unknown>>;
 }
 
 /**
@@ -121,7 +123,7 @@ export function buildCatalogCandidates(cin: CoachCatalogInput, verdicts: JudgeVe
     // The ONE add-only merge (shared with matrixRows): local content wins; a failure marker never shadows the server.
     const { serverArts, effective } = effectiveSteps(cin.serverByEntity.get(e.id), cin.localByEntity[e.id]);
     const own = entityStepList(cin.catalogId, e, cin.steps); // THIS entity's steps: stepIndex indexes the rail's list
-    const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, own, effective, serverArts, {}, verdicts);
+    const { displayStatus, driftByStep, artifactByStep } = deriveEntityArtifacts(cin.catalogId, e, own, effective, serverArts, cin.entitiesByCatalog ?? {}, verdicts);
     // A content-less failure reads `unproduced` and speaks through its verdict's reason (stepRecord).
     const candidate = assembleCandidate(cin.catalogId, cin.catalogLabel, e, own, displayStatus, driftByStep, (step) => coachVerdictOf(artifactByStep.get(step), effective[step])?.reason);
     if (candidate) candidates.push(candidate);
@@ -216,14 +218,15 @@ export function deriveEntityFromSummary(
   verdicts: JudgeVerdict[] = [],
   /** The entity's canon profile — keeps the coach's verdict on the same spine as the banner. */
   canonProfile?: string,
+  /** Live entity index for the CheckerContext's `has` (as the rail passes it). */
+  entitiesByCatalog: Record<string, Record<string, unknown>> = {},
 ): EntitySummaryDerivation {
   // Siblings come from the local artifacts only — the server's blobs are exactly what this
   // path does not fetch. For any entity that has been OPENED this is lossless: hydration
   // adopts every server row into the local store, so local ⊇ server. An entity nobody has
   // opened has no local steps at all, so no sibling-reading checker runs here in the first
-  // place. `has` matches the artifact path's own cross-catalog resolution for this surface
-  // (`buildCatalogCandidates` passes `{}` too).
-  const ctx = buildLabCheckerContext(catalogId, localSteps, {}, undefined, canonProfile);
+  // place. `has` reads the same live entity index the artifact path gets.
+  const ctx = buildLabCheckerContext(catalogId, localSteps, entitiesByCatalog, undefined, canonProfile);
   const driftByStep = new Map<string, StepDrift>();
   const statusByStep = new Map<string, StepDisplayStatus>();
   const reasonByStep = new Map<string, string>();
@@ -303,6 +306,8 @@ export interface CoachSummaryInput {
   summaryByEntity: Map<string, Map<string, StepSummary>>;
   /** Local produced steps by entity id (add-only overlay; local wins). */
   localByEntity: Record<string, Record<string, LabStepArtifact>>;
+  /** Live entity index for the CheckerContext's `has`; absent → nothing resolves. */
+  entitiesByCatalog?: Record<string, Record<string, unknown>>;
 }
 
 /** Group a catalog's flat summary rows into `entityId → step → row`. */
@@ -326,7 +331,7 @@ export function buildCatalogCandidatesFromSummary(cin: CoachSummaryInput, verdic
   const candidates: CoachCandidate[] = [];
   for (const e of cin.entities) {
     const own = entityStepList(cin.catalogId, e, cin.steps); // THIS entity's steps (as the full path above)
-    const derived = deriveEntityFromSummary(cin.catalogId, e.id, own, cin.localByEntity[e.id], cin.summaryByEntity.get(e.id), verdicts, e.canonProfile);
+    const derived = deriveEntityFromSummary(cin.catalogId, e.id, own, cin.localByEntity[e.id], cin.summaryByEntity.get(e.id), verdicts, e.canonProfile, cin.entitiesByCatalog ?? {});
     const candidate = assembleCandidate(cin.catalogId, cin.catalogLabel, e, own, derived.displayStatus, derived.driftByStep, derived.reasonForStep);
     if (candidate) candidates.push(candidate);
   }
