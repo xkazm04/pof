@@ -4,6 +4,7 @@ import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
 import { AssetTarget } from './shared/assetHonesty';
+import { MeterBar } from '@/components/ui/MeterBar';
 import { entitySlug, formatGpuMs, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
@@ -70,7 +71,8 @@ export function ItemVFX({ t, entity, step }: StepProps) {
         { label: 'Variants', node: <div>{(made ? variants : DEFAULT_VFX_VARIANTS).map(([n, s]) => <Row key={n} t={t} name={n} right={s} on={made} />)}</div> },
         { label: 'GPU budget', node: (
           <div style={{ display: 'grid', gap: 8 }}>
-            <div style={{ height: 16, background: t.line, opacity: 0.4 }}><div style={{ width: `${(cost / CAP) * 100}%`, height: '100%', background: cost <= CAP ? t.ok : t.bad }} /></div>
+            <MeterBar value={cost} max={CAP} overflow height={16} color={cost <= CAP ? t.ok : t.bad}
+              ariaLabel="VFX GPU cost vs frame budget" valueText={`${formatGpuMs(cost, CAP)} ms of ${CAP} ms`} />
             <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>{formatGpuMs(cost, CAP)} ms of {CAP} ms frame budget</span>
           </div>
         ) },

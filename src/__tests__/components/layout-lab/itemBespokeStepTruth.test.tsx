@@ -46,4 +46,17 @@ describe('VFX GPU cost is never rounded onto its own budget', () => {
     expect(text).toContain('0.85 ms of 0.8 ms');
     expect(text).not.toContain('0.8 ms of 0.8 ms');
   });
+
+  it('the GPU budget bar is the shared budget meter: over budget is announced and never overflows its track', () => {
+    seed('VFX', { variants: [['Idle glow', 'small']], cost: 1.2, cap: 0.8 });
+    const Step = getStepComponent('items', 'VFX')!;
+    const { container } = render(<Step t={t} entity={entity} step="VFX" />);
+    const bar = container.querySelector('[role="progressbar"][aria-label="VFX GPU cost vs frame budget"]');
+    expect(bar).not.toBeNull();
+    expect(bar!.getAttribute('aria-valuetext') ?? '').toMatch(/\bover\b/);
+    expect(bar!.getAttribute('data-over')).toBe('true');
+    // The hand-rolled fill used to be `width: (cost / cap) * 100%` — 150% of its own track.
+    const widths = [...container.querySelectorAll<HTMLElement>('[style*="width"]')].map((el) => el.style.width);
+    expect(widths).not.toContain('150%');
+  });
 });
