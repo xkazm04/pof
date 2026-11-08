@@ -43,7 +43,9 @@ export function BlueprintInspector() {
 
   const fetchBlueprint = useCallback(async () => {
     const trimmed = path.trim();
-    if (!trimmed) return;
+    // Same guard as the Inspect button's `disabled` — Enter is a second door
+    // into this fetch and must not bypass it.
+    if (!trimmed || loading || isDisconnected) return;
 
     setLoading(true);
     setError(null);
@@ -60,7 +62,7 @@ export function BlueprintInspector() {
     }
 
     setLoading(false);
-  }, [path, pofPort]);
+  }, [path, pofPort, loading, isDisconnected]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') fetchBlueprint();
