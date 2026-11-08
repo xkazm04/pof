@@ -48,3 +48,17 @@ describe('MaterialStyleTransfer — toggle state is exposed, not colour-only', (
     expect(compare.getAttribute('aria-pressed')).toBe('true');
   });
 });
+
+describe('MaterialStyleTransfer — the Refine Parameters disclosure', () => {
+  it('announces whether its sliders are shown and names the region it controls', async () => {
+    const { container } = await renderAnalyzed();
+    const toggle = Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes('Refine Parameters'))!;
+    // A landed analysis opens the panel.
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const controls = toggle.getAttribute('aria-controls');
+    expect(controls).toBeTruthy();
+    expect(container.querySelector(`[id="${controls}"]`)?.querySelector('input[type="range"]')).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+});

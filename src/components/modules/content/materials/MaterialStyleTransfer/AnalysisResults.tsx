@@ -2,6 +2,7 @@ import {
   Zap, RefreshCw, Eye, Palette, Sun, Sparkles, Gem, Droplets,
   ChevronDown, ChevronRight,
 } from 'lucide-react';
+import { useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SurfaceType } from '../MaterialParameterConfigurator';
 import { MODULE_COLORS } from '@/lib/constants';
@@ -48,6 +49,7 @@ export function AnalysisResults({
   handleGenerate,
   isGenerating,
 }: AnalysisResultsProps) {
+  const adjustmentsId = useId();
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -139,8 +141,11 @@ export function AnalysisResults({
       {/* Adjustments panel */}
       <div className="rounded-xl border border-border overflow-hidden">
         <button
+          type="button"
           onClick={() => setAdjustmentsOpen(!adjustmentsOpen)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
+          aria-expanded={adjustmentsOpen}
+          aria-controls={adjustmentsId}
+          className="focus-ring-inset w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
         >
           {adjustmentsOpen ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
           <span className="text-2xs font-medium text-text">Refine Parameters</span>
@@ -150,6 +155,7 @@ export function AnalysisResults({
         <AnimatePresence>
           {adjustmentsOpen && (
             <motion.div
+              id={adjustmentsId}
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
