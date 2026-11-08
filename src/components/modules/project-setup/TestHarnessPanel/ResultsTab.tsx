@@ -22,8 +22,11 @@ interface ResultsTabProps {
   onClear: () => void;
 }
 
+/** A run's identity: new runs land at the top, so a position would point at a different run. */
+const runKey = (run: SuiteRunResult) => `${run.suiteId}:${run.startedAt}`;
+
 export function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
-  const [expandedRunIdx, setExpandedRunIdx] = useState<number | null>(history.length > 0 ? 0 : null);
+  const [expandedRunKey, setExpandedRunKey] = useState<string | null>(history.length > 0 ? runKey(history[0]) : null);
 
   if (history.length === 0 && !isRunning) {
     return (
@@ -56,18 +59,19 @@ export function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
         </button>
       </div>
 
-      {history.map((run, idx) => {
-        const isOpen = expandedRunIdx === idx;
+      {history.map((run) => {
+        const key = runKey(run);
+        const isOpen = expandedRunKey === key;
         const StatusIcon = run.status === 'passed' ? CheckCircle2 : run.status === 'failed' ? XCircle : AlertTriangle;
         const statusColor = run.status === 'passed' ? STATUS_SUCCESS : run.status === 'failed' ? STATUS_ERROR : STATUS_WARNING;
         const duration = run.finishedAt - run.startedAt;
         const passedCount = run.testResults.filter((r) => r.status === 'passed').length;
 
         return (
-          <div key={idx} className="rounded border overflow-hidden" style={{ borderColor: `${statusColor}30` }}>
+          <div key={key} className="rounded border overflow-hidden" style={{ borderColor: `${statusColor}30` }}>
             <button
               className="flex items-center gap-2 w-full text-left px-3 py-2 hover:bg-surface-2 transition-colors"
-              onClick={() => setExpandedRunIdx(isOpen ? null : idx)}
+              onClick={() => setExpandedRunKey(isOpen ? null : key)}
             >
               {isOpen ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
               <StatusIcon className="w-3.5 h-3.5" style={{ color: statusColor }} />

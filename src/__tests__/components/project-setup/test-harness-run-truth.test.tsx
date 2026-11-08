@@ -5,8 +5,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, renderHook, act } from '@testing-library/react';
-import type { PofTestResult } from '@/types/pof-bridge';
+import { render, screen, cleanup, renderHook, act, fireEvent } from '@testing-library/react';
+import type { PofTestResult, PofSnapshotDiffReport } from '@/types/pof-bridge';
+import type { SuiteRunResult } from '@/components/modules/project-setup/TestHarnessPanel/types';
 
 const mocks = vi.hoisted(() => ({
   runTest: vi.fn(),
@@ -33,6 +34,11 @@ const result = (testId: string, status: PofTestResult['status']): PofTestResult 
   testId, status, startTime: '2026-11-08T00:00:00Z', assertions: [], logs: [], errors: [],
 });
 
+const run = (name: string, startedAt: number, results: PofTestResult[], snapshotReport: PofSnapshotDiffReport | null = null): SuiteRunResult => ({
+  suiteId: name, suiteName: name, startedAt, finishedAt: startedAt + 1000, testResults: results,
+  expectedCount: results.length, snapshotReport, status: 'failed',
+});
+
 /** A hook with one active suite of `scenarios` scenarios. */
 function suiteOf(scenarios: number) {
   const { result: hook } = renderHook(() => useTestHarnessPanel());
@@ -47,6 +53,18 @@ beforeEach(() => {
 });
 
 afterEach(() => cleanup());
+
+describe('the Results history', () => {
+  it('keeps the opened run open when a newer run lands above it', () => {
+    const older = run('Older', 1000, [result('older-test', 'passed')]);
+    const newer = run('Newer', 2000, [result('newer-test', 'passed')]);
+    const { rerender } = render(<ResultsTab isRunning={false} onClear={() => {}} history={[older]} />);
+    expect(screen.queryByText('older-test')).toBeTruthy();
+    rerender(<ResultsTab isRunning={false} onClear={() => {}} history={[newer, older]} />);
+    expect(screen.queryByText('older-test')).toBeTruthy();
+    expect(screen.queryByText('newer-test')).toBeNull();
+  });
+});
 
 describe('suite verdict', () => {
   it('control: every scenario returned and passed is passed', async () => {
