@@ -77,17 +77,25 @@ async function main() {
 
     let gen;
     for (let i = 0; i < 80; i++) {
-      const d = await req('GET', `${V1}/generations/${genId}`);
+      let d;
+      // A flaky poll must not cost a paid generation (same rule as lib/leonardo.ts): only a
+      // 4xx other than 429 says retrying is pointless.
+      try { d = await req('GET', `${V1}/generations/${genId}`); }
+      catch (e) {
+        if (/^4(?!29)\d\d:/.test(String(e.message))) throw e;
+        await sleep(3000);
+        continue;
+      }
       gen = d.generations_by_pk;
       if (gen?.status === 'COMPLETE') break;
       if (gen?.status === 'FAILED') throw new Error('generation FAILED');
       await sleep(3000);
     }
-    const img = (gen.generated_images || [])[0];
+    const img = (gen?.generated_images || [])[0];
     if (!img) throw new Error('no images (timed out?)');
     const r = await fetch(img.url);
     if (!r.ok) throw new Error(`image download ${r.status}`);
-    const buf =Buffer.from(await r.arrayBuffer());
+    const buf = Buffer.from(await r.arrayBuffer());
     const p = resolve(a.output);
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, buf);
