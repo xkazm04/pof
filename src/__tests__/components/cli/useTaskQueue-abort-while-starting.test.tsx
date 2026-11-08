@@ -89,7 +89,9 @@ describe('useTaskQueue — Abort while the run is still starting', () => {
       instanceId: 'i2', projectPath: '/p', taskQueue: [task as never], autoStart: true, enabledSkills: [], visible: true, onTaskComplete,
     }));
     await vi.waitFor(() => expect(apiFetch.mock.calls.some(([u, i]) => isPost(u as string, i as { method?: string }))).toBe(true), { timeout: 5000 });
-    expect(result.current.isStreaming).toBe(true);
+    // The POST is issued before React commits the streaming state; under a loaded
+    // full-suite run the render can lag the call, so wait for it rather than read it once.
+    await vi.waitFor(() => expect(result.current.isStreaming).toBe(true), { timeout: 5000 });
 
     await act(async () => { await result.current.handleAbort(); });
     await act(async () => { releasePost(); await Promise.resolve(); await Promise.resolve(); });
