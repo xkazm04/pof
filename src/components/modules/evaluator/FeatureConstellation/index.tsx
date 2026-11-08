@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useId } from 'react';
+import type { KeyboardEvent } from 'react';
 import { Sparkles, Loader2, RefreshCw, Stars } from 'lucide-react';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { layoutModuleConstellation } from '@/lib/constellation/layout';
@@ -65,6 +66,24 @@ export function FeatureConstellation() {
     const blocked = layout.nodes.filter((n) => n.isBlocked).length;
     return { counts, done, total: layout.nodes.length, blocked };
   }, [layout]);
+
+  // canvas-accessibility: the map is ONE tab stop with a roving cursor; focus drives
+  // the same lit prerequisite chain as hover. Arrows / Home / End move the cursor.
+  const [cursor, setCursor] = useState(0);
+  const active = Math.min(cursor, Math.max(0, layout.nodes.length - 1));
+  const onNodeKey = (e: KeyboardEvent<SVGGElement>, i: number) => {
+    const step: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    const n = layout.nodes.length;
+    let target: number | null = null;
+    if (e.key in step) target = (i + step[e.key] + n) % n;
+    else if (e.key === 'Home') target = 0;
+    else if (e.key === 'End') target = n - 1;
+    if (target === null) return;
+    e.preventDefault();
+    setCursor(target);
+    const siblings = e.currentTarget.parentElement?.querySelectorAll<SVGGElement>(':scope > g[data-constellation-node]');
+    siblings?.[target]?.focus();
+  };
 
   if (isLoading) {
     return (
@@ -150,8 +169,8 @@ export function FeatureConstellation() {
           {/* Constellation canvas */}
           <div className="rounded-lg overflow-x-auto border border-border" style={{ background: 'var(--background)' }}>
             <svg
-              role="img"
-              aria-label={`Feature constellation for ${MODULE_LABELS[moduleId] ?? moduleId}`}
+              role="group"
+              aria-label={`Feature constellation for ${MODULE_LABELS[moduleId] ?? moduleId}: ${summary.total} features, ${summary.blocked} blocked. Arrow keys move between features and light their prerequisite chain.`}
               width={layout.width}
               height={layout.height}
               viewBox={`0 0 ${layout.width} ${layout.height}`}
@@ -215,6 +234,10 @@ export function FeatureConstellation() {
                   dimmed={litKeys ? !litKeys.has(node.key) : false}
                   onHoverStart={() => setHoveredKey(node.key)}
                   onHoverEnd={() => setHoveredKey(null)}
+                  tabStop={i === active}
+                  onFocusNode={() => { setCursor(i); setHoveredKey(node.key); }}
+                  onBlurNode={() => setHoveredKey(null)}
+                  onKeyDown={(e) => onNodeKey(e, i)}
                 />
               ))}
             </svg>
