@@ -267,8 +267,16 @@ export function useScanTab(moduleId: SubModuleId) {
     setFixVerification((prev) => beginFixes(prev, ids));
 
     const finding = findings.find((f) => f.id === firstId);
-    if (finding) fixCli.sendPrompt(buildScanFixPrompt(finding, moduleLabel));
-  }, [activeFixId, findings, moduleLabel, fixCli]);
+    if (!finding) {
+      // Same rule as advanceFix: nothing is dispatched for a vanished id, so no
+      // onComplete would ever arrive — skip it and let the chain take the next.
+      logger.warn(`[ScanTab] ${moduleId} batch fix skipped "${firstId}": finding no longer in scan results — advancing to the next item`);
+      setFixVerification((prev) => dropFixTarget(prev, firstId));
+      scheduleAdvance();
+      return;
+    }
+    fixCli.sendPrompt(buildScanFixPrompt(finding, moduleLabel));
+  }, [activeFixId, findings, moduleId, moduleLabel, fixCli, scheduleAdvance]);
 
   const startBatchFix = useCallback(() => {
     startFixes(Array.from(selectedFindings));
