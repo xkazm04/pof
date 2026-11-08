@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { logger } from '@/lib/logger';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import type { InjectItemResponse } from '@/types/ue5-bridge';
@@ -21,7 +22,7 @@ export function useExportActions(selectedBase: ItemBase, craftedAffixes: Crafted
     try {
       await navigator.clipboard.writeText(generateExportCode(selectedBase, craftedAffixes, itemLevel));
       setCopiedExport(true);
-      setTimeout(() => setCopiedExport(false), 2000);
+      setTimeout(() => setCopiedExport(false), UI_TIMEOUTS.copyFeedback);
     } catch {
       logger.warn('Clipboard copy failed');
     }
@@ -57,11 +58,11 @@ export function useExportActions(selectedBase: ItemBase, craftedAffixes: Crafted
     });
     if (result.ok) {
       setInjectStatus('success');
-      setTimeout(() => setInjectStatus('idle'), 3000);
+      setTimeout(() => setInjectStatus('idle'), UI_TIMEOUTS.toast);
     } else {
       setInjectStatus('error');
       setInjectError(result.error);
-      setTimeout(() => setInjectStatus('idle'), 5000);
+      setTimeout(() => setInjectStatus('idle'), UI_TIMEOUTS.injectErrorBanner);
     }
   }, [selectedBase, craftedAffixes, itemLevel]);
 

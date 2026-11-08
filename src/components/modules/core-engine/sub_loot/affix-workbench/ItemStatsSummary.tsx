@@ -9,7 +9,7 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
-import { ACCENT } from './constants';
+import { ACCENT, CURRENCIES } from './constants';
 import { SYNERGY_COLORS, getItemLevelScaling } from './data';
 import type { CraftedAffix, SynergyRule } from './data';
 import type { CurrencyId } from './types';
@@ -34,6 +34,9 @@ export function ItemStatsSummary({
   const hasLocks = prefixLocked || suffixLocked;
   // Colour the count by the WORST active synergy, not whichever rule is listed first.
   const worstSynergy = (['broken', 'strong', 'good'] as const).find((sev) => activeSynergies.some((s) => s.severity === sev));
+
+  // Currencies are distinct resources: show each one's spend, never a unit-less sum.
+  const spentChips = CURRENCIES.flatMap((c) => (totalSpent[c.id] > 0 ? [{ ...c, spent: totalSpent[c.id] }] : []));
 
   const rows: { label: string; value: string | number; color: string; icon?: React.ReactNode }[] = [
     {
@@ -91,7 +94,14 @@ export function ItemStatsSummary({
           <span className="text-text-muted flex items-center gap-1">
             <CircleDollarSign className="w-3 h-3" /> Total Spent
           </span>
-          <span className="font-bold text-text">{Object.values(totalSpent).reduce((s, v) => s + v, 0)}</span>
+          <span className="flex flex-wrap justify-end gap-1 font-bold text-text" data-testid="total-spent">
+            {spentChips.length === 0 ? '0' : spentChips.map((c) => (
+              <span key={c.id} data-testid={`total-spent-${c.id}`} title={`${c.name}: ${c.spent}`} aria-label={`${c.name}: ${c.spent}`}
+                className="px-1 rounded" style={{ border: `1px solid ${withOpacity(c.color, OPACITY_25)}` }}>
+                {c.icon} {c.spent}
+              </span>
+            ))}
+          </span>
         </div>
       </div>
     </BlueprintPanel>

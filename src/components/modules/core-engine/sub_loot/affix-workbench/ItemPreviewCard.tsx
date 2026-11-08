@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  STATUS_SUCCESS,
+  STATUS_SUCCESS, STATUS_ERROR,
   ACCENT_ORANGE, ACCENT_CYAN, ACCENT_PURPLE,
   OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_37, OPACITY_50,
   withOpacity,
@@ -148,7 +148,8 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
           +{scaledMag.toFixed(1)} {affix.stat}
         </span>
         <button onClick={() => onRemove(affix.tag)} aria-label={`Remove ${affix.displayName}`}
-          className="p-0.5 rounded hover:bg-red-500/20 text-text-muted hover:text-red-400 transition-colors">
+          style={{ '--remove-accent': STATUS_ERROR } as React.CSSProperties}
+          className="p-0.5 rounded hover:bg-[color-mix(in_srgb,var(--remove-accent)_20%,transparent)] text-text-muted hover:text-[var(--remove-accent)] transition-colors">
           <Trash2 className="w-3 h-3" />
         </button>
       </div>

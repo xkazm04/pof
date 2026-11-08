@@ -38,3 +38,19 @@ describe('ItemStatsSummary — synergy count colour', () => {
     expect(synergyColor([strong, broken])).toBe(synergyColor([broken]));
   });
 });
+
+describe('ItemStatsSummary — Total Spent keeps currencies apart', () => {
+  it('one Reforge shows 3 Chaos and 8 Forging, never a mixed 11', () => {
+    const { container } = render(
+      <ItemStatsSummary craftedAffixes={[]} maxAffixes={4} itemLevel={25} activeSynergies={[]}
+        wallet={defaultWallet()} prefixLocked={false} suffixLocked={false}
+        totalSpent={{ ...zeroWallet(), chaos: 3, forging: 8 }} />,
+    );
+    const q = (id: string) => container.querySelector(`[data-testid="total-spent-${id}"]`)?.textContent ?? null;
+    expect(q('chaos')).toContain('3');
+    expect(q('forging')).toContain('8');
+    expect(q('exalted')).toBeNull();
+    expect(container.querySelector('[data-testid="total-spent"]')?.textContent).not.toMatch(/11/);
+    cleanup();
+  });
+});

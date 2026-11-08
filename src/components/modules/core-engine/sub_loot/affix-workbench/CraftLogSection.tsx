@@ -35,10 +35,11 @@ export function CraftLogSection({ craftLog, avgCraftCost, craftCount }: CraftLog
         <div className="flex items-center gap-1 text-xs font-mono font-bold text-text-muted uppercase tracking-[0.15em]">
           <History className="w-3 h-3" /> Craft Log
         </div>
+        {/* Entries are prepended one per counted craft, so craftCount - i is a stable per-entry id. */}
         {craftLog.slice(0, 8).map((entry, i) => {
           const action = CRAFTING_ACTIONS.find(a => a.id === entry.action);
           return (
-            <motion.div key={`${entry.timestamp}-${i}`}
+            <motion.div key={craftCount - i}
               initial={i === 0 ? { opacity: 0, y: -5 } : {}}
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-2 text-xs font-mono">
