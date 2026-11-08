@@ -16834,7 +16834,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/ExportPanel.tsx:115 Every non-ok runPython result, including one with no failure kind (which run-python.ts defines as the editor having run the call and Python raising), is recorded as 'deferred', so a Wire or Verify step that ran and failed reads as a gate not yet run and this panel has no path that records a fail.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "table",
@@ -25050,7 +25054,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:600 deriveCell grades a step verified as soon as any one artifact passes at L3/L4 and never reads counts.fail on that branch, so [e1 pass L3, e2 fail L3] projects to R4 PROVEN, counts toward readyPct, not blockedCount, and is excluded from the below-R3 work queue, while a checker fail only reaches 'attention' when nothing passed or deferred (line 612).",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "agent-instruction-files",

@@ -19238,14 +19238,14 @@
       "subject": "quality-gates",
       "bundle": "software-engineering",
       "state": "unknown",
-      "evaluatedAt": "2026-11-04",
-      "evaluatedTs": "2026-11-04T22:30:07.758Z",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T22:28:40.860Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "17e58d88-fa14-4ece-9425-59407b348be6",
+        "worker": "8647f561-e236-4dd3-b22c-2fb314138914",
         "state": "not-applicable",
-        "at": "2026-11-04T22:30:38.605237+00:00",
-        "reason": "reviewer (sonnet): The anchor (index.tsx:4) is only a doc-comment line and doesn't show that no gate or refusal exists. The panel has conflictResolution.ts, which isn't in the listed context files and returns an 'unavailable' plan and a 'not sent' write outcome. ConflictSection.tsx also disables a choice when there is"
+        "at": "2026-11-08T22:29:48.051505+00:00",
+        "reason": "reviewer (sonnet): The anchor WriteOutcomeChip.tsx:13 is incidental and shows the opposite: the chip's own outcome vocabulary includes 'refused' and 'conflict', and syncEvents.ts logs a rejected write as 'refused'. The panel directory also contains 'accept-ue5' (a substring hit for 'acceptance'), so the claim that the"
       }
     },
     "234034cf-29e8-432e-aca8-490e30e9f45d/eval-harness": {
@@ -23740,6 +23740,93 @@
           "technique": "contact-window-travels-with-the-clip",
           "verdict": "not-applicable",
           "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/useComboChains.ts:37 Montage timing here is read from UE assets. No extracted clip carries a measured window into this module."
+        }
+      ]
+    },
+    "3e63083f-1284-42d4-9d76-9ff18ba3e3e2/quality-gates": {
+      "context": "status-health-dashboard",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T22:28:40.860Z",
+      "worker": "8647f561-e236-4dd3-b22c-2fb314138914",
+      "techniques": [
+        {
+          "technique": "severity-by-construction",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:600 The header promises 'attention — a produced artifact fails', but on the pass branches a checker fail cannot change the grade; it survives only in the tooltip counts and the entity ledger. statusModel.test.ts pins deferred-over-fail but no test covers pass+fail."
+        },
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:289 Population exclusion keyed on a name the writer chooses: an entity named test-headless-* leaves the map, fails included, and nothing counts or displays the exclusion. The step-label key is handled separately (orphanedFacts plus factDrift.test.ts)."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/cellLedger.ts:88 A failed verdict read is its own state, never 'none', and verdictNote says rungs are checker-only."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/components/status/PipelinesView.tsx:12 Could-not-read is held out of the lanes as an UNKNOWN row rather than painted R0."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:686 Lane percentages, cells and the entity ledger all derive from buildSwimlane and readinessOf; WorkQueuePanel's cap of 8 is display-only with Show all."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:41 Closed non-satisfied vocabulary; never-produced is 'unwired' rather than a blank, and each grade carries a stated because."
+        },
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:196 A checker re-reading its author's literals is classed hand-authored and kept out of the trusted bucket."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:6 An L0-L2 pass is read only as a shape-level answer, not as evidence of quality."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:387 A step's own engine claim can only lower its grade; the audited fact outranks any upward claim."
+        }
+      ]
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/quality-gates": {
+      "context": "inventory-economy-simulator",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T22:28:40.860Z",
+      "worker": "8647f561-e236-4dd3-b22c-2fb314138914",
+      "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/ExportPanel.tsx:115 Ran-and-failed is folded into could-not-run even though RunPythonErr.kind separates the two; the failure text survives only as the reason. No test pins this branch."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/ExportPanel.tsx:79 The panel writes its own unconditional pass, and deriveLifecycle then unlocks Wire from that record. The server stamps these rows UNGRADED:, but the lifecycle reads status alone."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/AlertCard.tsx:11 Economy verdicts carry unmeasured as a fourth state, and the tab counts it separately from findings."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/AffixAlertsTabs.tsx:40 The affix list takes the verdict's own threshold instead of restating it."
         }
       ]
     }
