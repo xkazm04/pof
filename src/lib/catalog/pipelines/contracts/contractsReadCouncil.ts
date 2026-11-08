@@ -16,11 +16,13 @@ import { logger } from '@/lib/logger';
 
 const seatOf = (pathId: string) => pathId.split('-')[0];
 
-function readJson(file: string): unknown {
+/** Absent and corrupt are different states: only a present file that fails to parse carries an `error`. */
+function readSeatsFile(file: string): { value: unknown; error?: string } {
+  if (!fs.existsSync(file)) return { value: null };
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return null;
+    return { value: JSON.parse(fs.readFileSync(file, 'utf8')) };
+  } catch (e) {
+    return { value: null, error: e instanceof Error ? e.message : String(e) };
   }
 }
 
@@ -65,13 +67,15 @@ export function readCouncilFacts(root: string, sources: readonly string[], decla
   const inCouncil = !!runId && runId !== '.' && runId !== '..' && !/[\\/]/.test(runId);
   const runAbs = runId && inCouncil ? path.join(councilAbs, runId) : null;
   const runDirExists = !!runAbs && fs.existsSync(runAbs) && fs.statSync(runAbs).isDirectory();
+  const seatsRead = runDirExists ? readSeatsFile(path.join(runAbs!, 'seats.json')) : { value: null };
   return {
     runId,
     runIdBasis,
     candidates,
     runDir: runId ? `${COUNCIL_REL}/${runId}` : null,
     runDirExists,
-    seats: runDirExists ? parseSeats(readJson(path.join(runAbs!, 'seats.json'))) : [],
+    seats: parseSeats(seatsRead.value),
+    ...(seatsRead.error ? { seatsError: seatsRead.error } : {}),
     paths: runDirExists ? proposalsOf(runAbs!).map((p) => ({ pathId: p.pathId, title: p.title })) : [],
     sources,
   };

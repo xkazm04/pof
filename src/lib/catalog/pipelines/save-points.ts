@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, atMost, selected, minCount } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -10,7 +10,8 @@ import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 import { SAVE_SCHEMA_VERSION, persistedFieldLines, ephemeralFieldLines } from '@/lib/save-schema/fields';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 
 /**
  * Save / Checkpoint pipeline (catalogId: 'save-points').
@@ -590,7 +591,7 @@ registerCatalogPipeline({
       // artifact declares (loadBudget.targetMs), not merely near a literal.
       accept: allOf(
         budgetWithinCap('loadBudget', 'measuredMs', 'targetMs', 'Synchronous load within the declared budget'),
-        withinPercent('measuredMs', 'Load time within 50% of 30 ms target', 30, 50),
+        atMost('measuredMs', 'Load time at most 45 ms (30 ms target + 50%)', 45),
       ),
     },
 

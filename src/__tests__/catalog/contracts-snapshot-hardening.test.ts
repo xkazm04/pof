@@ -79,3 +79,33 @@ describe('contracts snapshot — a malformed folder entry is measured, never thr
     expect(step('fax-jam', 'Package').status).not.toBe('pass');
   });
 });
+
+/** A present-but-corrupt `seats.json` is reported as corrupt — it must not read as never written. */
+describe('contracts Council - corrupt seats.json is named, not "unrecorded"', () => {
+  const seatsFile = (runId: string) => path.join(ROOT, 'games/gtai/quests/_council', runId, 'seats.json');
+  const seed = () => {
+    const pkg = questPackage('fax-jam');
+    writeQuest(ROOT, 'fax-jam', { pkg: { ...pkg, provenance: { ...pkg.provenance, runId: '20261102-1500-real' } }, runId: '20261102-1500-real' });
+  };
+
+  it('a truncated seats.json names itself unreadable', () => {
+    seed();
+    fs.writeFileSync(seatsFile('20261102-1500-real'), '{ nope');
+    const snap = readQuestSnapshot(ROOT, 'fax-jam');
+    expect(typeof snap.council.seatsError).toBe('string');
+    expect(String(council('fax-jam').detail)).toContain('seats.json unreadable');
+  });
+
+  it('an absent seats.json still reads as unrecorded and carries no error (control)', () => {
+    seed();
+    fs.rmSync(seatsFile('20261102-1500-real'));
+    const snap = readQuestSnapshot(ROOT, 'fax-jam');
+    expect('seatsError' in snap.council).toBe(false);
+    expect(String(council('fax-jam').detail)).toContain('seats.json unrecorded');
+  });
+
+  it('a healthy seats.json adds no seatsError key (snapshot byte-identity)', () => {
+    seed();
+    expect('seatsError' in readQuestSnapshot(ROOT, 'fax-jam').council).toBe(false);
+  });
+});

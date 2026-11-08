@@ -41,6 +41,8 @@ export interface CouncilFacts {
   runDir: string | null;
   runDirExists: boolean;
   seats: readonly { seat: string; state: string; reason?: string }[];
+  /** Present iff `seats.json` EXISTS but did not parse — absent (unrecorded) and corrupt are different states. */
+  seatsError?: string;
   /** The council's paths with their titles (empty until the run's proposals are readable). */
   paths: readonly { pathId: string; title: string }[];
   /** `provenance.sources[].pathId` — which paths the owner fused from. */
