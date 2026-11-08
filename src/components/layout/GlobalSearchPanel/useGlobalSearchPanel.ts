@@ -28,6 +28,11 @@ import { readRecents, recordRecent } from './recentSelections';
 // than serving the previous project's stale index.
 let indexEnsuredForPath: string | null = null;
 
+/** Recents are places. An alert row is news with an event id: it goes stale, a place does not. */
+function rememberPlace(projectPath: string | null, result: SearchResult): void {
+  if (!result.id.startsWith(ALERT_ID_PREFIX)) recordRecent(projectPath, result);
+}
+
 export function useGlobalSearchPanel() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -156,7 +161,7 @@ export function useGlobalSearchPanel() {
   // ── Navigate to result (Enter / row click — never a paid run) ──
   const handleSelect = useCallback((result: SearchResult) => {
     const { primary } = resolveSearchIntents(result, checklistProgress);
-    recordRecent(projectPath, result);
+    rememberPlace(projectPath, result);
     if (primary) navigateToModule(primary.moduleId);
     setOpen(false);
   }, [navigateToModule, checklistProgress, projectPath]);
@@ -167,7 +172,7 @@ export function useGlobalSearchPanel() {
     const homeRun = homeRows.find((h) => h.result.id === result.id)?.run;
     const run = homeRun ?? resolveSearchIntents(result, checklistProgress).run;
     if (!run) { handleSelect(result); return; }
-    recordRecent(projectPath, result);
+    rememberPlace(projectPath, result);
     sendPromptToModule(run.moduleId, run.prompt);
     // Same rule as the feed card's Fix: a dispatched fix is a read alert, so a
     // second Shift+Enter cannot start the same paid run again.

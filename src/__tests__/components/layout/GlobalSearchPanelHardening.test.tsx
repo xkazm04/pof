@@ -22,6 +22,7 @@ import { GlobalSearchPanel } from '@/components/layout/GlobalSearchPanel';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
+import { readRecents } from '@/components/layout/GlobalSearchPanel/recentSelections';
 
 async function openPalette() {
   render(<GlobalSearchPanel />);
@@ -60,5 +61,15 @@ describe('palette alert rows', () => {
     await screen.findByText('Fix the combat');
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(useActivityFeedStore.getState().events[0].dismissed).toBe(false);
+  });
+
+  it.each([
+    ['Enter', false],
+    ['Shift+Enter', true],
+  ])('%s on an alert does not write it into the persisted recents', async (_label, shiftKey) => {
+    const input = await openPalette();
+    await screen.findByText('Fix the combat');
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey });
+    expect(readRecents('/proj').map((r) => r.id)).toEqual([]);
   });
 });
