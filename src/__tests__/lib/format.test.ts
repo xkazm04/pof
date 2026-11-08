@@ -63,6 +63,13 @@ describe('formatDuration', () => {
     expect(formatDuration(3_661_000)).toBe('1h 1m');
     expect(formatDuration(90_000_000)).toBe('25h 0m'); // 25h "time invested" total
   });
+
+  it('carries into the next unit at boundaries instead of printing 60', () => {
+    expect(formatDuration(59_960)).toBe('1m 0s');
+    expect(formatDuration(119_600)).toBe('2m 0s');
+    expect(formatDuration(3_599_600)).toBe('1h 0m');
+    expect(formatDuration(7_199_000)).toBe('2h 0m');
+  });
 });
 
 describe('formatDurationBetween', () => {

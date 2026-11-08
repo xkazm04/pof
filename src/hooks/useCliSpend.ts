@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { budgetPeriods, ENFORCED_BUDGET_ZONE } from '@/lib/cli-spend/budgetPreview';
@@ -54,8 +54,21 @@ export function useSpendDashboard(): UseSpendDashboardResult {
   return { dashboard, isLoading, error, refetch };
 }
 
+/**
+ * Load state carried on the budget status so a consumer can tell "no limit set"
+ * from "limits unknown" (a failed or still-pending load keeps the empty default).
+ */
+export interface BudgetLoadState {
+  /** True once a budget fetch has succeeded. */
+  isLoaded: boolean;
+  /** Message of the latest failed budget fetch; null after a success. */
+  loadError: string | null;
+  /** Re-run the budget fetch. */
+  retry: () => void;
+}
+
 export interface UseBudgetResult {
-  status: BudgetStatus;
+  status: BudgetStatus & BudgetLoadState;
   isSaving: boolean;
   save: (config: BudgetConfig) => Promise<void>;
   refetch: () => Promise<void>;
@@ -64,17 +77,29 @@ export interface UseBudgetResult {
 /** Read + persist the daily/monthly budget config and its live status. */
 export function useBudget(onSaved?: () => void): UseBudgetResult {
   const [status, setStatus] = useState<BudgetStatus>(emptyBudgetStatus);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const isMounted = useIsMounted();
 
   const refetch = useCallback(async () => {
     try {
       const data = await apiFetch<BudgetStatus>('/api/cli-spend?action=budget');
-      if (isMounted()) setStatus(data);
-    } catch {
-      // Non-critical — keep the empty default.
+      if (isMounted()) {
+        setStatus(data);
+        setIsLoaded(true);
+        setLoadError(null);
+      }
+    } catch (err) {
+      // The empty default has null limits: surface the failure so the panel
+      // never presents unknown limits as "no limit".
+      if (isMounted()) setLoadError(err instanceof Error ? err.message : 'Could not load budget');
     }
   }, [isMounted]);
+
+  const retry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   useEffect(() => {
     refetch();
@@ -98,5 +123,10 @@ export function useBudget(onSaved?: () => void): UseBudgetResult {
     [refetch, onSaved, isMounted],
   );
 
-  return { status, isSaving, save, refetch };
+  const merged = useMemo(
+    () => ({ ...status, isLoaded, loadError, retry }),
+    [status, isLoaded, loadError, retry],
+  );
+
+  return { status: merged, isSaving, save, refetch };
 }
