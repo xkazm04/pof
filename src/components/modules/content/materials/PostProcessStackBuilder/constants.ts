@@ -1,32 +1,4 @@
-import {
-  Sun, Eye, Wind, Circle, Move, Aperture, Layers as LayersIcon,
-  Gauge, Sparkles, Film,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import {
-  STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, ACCENT_EMERALD, ACCENT_PINK,
-} from '@/lib/chart-colors';
-import type { PPEffectCategory } from '@/types/post-process-studio';
-
-// ── Presentation maps (shared shape with PostProcessStudioView) ──
-
-export const CATEGORY_COLORS: Record<PPEffectCategory, string> = {
-  lighting: STATUS_WARNING,
-  color: ACCENT_VIOLET,
-  blur: STATUS_IMPROVED,
-  atmosphere: ACCENT_EMERALD,
-  special: ACCENT_PINK,
-};
-
-export const EFFECT_ICONS: Record<string, LucideIcon> = {
-  'bloom': Sun,
-  'color-grading': Aperture,
-  'depth-of-field': Eye,
-  'ambient-occlusion': Circle,
-  'motion-blur': Move,
-  'vignette': Wind,
-  'exposure': Gauge,
-  'chromatic-aberration': Sparkles,
-  'film-grain': Film,
-  'fog': LayersIcon,
-};
+// Presentation maps are owned by the Evaluator's PostProcessStudioView: both screens
+// render one store's effects, so a recoloured category or a new effect's icon must
+// land once, not in two hand-kept copies.
+export { CATEGORY_COLORS, EFFECT_ICONS } from '@/components/modules/evaluator/PostProcessStudioView/constants';
