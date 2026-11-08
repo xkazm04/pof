@@ -192,7 +192,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
 
       {activeTab === 'map' && (
         <VisibleSection moduleId={moduleId} sectionId="topology">
-        <CollapsibleGroup title="Map & Topology" accent={ACCENT} sectionCount={3} isOpen={openGroups.has(0)} onToggle={() => toggleGroup(0)}>
+        <CollapsibleGroup title="Map & Topology" accent={ACCENT} sectionCount={6} isOpen={openGroups.has(0)} onToggle={() => toggleGroup(0)}>
           <MapTopologyGroup featureMap={featureMap} defs={defs} matchingIds={matchingIds} />
         </CollapsibleGroup>
         </VisibleSection>
