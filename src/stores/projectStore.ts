@@ -74,6 +74,8 @@ let latestScanTicket = 0;
 let inFlightScan: Promise<void> | null = null;
 /** Ticket of the newest switchProject; an older switch never sets the identity. */
 let latestSwitchTicket = 0;
+/** The one follow-up forced scan queued behind a running scan; forced callers share it. */
+let queuedForcedScan: Promise<void> | null = null;
 
 export const useProjectStore = create<ProjectState>()(
   persist(
@@ -131,7 +133,16 @@ export const useProjectStore = create<ProjectState>()(
       scanProject: async (opts) => {
         // A caller that arrives mid-scan waits for it: returning at once let a
         // dispatch compose its prompt before the scan's context existed.
-        if (get().isScanning && inFlightScan) return inFlightScan;
+        if (get().isScanning && inFlightScan) {
+          if (!opts?.force) return inFlightScan;
+          // A forced caller needs files written after the running scan began, so
+          // the running scan's result is not enough: queue one follow-up for all.
+          queuedForcedScan ??= inFlightScan.then(() => {
+            queuedForcedScan = null;
+            return get().scanProject(opts);
+          });
+          return queuedForcedScan;
+        }
         const run = (async () => {
         const { projectPath, projectName, isScanning, dynamicContext } = get();
         if (!projectPath || !projectName || isScanning) return;
