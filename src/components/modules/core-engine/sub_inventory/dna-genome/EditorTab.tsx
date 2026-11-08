@@ -1,11 +1,12 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { Dna, Trash2, Target, FlaskConical } from 'lucide-react';
 import {
   ACCENT_PINK, STATUS_SUCCESS, OPACITY_10, OPACITY_20,
   withOpacity, OPACITY_37,
 } from '@/lib/chart-colors';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import { RadarChart } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -37,6 +38,7 @@ interface EditorTabProps {
 export function EditorTab({ selected, radarData, genomeCount, updateGenome, updateTrait, deleteGenome }: EditorTabProps) {
   // Visible captions become the controls' programmatic labels (same as RollerTab).
   const uid = useId();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const nameId = `${uid}-name`;
   const typeId = `${uid}-type`;
   const rarityId = `${uid}-rarity`;
@@ -52,7 +54,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
           {genomeCount > 1 && !selected.isPreset && (
             <button
               type="button"
-              onClick={() => deleteGenome(selected.id)}
+              onClick={() => setConfirmingDelete(true)}
               aria-label={`Delete genome ${selected.name}`}
               title="Delete genome"
               className="text-xs text-text-muted hover:text-red-400 transition-colors p-1"
@@ -201,6 +203,14 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
 
         <DistributionBar genome={selected} rarity="Rare" />
       </div>
+      <ConfirmDialog
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => deleteGenome(selected.id)}
+        title="Delete this genome?"
+        description={`"${selected.name}" will be removed permanently. This cannot be undone.`}
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

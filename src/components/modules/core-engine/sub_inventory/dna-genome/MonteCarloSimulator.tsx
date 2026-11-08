@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Activity, Dice5, Sigma } from 'lucide-react';
 import {
   withOpacity,
@@ -26,7 +26,9 @@ interface Props {
 export function MonteCarloSimulator({ genome, rarity, level }: Props) {
   const [iterations, setIterations] = useState<number>(1000);
   const [run, setRun] = useState<{ key: string; stats: SimulationStats } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   // Everything simulateRolls reads from its props: stats from other inputs are stale.
   const inputKey = JSON.stringify([
@@ -37,10 +39,14 @@ export function MonteCarloSimulator({ genome, rarity, level }: Props) {
   const stale = run !== null && stats === null;
 
   const runSimulation = () => {
-    startTransition(() => {
+    // Yield one macrotask so "Simulating…" paints before the batch blocks the thread
+    // (a transition defers state updates, not the computation inside it).
+    setIsPending(true);
+    timerRef.current = setTimeout(() => {
       const result = simulateRolls(genome, rarity, level, DEMO_AFFIX_POOL, iterations, GOD_ROLL_THRESHOLD);
       setRun({ key: inputKey, stats: result });
-    });
+      setIsPending(false);
+    }, 0);
   };
 
   return (
@@ -62,7 +68,7 @@ export function MonteCarloSimulator({ genome, rarity, level }: Props) {
                 className="text-xs font-mono font-bold px-2 py-1 rounded transition-all"
                 style={{
                   backgroundColor: iterations === n ? withOpacity(ACCENT, OPACITY_25) : withOpacity(ACCENT, OPACITY_10),
-                  color: iterations === n ? ACCENT : 'rgb(148 163 184)',
+                  color: iterations === n ? ACCENT : 'var(--text-muted)',
                   border: `1px solid ${withOpacity(ACCENT, iterations === n ? OPACITY_37 : OPACITY_12)}`,
                 }}
               >

@@ -10,7 +10,7 @@ import { withOpacity, OPACITY_25, OPACITY_30 } from '@/lib/chart-colors';
 /* ── DNA Strand Visualization ──────────────────────────────────────────── */
 
 export function DNAStrand({ genome }: { genome: ItemGenome }) {
-  // 40 base pairs breathe on the SVG `r` attribute. `r` is not one of framer's
+  // 20 base pairs (40 circles) breathe on the SVG `r` attribute. `r` is not one of framer's
   // positional keys, so the root MotionConfig leaves every one of them looping
   // for a motion-sensitive user.
   const prefersReduced = useReducedMotion();
@@ -19,7 +19,7 @@ export function DNAStrand({ genome }: { genome: ItemGenome }) {
   const width = 260;
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible" aria-hidden="true">
       {Array.from({ length: bases }).map((_, i) => {
         const x = (i / (bases - 1)) * (width - 20) + 10;
         const y1 = height / 2 + Math.sin((i / bases) * Math.PI * 4) * 25;

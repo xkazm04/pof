@@ -6,8 +6,8 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   ACCENT_PURPLE,
   withOpacity, OPACITY_12, OPACITY_25, OPACITY_37,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import { ACCENT } from '../_shared/data';
+import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
+import { ACCENT } from '@/components/modules/core-engine/sub_inventory/_shared/data';
 
 /* ── Economy Sankey Flow ──────────────────────────────────────────────── */
 
@@ -39,8 +39,8 @@ const SANKEY_LINKS: SankeyLink[] = [
 
 function SankeyDiagram() {
   const [hoveredLink, setHoveredLink] = useState<number | null>(null);
-  const W = 480, H = 220;
-  const colX = [30, 200, 370];
+  const W = 560, H = 240;
+  const colX = [110, 260, 410];
   const nodeW = 14;
 
   /* Compute node positions */
@@ -91,11 +91,13 @@ function SankeyDiagram() {
     dstOffsets.set(link.to, do_ + linkH_dst);
 
     const d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2} L${x2},${y2 + linkH_dst} C${mx},${y2 + linkH_dst} ${mx},${y1 + linkH_src} ${x1},${y1 + linkH_src} Z`;
-    return { d, color: srcNode.color, label: `${link.value}%` };
+    const dstNode = SANKEY_NODES.find(n => n.id === link.to)!;
+    return { d, color: srcNode.color, label: `${link.value}%`, name: `${srcNode.label} to ${dstNode.label}: ${link.value}% flow` };
   });
 
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible"
+      role="img" aria-label="Economy flow: item sources into the player inventory, then out to sinks. Each link lists its flow volume.">
       {/* Links */}
       {linkPaths.map((lp, i) => (
         <path key={i} d={lp.d}
@@ -103,9 +105,15 @@ function SankeyDiagram() {
           stroke={lp.color}
           strokeWidth={hoveredLink === i ? 1.5 : 0.5}
           style={{ transition: 'fill 0.15s, stroke-width 0.15s' }}
+          tabIndex={0}
+          aria-label={lp.name}
           onMouseEnter={() => setHoveredLink(i)}
           onMouseLeave={() => setHoveredLink(null)}
-        />
+          onFocus={() => setHoveredLink(i)}
+          onBlur={() => setHoveredLink(null)}
+        >
+          <title>{lp.name}</title>
+        </path>
       ))}
       {/* Nodes */}
       {SANKEY_NODES.map(n => {
@@ -115,17 +123,17 @@ function SankeyDiagram() {
             <rect x={pos.x} y={pos.y} width={nodeW} height={pos.h} rx={3}
               fill={withOpacity(n.color, OPACITY_25)} stroke={n.color} strokeWidth={1} />
             <text x={n.col === 2 ? pos.x + nodeW + 6 : n.col === 0 ? pos.x - 4 : pos.x + nodeW / 2}
-              y={pos.y + pos.h / 2}
+              y={pos.y + pos.h / 2 - 6}
               textAnchor={n.col === 2 ? 'start' : n.col === 0 ? 'end' : 'middle'}
               dominantBaseline="central"
-              className="text-xs font-mono font-bold" fill={n.color} style={{ fontSize: 9 }}>
+              className="text-xs font-mono font-bold" fill={n.color} style={{ fontSize: 12 }}>
               {n.label}
             </text>
             <text x={n.col === 2 ? pos.x + nodeW + 6 : n.col === 0 ? pos.x - 4 : pos.x + nodeW / 2}
-              y={pos.y + pos.h / 2 + 10}
+              y={pos.y + pos.h / 2 + 8}
               textAnchor={n.col === 2 ? 'start' : n.col === 0 ? 'end' : 'middle'}
               dominantBaseline="central"
-              className="text-xs font-mono fill-[var(--text-muted)]" style={{ fontSize: 7 }}>
+              className="text-xs font-mono fill-[var(--text-muted)]" style={{ fontSize: 12 }}>
               {n.value}%
             </text>
           </g>
@@ -141,10 +149,10 @@ function SankeyDiagram() {
         const ty = (src.y + dst.y) / 2;
         return (
           <g className="pointer-events-none">
-            <rect x={tx - 30} y={ty - 10} width={60} height={18} rx={4}
+            <rect x={tx - 40} y={ty - 11} width={80} height={22} rx={4}
               fill="var(--surface-deep)" stroke={lp.color} strokeWidth={1} />
             <text x={tx} y={ty} textAnchor="middle" dominantBaseline="central"
-              className="text-xs font-mono font-bold" fill={lp.color} style={{ fontSize: 9 }}>
+              className="text-xs font-mono font-bold" fill={lp.color} style={{ fontSize: 12 }}>
               {lp.label} flow
             </text>
           </g>
@@ -159,7 +167,7 @@ export function EconomySankeySection() {
     <BlueprintPanel color={ACCENT} className="p-4">
       <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${withOpacity(ACCENT, OPACITY_37)}, transparent)` }} />
       <SectionHeader icon={ArrowRightLeft} label="Economy Flow (Sankey)" color={ACCENT} />
-      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Item sources → Player Inventory → sinks. Hover links for flow volume.</p>
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Item sources → Player Inventory → sinks. Hover or focus links for flow volume.</p>
       <div className="flex justify-center overflow-x-auto">
         <SankeyDiagram />
       </div>
