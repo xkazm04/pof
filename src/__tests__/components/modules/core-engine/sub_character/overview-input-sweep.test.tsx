@@ -6,6 +6,9 @@ import { COMBO_ABILITIES } from '@/components/modules/core-engine/sub_ability/_s
 import { OptimizerMetric, DodgeMetric } from '@/components/modules/core-engine/sub_character/metrics/MovementMetrics';
 import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
+import { resolveBindings, normalizeKeyEvent } from '@/lib/character/input-bindings';
+import { INPUT_BINDINGS } from '@/components/modules/core-engine/sub_character/_shared/data';
+import { buildBindingsApplyPrompt } from '@/components/modules/core-engine/sub_character/input/build-bindings-apply-prompt';
 
 afterEach(() => cleanup());
 
@@ -43,5 +46,20 @@ describe('Features-tab metrics read the persisted feel stack', () => {
       expect(container.textContent).toContain(`${preset.profile.dodge.distance / 100}m`);
       unmount();
     }
+  });
+});
+
+describe('Apply-to-IMC prompt names real UE EKeys for every capturable key', () => {
+  // KeyboardEvent.key -> the EKeys name UE expects (FKey names from InputCoreTypes).
+  const CASES: Array<[string, string]> = [
+    ['-', 'Hyphen'], ['=', 'Equals'], ['[', 'LeftBracket'], [']', 'RightBracket'],
+    ['\\', 'Backslash'], [';', 'Semicolon'], ["'", 'Apostrophe'], [',', 'Comma'],
+    ['.', 'Period'], ['/', 'Slash'], ['`', 'Tilde'], ['Backspace', 'BackSpace'],
+    ['Meta', 'LeftCommand'],
+  ];
+  it.each(CASES)('a rebind captured as %s is written as EKeys::%s', (eventKey, ue) => {
+    const label = normalizeKeyEvent(eventKey);
+    const prompt = buildBindingsApplyPrompt(resolveBindings(INPUT_BINDINGS, { IA_Interact: label }));
+    expect(prompt).toContain(`IA_Interact: E -> ${label} (EKeys::${ue})`);
   });
 });
