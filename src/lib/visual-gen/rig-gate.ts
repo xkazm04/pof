@@ -140,7 +140,7 @@ interface Gltf {
     primitives: { attributes: Record<string, number>; targets?: Record<string, number>[] }[];
     extras?: { targetNames?: unknown };
   }[];
-  nodes?: { name?: string }[];
+  nodes?: { name?: string; mesh?: number; skin?: number }[];
   skins?: { joints: number[]; inverseBindMatrices?: number }[];
   accessors?: { bufferView: number; byteOffset?: number; componentType: number; count: number; type: string; normalized?: boolean }[];
   bufferViews?: { byteOffset?: number; byteLength: number; byteStride?: number }[];
@@ -194,8 +194,19 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     morphTargetCount, morphTargetNames,
   };
 
-  const prim = json.meshes?.[0]?.primitives?.[0];
-  if (!prim) return empty;
+  // Every primitive that can move with skins[0]. A character split into body, hair and
+  // cloth shells carries several, and each one's weights are this gate's question. A mesh
+  // a node binds to a DIFFERENT skin indexes that skin's joints, so reading it here would
+  // grade it against the wrong joint list.
+  const boundSkin = new Map<number, number | undefined>();
+  for (const node of json.nodes ?? []) {
+    if (node.mesh !== undefined) boundSkin.set(node.mesh, node.skin);
+  }
+  const primitives = (json.meshes ?? []).flatMap((mesh, index) => {
+    const bound = boundSkin.get(index);
+    return bound === undefined || bound === 0 ? (mesh.primitives ?? []) : [];
+  });
+  if (primitives.length === 0) return empty;
 
   const readAccessor = (index: number | undefined): number[][] | null => {
     if (index === undefined || !json.accessors || !json.bufferViews || !bin) return null;
@@ -216,19 +227,23 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     return rows;
   };
 
-  const position = readAccessor(prim.attributes.POSITION);
-  const vertexCount = position?.length ?? 0;
-
   const skin = json.skins?.[0];
-  const weights = readAccessor(prim.attributes.WEIGHTS_0);
-  const joints = readAccessor(prim.attributes.JOINTS_0);
-  if (!skin || !weights || !joints) return { ...empty, vertexCount };
 
   // Integer weight encodings are normalized fractions of their max; float ones are used
   // as-is. Without this an 8-bit-weight rig would read as sums of ~255 and fail.
-  const wAcc = json.accessors![prim.attributes.WEIGHTS_0];
-  const scale =
-    wAcc.componentType === 5121 ? 1 / 255 : wAcc.componentType === 5123 ? 1 / 65535 : 1;
+  const scaleOf = (index: number): number => {
+    const componentType = json!.accessors![index].componentType;
+    return componentType === 5121 ? 1 / 255 : componentType === 5123 ? 1 / 65535 : 1;
+  };
+  const skinned = primitives.flatMap((p) => {
+    const weights = readAccessor(p.attributes.WEIGHTS_0);
+    const joints = readAccessor(p.attributes.JOINTS_0);
+    return weights && joints ? [{ weights, joints, scale: scaleOf(p.attributes.WEIGHTS_0) }] : [];
+  });
+  if (!skin || skinned.length === 0) {
+    const vertexCount = primitives.reduce((n, p) => n + (readAccessor(p.attributes.POSITION)?.length ?? 0), 0);
+    return { ...empty, vertexCount };
+  }
 
   let zeroWeightVertices = 0;
   let negativeWeights = 0;
@@ -238,26 +253,30 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   let sumMax = Number.NEGATIVE_INFINITY;
   let sumTotal = 0;
   const referenced = new Set<number>();
+  let weightedVertices = 0;
 
-  for (let i = 0; i < weights.length; i++) {
-    const w = weights[i];
-    const j = joints[i] ?? [];
-    let sum = 0;
-    let influences = 0;
-    for (let c = 0; c < w.length; c++) {
-      const value = w[c] * scale;
-      if (!Number.isFinite(value)) { nonFiniteWeights++; continue; }
-      if (value < 0) negativeWeights++;
-      sum += value;
-      if (value > 0) { influences++; if (j[c] !== undefined) referenced.add(j[c]); }
+  for (const { weights, joints, scale } of skinned) {
+    weightedVertices += weights.length;
+    for (let i = 0; i < weights.length; i++) {
+      const w = weights[i];
+      const j = joints[i] ?? [];
+      let sum = 0;
+      let influences = 0;
+      for (let c = 0; c < w.length; c++) {
+        const value = w[c] * scale;
+        if (!Number.isFinite(value)) { nonFiniteWeights++; continue; }
+        if (value < 0) negativeWeights++;
+        sum += value;
+        if (value > 0) { influences++; if (j[c] !== undefined) referenced.add(j[c]); }
+      }
+      if (sum < 1e-6) zeroWeightVertices++;
+      if (influences > maxInfluences) maxInfluences = influences;
+      if (sum < sumMin) sumMin = sum;
+      if (sum > sumMax) sumMax = sum;
+      sumTotal += sum;
     }
-    if (sum < 1e-6) zeroWeightVertices++;
-    if (influences > maxInfluences) maxInfluences = influences;
-    if (sum < sumMin) sumMin = sum;
-    if (sum > sumMax) sumMax = sum;
-    sumTotal += sum;
   }
-  const n = weights.length || 1;
+  const n = weightedVertices || 1;
 
   return {
     hasSkin: true,
@@ -267,7 +286,7 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     jointNames: skin.joints.map((j) => json!.nodes?.[j]?.name ?? ''),
     referencedJoints: referenced.size,
     hasInverseBindMatrices: skin.inverseBindMatrices !== undefined,
-    vertexCount: vertexCount || weights.length,
+    vertexCount: weightedVertices,
     zeroWeightVertices,
     negativeWeights,
     nonFiniteWeights,

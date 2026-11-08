@@ -151,3 +151,83 @@ describe('rig gate: a damaged file is not an unrigged asset', () => {
     expect(res.verdict).toBeUndefined();
   });
 });
+
+interface TestPrim { weights: number[][]; joints: number[][]; weights1?: number[][]; joints1?: number[][] }
+
+/** A minimal, spec-shaped skinned GLB: float weights, uint16 joints, three named joints. */
+function skinnedGlb(meshes: TestPrim[][], nodeSkins?: (number | undefined)[]): Buffer {
+  const chunks: Buffer[] = [];
+  const bufferViews: object[] = [];
+  const accessors: object[] = [];
+  let offset = 0;
+  const add = (rows: number[][], componentType: number, type: string, bytes: (r: number[]) => Buffer): number => {
+    const data = Buffer.concat(rows.map(bytes));
+    bufferViews.push({ buffer: 0, byteOffset: offset, byteLength: data.length });
+    accessors.push({ bufferView: bufferViews.length - 1, componentType, count: rows.length, type });
+    chunks.push(data);
+    offset += data.length;
+    return accessors.length - 1;
+  };
+  const floats = (r: number[]) => Buffer.from(new Float32Array(r).buffer);
+  const shorts = (r: number[]) => Buffer.from(new Uint16Array(r).buffer);
+  const jsonMeshes = meshes.map((prims) => ({
+    primitives: prims.map((p) => ({
+      attributes: {
+        POSITION: add(p.weights.map(() => [0, 0, 0]), 5126, 'VEC3', floats),
+        WEIGHTS_0: add(p.weights, 5126, 'VEC4', floats),
+        JOINTS_0: add(p.joints, 5123, 'VEC4', shorts),
+        ...(p.weights1 ? { WEIGHTS_1: add(p.weights1, 5126, 'VEC4', floats), JOINTS_1: add(p.joints1!, 5123, 'VEC4', shorts) } : {}),
+      },
+    })),
+  }));
+  const json = {
+    asset: { version: '2.0' },
+    meshes: jsonMeshes,
+    nodes: [
+      { name: 'a' }, { name: 'b' }, { name: 'c' },
+      ...jsonMeshes.map((_, mesh) => ({ mesh, ...(nodeSkins?.[mesh] !== undefined ? { skin: nodeSkins[mesh] } : {}) })),
+    ],
+    skins: [{ joints: [0, 1, 2] }, { joints: [0, 1] }],
+    accessors,
+    bufferViews,
+  };
+  const pad = (b: Buffer, fill: number) => Buffer.concat([b, Buffer.alloc((4 - (b.length % 4)) % 4, fill)]);
+  const jsonChunk = pad(Buffer.from(JSON.stringify(json)), 0x20);
+  const binChunk = pad(Buffer.concat(chunks), 0);
+  const header = Buffer.alloc(12);
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(12 + 8 + jsonChunk.length + 8 + binChunk.length, 8);
+  const chunk = (type: number, body: Buffer) => {
+    const h = Buffer.alloc(8);
+    h.writeUInt32LE(body.length, 0);
+    h.writeUInt32LE(type, 4);
+    return Buffer.concat([h, body]);
+  };
+  return Buffer.concat([header, chunk(0x4e4f534a, jsonChunk), chunk(0x004e4942, binChunk)]);
+}
+
+const good: TestPrim = { weights: [[1, 0, 0, 0], [1, 0, 0, 0]], joints: [[0, 0, 0, 0], [1, 0, 0, 0]] };
+const unweighted: TestPrim = { weights: [[0, 0, 0, 0]], joints: [[2, 0, 0, 0]] };
+
+describe('rig gate: every skinned primitive is graded', () => {
+  it('sees an unweighted vertex on a second primitive', () => {
+    const facts = parseGlbRig(skinnedGlb([[good, unweighted]]));
+    expect(facts.zeroWeightVertices).toBe(1);
+    expect(facts.vertexCount).toBe(3);
+    expect(scoreRig(facts).pass).toBe(false);
+  });
+
+  it('sees an unweighted vertex on a second mesh', () => {
+    expect(parseGlbRig(skinnedGlb([[good], [unweighted]])).zeroWeightVertices).toBe(1);
+  });
+
+  it('counts joints referenced from any primitive, so none reads as an orphan', () => {
+    const third: TestPrim = { weights: [[1, 0, 0, 0]], joints: [[2, 0, 0, 0]] };
+    expect(parseGlbRig(skinnedGlb([[good, third]])).referencedJoints).toBe(3);
+  });
+
+  it('does not grade a mesh bound to a different skin against this one', () => {
+    expect(parseGlbRig(skinnedGlb([[good], [unweighted]], [0, 1])).zeroWeightVertices).toBe(0);
+  });
+});
