@@ -85,3 +85,21 @@ describe('POST /api/catalog transition - one lifecycle writer', () => {
     expect(json.data.trialRecorded).toBe(true);
   });
 });
+
+describe('POST /api/catalog - a body that is not a JSON object is a 400, not a 500', () => {
+  const raw = (body: string) => POST(new NextRequest('http://localhost/api/catalog', {
+    method: 'POST', body, headers: { 'content-type': 'application/json' },
+  }));
+
+  it.each([
+    ['unparseable', '{"action":"transition"'],
+    ['null', 'null'],
+    ['an array', '[]'],
+  ])('refuses %s with 400 and a reason', async (_label, body) => {
+    const res = await raw(body);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.success).toBe(false);
+    expect(json.error).toMatch(/JSON object/);
+  });
+});

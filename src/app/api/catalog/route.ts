@@ -37,7 +37,12 @@ export async function POST(req: NextRequest) {
   try {
     const denied = requireOperator(req);
     if (denied) return denied;
-    const body = await req.json();
+    // A callback body that is not a JSON object is the CALLER's error (400), not a server
+    // fault: `null` used to throw on `body.action` and malformed JSON surfaced as a 500.
+    const body = (await req.json().catch(() => undefined)) as Record<string, unknown> | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     if (body.action !== 'transition') return apiError(`Unknown action: ${body.action}`, 400);
 
     const next = lifecycleStateSchema.safeParse(body.nextLifecycle);
