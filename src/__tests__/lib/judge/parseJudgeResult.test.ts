@@ -40,6 +40,21 @@ describe('parseJudgeResult — dimensions are admissible by construction', () =>
     }
   });
 
+  it('a stray brace in prose BEFORE the verdict does not hide the verdict', () => {
+    // The contract is "tolerant of stray text before/after"; a judge that prefaces its JSON with a
+    // braced aside used to make the scanner stop at that aside, fail to parse it, and return null.
+    const raw = `Reading the {silhouette} first. ${wrap({ silhouette: 61 })} done`;
+    const r = parseJudgeResult(raw);
+    expect(r).not.toBeNull();
+    expect(r!.score).toBe(82);
+    expect(r!.dimensions).toEqual({ silhouette: 61 });
+  });
+
+  it('a parseable JSON object that is not a verdict is skipped in favour of the verdict after it', () => {
+    const raw = `{"note":"preamble"} ${wrap({ cleanliness: 50 })}`;
+    expect(parseJudgeResult(raw)?.dimensions).toEqual({ cleanliness: 50 });
+  });
+
   it('well-formed dimensions are kept exactly', () => {
     const r = parseJudgeResult(wrap({ silhouette: 40, valueHierarchy: 55 }));
     expect(r!.dimensions).toEqual({ silhouette: 40, valueHierarchy: 55 });

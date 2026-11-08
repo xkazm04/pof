@@ -188,11 +188,9 @@ export interface JudgeResult {
   fix: string;
 }
 
-/** Extract the first COMPLETE brace-balanced JSON object from text (string-aware, so braces
+/** Extract the COMPLETE brace-balanced object that opens at `start` (string-aware, so braces
  *  or quotes inside "findings" don't confuse it — the greedy-regex approach did). */
-function firstJsonObject(raw: string): string | null {
-  const start = raw.indexOf('{');
-  if (start < 0) return null;
+function balancedObjectAt(raw: string, start: number): string | null {
   let depth = 0, inStr = false, esc = false;
   for (let i = start; i < raw.length; i++) {
     const c = raw[i];
@@ -205,6 +203,27 @@ function firstJsonObject(raw: string): string | null {
     else if (c === '}' && --depth === 0) return raw.slice(start, i + 1);
   }
   return null;
+}
+
+/** Every top-level candidate object in `raw`, left to right, that JSON.parse accepts. A braced
+ *  aside in the judge's prose (`the {silhouette} reads`) is not JSON and is skipped rather than
+ *  ending the search — the first-brace-only scan returned null there and lost a paid draw. */
+function* jsonObjects(raw: string): Generator<Record<string, unknown>> {
+  let from = 0;
+  for (;;) {
+    const start = raw.indexOf('{', from);
+    if (start < 0) return;
+    const text = balancedObjectAt(raw, start);
+    if (!text) { from = start + 1; continue; } // an unclosed brace in prose — look past it
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch { parsed = undefined; }
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      yield parsed as Record<string, unknown>;
+      from = start + text.length;
+    } else {
+      from = start + 1;
+    }
+  }
 }
 
 /** A 0-100 judge score: rounded and clamped. */
@@ -225,11 +244,9 @@ function sanitizeDimensions(raw: unknown): Record<string, number> {
 
 /** Parse the judge's JSON verdict out of raw CLI stdout (tolerant of stray text before/after). */
 export function parseJudgeResult(raw: string): JudgeResult | null {
-  const json = firstJsonObject(raw);
-  if (!json) return null;
-  try {
-    const o = JSON.parse(json) as Partial<JudgeResult>;
-    if (typeof o.score !== 'number' || (o.verdict !== 'pass' && o.verdict !== 'fail')) return null;
+  // The verdict is the first object that carries a numeric score and a pass/fail verdict.
+  for (const o of jsonObjects(raw) as Iterable<Partial<JudgeResult>>) {
+    if (typeof o.score !== 'number' || (o.verdict !== 'pass' && o.verdict !== 'fail')) continue;
     return {
       dimensions: sanitizeDimensions(o.dimensions),
       score: clampScore(o.score),
@@ -237,7 +254,6 @@ export function parseJudgeResult(raw: string): JudgeResult | null {
       findings: String(o.findings ?? ''),
       fix: String(o.fix ?? ''),
     };
-  } catch {
-    return null;
   }
+  return null;
 }
