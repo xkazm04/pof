@@ -255,6 +255,11 @@ export function getFeatureInitPrompt(
   return INIT_PROMPTS[moduleId]?.[sectionId];
 }
 
+/** Section ids that carry an init prompt for a module (drift guard input). */
+export function getInitPromptSectionIds(moduleId: SubModuleId): string[] {
+  return Object.keys(INIT_PROMPTS[moduleId] ?? {});
+}
+
 /** Check if a module has any init prompts defined. */
 export function hasInitPrompts(moduleId: SubModuleId): boolean {
   return !!INIT_PROMPTS[moduleId];
