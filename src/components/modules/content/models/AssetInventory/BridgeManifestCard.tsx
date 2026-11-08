@@ -1,6 +1,14 @@
 import { Plug } from 'lucide-react';
 import type { BridgeManifestSummary } from './types';
 
+/** Date + time of the manifest write; a time alone hides a days-old manifest. */
+function stampOf(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'unknown';
+  const day = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return `${day}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 export function BridgeManifestCard({ summary, missingOnDisk, className = '' }: {
   summary: BridgeManifestSummary;
   /** /Game entries UE lists with no file in the scanned Content/ (only after a scan). */
@@ -31,7 +39,7 @@ export function BridgeManifestCard({ summary, missingOnDisk, className = '' }: {
         ))}
       </div>
       <div className="text-2xs text-text-muted">
-        {summary.total} total assets · Last updated {new Date(summary.generatedAt).toLocaleTimeString()}
+        {summary.total} total assets · Last updated {stampOf(summary.generatedAt)}
       </div>
       {missingOnDisk && missingOnDisk.length > 0 && (
         <details className="text-2xs text-text-muted">
