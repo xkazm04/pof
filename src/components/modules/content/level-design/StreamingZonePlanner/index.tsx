@@ -112,7 +112,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
           />
 
           {/* Summary & Generate */}
-          <div className="bg-[#03030a] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4">
+          <div className="bg-[var(--schematic-surface)] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4">
             <div className="flex items-center justify-between mb-3 text-xs font-mono tracking-widest uppercase text-violet-300">
               <span>{stats.total} ZONES</span>
               <span className="text-violet-800">|</span>

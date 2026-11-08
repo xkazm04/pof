@@ -114,3 +114,29 @@ describe('the prompt and the preflight share one identifier rule', () => {
     expect(prompt).toContain('   - Values: Town, DarkForest, OldRuins, Catacombs, BossArena\n');
   });
 });
+
+/** C++20 reserved words that can survive `zoneEnumIdentifier` (it strips underscores, so `and_eq` never reaches the check). */
+const CPP20_RESERVED = [
+  'alignas', 'alignof', 'and', 'asm', 'auto', 'bitand', 'bitor', 'bool', 'break', 'case', 'catch', 'char',
+  'char8t', 'char16t', 'char32t', 'class', 'compl', 'concept', 'const', 'consteval', 'constexpr', 'constinit',
+  'continue', 'decltype', 'default', 'delete', 'do', 'double', 'else', 'enum', 'explicit', 'export', 'extern',
+  'false', 'float', 'for', 'friend', 'goto', 'if', 'inline', 'int', 'long', 'mutable', 'namespace', 'new',
+  'noexcept', 'not', 'nullptr', 'operator', 'or', 'private', 'protected', 'public', 'register', 'requires',
+  'return', 'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'template', 'this', 'throw', 'true',
+  'try', 'typedef', 'typeid', 'typename', 'union', 'unsigned', 'using', 'virtual', 'void', 'volatile',
+  'wchart', 'while', 'xor',
+];
+
+describe('preflight: every C++20 reserved word is an invalid-identifier error', () => {
+  it.each(CPP20_RESERVED)("a zone named '%s' blocks Generate", (word) => {
+    const c = cfg(rename(base(), 'z-cata', word));
+    const found = byRule(c, 'invalid-identifier');
+    expect(found).toHaveLength(1);
+    expect(found[0].message).toContain('C++ keyword');
+    expect(preflightStreamingPlan(c).blocksGenerate).toBe(true);
+  });
+
+  it('a case-different name is a valid identifier (keywords are case-sensitive)', () => {
+    expect(byRule(cfg(rename(base(), 'z-cata', 'Register')), 'invalid-identifier')).toEqual([]);
+  });
+});

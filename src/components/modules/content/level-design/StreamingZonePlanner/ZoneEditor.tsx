@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 import { ZONE_TYPES, PRIORITY_COLORS } from './constants';
 import type { StreamingZone, ZoneType, LoadPriority } from './types';
 
@@ -120,15 +121,16 @@ export function ZoneEditor({
           type="checkbox"
           checked={zone.alwaysLoaded}
           onChange={(e) => onUpdate({ alwaysLoaded: e.target.checked, loadPriority: e.target.checked ? 'always' : zone.loadPriority === 'always' ? 'normal' : zone.loadPriority })}
-          className="accent-[#f59e0b] w-3 h-3"
+          className="w-3 h-3"
+          style={{ accentColor: STATUS_WARNING }}
         />
-        <span className="text-xs text-[#d0d4e8]">Always loaded (persistent zone)</span>
+        <span className="text-xs text-text">Always loaded (persistent zone)</span>
       </label>
 
       {/* Grid position */}
       <div className="flex items-center gap-4 text-2xs text-text-muted">
         <span>Grid: ({zone.gridX}, {zone.gridY})</span>
-        <span className="text-[#2a2a4a]">|</span>
+        <span className="text-border">|</span>
         <span>Priority: <span style={{ color: PRIORITY_COLORS[zone.loadPriority] }}>{zone.loadPriority}</span></span>
       </div>
     </SurfaceCard>

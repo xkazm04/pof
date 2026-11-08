@@ -35,7 +35,7 @@ export function PreflightPanel({ preflight, residency, zones, selectedZoneId, di
   const clean = findings.length === 0 && !empty;
 
   return (
-    <div data-testid="streaming-preflight" className="bg-[#03030a] rounded-xl border border-violet-900/30 p-4 space-y-2 text-xs">
+    <div data-testid="streaming-preflight" className="bg-[var(--schematic-surface)] rounded-xl border border-violet-900/30 p-4 space-y-2 text-xs">
       <div className="flex items-center gap-2 font-mono uppercase tracking-widest text-xs text-violet-300">
         {clean
           ? <ShieldCheck className="w-3.5 h-3.5" style={{ color: STATUS_SUCCESS }} />

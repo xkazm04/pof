@@ -50,7 +50,7 @@ export function ZoneGrid({
   };
 
   return (
-    <div className="flex-1 min-w-[550px] bg-[#03030a] rounded-2xl border-2 border-surface-deep shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-4 relative overflow-hidden flex items-center justify-center">
+    <div className="flex-1 min-w-[550px] bg-[var(--schematic-surface)] rounded-2xl border-2 border-surface-deep shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-4 relative overflow-hidden flex items-center justify-center">
 
       {/* Ambient Glows */}
       <div className="absolute inset-0 pointer-events-none z-0">
