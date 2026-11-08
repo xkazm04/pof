@@ -113,6 +113,7 @@ import { canonContextFor } from '../src/lib/catalog/canon/canonContext';
 import { CANON_SEED } from '../src/lib/catalog/canon/canon-seed';
 import { buildSiblingContext } from '../src/lib/judge/siblingContext';
 import { stripNonContent } from '../src/lib/judge/payload';
+import { STORED_FINDINGS_CAP } from '../src/components/layout-lab/steps/ux/judgeVerdictRecord';
 import stepFacts from '../src/lib/status/step-facts.json';
 
 /** All catalog ids (for --all), from the authoritative step-facts map. */
@@ -408,7 +409,7 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
   const body = {
     catalogId, entityId: art.entityId, step: art.step, judge,
     verdict, score: res.score,
-    findings: `[rubric v${RUBRIC_VERSION}${canonTag}]${spread} ${res.findings} FIX: ${res.fix}`.slice(0, 1500),
+    findings: `[rubric v${RUBRIC_VERSION}${canonTag}]${spread} ${res.findings} FIX: ${res.fix}`.slice(0, STORED_FINDINGS_CAP),
     model: policy.modelId, effort: policy.effort, rubricVersion: RUBRIC_VERSION,
     ...(dimensions ? { dimensions } : {}),
   };
