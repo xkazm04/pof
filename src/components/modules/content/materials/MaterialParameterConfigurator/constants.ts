@@ -38,7 +38,7 @@ export const BASE_PARAMS: ParamDef[] = [
     plain: { label: 'Looks like metal', explanation: 'How much the surface behaves like metal (sharp, tinted reflections) vs plastic/cloth/skin.', cue: 'level', lowLabel: 'Plastic', highLabel: 'Steel' } },
   { name: 'Opacity',    label: 'Opacity',    min: 0, max: 1, defaultValue: 1,   step: 0.05, surfaces: ['glass', 'water'],
     plain: { label: 'How see-through', explanation: 'How transparent the surface is. Low = ghostly; high = solid.', cue: 'level', lowLabel: 'See through', highLabel: 'Solid' } },
-  { name: 'IOR',        label: 'IOR',        min: 1, max: 2.5, defaultValue: 1.5, step: 0.1, surfaces: ['glass', 'water'],
+  { name: 'IOR',        label: 'IOR',        min: 1, max: 2.5, defaultValue: 1.5, step: 0.01, surfaces: ['glass', 'water'],
     plain: { label: 'How much light bends', explanation: 'How sharply light bends as it enters the surface. Air ≈ 1, water ≈ 1.33, glass ≈ 1.5, diamond ≈ 2.4.', cue: 'distance', lowLabel: 'No bend', highLabel: 'Strong bend' } },
   { name: 'EmissiveIntensity', label: 'Emissive Intensity', min: 0, max: 20, defaultValue: 5, step: 0.5, surfaces: ['emissive'],
     plain: { label: 'Glow strength', explanation: 'How brightly the surface glows. High values bloom and tint nearby objects.', cue: 'glow', lowLabel: 'Dim', highLabel: 'Blinding' } },
