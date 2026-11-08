@@ -83,7 +83,9 @@ export function extractInlineEntities(text: string): InlineEntity[] {
   let m: RegExpExecArray | null;
   while ((m = UE_CLASS_RE.exec(text)) !== null) {
     const name = m[1];
-    if (name.length >= 4 && !UE_CLASS_EXCLUDE.has(name) && !seen.has(name)) {
+    // UE types are prefix + PascalCase (AActor, FHitResult) — an all-caps word
+    // (FATAL, UPDATE, AFTER) carries no lowercase letter and is not a class.
+    if (name.length >= 4 && /[a-z]/.test(name) && !UE_CLASS_EXCLUDE.has(name) && !seen.has(name)) {
       seen.add(name);
       entities.push({ type: 'class', value: name });
     }
