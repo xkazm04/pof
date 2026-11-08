@@ -60,6 +60,26 @@ describe('Mesh Optimization reads its optimize-mesh receipt', () => {
   });
 });
 
+describe('Mesh Optimization offers the measured-mesh picker like the LOD tab', () => {
+  it('Read scene meshes fills a Measured meshes combobox that sets the object name', async () => {
+    const sword = { name: 'SM_Rock', tris: 1200, verts: 640, polys: 600 };
+    const out = 'stats\nPOF_RESULT=' + JSON.stringify({ kind: 'mesh-stats', meshes: [sword] });
+    const fetchMock = vi.fn().mockResolvedValue(executeReply(out));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<MeshOptimizationTab />);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('combobox', { name: /measured meshes/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /read scene meshes/i }));
+    const picker = await screen.findByRole('combobox', { name: /measured meshes/i });
+    expect(screen.getByRole('option', { name: /SM_Rock — 1,200 tris/ })).toBeTruthy();
+    fireEvent.change(picker, { target: { value: 'SM_Rock' } });
+    const input = screen.getByPlaceholderText('e.g. SM_Character') as HTMLInputElement;
+    expect(input.value).toBe('SM_Rock');
+    expect(useBlenderStore.getState().scripts[0].scriptName).toBe('Mesh Stats');
+  });
+});
+
 describe('FBX Conversion receipt states only what the route measured', () => {
   async function convertWith(data: Record<string, unknown>) {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true, data }))));

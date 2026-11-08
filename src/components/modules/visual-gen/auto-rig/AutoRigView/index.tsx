@@ -8,7 +8,7 @@ import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/l
 import { RIG_PRESETS, checkPresetBinding, type RigPreset } from '@/lib/visual-gen/rig-presets';
 import { createArmatureScript } from '@/lib/blender-mcp/scripts/create-armature';
 import { readReceipt } from '@/lib/blender-mcp/receipt';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import type { RigCheckResponse } from '@/lib/visual-gen/rig-check';
 import { RigPresetCard } from './RigPresetCard';

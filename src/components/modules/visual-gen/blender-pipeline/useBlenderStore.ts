@@ -19,6 +19,8 @@ export interface ScriptJob {
  */
 interface BlenderState {
   scripts: ScriptJob[];
+  /** How many older rows were evicted by the retention cap this session. */
+  droppedCount: number;
 
   addScript: (scriptName: string, args: string[]) => string;
   updateScript: (id: string, updates: Partial<ScriptJob>) => void;
@@ -26,10 +28,14 @@ interface BlenderState {
   clearCompleted: () => void;
 }
 
+/** Retention cap: newest N rows are kept so a long session keeps a bounded heap and DOM. */
+export const SCRIPT_HISTORY_CAP = 100;
+
 let scriptCounter = 0;
 
 export const useBlenderStore = create<BlenderState>((set) => ({
   scripts: [],
+  droppedCount: 0,
 
   addScript: (scriptName, args) => {
     const id = `script-${Date.now()}-${++scriptCounter}`;
@@ -41,7 +47,14 @@ export const useBlenderStore = create<BlenderState>((set) => ({
       output: '',
       startedAt: Date.now(),
     };
-    set((s) => ({ scripts: [job, ...s.scripts] }));
+    set((s) => {
+      const next = [job, ...s.scripts];
+      const dropped = Math.max(0, next.length - SCRIPT_HISTORY_CAP);
+      return {
+        scripts: dropped > 0 ? next.slice(0, SCRIPT_HISTORY_CAP) : next,
+        droppedCount: s.droppedCount + dropped,
+      };
+    });
     return id;
   },
 

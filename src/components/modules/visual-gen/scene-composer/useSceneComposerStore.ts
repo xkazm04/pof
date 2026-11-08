@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import {
   deleteObjectScript,
   duplicateObjectScript,

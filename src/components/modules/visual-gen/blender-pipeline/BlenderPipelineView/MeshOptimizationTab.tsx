@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Zap } from 'lucide-react';
+import { Zap, Ruler } from 'lucide-react';
 import { optimizeMeshScript } from '@/lib/blender-mcp/scripts/optimize-mesh';
 import { readReceipt } from '@/lib/blender-mcp/receipt';
+import type { MeshStat } from '@/lib/blender-mcp/scripts/mesh-stats';
 import { TabHeader } from '@/components/modules/shared/TabHeader';
 import { WARNING_TEXT } from '@/lib/blender-mcp/status-tokens';
 import {
@@ -13,12 +14,18 @@ import {
   MCPSubmitButton,
   DisconnectedNotice,
   ResultBlock,
+  MCP_FORM_RADIUS,
 } from '@/components/blender-mcp/McpFormControls';
 import { useScriptExecution } from './useScriptExecution';
+import { useMeshStats } from './useMeshStats';
 
 /* ─── Mesh Optimization Tab ─────────────────────────────────────────────── */
 
 /** Checkbox styling shared by the operation toggles — keyboard focus included. */
+const NO_MESHES: MeshStat[] = [];
+const SELECT = `focus-ring w-full bg-surface-tertiary border border-border ${MCP_FORM_RADIUS} px-3 py-1.5 text-xs text-text`;
+const fmt = (n: number) => n.toLocaleString('en-US');
+
 const CHECKBOX_CLASS =
   'focus-ring rounded border-border accent-[var(--visual-gen)]';
 
@@ -40,6 +47,7 @@ export function readOptimizeOutcome(output: string): { ok: true; text: string } 
 
 export function MeshOptimizationTab() {
   const { isRunning, result, error, connected, execute } = useScriptExecution();
+  const { state: stats, read: readStats } = useMeshStats();
   const [objectName, setObjectName] = useState('');
   const [removeDoubles, setRemoveDoubles] = useState(true);
   const [recalcNormals, setRecalcNormals] = useState(true);
@@ -55,6 +63,9 @@ export function MeshOptimizationTab() {
     const n = parseFloat(mergeDistance.trim());
     return Number.isFinite(n) && n > 0 ? n : null;
   }, [mergeDistance]);
+
+  const meshes = stats.status === 'read' ? stats.meshes : NO_MESHES;
+  const source = meshes.find((m) => m.name === objectName.trim());
 
   const outcome = useMemo(() => (result === null ? null : readOptimizeOutcome(result)), [result]);
 
@@ -82,6 +93,36 @@ export function MeshOptimizationTab() {
       />
 
       <MCPFormCard>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={readStats}
+            disabled={!connected || stats.status === 'reading'}
+            className={`focus-ring flex items-center gap-1.5 px-3 py-1.5 ${MCP_FORM_RADIUS} border border-border text-xs text-text hover:bg-surface-tertiary disabled:opacity-50`}
+          >
+            <Ruler size={14} aria-hidden="true" />
+            {stats.status === 'reading' ? 'Reading…' : 'Read scene meshes'}
+          </button>
+          {stats.status === 'read' && meshes.length === 0 && (
+            <span className="text-xs text-text-muted">No mesh objects in the scene.</span>
+          )}
+          {stats.status === 'failed' && <span className={`text-xs ${WARNING_TEXT}`}>{stats.reason}</span>}
+        </div>
+
+        {meshes.length > 0 && (
+          <select
+            aria-label="Measured meshes"
+            className={SELECT}
+            value={source ? source.name : ''}
+            onChange={(e) => setObjectName(e.target.value)}
+          >
+            <option value="">Pick a measured mesh…</option>
+            {meshes.map((m) => (
+              <option key={m.name} value={m.name}>{`${m.name} — ${fmt(m.tris)} tris`}</option>
+            ))}
+          </select>
+        )}
+
         <MCPField label="Object Name" htmlFor="mesh-object">
           <MCPTextInput
             id="mesh-object"

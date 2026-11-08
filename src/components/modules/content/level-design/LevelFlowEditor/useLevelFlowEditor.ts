@@ -1,10 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 import type { RoomNode } from '@/types/level-design';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { levelBlockoutScript } from '@/lib/blender-mcp/scripts/level-blockout';
 import type { BlockoutRoom } from '@/lib/blender-mcp/scripts/level-blockout';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { ROOM_W, ROOM_H, roomTypeConfig } from './constants';
 import type { LevelFlowEditorProps } from './types';
@@ -263,11 +262,7 @@ export function useLevelFlowEditor({
         };
       });
       const code = levelBlockoutScript({ rooms: blockoutRooms, wallHeight: 3 });
-      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
+      const result = await executeViaMCP('Level flow blockout', code);
       if (result.ok) {
         setBlenderResult({ message: result.data.output || `Blockout created: ${rooms.length} rooms`, isError: false });
       } else {

@@ -3,7 +3,7 @@
  *
  * The Blender pipeline module ships a panel presented as the record of what PoF
  * ran in the user's Blender. It is fed by exactly one function — `executeViaMCP`
- * in `ScriptRunner.tsx` — but 13 call sites fetched `/api/blender-mcp/execute`
+ * in `lib/blender-mcp/dispatch.ts` — but 13 call sites fetched `/api/blender-mcp/execute`
  * directly, so after sending a material or creating an armature the panel still
  * read "No scripts have been run yet". Several of those call sites also threw
  * the `Result` away, making a failed script indistinguishable from a good one.
@@ -22,27 +22,16 @@ const SRC = path.resolve(__dirname, '../../..');
 const ROUTE = '/api/blender-mcp/execute';
 
 /** The one dispatcher. */
-const WRAPPER = ['components/modules/visual-gen/blender-pipeline/ScriptRunner.tsx'];
+const WRAPPER = ['lib/blender-mcp/dispatch.ts'];
 
 /**
- * Call sites still fetching the route directly. Each is OUTSIDE the write set
- * of the lot that introduced this guard (wave 23 / Lot KC owns `blender-mcp`,
- * `scene-composer` and `ScriptRunner`), so migrating them would have meant
- * editing files another parallel session may hold uncommitted work in.
- *
- * Migrating one is mechanical: replace the `tryApiFetch(ROUTE, …)` call with
- * `executeViaMCP('<human script name>', code)` — same `Result`, plus a row in
- * the panel — and delete its line here.
+ * Call sites still fetching the route directly. EMPTY: all seven former residuals
+ * (material-lab, PostProcessStackBuilder, MaterialPatternCatalog, ProceduralLevelWizard,
+ * LevelFlowEditor, state-machine-shared, AIComboChoreographer) dispatch through
+ * `executeViaMCP` now. The list only exists so a future, reasoned residual has a place
+ * to be named; the stale-entry check below still keeps it honest.
  */
-const UNMIGRATED = [
-  'components/modules/visual-gen/material-lab/useMaterialStore.ts',
-  'components/modules/content/materials/PostProcessStackBuilder/index.tsx',
-  'components/modules/content/materials/MaterialPatternCatalog/index.tsx',
-  'components/modules/content/level-design/ProceduralLevelWizard/useProceduralLevelWizard.ts',
-  'components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts',
-  'components/modules/content/animations/shared/state-machine-shared.ts',
-  'components/modules/content/animations/AIComboChoreographer/useAIComboChoreographer.ts',
-];
+const UNMIGRATED: string[] = [];
 
 /**
  * A DISPATCH is the route string passed to a fetch call — `fetch(`,
@@ -96,6 +85,19 @@ describe('every /api/blender-mcp/execute dispatch goes through executeViaMCP', (
       stale,
       'These no longer fetch the execute route; delete them from UNMIGRATED',
     ).toEqual([]);
+  });
+
+  it('has no residuals left: every dispatch is recorded in Script History', () => {
+    expect(UNMIGRATED).toHaveLength(0);
+    expect(dispatchers).toEqual(WRAPPER);
+  });
+
+  it('no non-UI module imports the dispatcher from the ScriptRunner component', () => {
+    // executeViaMCP lives in lib/blender-mcp/dispatch.ts; ScriptRunner.tsx only re-exports it.
+    const viaComponent = walk(SRC)
+      .filter((f) => /import[^;]*executeViaMCP[^;]*from\s+['"]@\/components\/modules\/visual-gen\/blender-pipeline\/ScriptRunner['"]/.test(fs.readFileSync(f, 'utf-8')))
+      .map((f) => path.relative(SRC, f).split(path.sep).join('/'));
+    expect(viaComponent).toEqual([]);
   });
 
   it('Auto-Rig dispatches through executeViaMCP — its armature is recorded and its receipt read', () => {

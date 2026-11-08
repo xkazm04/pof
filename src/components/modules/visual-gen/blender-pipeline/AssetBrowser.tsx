@@ -76,7 +76,7 @@ export function AssetBrowser() {
           <Chip
             label="All"
             active={b.category === null}
-            onClick={() => b.setCategory(null)}
+            onClick={() => b.selectCategory(null)}
             testId="asset-cat-all"
           />
           {POLYHAVEN_CATEGORIES.map((cat) => (
@@ -84,7 +84,7 @@ export function AssetBrowser() {
               key={cat}
               label={cat}
               active={b.category === cat}
-              onClick={() => b.setCategory(b.category === cat ? null : cat)}
+              onClick={() => b.selectCategory(b.category === cat ? null : cat)}
               testId={`asset-cat-${cat}`}
             />
           ))}
@@ -119,6 +119,12 @@ export function AssetBrowser() {
           </div>
         </div>
 
+        {b.hasSearched && b.searchedCategory !== null && (
+          <p className="text-2xs text-text-muted" data-testid="asset-facet-note">
+            Sketchfab has no category facet, so only PolyHaven results are shown while a category is active.
+          </p>
+        )}
+
         {!connected && (
           <p className={`text-xs ${WARNING_TEXT}`}>
             Connect to Blender MCP above to search and import assets.
@@ -138,7 +144,7 @@ export function AssetBrowser() {
 
       {/* Soft warning — one source failed */}
       {b.searchWarning && !b.searchError && (
-        <p className="flex items-center gap-1.5 text-xs text-amber-400">
+        <p className={`flex items-center gap-1.5 text-xs ${WARNING_TEXT}`}>
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           Showing partial results — {b.searchWarning}
         </p>

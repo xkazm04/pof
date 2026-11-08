@@ -2,10 +2,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { comboAnimationScript } from '@/lib/blender-mcp/scripts/combo-animation';
 import type { ComboHit } from '@/lib/blender-mcp/scripts/combo-animation';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import type { GeneratedCombo } from './types';
 import { generateCombo } from './helpers';
@@ -82,11 +81,7 @@ export function useAIComboChoreographer() {
         hits,
         totalDuration: generatedCombo.totalDuration,
       });
-      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
+      const result = await executeViaMCP('AI combo preview', code);
       if (result.ok) {
         setBlenderResult({ message: result.data.output || 'Combo preview created in Blender', isError: false });
       } else {

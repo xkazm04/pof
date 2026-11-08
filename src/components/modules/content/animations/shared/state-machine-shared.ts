@@ -1,7 +1,7 @@
 import {
   ACCENT_VIOLET, ACCENT_ORANGE, MODULE_COLORS,
 } from '@/lib/chart-colors';
-import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import type { Result } from '@/types/result';
@@ -68,9 +68,5 @@ export function exportStatesToBlenderNLA(
       frameEnd: (i + 1) * frameDuration,
     })),
   });
-  return tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
-  });
+  return executeViaMCP('State machine animation preview', code);
 }
