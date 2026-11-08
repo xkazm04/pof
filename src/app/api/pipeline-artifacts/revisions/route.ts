@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { listRevisions, getRevision } from '@/lib/pipeline-artifacts-db';
 import { artifactCommitDeps, gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
 import { commitArtifact, deriveVerdict } from '@/lib/catalog/artifactCommit';
@@ -46,6 +47,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const body = (await req.json().catch(() => undefined)) as { revisionId?: unknown; dryRun?: unknown } | null | undefined;
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
       return apiError('Request body must be a JSON object', 400);

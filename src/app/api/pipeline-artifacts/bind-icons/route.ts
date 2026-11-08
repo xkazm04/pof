@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { bindIconsAll } from '@/lib/catalog/acceptance/bindIconsAll';
 import { listIconLibrary, makeBindIconsDeps } from '@/lib/catalog/acceptance/bindIconsDeps';
 import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
@@ -39,6 +40,8 @@ export async function GET(req: NextRequest) {
  *  that already carries a real asset is skipped as `already-real`). */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const read = await readSweepBody(req);
     if (!read.ok) return read.error;
     const body = read.data;

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { verifyPackagingAll, defaultPackagingVerifyDeps } from '@/lib/catalog/acceptance/packagingVerify';
 import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
 import { readSweepBody } from '@/app/api/pipeline-artifacts/_lib/sweepBody';
@@ -32,6 +33,8 @@ export async function GET(req: NextRequest) {
  *  otherwise). Body: { catalogId?, entityId? }. */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const read = await readSweepBody(req);
     if (!read.ok) return read.error;
     const summary = verifyPackagingAll(parseSweepFilter(read.data), defaultPackagingVerifyDeps(), { apply: true });

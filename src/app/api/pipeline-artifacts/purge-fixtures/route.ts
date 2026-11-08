@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { inventorySyntheticFixtures, purgeSyntheticFixtures, totalPurged } from '@/lib/catalog/artifact-purge';
 
 /**
@@ -33,6 +34,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const body = (await req.json().catch(() => null)) as { expectRows?: unknown } | null;
     const expectRows = typeof body?.expectRows === 'number' ? body.expectRows : null;
     if (expectRows === null) {

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { drainPythonAll, readDispatch, hasResult, type PythonDrainDeps } from '@/lib/catalog/acceptance/pythonDrain';
 import { listAllArtifacts } from '@/lib/pipeline-artifacts-db';
 import { persistRegrade, realArtifactIO, createTouched, parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
@@ -85,6 +86,8 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const read = await readSweepBody(req);
     if (!read.ok) return read.error;
     const body = read.data as {

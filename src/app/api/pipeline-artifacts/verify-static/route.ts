@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { verifyStaticAll, defaultStaticVerifyDeps } from '@/lib/catalog/acceptance/staticVerify';
 import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
 import { readSweepBody } from '@/app/api/pipeline-artifacts/_lib/sweepBody';
@@ -30,6 +31,8 @@ export async function GET(req: NextRequest) {
  *  deferred when it's authored-but-not-yet-realized in UE). Body: { catalogId?, entityId? }. */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const read = await readSweepBody(req);
     if (!read.ok) return read.error;
     const summary = verifyStaticAll(parseSweepFilter(read.data), defaultStaticVerifyDeps, { apply: true });
