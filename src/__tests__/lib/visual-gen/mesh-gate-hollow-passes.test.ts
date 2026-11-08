@@ -7,6 +7,7 @@ import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visu
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
 import { planKitAtlas } from '@/lib/visual-gen/texel-density';
+import { critiqueMesh } from '@/lib/visual-gen/mesh-critique';
 import { gradeSheet } from '@/lib/visual-gen/sheet-gate';
 import sharp from 'sharp';
 import { detectSeams, detectSeamsSafe } from '@/lib/visual-gen/seam-check';
@@ -192,5 +193,28 @@ describe('gradeSheet does not grade an unreadable seam measurement', () => {
 
   it('still computes a real ratio', () => {
     expect(gradeSheet({ ...input, seamContrasts: [2], interiorContrast: 4 }).seamRatio).toBe(0.5);
+  });
+});
+
+describe('critiqueMesh says why a run produced no markers', () => {
+  it('carries the exit code and the end of the output', async () => {
+    const out = await critiqueMesh('a.glb', {
+      run: async () => ({ stdout: 'Traceback: ImportError trimesh', code: 1 }),
+      fileExists: () => true,
+      env: { POF_TRIPOSR_ROOT: 'C:/r' },
+    });
+    expect(out.ok).toBe(false);
+    expect(out.error).toContain('no critique markers');
+    expect(out.error).toContain('exit 1');
+    expect(out.error).toContain('ImportError trimesh');
+  });
+
+  it('leaves a reported POF_CRITIQUE_ERROR as it is', async () => {
+    const out = await critiqueMesh('a.glb', {
+      run: async () => ({ stdout: 'POF_CRITIQUE_ERROR=cannot load mesh', code: 1 }),
+      fileExists: () => true,
+      env: { POF_TRIPOSR_ROOT: 'C:/r' },
+    });
+    expect(out.error).toBe('cannot load mesh');
   });
 });
