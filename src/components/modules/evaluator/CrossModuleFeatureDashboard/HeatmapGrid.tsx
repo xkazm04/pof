@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ArrowUpDown,
 } from 'lucide-react';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
 import { STATUS_COLORS, STATUS_LABELS, STATUS_KEYS, type StatusKey, type SortKey } from './constants';
@@ -47,7 +48,7 @@ export function HeatmapGrid({
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Grid3x3 className="w-3.5 h-3.5 text-[#ef4444]" />
+          <Grid3x3 className="w-3.5 h-3.5" style={{ color: MODULE_COLORS.evaluator }} />
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Feature Status Heatmap
           </span>
@@ -69,7 +70,7 @@ export function HeatmapGrid({
         </div>
       </div>
 
-      <div className="bg-[#0a0a1e] border border-border rounded-xl overflow-hidden">
+      <div className="bg-background border border-border rounded-xl overflow-hidden">
         {/* Table header */}
         <div className="grid items-center border-b border-border bg-surface-deep"
           style={{ gridTemplateColumns: HEATMAP_GRID_TEMPLATE }}

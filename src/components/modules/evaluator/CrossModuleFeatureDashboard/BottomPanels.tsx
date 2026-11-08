@@ -5,7 +5,7 @@ import {
   Hammer,
   ChevronRight,
 } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_BLOCKER, statusBorder } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_BLOCKER, statusBorder } from '@/lib/chart-colors';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import type { PlanItem } from '@/lib/implementation-planner/plan-generator';
 import type { SubModuleId } from '@/types/modules';
@@ -33,10 +33,10 @@ export function BottomPanels({
   return (
     <div className="grid grid-cols-2 gap-4">
       {/* Lowest-scoring modules */}
-      <div className="bg-surface border border-[#f87171]/20 rounded-lg p-4">
+      <div className="bg-surface border rounded-lg p-4" style={{ borderColor: statusBorder(STATUS_ERROR) }}>
         <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-3.5 h-3.5 text-[#f87171]" />
-          <span className="text-xs font-semibold text-[#f87171] uppercase tracking-wider">
+          <AlertTriangle className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: STATUS_ERROR }}>
             Lowest Completion
           </span>
         </div>
