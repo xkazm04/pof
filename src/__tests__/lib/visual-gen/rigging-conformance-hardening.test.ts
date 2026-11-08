@@ -112,3 +112,14 @@ describe('metahuman conform: a failure names what actually failed', () => {
     expect(res.error).toContain('/Game/X/Missing');
   });
 });
+
+describe('metahuman conform: the editor Python', () => {
+  it('commits and saves the body only when the conform succeeded, and always releases the edit', () => {
+    const lines = buildConformPython('C:/gen/x.glb').split('\n');
+    const guard = lines.indexOf('    if _ok:');
+    expect(guard).toBeGreaterThan(lines.findIndex((l) => l.includes('conform_body_to_target')));
+    expect(lines[guard + 1]).toBe('        _sub.commit_body_state(_char)');
+    expect(lines[guard + 2]).toBe('        unreal.EditorAssetLibrary.save_loaded_asset(_char)');
+    expect(lines[guard + 3]).toBe('    _sub.remove_object_to_edit(_char)');
+  });
+});

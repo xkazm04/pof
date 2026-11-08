@@ -61,8 +61,10 @@ export function buildConformPython(glbPath: string, opts: ConformOptions = {}): 
     'if _char:',
     '    _sub.try_add_object_to_edit(_char)',
     '    _ok = _sub.conform_body_to_target(_char, _verts, [], True, True)',
-    '    _sub.commit_body_state(_char)',
-    '    unreal.EditorAssetLibrary.save_loaded_asset(_char)',
+    // A failed fit must not be committed and saved as if it were a conformed character.
+    '    if _ok:',
+    '        _sub.commit_body_state(_char)',
+    '        unreal.EditorAssetLibrary.save_loaded_asset(_char)',
     '    _sub.remove_object_to_edit(_char)',
     "unreal.log('POF_MH_CONFORMED=' + str(_ok))",
   ].join('\n');
