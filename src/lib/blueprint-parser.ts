@@ -82,8 +82,24 @@ export function blueprintTypeToCpp(bpType: string): string {
   if (arrayMatch) return `TArray<${blueprintTypeToCpp(arrayMatch[1])}>`;
 
   // Map<K,V>
-  const mapMatch = bpType.match(/^(?:Map|TMap)\s*<\s*(.+)\s*,\s*(.+)\s*>$/i);
-  if (mapMatch) return `TMap<${blueprintTypeToCpp(mapMatch[1])}, ${blueprintTypeToCpp(mapMatch[2])}>`;
+  // The key/value comma is the one at bracket depth 0 — a greedy regex split at
+  // the LAST comma, so a nested Map's inner comma ended up between the halves.
+  const mapMatch = bpType.match(/^(?:Map|TMap)\s*<(.+)>$/i);
+  if (mapMatch) {
+    const inner = mapMatch[1];
+    let depth = 0;
+    for (let i = 0; i < inner.length; i++) {
+      const c = inner[i];
+      if (c === '<') depth++;
+      else if (c === '>') depth--;
+      else if (c === ',' && depth === 0) {
+        const key = inner.slice(0, i).trim();
+        const value = inner.slice(i + 1).trim();
+        if (key && value) return `TMap<${blueprintTypeToCpp(key)}, ${blueprintTypeToCpp(value)}>`;
+        break;
+      }
+    }
+  }
 
   // Set<Type>
   const setMatch = bpType.match(/^(?:Set|TSet)\s*<\s*(.+)\s*>$/i);
