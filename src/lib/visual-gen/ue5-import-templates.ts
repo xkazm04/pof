@@ -85,6 +85,9 @@ export function generateImportScript(config: ImportConfig): string {
 #include "EditorUtilityWidget.h"
 #include "AssetImportTask.h"
 #include "Factories/FbxFactory.h"
+#include "Factories/FbxImportUI.h"
+#include "Factories/FbxStaticMeshImportData.h"
+#include "Factories/FbxSkeletalMeshImportData.h"
 #include "AssetToolsModule.h"
 #include "${config.assetName}Importer.generated.h"
 
@@ -116,9 +119,9 @@ public:
         Factory->ImportUI->bImportMaterials = ${config.importMaterials ? 'true' : 'false'};
         // The importer's auto collision is a coarse one-box fallback, NOT a substitute.
         ${collisionNote}
-        Factory->ImportUI->bAutoGenerateCollision = false;
-        Factory->ImportUI->StaticMeshImportData->ImportUniformScale = ${formatScale(config.scale)}f;
-        ${config.lodCount > 0 ? `Factory->ImportUI->StaticMeshImportData->bAutoComputeLodDistances = true;` : '// No LOD generation'}
+        Factory->ImportUI->StaticMeshImportData->bAutoGenerateCollision = false;
+        Factory->ImportUI->${config.meshType === 'skeletal' ? 'SkeletalMeshImportData' : 'StaticMeshImportData'}->ImportUniformScale = ${formatScale(config.scale)}f;
+        ${config.lodCount > 0 ? `Factory->ImportUI->bAutoComputeLodDistances = true;` : '// No LOD generation'}
         ImportTask->Factory = Factory;
 
         // Execute import
