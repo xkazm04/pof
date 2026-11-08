@@ -107,11 +107,11 @@ export interface RecoveryResult {
   confidence: number; detail: string;
 }
 
-export const RECOVERY_STEPS: { id: RecoveryStep; label: string; icon: string }[] = [
-  { id: 'detect', label: 'Detect', icon: 'scan' },
-  { id: 'recover', label: 'Recover', icon: 'restore' },
-  { id: 'verify', label: 'Verify', icon: 'check' },
-  { id: 'confirm', label: 'Confirm', icon: 'done' },
+export const RECOVERY_STEPS: { id: RecoveryStep; label: string }[] = [
+  { id: 'detect', label: 'Detect' },
+  { id: 'recover', label: 'Recover' },
+  { id: 'verify', label: 'Verify' },
+  { id: 'confirm', label: 'Confirm' },
 ];
 
 export const RECOVERY_RESULTS: RecoveryResult[] = [
