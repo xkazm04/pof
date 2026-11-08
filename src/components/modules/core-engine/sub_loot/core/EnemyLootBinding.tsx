@@ -105,7 +105,7 @@ export function EnemyLootBindingSection() {
                 })}
               </div>
               <div className="mt-1.5 flex items-center justify-between text-xs font-mono">
-                <span className="text-text-muted">Total gold ({simKillCount} kills)</span>
+                <span className="text-text-muted">Bonus gold ({simKillCount} kills)</span>
                 <span className="font-bold" style={{ color: STATUS_WARNING }}>{(simKillCount * binding.bonusGold).toLocaleString()}g</span>
               </div>
             </div>
