@@ -32,6 +32,9 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   // Latest-wins token: an analysis answers the reference it was asked about. Clearing or
   // replacing that reference mints a new token, so a late completion is inert.
   const analyzeTokenRef = useRef(0);
+  // Same rule for the file read: each pick mints a token, so an older (larger) read that
+  // finishes after a newer pick can neither replace the reference nor report an error.
+  const readTokenRef = useRef(0);
 
   // Adjustable overrides on top of analysis
   const [overrideRoughness, setOverrideRoughness] = useState<number | null>(null);
@@ -57,8 +60,10 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       setUploadError(reason);
       return;
     }
+    const readToken = ++readTokenRef.current;
     const reader = new FileReader();
     reader.onload = () => {
+      if (readToken !== readTokenRef.current) return;
       analyzeTokenRef.current += 1;
       setIsAnalyzing(false);
       setUploadError(null);
@@ -71,6 +76,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       setOverrideSurface(null);
     };
     reader.onerror = () => {
+      if (readToken !== readTokenRef.current) return;
       logger.warn('[MaterialStyleTransfer] reference file could not be read', reader.error);
       setUploadError(`"${file.name}" could not be read — the file may be corrupt or still downloading.`);
     };
@@ -96,6 +102,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   }, [acceptFile]);
 
   const handleClearImage = useCallback(() => {
+    readTokenRef.current += 1;
     analyzeTokenRef.current += 1;
     setIsAnalyzing(false);
     setImageDataUrl(null);
