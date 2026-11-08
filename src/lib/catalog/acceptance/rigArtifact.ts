@@ -107,6 +107,21 @@ function readRigRecord(payload: Record<string, unknown> | undefined): RigCandida
 }
 
 /**
+ * The facts a stamped `pass: true` record carries that `scoreRig` would have FAILED on. The producer
+ * writes the `pass` bit; the grader re-checks it against the facts beside it rather than taking it on
+ * trust. `referencedJoints` is checked only when the record states it (a legacy record may not).
+ */
+function rigContradictions(payload: Record<string, unknown> | undefined, rig: RigCandidateRecord): string[] {
+  const raw = ((payload ?? {})[RIG_PAYLOAD_KEY] ?? {}) as Record<string, unknown>;
+  const out: string[] = [];
+  if (rig.jointCount <= 0) out.push(`${rig.jointCount} joints`);
+  if (typeof raw.referencedJoints === 'number' && raw.referencedJoints <= 0) out.push('no joint is referenced by a weighted vertex');
+  if (rig.zeroWeightVertices > 0) out.push(`${rig.zeroWeightVertices} vertices carry no weight`);
+  if (rig.failures.length) out.push(`recorded failures: ${rig.failures.join('; ')}`);
+  return out;
+}
+
+/**
  * Grade a rig-bearing gallery step. Pure; reads only the step's own artifact `data`, so it
  * behaves identically on the lab path, the server re-grade and the headless loop.
  *
@@ -138,6 +153,19 @@ export function gradeRiggedSelection(
         'A static mesh is indistinguishable from a rigged one at this layer. Run skintokens ' +
         '(src/lib/visual-gen/skintokens-runner.ts, GPU/Vulkan) so the candidate records its ' +
         'Tier-1 rig verdict, then re-grade.',
+    };
+  }
+
+  const contradictions = rig.pass ? rigContradictions(cand?.payload as Record<string, unknown> | undefined, rig) : [];
+  if (contradictions.length) {
+    return {
+      label,
+      tier: 'L2',
+      status: 'fail',
+      detail: `${named} — rig record contradicts itself`,
+      reason:
+        `the selected candidate (${named}) records a passing rig gate, but its own facts contradict it: ` +
+        `${contradictions.join('; ')}. Re-run the rig gate (scripts/diablo/rig.ts) so the record is the gate's output.`,
     };
   }
 
