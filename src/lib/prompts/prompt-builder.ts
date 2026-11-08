@@ -278,20 +278,56 @@ export class PromptBuilder {
    * Returns which sections are populated — useful for auditing prompt completeness.
    */
   audit(): { section: string; present: boolean }[] {
-    return [
-      { section: 'projectContext', present: !!this._projectContext },
-      { section: 'domainContext', present: !!this._domainContext },
-      { section: 'taskInstructions', present: !!this._taskInstructions },
-      { section: 'assetSpec', present: !!this._assetSpec },
-      { section: 'wiringRequirements', present: !!this._wiringRequirements },
-      { section: 'bestPractices', present: !!this._bestPractices },
-      { section: 'outputSchema', present: !!this._outputSchema },
-      { section: 'successCriteria', present: !!this._successCriteria },
-    ];
+    const held: Record<PromptSectionKey, boolean> = {
+      projectContext: !!this._projectContext,
+      qualityPack: !!this._qualityPack,
+      domainContext: !!this._domainContext,
+      taskInstructions: !!this._taskInstructions,
+      assetSpec: !!this._assetSpec,
+      wiringRequirements: !!this._wiringRequirements,
+      bestPractices: !!this._bestPractices,
+      outputSchema: !!this._outputSchema,
+      successCriteria: !!this._successCriteria,
+    };
+    return PROMPT_SECTIONS.map(({ section }) => ({ section, present: held[section] }));
   }
 }
 
 // ── Audit by string scan (for prompts not built through PromptBuilder) ──────
+
+export type PromptSectionKey =
+  | 'projectContext' | 'qualityPack' | 'domainContext' | 'taskInstructions' | 'assetSpec'
+  | 'wiringRequirements' | 'bestPractices' | 'outputSchema' | 'successCriteria';
+
+/**
+ * The ONE list of sections `build()` can emit, in render order. `audit()` and
+ * `auditPromptString` both derive from it, so a section added to `build()` cannot be
+ * missing from one audit. `cue` is the heading/content marker the string scan uses;
+ * hand-rolled prompts use varied phrasing, so cues are not exact section names.
+ */
+export const PROMPT_SECTIONS: ReadonlyArray<{
+  section: PromptSectionKey; label: string; required: boolean; cue: RegExp;
+}> = [
+  { section: 'projectContext', label: 'Project Context', required: true,
+    cue: /##\s*Project Context|UE Project|Engine Version|## Existing Project Context/i },
+  { section: 'qualityPack', label: 'Quality Pack', required: false,
+    cue: /professional bar is:|exact craft dimensions/i },
+  { section: 'domainContext', label: 'Domain', required: false,
+    cue: /##\s*Domain Context|You are an expert|You are a UE5/i },
+  { section: 'taskInstructions', label: 'Task', required: true,
+    cue: /##\s*Task:|##\s*Task /i },
+  { section: 'assetSpec', label: 'Asset Spec', required: false,
+    cue: /##\s*Asset Specification/i },
+  { section: 'wiringRequirements', label: 'Wiring', required: false,
+    cue: /##\s*Wiring Requirements|wiring sub-prompt/i },
+  { section: 'bestPractices', label: 'Best Practices', required: false,
+    cue: /##\s*UE5 Best Practices|##\s*Best Practices/i },
+  { section: 'outputSchema', label: 'Output Schema', required: false,
+    cue: /##\s*Output Format|##\s*Output Schema|Return ONLY a JSON|@@CALLBACK:/i },
+  // Tied to the heading: a bare numbered list is just as likely to be the Instructions.
+  { section: 'successCriteria', label: 'Success Criteria', required: false,
+    cue: /##\s*Success Criteria|##\s*Rules\b/i },
+];
 
 /** A row in the audit table; `required` drives the "missing required" amber state. */
 export interface PromptAuditRow {
@@ -304,7 +340,7 @@ export interface PromptAuditRow {
 }
 
 /**
- * Detect which of the 7 canonical sections a hand-rolled prompt covers, so the
+ * Detect which of the canonical sections a hand-rolled prompt covers, so the
  * Prompt Inspector can render the same audit-chip strip for prompts that don't
  * go through `PromptBuilder` (e.g. the raw section strings the cli-task-handlers
  * assemble). Matched by characteristic markers — heading text, header keys, or
@@ -312,24 +348,9 @@ export interface PromptAuditRow {
  * varied phrasing.
  */
 export function auditPromptString(prompt: string): PromptAuditRow[] {
-  const text = prompt;
-  const has = (re: RegExp): boolean => re.test(text);
-  return [
-    { section: 'projectContext', label: 'Project Context', required: true,
-      present: has(/##\s*Project Context|UE Project|Engine Version|## Existing Project Context/i) },
-    { section: 'domainContext', label: 'Domain', required: false,
-      present: has(/##\s*Domain Context|You are an expert|You are a UE5/i) },
-    { section: 'taskInstructions', label: 'Task', required: true,
-      present: has(/##\s*Task:|##\s*Task /i) },
-    { section: 'wiringRequirements', label: 'Wiring', required: false,
-      present: has(/##\s*Wiring Requirements|wiring sub-prompt/i) },
-    { section: 'bestPractices', label: 'Best Practices', required: false,
-      present: has(/##\s*UE5 Best Practices|##\s*Best Practices/i) },
-    { section: 'outputSchema', label: 'Output Schema', required: false,
-      present: has(/##\s*Output Format|##\s*Output Schema|Return ONLY a JSON|@@CALLBACK:/i) },
-    { section: 'successCriteria', label: 'Success Criteria', required: false,
-      present: has(/##\s*Success Criteria|##\s*Rules\b|^\d+\.\s/m) },
-  ];
+  return PROMPT_SECTIONS.map(({ section, label, required, cue }) => ({
+    section, label, required, present: cue.test(prompt),
+  }));
 }
 
 /** One-line plain-English summary of an audit, e.g. "5 of 7 sections populated · all required ✓". */
