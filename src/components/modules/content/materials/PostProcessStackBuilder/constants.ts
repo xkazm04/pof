@@ -6,7 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, ACCENT_EMERALD, ACCENT_PINK,
 } from '@/lib/chart-colors';
-import type { PPEffectCategory, PPResolution } from '@/types/post-process-studio';
+import type { PPEffectCategory } from '@/types/post-process-studio';
 
 // ── Presentation maps (shared shape with PostProcessStudioView) ──
 
@@ -30,6 +30,3 @@ export const EFFECT_ICONS: Record<string, LucideIcon> = {
   'film-grain': Film,
   'fog': LayersIcon,
 };
-
-// Materials tab evaluates GPU budget against a fixed target resolution.
-export const TARGET_RESOLUTION: PPResolution = '1080p';
