@@ -7,6 +7,7 @@ import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visu
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
 import { planKitAtlas } from '@/lib/visual-gen/texel-density';
+import { fetchMeshForGrading } from '@/lib/visual-gen/mesh-fetch';
 import { runMeshViews } from '@/lib/visual-gen/mesh-views';
 
 describe('parseCritiqueMetrics refuses counts it cannot read', () => {
@@ -139,5 +140,20 @@ describe('runMeshViews holds the render to the views it planned', () => {
   it('accepts a render that delivered the plan', async () => {
     const r = await runMeshViews({ meshPath: 'a.glb', outDir: 'C:/v', views: 2 }, deps(out(2)));
     expect(r.ok).toBe(true);
+  });
+});
+
+describe('fetchMeshForGrading reports a failed body read as a refusal', () => {
+  it('a connection that drops mid-body returns ok:false with the reason', async () => {
+    const fetchFn = (async () => ({
+      ok: true,
+      status: 200,
+      url: 'https://x.deemos.com/a.glb',
+      headers: { get: (k: string) => (k === 'content-type' ? 'model/gltf-binary' : null) },
+      arrayBuffer: async () => { throw new Error('socket hang up'); },
+    })) as unknown as typeof fetch;
+    const out = await fetchMeshForGrading('https://x.deemos.com/a.glb', 'job1', { fetchFn, fileExists: () => false, outDir: 'C:/nowhere' });
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.reason).toContain('socket hang up');
   });
 });

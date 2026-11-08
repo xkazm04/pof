@@ -250,7 +250,12 @@ export async function fetchMeshForGrading(
     return { ok: false, reason: `refused: the provider declared ${declared} bytes, over the ${MESH_FETCH_MAX_BYTES}-byte cap` };
   }
 
-  const buf = new Uint8Array(await res.arrayBuffer());
+  let buf: Uint8Array;
+  try {
+    buf = new Uint8Array(await res.arrayBuffer());
+  } catch (e) {
+    return { ok: false, reason: `refused: the download failed mid-body — ${e instanceof Error ? e.message : String(e)}` };
+  }
   if (buf.byteLength === 0) return { ok: false, reason: 'refused: the provider returned an empty body' };
   if (buf.byteLength > MESH_FETCH_MAX_BYTES) {
     return { ok: false, reason: `refused: the body is ${buf.byteLength} bytes, over the ${MESH_FETCH_MAX_BYTES}-byte cap` };
