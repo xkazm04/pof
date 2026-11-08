@@ -63,3 +63,13 @@ describe('usePromptEvolution — the suggestion path obeys the adoption rules', 
     expect(result.current.expandedTestId).toBe('t1');
   });
 });
+
+describe('usePromptEvolution — a rewrite belongs to the module it was optimized in', () => {
+  it('clears the last optimization when the module changes', () => {
+    seed(decided({}));
+    usePromptEvolutionStore.setState({ lastOptimization: { optimized: 'x' } as PromptOptimizationResult });
+    const { result } = renderHook(() => usePromptEvolution());
+    act(() => { result.current.handleSelectModule('arpg-loot' as SubModuleId); });
+    expect(usePromptEvolutionStore.getState().lastOptimization).toBeNull();
+  });
+});

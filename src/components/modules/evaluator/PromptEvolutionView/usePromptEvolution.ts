@@ -71,6 +71,9 @@ export function usePromptEvolution() {
   // Handled at the onChange site to avoid set-state-in-effect.
   const handleSelectModule = useCallback((next: SubModuleId | null) => {
     setSelectedModule(next);
+    // The rewrite was built from this module's history; saved as a challenger under
+    // another module it would race that module's baseline.
+    usePromptEvolutionStore.setState({ lastOptimization: null });
     setNewChecklistItemId('');
     setFormErrors({});
   }, [setSelectedModule]);
