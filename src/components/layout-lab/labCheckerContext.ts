@@ -94,9 +94,6 @@ function siblingVerdictOf(
   return { status: merged.status, source };
 }
 
-/** The same context, read from the live store snapshots — for callers outside render.
- *  `verdicts` is optional: pass the catalog's judge verdicts (they are fetched, so only a
- *  React caller has them) to make `siblingVerdict` judge-aware as well as drain-aware. */
 /**
  * The canon profile of an entity as the lab knows it. Ingested entities live in the hydrated
  * draft cache (`draftEntitiesByCatalog`) with their provenance; code seeds are PoF's.
@@ -108,6 +105,9 @@ export function canonProfileInStore(catalogId: string, entityId: string): string
   return canonProfileOf(e);
 }
 
+/** The same context, read from the live store snapshots — for callers outside render.
+ *  `verdicts` is optional: pass the catalog's judge verdicts (they are fetched, so only a
+ *  React caller has them) to make `siblingVerdict` judge-aware as well as drain-aware. */
 export function labCheckerContext(catalogId: string, entityId: string, verdicts?: JudgeVerdict[]): CheckerContext {
   return buildLabCheckerContext(
     catalogId,
