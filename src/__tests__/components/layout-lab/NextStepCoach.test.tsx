@@ -337,3 +337,33 @@ describe('<NextStepCoach /> — the settling act (pipeline-acceptance-engine/B)'
     expect(list.textContent).toContain('VO Script');
   });
 });
+
+describe('<NextStepCoach /> — live region holds only the advice', () => {
+  const base = {
+    t: LIGHT, steps, rollup: rollup({ done: 3, pending: 0, deferred: 2, total: 5 }),
+    onJump: () => {}, plainMode: false, onTogglePlainMode: () => {}, onDrain: () => {}, draining: false,
+  };
+
+  it('announces the next step without re-reading the CTA or the disclosure', () => {
+    const { container } = render(<NextStepCoach {...base} statusByStep={(_, i) => (i < 3 ? 'pass' : 'deferred') as StepStatus} />);
+    const live = Array.from(container.querySelectorAll('[aria-live]'));
+    expect(live).toHaveLength(1);
+    expect(live[0].querySelector('button')).toBeNull();
+    expect(live[0].textContent).toContain('Economy');
+  });
+
+  it('announces the done state without a button inside the live region', () => {
+    const { container } = render(<NextStepCoach {...base} statusByStep={() => 'pass' as StepStatus} />);
+    const live = Array.from(container.querySelectorAll('[aria-live]'));
+    expect(live).toHaveLength(1);
+    expect(live[0].querySelector('button')).toBeNull();
+    expect(live[0].textContent).toMatch(/All done/);
+  });
+
+  it('does not nest the error alert inside a second live region', () => {
+    const { container } = render(<NextStepCoach {...base} statusByStep={() => 'pass' as StepStatus} serverError="HTTP 500" onRetryLoad={() => {}} />);
+    const alert = container.querySelector('[role="alert"]') as HTMLElement;
+    expect(alert).not.toBeNull();
+    expect(alert.parentElement?.closest('[aria-live],[role="status"]')).toBeNull();
+  });
+});
