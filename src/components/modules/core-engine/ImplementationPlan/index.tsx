@@ -135,6 +135,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
                 updateFilter({ moduleId });
               }
             }}
+            aria-pressed={!showAllModules}
             className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
               showAllModules
                 ? 'text-text-muted hover:text-text hover:bg-surface-hover border border-transparent'
@@ -142,7 +143,9 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
             }`}
           >
             <Target className="w-3 h-3" />
-            {showAllModules ? 'Filtered to module' : getModuleLabel(moduleId as SubModuleId) + ' only'}
+            {showAllModules
+              ? `Show ${getModuleLabel(moduleId as SubModuleId)} only`
+              : `${getModuleLabel(moduleId as SubModuleId)} only`}
           </button>
           {!showAllModules && (
             <span className="text-2xs text-text-muted">Cross-module deps shown as context</span>
