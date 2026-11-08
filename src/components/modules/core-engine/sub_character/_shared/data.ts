@@ -116,7 +116,8 @@ export interface KeyDef {
   widthClass?: string;
 }
 
-/** Every non-mouse key a binding can resolve to must be drawn here (see input-bindings tests). */
+/** Every default-bound non-mouse key is drawn here (see input-bindings tests); a rebind to a key
+ *  this layout lacks renders in KeyboardVisualization's 'Other' row instead. */
 export const KEYBOARD_ROWS: KeyDef[][] = [
   [{ key: '1' }, { key: '2' }, { key: '3' }, { key: '4' }, { key: '5' }, { key: '6' }, { key: '7' }, { key: '8' }, { key: '9' }, { key: '0' }],
   [{ key: 'Q' }, { key: 'W' }, { key: 'E' }, { key: 'R' }, { key: 'T' }, { key: 'Y' }, { key: 'U' }, { key: 'I' }, { key: 'O' }, { key: 'P' }],

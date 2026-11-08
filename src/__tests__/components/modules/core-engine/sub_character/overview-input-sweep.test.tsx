@@ -152,3 +152,14 @@ describe('class-tree cross-reference chip does what its link styling promises', 
     expect(useNavigationStore.getState().activeSubModule).toBe('arpg-enemy-ai');
   });
 });
+
+describe('keyboard map shows every rebound key, not only the drawn layout', () => {
+  afterEach(() => useCharacterBlueprintStore.getState().resetBindings());
+
+  it.each(['Tab', 'Up', 'F1', '-'])('a rebind to %s appears on the map', (key) => {
+    useCharacterBlueprintStore.getState().resetBindings();
+    useCharacterBlueprintStore.getState().setBindingOverride('IA_Interact', key);
+    const { getByLabelText } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
+    expect(getByLabelText(`${key}: IA_Interact`)).toBeTruthy();
+  }, 15000);
+});

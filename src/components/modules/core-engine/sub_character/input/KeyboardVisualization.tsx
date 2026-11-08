@@ -10,7 +10,10 @@ import {
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { useResolvedBindings } from '@/stores/characterBlueprintStore';
-import { KEYBOARD_ROWS } from '../_shared/data';
+import { KEYBOARD_ROWS, type KeyDef } from '../_shared/data';
+import { isMouseKey } from '@/lib/character/input-bindings';
+
+const DRAWN_KEYS = new Set(KEYBOARD_ROWS.flat().map((k) => k.key));
 import { KeyboardKey } from './KeyboardKey';
 import { MouseWidget } from './MouseWidget';
 
@@ -21,6 +24,11 @@ export function KeyboardVisualization() {
   // Legend swatches pulse opacity only — not a positional key, so the root
   // MotionConfig would keep looping them for a motion-sensitive user.
   const prefersReduced = useReducedMotion();
+  // A rebind can land on any capturable key (Tab, arrows, F-keys, punctuation);
+  // keys the drawn layout lacks get an extra row so no binding vanishes from the map.
+  const offMap: KeyDef[] = [...resolved.keyMap.keys()]
+    .filter((k) => !DRAWN_KEYS.has(k) && !isMouseKey(k))
+    .map((k) => ({ key: k, widthClass: k.length > 2 ? 'px-2 min-w-8' : undefined }));
   return (
     <BlueprintPanel className="p-4">
       <SectionHeader icon={Command} label="Input Binding Map" color={ACCENT_CYAN} />
@@ -52,6 +60,19 @@ export function KeyboardVisualization() {
                   ))}
                 </motion.div>
               ))}
+              {offMap.length > 0 && (
+                <div className="flex gap-1.5 items-center pt-1" data-testid="keyboard-offmap-row">
+                  <span className="text-xs font-mono text-text-muted mr-1">Other</span>
+                  {offMap.map((kd) => (
+                    <KeyboardKey
+                      key={kd.key}
+                      kd={kd}
+                      binding={resolved.keyMap.get(kd.key)}
+                      conflict={resolved.conflicts.get(kd.key)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
