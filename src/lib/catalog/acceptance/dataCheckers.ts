@@ -137,7 +137,8 @@ export function withinPercent(field: string, label: string, target: number, pct:
  */
 export function withinAbsolute(field: string, label: string, target: number, tol: number): Checker {
   return (data) => {
-    const v = data[field];
+    // Dot-path aware, like withinPercent (`pickField`): a step may grade the nested datum it charts.
+    const v = pickField(data, field);
     const n = readNumber(v);
     if (n == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" ${v == null ? 'is not set' : `is not a number (${JSON.stringify(v)?.slice(0, 40)})`} (expected a value within ±${tol} of ${target})` };
     const ok = Math.abs(n - target) <= tol;
