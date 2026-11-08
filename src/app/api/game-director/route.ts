@@ -202,7 +202,10 @@ export async function GET(req: Request) {
 
       case 'trend': {
         const limitParam = searchParams.get('limit');
-        const limit = limitParam ? Math.max(1, Math.min(200, Number(limitParam))) : 30;
+        // Same fold as /api/feature-matrix/history: NaN → default, else an integer in
+        // [1, 200]. `LIMIT NaN` / `LIMIT 2.5` is a SQLite datatype mismatch (a 500).
+        const parsed = parseInt(limitParam ?? '', 10);
+        const limit = Number.isNaN(parsed) ? 30 : Math.max(1, Math.min(200, parsed));
         return apiSuccess(getHealthTrend(limit));
       }
 
