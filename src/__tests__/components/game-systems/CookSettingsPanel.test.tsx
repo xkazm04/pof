@@ -65,3 +65,16 @@ describe('CookSettingsPanel list fields', () => {
     expect(textareas()[0].value).toBe('/Game/Y\n/Game/Z');
   });
 });
+
+describe('CookSettingsPanel switches', () => {
+  it('draws a keyboard focus indicator on every switch track', () => {
+    render(<CookSettingsPanel settings={{ ...DEFAULT_COOK_SETTINGS }} onChange={() => {}} />);
+    const boxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+    expect(boxes.length).toBeGreaterThanOrEqual(7);
+    const withRing = boxes.filter((b) => {
+      const track = b.nextElementSibling;
+      return b.classList.contains('peer') && (track?.className ?? '').includes('peer-focus-visible:ring');
+    });
+    expect(withRing.length).toBe(boxes.length);
+  });
+});

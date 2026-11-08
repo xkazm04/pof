@@ -77,9 +77,9 @@ function Toggle({ label, description, checked, onChange, icon }: {
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="sr-only"
+          className="sr-only peer"
         />
-        <div className={`w-7 h-4 rounded-full transition-colors flex items-center ${checked ? '' : 'bg-border-bright'}`} style={checked ? { backgroundColor: MODULE_COLORS.systems } : undefined}>
+        <div className={`w-7 h-4 rounded-full transition-colors flex items-center peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-accent,var(--systems))] peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-[var(--background)] ${checked ? '' : 'bg-border-bright'}`} style={checked ? { backgroundColor: MODULE_COLORS.systems } : undefined}>
           <div className={`w-3 h-3 rounded-full bg-white transition-transform mx-0.5 ${checked ? 'translate-x-3' : 'translate-x-0'}`} />
         </div>
       </div>
