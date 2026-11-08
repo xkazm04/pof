@@ -104,7 +104,7 @@ export function WeaponMatchupPanel() {
                   const sel = compareIds.includes(w.id);
                   const row = rowById.get(w.id);
                   return (
-                    <button key={w.id} type="button" onClick={() => toggleCompare(w.id)}
+                    <button key={w.id} type="button" aria-pressed={sel} onClick={() => toggleCompare(w.id)}
                       disabled={!sel && compareIds.length >= MAX_COMPARE}
                       className="px-2 py-1.5 rounded border text-xs font-mono text-left transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110"
                       style={{ borderColor: sel ? withOpacity(w.color, OPACITY_30) : 'var(--border)', backgroundColor: sel ? withOpacity(w.color, OPACITY_10) : 'transparent', color: sel ? w.color : 'var(--text-muted)' }}>

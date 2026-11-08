@@ -2,6 +2,8 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import type React from 'react';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { StatInfluencePanel } from '@/components/modules/core-engine/sub_combat/metrics/StatInfluencePanel';
+import { WeaponMatchupPanel } from '@/components/modules/core-engine/sub_combat/metrics/WeaponMatchupPanel';
+import { WEAPONS } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 
 // combat-metrics controls carry an accessible name and expose their state
 // (scan-sweep night 2026-11-08, accessibility-checker).
@@ -41,5 +43,26 @@ describe('StatInfluencePanel controls are named', () => {
     const str = screen.getByRole('slider', { name: 'STR' }) as HTMLInputElement;
     fireEvent.change(str, { target: { value: '14' } });
     expect(str.value).toBe('14');
+  });
+});
+
+describe('WeaponMatchupPanel compare toggles expose their state', () => {
+  it('every weapon toggle carries aria-pressed, and it follows the selection', () => {
+    render(<WeaponMatchupPanel />);
+    const panel = screen.getByTestId('weapon-matchup-panel');
+    const toggles = WEAPONS.map((w) => {
+      const btn = Array.from(panel.querySelectorAll('button')).find((b) => b.textContent?.startsWith(w.name));
+      if (!btn) throw new Error(`no toggle for ${w.name}`);
+      return btn;
+    });
+    expect(toggles).toHaveLength(WEAPONS.length);
+    expect(toggles.filter((b) => b.getAttribute('aria-pressed') === null)).toHaveLength(0);
+    expect(toggles.filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(0);
+
+    fireEvent.click(toggles[0]);
+    expect(toggles[0].getAttribute('aria-pressed')).toBe('true');
+    expect(toggles[1].getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggles[0]);
+    expect(toggles[0].getAttribute('aria-pressed')).toBe('false');
   });
 });
