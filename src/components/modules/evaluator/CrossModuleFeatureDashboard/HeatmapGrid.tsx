@@ -154,7 +154,6 @@ export function HeatmapGrid({
                             type="button"
                             aria-pressed={isSelected}
                             aria-label={`${cell.label}: ${cellTitle}. Show features.`}
-                            title={`${cellTitle}: show features`}
                             onClick={() => onSelectCell(cell.moduleId, key)}
                             className="w-full h-7 rounded-md flex items-center justify-center transition-all duration-base cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-bright"
                             style={{
