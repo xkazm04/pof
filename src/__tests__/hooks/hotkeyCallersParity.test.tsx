@@ -144,6 +144,15 @@ describe('[guard] InputBindingsTable rebinding capture', () => {
     expect(setBindingOverride).toHaveBeenCalledTimes(1);
   });
 
+  it("(c2) a shifted key binds the physical key, not the shifted symbol (Shift+1 -> '1')", () => {
+    const setBindingOverride = vi.fn();
+    useCharacterBlueprintStore.setState({ setBindingOverride });
+    render(<InputBindingsTable moduleId="arpg-character" featureMap={new Map()} />);
+    const action = startRebind();
+    key({ key: '!', code: 'Digit1', shiftKey: true });
+    expect(setBindingOverride).toHaveBeenCalledWith(action, '1');
+  });
+
   it('(c) Escape cancels the rebind without an override', () => {
     const setBindingOverride = vi.fn();
     useCharacterBlueprintStore.setState({ setBindingOverride });
