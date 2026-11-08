@@ -5,6 +5,7 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { TaskFactory, buildTaskPrompt, resolveCallback } from '@/lib/cli-task';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getOriginFromRequest, UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import type { BatchReviewAbortRequest, BatchReviewStartRequest, BatchReviewState } from '@/types/batch-review';
@@ -115,8 +116,14 @@ export async function GET() {
 
 /**
  * POST — Start a new batch review (or abort current one)
+ *
+ * Operator-guarded: a start spawns the Claude CLI (MCP enabled) in the body's
+ * `projectPath`, once per module — a process launch like experiment/run and the
+ * pipeline drains, so a cross-site request must not be able to trigger it.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const raw = (await request.json().catch(() => undefined)) as BatchReviewStartRequest | BatchReviewAbortRequest | null | undefined;
     // A body that is not a JSON object is the caller's error (400), not a server fault.
@@ -196,9 +203,11 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * DELETE — Clear completed batch state
+ * DELETE — Clear completed batch state (operator-guarded like POST)
  */
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   if (activeBatch && activeBatch.status === 'running') {
     return apiError('Cannot clear while batch is running', 400);
   }
