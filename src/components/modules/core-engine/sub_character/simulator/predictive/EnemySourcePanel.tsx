@@ -39,7 +39,7 @@ export function EnemySourcePanel({
 
       {error && (
         <div className="text-text-muted">
-          Bestiary read failed: {error} — the sweep ran on the hardcoded fixtures.
+          Bestiary read failed: {error} — sweeps run on the hardcoded fixtures.
         </div>
       )}
 
