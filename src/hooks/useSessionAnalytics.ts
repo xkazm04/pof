@@ -62,6 +62,10 @@ export interface UsePromptSuggestionsResult {
 export function usePromptSuggestions(moduleId: SubModuleId): UsePromptSuggestionsResult {
   const [suggestions, setSuggestions] = useState<PromptSuggestion[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Latest-wins token: every keystroke (including a clear) mints one, and only the
+  // request carrying the current token may write — a clear cancels the armed
+  // debounce AND makes any in-flight answer inert.
+  const latestRef = useRef(0);
   const suspended = useIsSuspended();
 
   // Clear debounce timer when suspended or on unmount
@@ -77,19 +81,21 @@ export function usePromptSuggestions(moduleId: SubModuleId): UsePromptSuggestion
 
   const fetchSuggestions = useCallback(async (prompt: string) => {
     if (suspended) return;
+    const token = ++latestRef.current;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = undefined;
     if (!prompt.trim() || !moduleId) {
       setSuggestions([]);
       return;
     }
 
     // Debounce
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(async () => {
       try {
         const data = await apiFetch<{ suggestions: PromptSuggestion[] }>(
           `/api/session-analytics?action=suggestions&moduleId=${encodeURIComponent(moduleId)}&prompt=${encodeURIComponent(prompt)}`
         );
-        setSuggestions(data.suggestions ?? []);
+        if (token === latestRef.current) setSuggestions(data.suggestions ?? []);
       } catch {
         // Silently ignore — suggestions are non-critical
       }
