@@ -26,7 +26,7 @@ export function AdvancedTexturePanel() {
           <Sparkles className="w-4 h-4" /> Scenario PBR set
         </header>
         <textarea
-          data-testid="scenario-prompt"
+          data-testid="scenario-prompt" aria-label="Scenario PBR prompt"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="dark fantasy dungeon stone, seamless PBR"
@@ -34,7 +34,7 @@ export function AdvancedTexturePanel() {
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
         />
         <input
-          data-testid="scenario-model"
+          data-testid="scenario-model" aria-label="Scenario model id"
           value={modelId}
           onChange={(e) => setModelId(e.target.value)}
           placeholder="Scenario model id (optional)"
@@ -151,14 +151,14 @@ export function AdvancedTexturePanel() {
           <ArrowUpRight className="w-4 h-4" /> Universal Upscaler
         </header>
         <input
-          data-testid="upscale-image-id"
+          data-testid="upscale-image-id" aria-label="Image id to upscale"
           value={imageId}
           onChange={(e) => setImageId(e.target.value)}
           placeholder="Leonardo generated image id"
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
         />
         <select
-          data-testid="upscale-style"
+          data-testid="upscale-style" aria-label="Upscale style"
           value={style}
           onChange={(e) => setStyle(e.target.value)}
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
@@ -191,14 +191,14 @@ export function AdvancedTexturePanel() {
           <Maximize2 className="w-4 h-4" /> Unzoom (extend borders)
         </header>
         <input
-          data-testid="unzoom-image-id"
+          data-testid="unzoom-image-id" aria-label="Image id to unzoom"
           value={uzImageId}
           onChange={(e) => setUzImageId(e.target.value)}
           placeholder="Leonardo generated image id"
           className={tileInput}
         />
         <input
-          data-testid="unzoom-prompt"
+          data-testid="unzoom-prompt" aria-label="Unzoom fill prompt"
           value={uzPrompt}
           onChange={(e) => setUzPrompt(e.target.value)}
           placeholder="what to paint into the extended region (optional)"
@@ -222,20 +222,20 @@ export function AdvancedTexturePanel() {
           <Workflow className="w-4 h-4" /> ControlNet (guided)
         </header>
         <input
-          data-testid="controlnet-prompt"
+          data-testid="controlnet-prompt" aria-label="ControlNet prompt"
           value={cnPrompt}
           onChange={(e) => setCnPrompt(e.target.value)}
           placeholder="prompt — e.g. an icon matching this silhouette"
           className={tileInput}
         />
         <input
-          data-testid="controlnet-image-id"
+          data-testid="controlnet-image-id" aria-label="ControlNet init image id"
           value={cnImageId}
           onChange={(e) => setCnImageId(e.target.value)}
           placeholder="uploaded init image id"
           className={tileInput}
         />
-        <select data-testid="controlnet-preprocessor" value={cnPreproc} onChange={(e) => setCnPreproc(e.target.value)} className={tileInput}>
+        <select data-testid="controlnet-preprocessor" aria-label="ControlNet preprocessor" value={cnPreproc} onChange={(e) => setCnPreproc(e.target.value)} className={tileInput}>
           <option value="67">Style Reference</option>
           <option value="19">Depth</option>
           <option value="20">Normal</option>
@@ -259,21 +259,21 @@ export function AdvancedTexturePanel() {
           <Brush className="w-4 h-4" /> Inpaint (fix a region)
         </header>
         <input
-          data-testid="inpaint-prompt"
+          data-testid="inpaint-prompt" aria-label="Inpaint prompt"
           value={ipPrompt}
           onChange={(e) => setIpPrompt(e.target.value)}
           placeholder="what to paint into the masked region"
           className={tileInput}
         />
         <input
-          data-testid="inpaint-image-id"
+          data-testid="inpaint-image-id" aria-label="Inpaint base image id"
           value={ipImageId}
           onChange={(e) => setIpImageId(e.target.value)}
           placeholder="base image id"
           className={tileInput}
         />
         <input
-          data-testid="inpaint-mask-id"
+          data-testid="inpaint-mask-id" aria-label="Inpaint mask image id"
           value={ipMaskId}
           onChange={(e) => setIpMaskId(e.target.value)}
           placeholder="mask image id (optional)"

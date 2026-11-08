@@ -57,3 +57,16 @@ describe('AdvancedTexturePanel — every tile reports failure through TileError'
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 });
+
+describe('AdvancedTexturePanel — every field has an accessible name', () => {
+  it('no input, select or textarea relies on its placeholder alone', () => {
+    mockFetch({ body: { success: true, data: {} } });
+    const { container } = render(<AdvancedTexturePanel />);
+    const fields = Array.from(container.querySelectorAll('input, select, textarea'));
+    expect(fields.length).toBe(12);
+    const unnamed = fields
+      .filter((el) => !el.getAttribute('aria-label') && !(el.id && container.querySelector(`label[for="${el.id}"]`)))
+      .map((el) => el.getAttribute('data-testid'));
+    expect(unnamed).toEqual([]);
+  });
+});
