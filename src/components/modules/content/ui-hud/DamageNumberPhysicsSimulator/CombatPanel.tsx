@@ -8,12 +8,15 @@ import { SliderParam } from './SliderParam';
 import { ELEMENT_COLORS, ELEMENT_ICONS } from './constants';
 import type { CombatConfig, DamageElement } from './types';
 
+const DAMAGE_ELEMENTS: DamageElement[] = ['physical', 'fire', 'ice', 'lightning'];
+
 export function CombatPanel({ showCombat, setShowCombat, combat, updateCombat }: {
   showCombat: boolean;
   setShowCombat: Dispatch<SetStateAction<boolean>>;
   combat: CombatConfig;
   updateCombat: (updates: Partial<CombatConfig>) => void;
 }) {
+  const mixTotal = DAMAGE_ELEMENTS.reduce((s, el) => s + combat.elementWeights[el], 0);
   return (
     <SurfaceCard level={2} className="p-2.5 space-y-2">
       <button
@@ -39,8 +42,10 @@ export function CombatPanel({ showCombat, setShowCombat, combat, updateCombat }:
           {/* Element mix */}
           <div className="space-y-1 pt-1">
             <span className="text-2xs text-text-muted font-bold uppercase tracking-wider">Element Mix</span>
-            {(['physical', 'fire', 'ice', 'lightning'] as DamageElement[]).map(el => {
+            {DAMAGE_ELEMENTS.map(el => {
               const Icon = ELEMENT_ICONS[el];
+              // pickElement normalises by the sum, so show the real spawn share
+              const share = mixTotal > 0 ? combat.elementWeights[el] / mixTotal : 0;
               return (
                 <div key={el} className="flex items-center gap-1.5">
                   <Icon className="w-2.5 h-2.5 shrink-0" style={{ color: ELEMENT_COLORS[el] }} />
@@ -55,7 +60,7 @@ export function CombatPanel({ showCombat, setShowCombat, combat, updateCombat }:
                       background: `linear-gradient(to right, ${ELEMENT_COLORS[el]} ${combat.elementWeights[el] * 100}%, rgba(255,255,255,0.1) ${combat.elementWeights[el] * 100}%)`,
                     }}
                   />
-                  <span className="text-xs font-mono text-text-muted w-6 text-right">{(combat.elementWeights[el] * 100).toFixed(0)}%</span>
+                  <span className="text-xs font-mono text-text-muted w-6 text-right">{(share * 100).toFixed(0)}%</span>
                 </div>
               );
             })}
