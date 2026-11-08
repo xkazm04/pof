@@ -38,7 +38,7 @@ import { ErrorMemoryPanel } from '../ErrorMemoryPanel';
 import { BuildHealthDashboard } from '../BuildHealthDashboard';
 import { JudgeVerdictsView } from '../JudgeVerdictsView';
 import { EvaluatorCoachmark } from '../EvaluatorCoachmark';
-import { EVALUATOR_TAB_INFO } from '@/lib/evaluator/tab-glossary';
+import { EVALUATOR_TAB_INFO, type EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
 import { logger } from '@/lib/logger';
 import { type TabId } from './types';
 import { TabDivider, ScrollableTabBar, TabButton, EVALUATOR_TABPANEL_ID, evaluatorTabDomId } from './TabControls';
@@ -53,14 +53,14 @@ export function EvaluatorModule() {
     setActiveTab(tab);
   }, [captureScroll]);
 
-  // Child views name tabs as plain strings; an id the glossary does not know
-  // would make the subtitle read EVALUATOR_TAB_INFO[undefined] and crash the shell.
-  const navigateTab = useCallback((tab: string) => {
+  // Child views name tabs as EvaluatorTabId (compile-time checked); the runtime guard
+  // stays for callers that cast, since an unknown id would crash the subtitle lookup.
+  const navigateTab = useCallback((tab: EvaluatorTabId) => {
     if (!Object.hasOwn(EVALUATOR_TAB_INFO, tab)) {
       logger.warn(`[EvaluatorModule] ignoring navigation to unknown tab "${tab}"`);
       return;
     }
-    switchTab(tab as TabId);
+    switchTab(tab);
   }, [switchTab]);
 
   const handleTabArrowNav = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {

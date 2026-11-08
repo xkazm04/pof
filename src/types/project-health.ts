@@ -1,3 +1,5 @@
+import type { EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
+
 /* ------------------------------------------------------------------ */
 /*  Holistic Project Health Dashboard Types                           */
 /* ------------------------------------------------------------------ */
@@ -147,7 +149,7 @@ export interface SubsystemSignal {
    * Optional evaluator tab id this signal drills into when clicked
    * (e.g. `'perf'`, `'crashes'`). Omitted for signals with no source view.
    */
-  linkTab?: string;
+  linkTab?: EvaluatorTabId;
 }
 
 /**
