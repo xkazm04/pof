@@ -118,6 +118,35 @@ describe("a refused start leaves the current run's server state alone", () => {
   });
 });
 
+describe('DELETE of a live run', () => {
+  function del(id: string) {
+    return DELETE(
+      new NextRequest(`http://localhost:3001/api/harness/runs/${id}`, { method: 'DELETE', headers: { host: 'localhost:3001' } }),
+      { params: Promise.resolve({ id }) },
+    );
+  }
+  const live = { getRunId: () => 'live-run' };
+
+  for (const status of ['running', 'paused']) {
+    it(`answers 409 and keeps the row while the id is the ${status} run`, async () => {
+      G.harnessOrchestrator = live;
+      G.harnessStatus = status;
+      const res = await del('live-run');
+      expect(res.status).toBe(409);
+      expect(h.deleted).toEqual([]);
+    });
+  }
+
+  it('deletes another run, and the same id once the run is no longer live', async () => {
+    G.harnessOrchestrator = live;
+    G.harnessStatus = 'running';
+    expect((await del('old-run')).status).toBe(200);
+    G.harnessStatus = 'completed';
+    expect((await del('live-run')).status).toBe(200);
+    expect(h.deleted).toEqual(['old-run', 'live-run']);
+  });
+});
+
 describe('a start over a paused run', () => {
   const orchestrator = { getRunId: () => 'paused-run', on: () => undefined, start: async () => undefined };
 
