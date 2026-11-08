@@ -83,7 +83,7 @@ export function ScreenNodeRow({
           )}
         </AnimatePresence>
 
-        <button onClick={() => onToggle(node.id)} className="w-full text-left px-3.5 py-2.5 focus:outline-none">
+        <button type="button" onClick={() => onToggle(node.id)} aria-expanded={isExpanded} className="focus-ring-inset w-full text-left px-3.5 py-2.5">
           <div className="flex items-center gap-4">
             <motion.div animate={{ rotate: isExpanded ? 90 : 0 }}>
               <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text transition-colors" />
