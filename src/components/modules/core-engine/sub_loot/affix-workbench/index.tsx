@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { OPACITY_20, OPACITY_37, withOpacity } from '@/lib/chart-colors';
+import { OPACITY_20, OPACITY_37, OPACITY_40, OPACITY_90, withOpacity } from '@/lib/chart-colors';
 import { RARITY_COLORS } from './data';
 import type { AffixPoolEntry } from './data';
 import { ACCENT, getCategoryColor } from './constants';
@@ -31,11 +31,11 @@ function buildDragGhost(entry: AffixPoolEntry): HTMLDivElement {
   ghost.style.cssText = `
     position:fixed;top:-100px;left:-100px;width:120px;height:28px;
     display:flex;align-items:center;gap:6px;padding:0 10px;
-    background:rgba(15,15,25,0.9);border:1px solid ${withOpacity(catColor, OPACITY_37)};
+    background:${withOpacity('var(--surface-deep)', OPACITY_90)};border:1px solid ${withOpacity(catColor, OPACITY_37)};
     border-radius:14px;font-family:ui-monospace,monospace;
-    font-size:11px;font-weight:700;color:#e2e8f0;
+    font-size:11px;font-weight:700;color:var(--text);
     backdrop-filter:blur(8px);pointer-events:none;
-    box-shadow:0 4px 12px rgba(0,0,0,0.4),0 0 8px ${withOpacity(catColor, OPACITY_20)};`;
+    box-shadow:0 4px 12px ${withOpacity('var(--surface-deep)', OPACITY_40)},0 0 8px ${withOpacity(catColor, OPACITY_20)};`;
   const dot = document.createElement('span');
   dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:${catColor};box-shadow:0 0 4px ${catColor};flex-shrink:0;`;
   const label = document.createElement('span');
