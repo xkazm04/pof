@@ -39,10 +39,13 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
   const [xpTableTab, setXpTableTab] = useState<'table' | 'csv' | 'struct' | 'loader'>('table');
   const [levelOverrides] = useState<Map<number, Partial<{ xpRequired: number; hpBonus: number; manaBonus: number }>>>(new Map());
 
-  const progressionRows = useMemo(
-    () => generateProgressionTable(MAX_LEVEL, baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule),
-    [baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule],
-  );
+  const progressionRows = useMemo(() => {
+    // Pin to the declared input ranges at export; the inputs stay free while typing.
+    const pin = (v: number, lo: number, hi: number) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : lo);
+    return generateProgressionTable(
+      MAX_LEVEL, baseXp, curveExp, pin(hpPerLevel, 1, 100), pin(manaPerLevel, 1, 100), pin(attrPointsPerLevel, 0, 10), levelOverrides, schedule,
+    );
+  }, [baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule]);
   const leadRewardAt = useMemo(() => new Map(schedule.map((g) => [g.level, g.rewards[0]])), [schedule]);
 
   const xpTableOutput = useMemo(() => {
@@ -64,7 +67,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(1)}.csv`;
+    a.download = `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(2)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [progressionRows, baseXp, curveExp]);
@@ -205,7 +208,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <div className="px-3 py-1.5 bg-surface-deep/50 border-b border-border/30 flex items-center gap-2">
             <Code className="w-3 h-3 text-text-muted" />
             <span className="text-2xs font-mono text-text-muted">
-              {xpTableTab === 'csv' ? `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(1)}.csv` :
+              {xpTableTab === 'csv' ? `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(2)}.csv` :
                xpTableTab === 'struct' ? 'Framework/FProgressionCurveRow.h' :
                'Player/ARPGPlayerCharacter_DataTable.cpp'}
             </span>
