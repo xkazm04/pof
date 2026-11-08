@@ -13,6 +13,7 @@ import { FEEDBACK_PARAMS } from '../_shared/data';
 /** Tuner knob id -> the UGA_MeleeAttack UPROPERTY it drives (snake_case). */
 const MAPPED: Record<string, string> = {
   hitstopDuration: 'hit_stop_duration',
+  hitstopTimeDilation: 'hit_stop_time_dilation',
   shakeScale: 'hit_camera_shake_scale',
 };
 

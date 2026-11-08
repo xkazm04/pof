@@ -1,8 +1,5 @@
 'use client';
 
-import { useState, useCallback, useId } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, OVERLAY_WHITE, withOpacity, OPACITY_25 } from '@/lib/chart-colors';
 import { ChartLegend } from '@/components/ui/ChartLegend';
 import { STAGGER_DEFAULT } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -10,6 +7,7 @@ import { NODE_W, NODE_H, BRANCH_OFFSET_X } from './types';
 import { DAMAGE_PIPELINE } from './pipeline-data';
 import { FlowNode, FlowArrow } from './FlowNode';
 import { ResponsiveSvgContainer } from './ResponsiveSvgContainer';
+import { useCppRefDisclosure, CppRefPanel } from './CppRefDisclosure';
 
 /**
  * The branch arrows are drawn as bare SVG text, which reads as unanchored noise
@@ -22,19 +20,8 @@ const BRANCH_OUTCOME: Record<string, string> = {
 };
 
 export function DamagePipelineFlow() {
-  const [expandedNode, setExpandedNode] = useState<string | null>(null);
-  const uid = useId();
-  const panelId = `${uid}-cppref`;
-
-  const toggle = useCallback((id: string) => {
-    setExpandedNode((prev) => (prev === id ? null : id));
-  }, []);
-
-  /** Collapse the reference panel and hand focus back to the node that opened it. */
-  const collapse = useCallback(() => {
-    if (expandedNode) document.getElementById(`${uid}-node-${expandedNode}`)?.focus();
-    setExpandedNode(null);
-  }, [expandedNode, uid]);
+  const { expandedNode, expandedNodeData, panelId, toggle, collapse, containerProps, nodeProps } =
+    useCppRefDisclosure(DAMAGE_PIPELINE);
 
   const centerX = 260;
   const rightX = centerX + BRANCH_OFFSET_X;
@@ -58,15 +45,7 @@ export function DamagePipelineFlow() {
   const svgWidth = centerX * 2 + 20;
 
   return (
-    <div
-      className="relative min-h-[200px]"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape' && expandedNode) {
-          e.stopPropagation();
-          collapse();
-        }
-      }}
-    >
+    <div className="relative min-h-[200px]" {...containerProps}>
       {/* Decode the branch-arrow colors so the death/alive paths read without
           relying on red-vs-green (WCAG 1.4.1); the arrows also carry text labels.
           Each description names where that branch lands, so the key stands alone. */}
@@ -121,20 +100,8 @@ export function DamagePipelineFlow() {
             const isExpanded = expandedNode === node.id;
             return (
               <g key={node.id}
-                id={`${uid}-node-${node.id}`}
-                role={interactive ? 'button' : 'img'}
-                tabIndex={interactive ? 0 : undefined}
-                aria-expanded={interactive ? isExpanded : undefined}
-                aria-controls={interactive && isExpanded ? panelId : undefined}
-                aria-label={`${node.label} — ${node.kind} step. ${node.detail}.${BRANCH_OUTCOME[node.id] ?? ''}${interactive ? ' Activate to show its C++ reference.' : ''}`}
-                onKeyDown={(e) => {
-                  if (!interactive) return;
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggle(node.id);
-                  }
-                }}
-                className={interactive ? 'focus-ring-outline cursor-pointer' : undefined}>
+                {...nodeProps(node)}
+                aria-label={`${node.label} — ${node.kind} step. ${node.detail}.${BRANCH_OUTCOME[node.id] ?? ''}${interactive ? ' Activate to show its C++ reference.' : ''}`}>
                 <FlowNode node={node} x={nx} y={ny}
                   delay={i * STAGGER_DEFAULT}
                   expanded={isExpanded}
@@ -181,39 +148,7 @@ export function DamagePipelineFlow() {
         </svg>
       </ResponsiveSvgContainer>
 
-      <AnimatePresence>
-        {expandedNode && (() => {
-          const node = DAMAGE_PIPELINE.find((n) => n.id === expandedNode);
-          if (!node?.cppRef) return null;
-          return (
-            <motion.div key={expandedNode}
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              id={panelId}
-              role="region"
-              aria-label={`C++ reference for ${node.label}`}
-              className="mt-2 px-3 py-2 rounded-lg border border-border/40 bg-surface-deep/80"
-              data-testid="pipeline-cpp-ref">
-              {/* Name the step the snippet belongs to — the panel sits below a
-                  scrollable diagram, so "C++ Reference" alone is ambiguous. */}
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">
-                  C++ Reference — <span className="text-text">{node.label}</span>
-                </div>
-                <button type="button"
-                  onClick={collapse}
-                  aria-label={`Hide C++ reference for ${node.label}`}
-                  className="focus-ring shrink-0 rounded p-0.5 text-text-muted hover:text-text"
-                  data-testid="pipeline-cpp-ref-close">
-                  <X className="w-3.5 h-3.5" aria-hidden="true" />
-                </button>
-              </div>
-              <code className="text-xs font-mono text-text break-all">{node.cppRef}</code>
-            </motion.div>
-          );
-        })()}
-      </AnimatePresence>
+      <CppRefPanel node={expandedNodeData} panelId={panelId} onClose={collapse} />
     </div>
   );
 }
