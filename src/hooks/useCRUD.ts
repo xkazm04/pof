@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useIsMounted } from '@/hooks/useIsMounted';
@@ -55,8 +55,12 @@ export function useCRUD<T>(
   const [error, setError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const isMounted = useIsMounted();
+  // Last request wins: a slow response for a previous endpoint never lands over the current one.
+  const latestRequestRef = useRef(0);
 
   const refetch = useCallback(async () => {
+    const requestId = ++latestRequestRef.current;
+    const isCurrent = () => isMounted() && requestId === latestRequestRef.current;
     setIsLoading(true);
     setError(null);
     try {
@@ -67,14 +71,14 @@ export function useCRUD<T>(
         const raw = await apiFetch<unknown>(endpoint);
         result = transform ? transform(raw) : raw as T;
       }
-      if (!isMounted()) return;
+      if (!isCurrent()) return;
       setData(result);
     } catch (err) {
-      if (isMounted()) {
+      if (isCurrent()) {
         setError(err instanceof Error ? err.message : (errorMessage ?? 'Failed to fetch data'));
       }
     } finally {
-      if (isMounted()) setIsLoading(false);
+      if (isCurrent()) setIsLoading(false);
     }
   }, [endpoint, transform, fetcher, errorMessage, isMounted]);
 
