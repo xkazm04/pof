@@ -2,7 +2,6 @@
 
 import { STATUS_SUCCESS, STATUS_ERROR, withOpacity, OPACITY_20 } from '@/lib/chart-colors';
 import { FEEL_FIELD_META, type FeelComparison } from '@/lib/character-feel-optimizer';
-import { NeonBar } from '../../unique-tabs/_design';
 
 /* ── Comparison Row ──────────────────────────────────────────────────────── */
 
@@ -19,9 +18,15 @@ export function ComparisonRow({ item, colorA, colorB }: {
   colorB: string;
 }) {
   const meta = FEEL_FIELD_META.find((f) => f.key === item.field);
-  const range = meta ? meta.max - meta.min : 1;
-  const barA = meta ? Math.min(((item.valueA - meta.min) / range) * 100, 100) : 50;
-  const barB = meta ? Math.min(((item.valueB - meta.min) / range) * 100, 100) : 50;
+  // Clamped both ends (as ValueRow does): a resolved-stack value below the
+  // field min would otherwise give a negative width, which CSS drops.
+  const barPct = (v: number) => {
+    if (!meta) return 50;
+    const range = meta.max - meta.min;
+    return range === 0 ? 0 : Math.max(0, Math.min(100, ((v - meta.min) / range) * 100));
+  };
+  const barA = barPct(item.valueA);
+  const barB = barPct(item.valueB);
 
   return (
     <div className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface/20 transition-colors text-xs font-mono">
