@@ -61,7 +61,10 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const [plainMode, setPlainMode] = useState(false);
   // Reset (local + server) state — a failed server delete must be reported, never swallowed.
   const [resetting, setResetting] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
+  // Keyed by the entity the reset ran against: the banner's Retry re-runs a DESTRUCTIVE delete
+  // against whichever entity is open, so a failure must never render on (or retry against)
+  // another one. An unkeyed string followed the operator across entity switches.
+  const [resetFailure, setResetFailure] = useState<{ entityId: string; error: string } | null>(null);
   // Explicit refresh-from-server state. A refresh RECONCILES (it can adopt content and drop
   // steps the server no longer has), so what it did is reported, never applied silently.
   const [refreshing, setRefreshing] = useState(false);
@@ -275,13 +278,14 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // surviving server artifacts were re-adopted on the next load and the reset silently
   // un-did itself. Reset now deletes the server rows FIRST and only clears local state
   // when that succeeded — a reset that reports "done" is a reset that stuck.
+  const resetError = resetFailure && resetFailure.entityId === entityKey ? resetFailure.error : null;
   const resetEntityEverywhere = useCallback(async () => {
     if (!catalogId || !entityKey) return;
-    setResetError(null);
+    setResetFailure(null);
     setResetting(true);
     try {
       const res = await deleteEntityArtifacts(catalogId, entityKey);
-      if (!res.ok) { setResetError(res.error); return; }
+      if (!res.ok) { setResetFailure({ entityId: entityKey, error: res.error }); return; }
       useLabPipelineStore.getState().resetEntity(entityKey);
       invalidateArtifacts(catalogId, entityKey);
     } finally {
@@ -350,7 +354,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     fields,
     isItems,
     produce,
-    resetEntityEverywhere, resetting, resetError, dismissResetError: () => setResetError(null),
+    resetEntityEverywhere, resetting, resetError, dismissResetError: () => setResetFailure(null),
     ueAssetCount,
     clearStepError,
     retryStepSync, dismissStepSyncError,
