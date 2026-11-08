@@ -5,6 +5,7 @@ import type {
 } from '@/lib/audio-gen/types';
 import { refusalMessage, supportsKind } from '@/lib/audio-gen/capabilities';
 import { logger } from '@/lib/logger';
+import { ProviderNotConfiguredError } from '@/lib/audio-gen/errors';
 
 const ENDPOINT = 'https://api.elevenlabs.io/v1/sound-generation';
 
@@ -54,7 +55,7 @@ export const ElevenLabsProvider: AudioProvider = {
     }
 
     const key = getKey();
-    if (!key) throw new Error('ELEVENLABS_API_KEY not configured');
+    if (!key) throw new ProviderNotConfiguredError('ELEVENLABS_API_KEY not configured');
 
     const format: 'mp3' | 'wav' = 'mp3'; // tier-safe default
     const outputFormatQuery = 'mp3_44100_128';

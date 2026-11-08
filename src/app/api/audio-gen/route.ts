@@ -33,6 +33,7 @@ import {
 import { audioPromptFor } from '@/lib/media-prompts/audioPrompts';
 import { AUDIO_KINDS, type AudioKind } from '@/lib/audio-gen/types';
 import { isAudioKind, refusalMessage, supportsKind } from '@/lib/audio-gen/capabilities';
+import { ProviderNotConfiguredError } from '@/lib/audio-gen/errors';
 
 /** `null`, arrays and scalars parse as JSON but are not a request body: destructuring `null` was a TypeError 500. */
 function isJsonObject(v: unknown): boolean {
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
     result = await p.generate({ kind, prompt: composedPrompt, durationSeconds: body.durationSeconds });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'generation failed';
-    if (msg.includes('ELEVENLABS_API_KEY')) return apiError(msg, 503);
+    if (e instanceof ProviderNotConfiguredError) return apiError(msg, 503);
     return apiError(msg, 502);
   }
 
