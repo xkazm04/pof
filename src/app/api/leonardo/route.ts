@@ -33,7 +33,13 @@ export async function POST(request: Request) {
       const prompt = body?.prompt;
       if (!prompt || typeof prompt !== 'string') return apiError('Missing or invalid "prompt" field', 400);
       if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
-      const opts: GenerateImageOptions = body?.opts ?? {};
+      // `cleanup` and `pollIntervalMs` are library seams, not request options: forwarding a
+      // caller's `cleanup: false` would leave the generation on the Leonardo account, breaking
+      // the download-then-delete contract every generation honours. No in-tree caller sends either.
+      const rawOpts = body?.opts && typeof body.opts === 'object' && !Array.isArray(body.opts) ? body.opts : {};
+      const opts: GenerateImageOptions = { ...(rawOpts as GenerateImageOptions) };
+      delete opts.cleanup;
+      delete opts.pollIntervalMs;
 
       // Opt-in style consistency through the ONE canon-aware resolver (style-apply.ts):
       // `canonProfile` (/diablo W03 D13) picks WHICH style — the project's active one for PoF's
