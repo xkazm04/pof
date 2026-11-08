@@ -28,6 +28,22 @@ export function resolveRarityName(value: string | number | undefined): string {
   return RARITY_ENUM_VALUES.find(r => r.toLowerCase() === stripped.toLowerCase()) ?? stripped;
 }
 
+/**
+ * Clamp a rarity to a real EARPGItemRarity value. Anything outside the enum (an unknown
+ * imported name) becomes 'Common' so generated C++/JSON never names a value UE rejects.
+ */
+function enumRarity(value: string | undefined): string {
+  const raw = value ?? 'Common';
+  return RARITY_ENUM_VALUES.includes(raw) ? raw : 'Common';
+}
+
+function isKnownRarity(value: string | number | undefined): boolean {
+  if (value === undefined) return true;
+  if (typeof value === 'number') return RARITY_ENUM_VALUES[value] !== undefined;
+  const stripped = String(value).replace(/^.*::/, '').toLowerCase();
+  return RARITY_ENUM_VALUES.some(r => r.toLowerCase() === stripped);
+}
+
 export function resolveItemName(item: UE5LootEntry['Item']): string {
   if (!item) return 'Unknown Item';
   if (typeof item === 'string') {
@@ -53,17 +69,27 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 
 export function parseUE5LootTable(
   json: UE5LootTableJson,
-): { entries: (LootEditorEntry & { source: LootSource })[]; nothingWeight: number } {
+): { entries: (LootEditorEntry & { source: LootSource })[]; nothingWeight: number; warnings: string[] } {
   // Valid JSON of the wrong shape (null, an array, a non-array Entries, a null row) imports
   // as "no entries" instead of throwing into the caller's "Failed to parse JSON" catch.
   const root: Record<string, unknown> = isRecord(json) ? json : {};
   const props = isRecord(root.Properties) ? root.Properties : root;
   const rawEntries = (Array.isArray(props.Entries) ? props.Entries : []).filter(isRecord) as UE5LootEntry[];
   const nothingWeight = finiteNonNeg(props.NothingWeight, 0);
+  const warnings: string[] = [];
 
   const entries = rawEntries.map((entry, i) => {
-    const minRarity = resolveRarityName(entry.MinRarity);
-    const maxRarity = resolveRarityName(entry.MaxRarity);
+    const rowName = resolveItemName(entry.Item);
+    // An unknown rarity is mapped to Common (never carried into codegen) and reported by row.
+    const rarityOf = (raw: string | number | undefined, field: string): string => {
+      if (!isKnownRarity(raw)) {
+        warnings.push(`Row ${i + 1} "${rowName}": unknown ${field} "${String(raw)}" mapped to Common.`);
+        return 'Common';
+      }
+      return resolveRarityName(raw);
+    };
+    const minRarity = rarityOf(entry.MinRarity, 'MinRarity');
+    const maxRarity = rarityOf(entry.MaxRarity, 'MaxRarity');
     // UE5 rolls RandRange(Min, Max): normalise an inverted range so it never round-trips.
     const qa = finiteNonNeg(entry.MinQuantity, 1);
     const qb = finiteNonNeg(entry.MaxQuantity, 1);
@@ -82,7 +108,7 @@ export function parseUE5LootTable(
     };
   });
 
-  return { entries, nothingWeight };
+  return { entries, nothingWeight, warnings };
 }
 
 /* -- UE5 Export helpers --------------------------------------------------- */
@@ -93,8 +119,8 @@ export function generateUE5LootTableJson(entries: (LootEditorEntry & { source?: 
     DropWeight: e.weight,
     MinQuantity: e.minQuantity ?? 1,
     MaxQuantity: e.maxQuantity ?? 1,
-    MinRarity: `EARPGItemRarity::${e.minRarity ?? e.rarity}`,
-    MaxRarity: `EARPGItemRarity::${e.maxRarity ?? e.rarity}`,
+    MinRarity: `EARPGItemRarity::${enumRarity(e.minRarity ?? e.rarity)}`,
+    MaxRarity: `EARPGItemRarity::${enumRarity(e.maxRarity ?? e.rarity)}`,
     // Emit source so an export → re-import round-trip preserves it.
     ...(e.source ? { Source: e.source } : {}),
   }));
@@ -116,8 +142,8 @@ export function generateUE5LootTableCpp(entries: LootEditorEntry[], nothingWeigh
     lines.push(`//     DropWeight = ${e.weight.toFixed(1)}f,`);
     lines.push(`//     MinQuantity = ${e.minQuantity ?? 1},`);
     lines.push(`//     MaxQuantity = ${e.maxQuantity ?? 1},`);
-    lines.push(`//     MinRarity = EARPGItemRarity::${e.minRarity ?? e.rarity},`);
-    lines.push(`//     MaxRarity = EARPGItemRarity::${e.maxRarity ?? e.rarity},`);
+    lines.push(`//     MinRarity = EARPGItemRarity::${enumRarity(e.minRarity ?? e.rarity)},`);
+    lines.push(`//     MaxRarity = EARPGItemRarity::${enumRarity(e.maxRarity ?? e.rarity)},`);
     lines.push(`// },`);
   }
   lines.push('');
@@ -133,8 +159,8 @@ export function generateUE5LootTableCpp(entries: LootEditorEntry[], nothingWeigh
     lines.push(`\tE.DropWeight = ${e.weight.toFixed(1)}f;`);
     lines.push(`\tE.MinQuantity = ${e.minQuantity ?? 1};`);
     lines.push(`\tE.MaxQuantity = ${e.maxQuantity ?? 1};`);
-    lines.push(`\tE.MinRarity = EARPGItemRarity::${e.minRarity ?? e.rarity};`);
-    lines.push(`\tE.MaxRarity = EARPGItemRarity::${e.maxRarity ?? e.rarity};`);
+    lines.push(`\tE.MinRarity = EARPGItemRarity::${enumRarity(e.minRarity ?? e.rarity)};`);
+    lines.push(`\tE.MaxRarity = EARPGItemRarity::${enumRarity(e.maxRarity ?? e.rarity)};`);
     lines.push(`}`);
   }
   return lines.join('\n');

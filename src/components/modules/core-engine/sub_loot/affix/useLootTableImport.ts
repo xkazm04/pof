@@ -28,7 +28,7 @@ export function useLootTableImport({
     reader.onload = () => {
       try {
         const json = JSON.parse(reader.result as string) as UE5LootTableJson;
-        const { entries, nothingWeight: nw } = parseUE5LootTable(json);
+        const { entries, nothingWeight: nw, warnings } = parseUE5LootTable(json);
         if (entries.length === 0) {
           setImportError('No loot entries found in file. Expected { Entries: [...] } format.');
           return;
@@ -41,7 +41,8 @@ export function useLootTableImport({
         setEditorHistory([expanded]);
         setNothingWeight(nw);
         setImportSource(file.name);
-        setImportError(null);
+        // Imported anyway; name the rows whose rarity was not a real EARPGItemRarity value.
+        setImportError(warnings.length > 0 ? `Imported with ${warnings.length} warning(s): ${warnings.join(' ')}` : null);
         setShowEditorJson(false);
         setShowReExport(null);
         setPage(0);
