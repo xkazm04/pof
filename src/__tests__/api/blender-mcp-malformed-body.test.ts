@@ -24,6 +24,9 @@ vi.mock('@/lib/logger', () => ({
 
 const { POST: bridge } = await import('@/app/api/blender-mcp/route');
 const { POST: execute } = await import('@/app/api/blender-mcp/execute/route');
+const { POST: generate } = await import('@/app/api/blender-mcp/generate/route');
+const { POST: importJob } = await import('@/app/api/blender-mcp/generate/import/route');
+const { POST: download } = await import('@/app/api/blender-mcp/assets/download/route');
 
 function rawReq(path: string, body: string) {
   return new NextRequest(`http://localhost:3001${path}`, {
@@ -62,5 +65,17 @@ describe('POST /api/blender-mcp/execute — malformed body', () => {
     const json = await res.json();
     expect(json.success).toBe(false);
     expect(svc.executeCode).not.toHaveBeenCalled();
+  });
+});
+
+describe.each([
+  ['generate', () => generate],
+  ['generate/import', () => importJob],
+  ['assets/download', () => download],
+] as const)('POST /api/blender-mcp/%s - malformed body', (name, route) => {
+  it.each(MALFORMED)('answers 400 for body %s', async (body) => {
+    const res = await route()(rawReq(`/api/blender-mcp/${name}`, body));
+    expect(res.status).toBe(400);
+    expect((await res.json()).success).toBe(false);
   });
 });
