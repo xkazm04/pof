@@ -34,7 +34,7 @@ export function MetricsRow({ stats, version, nextVersion, onBump }: {
   // cancelled count is stated rather than folded into "failed".
   const decided = stats.decidedBuilds ?? stats.successCount + stats.failedCount;
   const cancelled = stats.cancelledCount ?? 0;
-  const decidedSub = `${stats.successCount}/${decided}${cancelled > 0 ? ` · ${cancelled} cancelled` : ''}`;
+  const decidedSub = `${stats.successCount}/${decided}${cancelled > 0 ? ` Â· ${cancelled} cancelled` : ''}`;
   return (
     <div className="grid grid-cols-5 gap-2">
       <MetricCard

@@ -31,7 +31,8 @@ describe('MetricsRow keeps one denominator', () => {
     const t = text(stats({ totalBuilds: 9, successCount: 7, decidedBuilds: 7, cancelledCount: 2, successRate: 100 }));
     expect(t).toContain('7/7');
     expect(t).not.toContain('7/9');
-    expect(t).toContain('2 cancelled');
+    expect(t).toContain('7/7 · 2 cancelled');
+    expect(t).not.toContain('�');
   });
 
   it('never claims a failure share when nothing was decided', () => {
