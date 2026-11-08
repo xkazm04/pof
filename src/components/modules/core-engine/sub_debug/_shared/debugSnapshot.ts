@@ -146,7 +146,7 @@ function projectStats(session: ProfilingSession, memory: DebugSnapshot['memory']
   const avgTriangles = tail.length > 0 ? tail.reduce((sum, f) => sum + f.triangleCount, 0) / tail.length : 0;
   return [
     { group: 'Frame', stats: [
-      { label: 'FPS', value: s.avgFPS, digits: 1, unit: 'fps', sparkline: series((f) => round1(1000 / f.totalFrameMs)) },
+      { label: 'FPS', value: s.avgFPS, digits: 1, unit: 'fps', sparkline: series((f) => round1(1000 / f.totalFrameMs)).filter(Number.isFinite) },
       { label: 'Frame Time', value: s.avgFrameMs, digits: 2, unit: 'ms', sparkline: series((f) => f.totalFrameMs) },
       { label: 'P99 Frame', value: s.p99FrameMs, digits: 2, unit: 'ms', sparkline: [] },
     ] },

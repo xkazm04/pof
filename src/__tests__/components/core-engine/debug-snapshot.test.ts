@@ -104,3 +104,13 @@ describe('GC interval provenance', () => {
     expect(projectDebugSnapshot(session, null).gc.avgIntervalS).toBeNull();
   });
 });
+
+describe('FPS sparkline', () => {
+  it('a zero-length frame does not put a non-finite point in the FPS sparkline', () => {
+    const frames = SAMPLE_SESSION.frameSamples.map((f, i) => (i === 0 ? { ...f, totalFrameMs: 0 } : f));
+    const snap = projectDebugSnapshot({ ...SAMPLE_SESSION, frameSamples: frames }, null);
+    const fps = snap.stats.flatMap((g) => g.stats).find((s) => s.label === 'FPS');
+    expect(fps?.sparkline.length).toBeGreaterThan(0);
+    expect(fps?.sparkline.every(Number.isFinite)).toBe(true);
+  });
+});
