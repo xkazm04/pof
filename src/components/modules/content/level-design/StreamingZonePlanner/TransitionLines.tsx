@@ -1,3 +1,4 @@
+import { useReducedMotion } from 'framer-motion';
 import { STATUS_WARNING } from '@/lib/chart-colors';
 import { TRANSITION_STYLES } from './constants';
 import type { TransitionLine } from './types';
@@ -8,6 +9,8 @@ interface TransitionLinesProps {
 }
 
 export function TransitionLines({ lines, deleteTransition }: TransitionLinesProps) {
+  // SMIL <animate> is not covered by the global prefers-reduced-motion CSS rule.
+  const reduceMotion = useReducedMotion();
   return (
     <>
       {lines.map((ln) => {
@@ -33,7 +36,7 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
               strokeDasharray="4 12"
               className="pointer-events-none"
             >
-              <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" repeatCount="indefinite" />
+              {!reduceMotion && <animate attributeName="stroke-dashoffset" from="16" to="0" dur="1s" repeatCount="indefinite" />}
             </line>
 
             {/* Condition badge at midpoint */}

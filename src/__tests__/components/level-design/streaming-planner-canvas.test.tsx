@@ -11,7 +11,10 @@ import { TRANSITION_STYLES } from '@/components/modules/content/level-design/Str
 import type { TransitionLine } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
 import type { StreamingZone } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
 
-afterEach(cleanup);
+const motion = vi.hoisted(() => ({ reduced: false }));
+vi.mock('framer-motion', () => ({ useReducedMotion: () => motion.reduced }));
+
+afterEach(() => { cleanup(); motion.reduced = false; });
 
 const ZONE: StreamingZone = {
   id: 'z', name: 'Town', type: 'town', gridX: 2, gridY: 3, loadPriority: 'normal', alwaysLoaded: false, preloadRadius: 1,
@@ -83,5 +86,21 @@ describe('ZoneGrid keyboard', () => {
     fireEvent.focus(grid);
     for (const key of ['ArrowRight', 'ArrowRight', 'ArrowDown', 'ArrowDown', 'ArrowDown']) fireEvent.keyDown(grid, { key });
     expect(screen.getByRole('status').textContent).toMatch(/Town/);
+  });
+});
+
+describe('reduced motion', () => {
+  const cell = <svg><ZoneCell zone={ZONE} selectedZoneId="z" linkingFrom={null} paintType={null} handleCellClick={() => {}} /></svg>;
+  const lines = <svg><TransitionLines lines={[LINE]} deleteTransition={() => {}} /></svg>;
+
+  it('runs the line and ring animations by default', () => {
+    expect(render(cell).container.querySelectorAll('animate').length).toBe(1);
+    expect(render(lines).container.querySelectorAll('animate').length).toBe(1);
+  });
+
+  it('drops them when the user asked for reduced motion', () => {
+    motion.reduced = true;
+    expect(render(cell).container.querySelectorAll('animate').length).toBe(0);
+    expect(render(lines).container.querySelectorAll('animate').length).toBe(0);
   });
 });

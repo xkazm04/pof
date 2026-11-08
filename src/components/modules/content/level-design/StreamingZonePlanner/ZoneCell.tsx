@@ -1,3 +1,4 @@
+import { useReducedMotion } from 'framer-motion';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_WARNING, OVERLAY_WHITE } from '@/lib/chart-colors';
 import { CELL_SIZE, ZONE_TYPES, PRIORITY_COLORS } from './constants';
@@ -14,6 +15,7 @@ interface ZoneCellProps {
 }
 
 export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom, paintType, handleCellClick }: ZoneCellProps) {
+  const reduceMotion = useReducedMotion();
   const cfg = ZONE_TYPES[zone.type];
   const isSelected = selectedZoneId === zone.id;
   const isLinkTarget = linkingFrom !== null && linkingFrom !== zone.id;
@@ -51,7 +53,7 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
             strokeDasharray="8,8"
             className="pointer-events-none"
           >
-            <animate attributeName="stroke-dashoffset" from="32" to="0" dur="2s" repeatCount="indefinite" />
+            {!reduceMotion && <animate attributeName="stroke-dashoffset" from="32" to="0" dur="2s" repeatCount="indefinite" />}
           </rect>
         </g>
       )}
