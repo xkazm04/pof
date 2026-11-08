@@ -114,7 +114,7 @@ useLifecycle(() => createTimerLifecycle(callback, 500), [callback]);
 useGuardedLifecycle(() => createGuardedLifecycle(setup));
 ```
 
-Both hooks store the `Lifecycle` instance in a `useRef` so `dispose()` is always called on the exact instance that was created, even across strict-mode double invocations.
+Each effect closes over the instance it created, so `dispose()` always reaches that exact instance, even across strict-mode double invocations.
 
 ---
 
@@ -182,7 +182,7 @@ useSuspendableEffect(() => {
 }, [poll]);
 ```
 
-When `suspended` becomes `true`, the cleanup function fires. When `suspended` becomes `false`, the effect re-runs (line 106: `[suspended, ...deps]`).
+When `suspended` becomes `true`, the cleanup function fires. When `suspended` becomes `false`, the effect re-runs (line 103: `[suspended, ...deps]`).
 
 ### useSuspendableSelector
 
@@ -192,7 +192,7 @@ Drop-in for Zustand's `useStore(selector)` that freezes while suspended:
 const progress = useSuspendableSelector(useModuleStore, (s) => s.checklistProgress);
 ```
 
-While suspended, the store subscription is replaced with a no-op (no re-renders). On resume, `frozenRef` is cleared and `getSnapshot` reads fresh state from the store. Internally uses `useSyncExternalStore` (line 81) for tear-free reads.
+While suspended, the store subscription is replaced with a no-op (no re-renders). On resume, `frozenRef` is cleared and `getSnapshot` reads fresh state from the store. Internally uses `useSyncExternalStore` (line 79) for tear-free reads.
 
 ---
 

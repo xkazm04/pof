@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { resolveAffectedItems, type VerifyTarget } from '@/lib/checklist-verify-index';
@@ -96,8 +96,6 @@ export function useFileWatcher(): WatcherStatus {
     changeCount: 0,
   });
 
-  const eventSourceRef = useRef<EventSource | null>(null);
-
   // Auto-verify the items whose expectation names a changed class
   const autoVerify = useCallback((declarations: ScannedDeclaration[]) => {
     const items = resolveAffectedItems(declarations);
@@ -147,7 +145,6 @@ export function useFileWatcher(): WatcherStatus {
     return createLifecycle<EventSource>(
       () => {
         const es = new EventSource(url);
-        eventSourceRef.current = es;
 
         es.onmessage = (event) => {
           try {
@@ -168,7 +165,6 @@ export function useFileWatcher(): WatcherStatus {
       },
       (es) => {
         es.close();
-        eventSourceRef.current = null;
         setStatus((prev) => ({ ...prev, connected: false }));
       },
     );
