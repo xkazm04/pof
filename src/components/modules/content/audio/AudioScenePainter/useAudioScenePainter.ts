@@ -65,7 +65,7 @@ export function useAudioScenePainter({
    * a selection click with hand jitter never writes the scene.
    */
   const pressOrigin = useRef({ x: 0, y: 0 });
-  const pastThreshold = useCallback((e: React.MouseEvent) => gestureDirty.current
+  const pastThreshold = useCallback((e: { clientX: number; clientY: number }) => gestureDirty.current
     || Math.hypot(e.clientX - pressOrigin.current.x, e.clientY - pressOrigin.current.y) >= DRAG_THRESHOLD_PX, []);
 
   const serverScene = useMemo<SceneDraft>(() => ({ zones, emitters }), [zones, emitters]);
@@ -187,7 +187,7 @@ export function useAudioScenePainter({
     onSelectEmitter(null);
   }, [paintMode, getSVGPoint, baseScene, runCommit, onSelectEmitter, onSelectZone, view]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent | MouseEvent) => {
     if (listenerDrag.current) {
       setListener(getSVGPoint(e));
       return;
@@ -284,6 +284,28 @@ export function useAudioScenePainter({
     setDragState(null);
     setIsPanning(false);
   }, [drawState, baseScene, runCommit, onSelectZone, onSelectEmitter]);
+
+  // A gesture outlives the svg: the toolbar, minimap and zoom cluster overlay the
+  // canvas, so the pointer crossing one fires svg `mouseleave`, which must NOT end
+  // the drag/resize/draw. Move and up are also tracked on the window; presses that
+  // land inside the svg are still handled by its own React handlers (no double run).
+  const moveRef = useRef(handleMouseMove);
+  const upRef = useRef(handleMouseUp);
+  useEffect(() => {
+    moveRef.current = handleMouseMove;
+    upRef.current = handleMouseUp;
+  }, [handleMouseMove, handleMouseUp]);
+  useEffect(() => {
+    const outsideSvg = (e: MouseEvent) => !(e.target instanceof Node && svgRef.current?.contains(e.target));
+    const move = (e: MouseEvent) => { if (outsideSvg(e)) moveRef.current(e); };
+    const up = (e: MouseEvent) => { if (outsideSvg(e)) upRef.current(); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+  }, []);
 
   // ── Item interaction ──
 

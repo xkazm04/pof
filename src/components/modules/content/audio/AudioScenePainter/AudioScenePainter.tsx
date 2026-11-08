@@ -108,7 +108,6 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
       >
         {/* Grid and defs — spacing scales with zoom so the grid tracks content. */}
         <defs>
