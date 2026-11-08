@@ -17,7 +17,11 @@ export function CSVImportPanel({ onImport, isImporting }: {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
+    // Clear the picker so choosing the same path again (re-export, failed read) fires change.
+    // The File object stays valid after the value is reset.
+    input.value = '';
     if (!file) return;
     setName(file.name.replace(/\.(csv|txt)$/i, ''));
     setReadError(null);
