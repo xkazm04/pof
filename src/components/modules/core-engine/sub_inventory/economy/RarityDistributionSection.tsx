@@ -6,12 +6,12 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_MUTED, OVERLAY_WHI
 } from '@/lib/chart-colors';
 import { useItemEconomySessionStore } from '@/stores/itemEconomySessionStore';
 import type { ItemRarity } from '@/types/economy-simulator';
-import { rarityEvidence } from '../_shared/balance-evidence';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { rarityEvidence } from '@/components/modules/core-engine/sub_inventory/_shared/balance-evidence';
+import { BlueprintPanel, SectionHeader, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import {
   ACCENT,
   RARITY_DIST,
-} from '../_shared/data';
+} from '@/components/modules/core-engine/sub_inventory/_shared/data';
 
 /** The design-target level the analyzer reads (matches the Balance Advisor's default). */
 const ANALYZER_LEVEL = 14;

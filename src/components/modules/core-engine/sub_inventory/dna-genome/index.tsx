@@ -20,8 +20,8 @@ import { BreedingTab } from './BreedingTab';
 import { EvolutionTab } from './EvolutionTab';
 import { LibraryTab } from './LibraryTab';
 import { CodePreview } from './CodePreview';
-import { GenomeImportPanel } from '../../unique-tabs/_genome-share/GenomeImportPanel';
-import { BuildCodeExportPanel } from '../../unique-tabs/_genome-share/BuildCodeExport';
+import { GenomeImportPanel } from '@/components/modules/core-engine/unique-tabs/_genome-share/GenomeImportPanel';
+import { BuildCodeExportPanel } from '@/components/modules/core-engine/unique-tabs/_genome-share/BuildCodeExport';
 import { GenomeEditorHeader } from './GenomeEditorHeader';
 import { GenomeSelector } from './GenomeSelector';
 

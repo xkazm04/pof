@@ -5,11 +5,11 @@ import {
   withOpacity, OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_37,
 } from '@/lib/chart-colors';
 import { motion } from 'framer-motion';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { BlueprintPanel, SectionHeader, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import {
   ACCENT, RARITY_COLORS,
   CRYSTAL_STAFF_SOURCES,
-} from '../_shared/data';
+} from '@/components/modules/core-engine/sub_inventory/_shared/data';
 
 /* ── Drop Source Section ───────────────────────────────────────────────── */
 

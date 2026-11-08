@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useMemo } from 'react';
-import type { ScalingLine } from '../_shared/data';
+import type { ScalingLine } from '@/components/modules/core-engine/sub_inventory/_shared/data';
 
 import { withOpacity, OPACITY_6, OPACITY_10, OPACITY_25, OVERLAY_WHITE } from '@/lib/chart-colors';
 /* ── Item Level Scaling Chart SVG ──────────────────────────────────────── */

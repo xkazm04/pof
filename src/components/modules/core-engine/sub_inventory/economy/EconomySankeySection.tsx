@@ -6,8 +6,8 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   ACCENT_PURPLE,
   withOpacity, OPACITY_12, OPACITY_25, OPACITY_37,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import { ACCENT } from '../_shared/data';
+import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
+import { ACCENT } from '@/components/modules/core-engine/sub_inventory/_shared/data';
 
 /* ── Economy Sankey Flow ──────────────────────────────────────────────── */
 

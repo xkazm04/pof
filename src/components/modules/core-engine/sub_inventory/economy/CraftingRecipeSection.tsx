@@ -4,11 +4,11 @@ import { FlaskConical } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_MUTED,
   withOpacity, OPACITY_5, OPACITY_8, OPACITY_25, OPACITY_37,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { BlueprintPanel, SectionHeader, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import {
   ACCENT, RARITY_COLORS,
   SAMPLE_RECIPE,
-} from '../_shared/data';
+} from '@/components/modules/core-engine/sub_inventory/_shared/data';
 
 /* ── Crafting Recipe Section ───────────────────────────────────────────── */
 
