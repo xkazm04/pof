@@ -1,8 +1,9 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, cleanup, fireEvent } from '@testing-library/react';
+import { render, cleanup, fireEvent, act } from '@testing-library/react';
 import { AbilityQuickPicker } from '@/components/modules/core-engine/sub_character/input/AbilityQuickPicker';
 import { COMBO_ABILITIES } from '@/components/modules/core-engine/sub_ability/_shared/data';
 
+import { PropertiesMetric } from '@/components/modules/core-engine/sub_character/metrics/BlueprintMetrics';
 import { OptimizerMetric, DodgeMetric } from '@/components/modules/core-engine/sub_character/metrics/MovementMetrics';
 import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
@@ -48,6 +49,18 @@ describe('Features-tab metrics read the persisted feel stack', () => {
       expect(container.textContent).toContain(preset.name);
       unmount();
     }
+  });
+
+  it('PropertiesMetric follows an Inspector edit (MaxWalkSpeed 320 -> 450)', () => {
+    const preset = FEEL_PRESETS[0];
+    useCharacterBlueprintStore.setState({ baseFeelPresetId: preset.id, feelLayers: [] });
+    const { container, unmount } = render(<PropertiesMetric />);
+    const read = () => container.querySelector('[data-testid="properties-metric-Spd"]')?.getAttribute('data-value');
+    const before = read();
+    expect(before).toBe(String(preset.profile.movement.maxWalkSpeed));
+    act(() => { useCharacterBlueprintStore.getState().setInspectorOverride('MaxWalkSpeed', 450); });
+    expect(read()).toBe('450');
+    unmount();
   });
 
   it('DodgeMetric shows the resolved dodge distance (cm -> m), not a fixed 4.5m', () => {
