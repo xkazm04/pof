@@ -1,6 +1,7 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { ScanLine, FolderOpen } from 'lucide-react';
 import type { ScannedAsset } from '@/app/api/filesystem/scan-assets/route';
 import type { InventoryEdge } from '@/lib/asset-inventory/declared-edges';
@@ -22,16 +23,19 @@ interface AssetCardProps {
 export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencies, ueListed, setExpandedAsset }: AssetCardProps) {
   const conf = TYPE_CONFIG[asset.type];
   const Icon = conf.icon;
+  // Same contract as the sibling AssetPipelineDiagram: no scale-in, spring or
+  // hover lift under prefers-reduced-motion (opacity fades only).
+  const prefersReduced = useReducedMotion();
 
   return (
     <motion.div
       key={asset.relativePath}
       layout
-      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      initial={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: -10 }}
-      transition={{ type: "spring", stiffness: 350, damping: 25 }}
-      whileHover={{ y: isExpanded ? 0 : -5, scale: isExpanded ? 1 : 1.02 }}
+      exit={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: -10 }}
+      transition={motionSafe({ type: 'spring', stiffness: 350, damping: 25 } as const, prefersReduced)}
+      whileHover={prefersReduced ? undefined : { y: isExpanded ? 0 : -5, scale: isExpanded ? 1 : 1.02 }}
       className={`relative group ${isExpanded ? 'col-span-full row-span-2' : ''}`}
       style={{ perspective: 1000 }}
     >
@@ -141,6 +145,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
+              transition={motionSafe({}, prefersReduced)}
               className="relative z-10 flex-1 bg-background/60 backdrop-blur-md"
             >
               <div className="p-4 border-t" style={{ borderColor: `${conf.color}20` }}>
