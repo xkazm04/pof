@@ -66,6 +66,38 @@ describe('the Results history', () => {
   });
 });
 
+describe('the run detail rows', () => {
+  const preset = (presetId: string, status: PofSnapshotDiffReport['results'][number]['status']) => ({
+    presetId, presetName: presetId, status, diffPercentage: 0, maxPixelDiff: 0, diffPixelCount: 0, totalPixelCount: 1,
+  });
+
+  it('names every preset that did not pass, not only the failed ones', () => {
+    const report: PofSnapshotDiffReport = {
+      generatedAt: '2026-11-08T00:00:00Z', diffThreshold: 0.5, overallStatus: 'failed',
+      results: [preset('fresh-cam', 'no-baseline'), preset('wide-cam', 'resolution-mismatch')],
+      summary: { totalPresets: 2, passed: 0, failed: 0, noBaseline: 1, skipped: 0 },
+    };
+    render(<ResultsTab isRunning={false} onClear={() => {}} history={[run('S', 1000, [], report)]} />);
+    expect(screen.getByText(/fresh-cam: no baseline/)).toBeTruthy();
+    expect(screen.getByText(/wide-cam: resolution mismatch/)).toBeTruthy();
+  });
+
+  const failing = (failureReason?: string): PofTestResult => ({
+    ...result('t', 'failed'),
+    assertions: [{ id: 'a', status: 'failed', description: 'health', expected: '100', actual: '0', failureReason }],
+  });
+
+  it('shows actual and expected for a failed assertion that carries no reason', () => {
+    render(<ResultsTab isRunning={false} onClear={() => {}} history={[run('S', 1000, [failing()])]} />);
+    expect(screen.getByText(/0 \(expected 100\)/)).toBeTruthy();
+  });
+
+  it("shows the plugin's failure reason when it gives one", () => {
+    render(<ResultsTab isRunning={false} onClear={() => {}} history={[run('S', 1000, [failing('actor never spawned')])]} />);
+    expect(screen.getByText(/actor never spawned/)).toBeTruthy();
+  });
+});
+
 describe('suite verdict', () => {
   it('control: every scenario returned and passed is passed', async () => {
     mocks.runTest.mockResolvedValue(result('a', 'passed'));

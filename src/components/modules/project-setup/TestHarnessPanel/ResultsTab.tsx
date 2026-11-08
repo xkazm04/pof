@@ -10,7 +10,7 @@ import {
 } from '@/lib/chart-colors';
 import type { PofTestResult, PofSnapshotDiffReport } from '@/types/pof-bridge';
 import type { SuiteRunResult } from './types';
-import { testStatusColor, testStatusIcon } from './helpers';
+import { snapshotStatusColor, testStatusColor, testStatusIcon } from './helpers';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Results Tab
@@ -141,9 +141,9 @@ function TestResultCard({ result }: { result: PofTestResult }) {
                 <XCircle className="w-2.5 h-2.5 shrink-0" style={{ color: STATUS_ERROR }} />
               )}
               <span className="text-text-muted truncate">{a.description}</span>
-              {a.status === 'failed' && a.failureReason && (
-                <span className="ml-auto shrink-0" style={{ color: STATUS_ERROR }}>
-                  {a.actual} (expected {a.expected})
+              {a.status === 'failed' && (
+                <span className="ml-auto min-w-0 truncate" style={{ color: STATUS_ERROR }} title={a.failureReason}>
+                  {a.actual} (expected {a.expected}){a.failureReason ? ` - ${a.failureReason}` : ''}
                 </span>
               )}
             </div>
@@ -180,6 +180,7 @@ function TestResultCard({ result }: { result: PofTestResult }) {
 
 function SnapshotSummaryRow({ report }: { report: PofSnapshotDiffReport }) {
   const color = report.overallStatus === 'passed' ? STATUS_SUCCESS : STATUS_ERROR;
+  const notPassed = report.results.filter((r) => r.status !== 'passed');
   return (
     <div className="rounded px-2.5 py-1.5" style={{ background: `${color}${OPACITY_8}` }}>
       <div className="flex items-center gap-2 text-xs">
@@ -189,15 +190,15 @@ function SnapshotSummaryRow({ report }: { report: PofSnapshotDiffReport }) {
           {report.summary.passed}/{report.summary.totalPresets} passed
         </span>
       </div>
-      {report.results.filter((r) => r.status === 'failed').length > 0 && (
+      {notPassed.length > 0 && (
         <div className="mt-1 space-y-0.5">
-          {report.results
-            .filter((r) => r.status === 'failed')
-            .map((r) => (
-              <div key={r.presetId} className="text-xs pl-5" style={{ color: STATUS_ERROR }}>
-                {r.presetName}: {r.diffPercentage.toFixed(2)}% diff ({r.diffPixelCount} px)
-              </div>
-            ))}
+          {notPassed.map((r) => (
+            <div key={r.presetId} className="text-xs pl-5" style={{ color: snapshotStatusColor(r.status) }}>
+              {r.presetName}: {r.status === 'failed'
+                ? `${r.diffPercentage.toFixed(2)}% diff (${r.diffPixelCount} px)`
+                : r.status === 'no-baseline' ? 'no baseline' : 'resolution mismatch'}
+            </div>
+          ))}
         </div>
       )}
     </div>
