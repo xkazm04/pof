@@ -38,3 +38,15 @@ describe('<ChartPanel /> geometry stays inside its track', () => {
     expect(heights).toEqual([110, 0]);
   });
 });
+
+describe('<ChartPanel /> under prefers-reduced-motion', () => {
+  it('collapses every entrance duration, not only the stagger', () => {
+    motionState.reduced = true;
+    const { container } = render(
+      <ChartPanel t={LIGHT} variant="scatter" xDomain={[0, 1]} yDomain={[0, 1]} reference={[{ x: 0, y: 0 }]} points={[{ x: 1, y: 1 }]} />,
+    );
+    const durations = [...container.querySelectorAll('[data-transition]')].map((el) => JSON.parse(el.getAttribute('data-transition') ?? '{}').duration);
+    expect(durations.length).toBe(3);
+    expect(durations.every((d) => d === 0)).toBe(true);
+  });
+});
