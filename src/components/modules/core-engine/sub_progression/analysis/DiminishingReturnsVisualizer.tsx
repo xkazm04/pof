@@ -71,6 +71,7 @@ export function DiminishingReturnsVisualizer({
           <button
             key={a.name}
             onClick={() => setSelectedDRAttr(idx)}
+            aria-pressed={selectedDRAttr === idx}
             className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border"
             style={{
               backgroundColor: selectedDRAttr === idx ? `${a.color}${OPACITY_15}` : 'transparent',

@@ -21,7 +21,7 @@ export function BuildPresetPanel({ activeBuild, setActiveBuild }: BuildPresetPan
           const Icon = bp.icon;
           const isActive = activeBuild === idx;
           return (
-            <button key={bp.name} onClick={() => setActiveBuild(idx)}
+            <button key={bp.name} onClick={() => setActiveBuild(idx)} aria-pressed={isActive}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-medium transition-colors border"
               style={{
                 borderColor: isActive ? bp.color : `${withOpacity(bp.color, OPACITY_15)}`,

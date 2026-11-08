@@ -50,6 +50,14 @@ describe('DiminishingReturnsVisualizer', () => {
   });
 });
 
+describe('DiminishingReturnsVisualizer attribute picker', () => {
+  it('exposes the selected attribute as pressed, as the build toggles do', () => {
+    render(<DiminishingReturnsVisualizer />);
+    expect(screen.getByRole('button', { name: 'Strength' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Dexterity' }).getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
 describe('DiminishingReturnsVisualizer x axis', () => {
   it('labels the left edge 0 pts, because points are plotted at x = pts', () => {
     const { container } = render(<DiminishingReturnsVisualizer />);
