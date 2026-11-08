@@ -97,10 +97,6 @@ const POSITIONAL_ONLY_LOOPS: Record<string, Exemption> = {
     animates: ['y'],
     why: 'Scan line travels down the wireframe on y (deliberately framer-driven to avoid per-frame state).',
   },
-  'components/modules/core-engine/sub_character/simulator/feedback/ConfigPanel.tsx': {
-    animates: ['rotate'],
-    why: 'Run-in-progress spinner — rotate only.',
-  },
   'components/modules/core-engine/sub_character/simulator/predictive/PredictiveBalanceSimulator.tsx': {
     animates: ['rotate'],
     why: 'Two run-in-progress spinners — rotate only.',
