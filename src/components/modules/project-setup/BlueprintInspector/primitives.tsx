@@ -26,7 +26,7 @@ export function EmptyHint({ text, hint }: { text: string; hint?: string }) {
   return (
     <div className="pl-1">
       <p className="text-xs text-text-muted italic">{text}</p>
-      {hint && <p className="text-xs text-text-muted/50 mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-text-subtle mt-0.5">{hint}</p>}
     </div>
   );
 }

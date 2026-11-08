@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 
 export function RawLogBlock({ rawLog }: { rawLog: string }) {
   return (
@@ -20,6 +21,7 @@ export function RawLogBlock({ rawLog }: { rawLog: string }) {
 /** Standalone raw-log disclosure used in Technical mode (its own toggle). */
 export function RawLogDisclosure({ rawLog }: { rawLog: string }) {
   const [showRawLog, setShowRawLog] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
   return (
     <>
       <button
@@ -38,6 +40,7 @@ export function RawLogDisclosure({ rawLog }: { rawLog: string }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            transition={motionSafe({ duration: DURATION.base, ease: EASE_OUT }, prefersReducedMotion)}
             className="overflow-hidden"
           >
             <pre className="text-xs leading-relaxed p-3 rounded-md border border-border bg-surface text-text-muted overflow-x-auto max-h-48 overflow-y-auto">

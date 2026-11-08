@@ -68,3 +68,38 @@ describe('preflight route — check validation', () => {
     },
   );
 });
+
+describe('preflight route - projectName is a UE project identifier', () => {
+  it.each(['..\\x', '-Mode=Foo', 'a/b', '', 'My Game'])(
+    'rejects crafted projectName %p with 400 and spawns nothing',
+    async (projectName) => {
+      const res = await post({ ...BASE, projectName, check: 'build-verify-editor' });
+      expect(res.status).toBe(400);
+      expect(spawnCapture).not.toHaveBeenCalled();
+      expect(runFastPreflight).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['PoF', 'Jinx_5', 'MyGame2', '_Scratch'])(
+    'accepts real project name %s',
+    async (projectName) => {
+      const res = await post({ ...BASE, projectName, check: 'build-verify-editor' });
+      expect(res.status).toBe(200);
+      expect(spawnCapture).toHaveBeenCalledTimes(1);
+    },
+  );
+});
+
+describe('preflight route - timeouts are named', () => {
+  it.each(['build-verify-editor', 'build-verify-shipping', 'asset-validation'])(
+    'reports a timed-out %s as a timeout, not a generic failure',
+    async (check) => {
+      spawnCapture.mockResolvedValue({ output: 'Result: Succeeded', spawnError: null, timedOut: true });
+      const res = await post({ ...BASE, check });
+      const json = await res.json();
+      const r = json.data.results[0];
+      expect(r.status).toBe('fail');
+      expect(r.detail).toContain('timed out after');
+    },
+  );
+});

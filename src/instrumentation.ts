@@ -23,7 +23,6 @@ export async function register(): Promise<void> {
 
   const g = globalThis as typeof globalThis & { __pofSchedulerStarted?: boolean };
   if (g.__pofSchedulerStarted) return;
-  g.__pofSchedulerStarted = true;
 
   const [{ tickScheduler }, { UI_TIMEOUTS }, { logger }, { registerGateNotifier }, { tickPurgeExpiredKeys }] = await Promise.all([
     import('@/lib/packaging/scheduled-build-runner'),
@@ -34,7 +33,12 @@ export async function register(): Promise<void> {
   ]);
 
   // Wire the gate-verdict webhook listener onto the in-process event bus.
-  registerGateNotifier();
+  // Isolated: a broken listener must not stop the nightly cron or the drain worker.
+  try {
+    registerGateNotifier();
+  } catch (err) {
+    logger.warn(`[gate-notifier] registration failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   const timer = setInterval(() => {
     try {
@@ -55,6 +59,8 @@ export async function register(): Promise<void> {
 
   // The scheduler should never be the reason the process stays alive.
   if (typeof timer.unref === 'function') timer.unref();
+  // Set only once the cron is armed: a boot that failed earlier stays retryable.
+  g.__pofSchedulerStarted = true;
   logger.info('[nightly-build] scheduler cron registered');
 
   // ── Opt-in drain worker ───────────────────────────────────────────────────

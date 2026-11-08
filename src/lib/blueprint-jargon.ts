@@ -338,7 +338,7 @@ const ALL_JARGON: Record<string, JargonEntry> = {
  * are case-sensitive in real code).
  */
 export function lookupJargon(term: string): JargonEntry | undefined {
-  return ALL_JARGON[term];
+  return Object.hasOwn(ALL_JARGON, term) ? ALL_JARGON[term] : undefined;
 }
 
 // Precompute ONCE at module load so findJargonInText runs a single regex sweep

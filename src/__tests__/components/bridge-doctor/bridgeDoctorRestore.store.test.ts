@@ -24,7 +24,7 @@ const s = () => useBridgeDoctorStore.getState();
 beforeEach(() => {
   useBridgeDoctorStore.setState({
     latest: null, running: false, lastKnownGood: good,
-    restorePhase: 'idle', restorePreview: null, undoSnapshot: null,
+    restorePhase: 'idle', restorePreview: null, restoreError: null, undoSnapshot: null,
   });
 });
 
@@ -97,5 +97,30 @@ describe('bridge doctor restore state machine', () => {
     expect(s().undoSnapshot).toBeNull();
     expect(s().undoRestore(st)).toBe(false);
     expect(st.setRcPort).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('bridge doctor restore preview failures carry a reason', () => {
+  it('keeps the probe error text when the dry-probe throws', async () => {
+    const r = await s().previewRestore(good, async () => { throw new Error('ECONNREFUSED 127.0.0.1:30011'); });
+    expect(r).toBeNull();
+    expect(s().restorePhase).toBe('idle');
+    expect(s().restoreError).toContain('ECONNREFUSED');
+  });
+
+  it('says why when a preview is refused while diagnostics are running', async () => {
+    useBridgeDoctorStore.setState({ running: true });
+    const probe = vi.fn(async (c: ProbeConfig) => rep(true, c));
+    expect(await s().previewRestore(good, probe)).toBeNull();
+    expect(probe).not.toHaveBeenCalled();
+    expect(s().restoreError).toMatch(/running/i);
+  });
+
+  it('clears the error on the next successful preview and never persists it', async () => {
+    useBridgeDoctorStore.setState({ restoreError: 'old failure' });
+    await s().previewRestore(good, async (c) => rep(true, c));
+    expect(s().restoreError).toBeNull();
+    useBridgeDoctorStore.setState({ restoreError: 'x' });
+    expect(localStorage.getItem('pof-bridge-doctor') ?? '').not.toContain('restoreError');
   });
 });

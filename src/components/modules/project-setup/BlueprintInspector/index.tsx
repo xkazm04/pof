@@ -95,7 +95,7 @@ export function BlueprintInspector() {
           onKeyDown={handleKeyDown}
           placeholder="/Game/Blueprints/BP_MyCharacter"
           aria-label="Blueprint asset path — press Enter to inspect"
-          className="flex-1 bg-transparent text-xs font-mono text-text placeholder:text-text-muted/50
+          className="flex-1 bg-transparent text-xs font-mono text-text placeholder:text-text-subtle
                      outline-none border-none"
           data-testid="blueprint-inspector-path-input"
         />
@@ -179,7 +179,7 @@ export function BlueprintInspector() {
           <p className="text-xs text-text-muted">
             Enter a blueprint asset path to inspect its anatomy
           </p>
-          <p className="text-xs text-text-muted/50 mt-1">
+          <p className="text-xs text-text-subtle mt-1">
             e.g. /Game/Blueprints/BP_MyCharacter
           </p>
         </div>
