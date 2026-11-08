@@ -4,7 +4,7 @@ import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
 import { AssetTarget } from './shared/assetHonesty';
-import { entitySlug, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
+import { entitySlug, formatGpuMs, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
@@ -71,7 +71,7 @@ export function ItemVFX({ t, entity, step }: StepProps) {
         { label: 'GPU budget', node: (
           <div style={{ display: 'grid', gap: 8 }}>
             <div style={{ height: 16, background: t.line, opacity: 0.4 }}><div style={{ width: `${(cost / CAP) * 100}%`, height: '100%', background: cost <= CAP ? t.ok : t.bad }} /></div>
-            <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>{cost.toFixed(1)} ms of {CAP} ms frame budget</span>
+            <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>{formatGpuMs(cost, CAP)} ms of {CAP} ms frame budget</span>
           </div>
         ) },
         { label: 'Produce', node: (

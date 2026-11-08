@@ -358,6 +358,20 @@ function animationsCopy(data: Record<string, unknown>): AcceptanceCopy {
         suggestion: 'Re-run Produce to add the missing clips.' };
 }
 
+/**
+ * A GPU cost printed beside its budget, with only as many decimals as it takes to keep a cost
+ * that differs from the cap from READING as the cap. `toFixed(1)` printed 0.85 ms as "0.8" next to
+ * a 0.8 ms budget, so an over-budget step read "0.8 ms of 0.8 ms" under a FAIL. Shared by the VFX
+ * copy and the VFX view.
+ */
+export function formatGpuMs(cost: number, cap: number): string {
+  for (let d = 1; d <= 4; d++) {
+    const s = String(Number(cost.toFixed(d)));
+    if (cost === cap || s !== String(cap)) return s;
+  }
+  return String(cost);
+}
+
 function vfxCopy(data: Record<string, unknown>): AcceptanceCopy {
   const variants = (data.variants ?? []) as unknown[];
   const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? 0.8);
@@ -365,7 +379,7 @@ function vfxCopy(data: Record<string, unknown>): AcceptanceCopy {
     return { why: 'No Niagara variants exist — the item has no visual reactions.',
       suggestion: 'Run Produce to author the idle / equip / use variants.' };
   }
-  return { why: `GPU cost (${cost.toFixed(1)}ms) sits over the ${cap}ms frame budget — performance regressions on lower tiers.`,
+  return { why: `GPU cost (${formatGpuMs(cost, cap)}ms) sits over the ${cap}ms frame budget — performance regressions on lower tiers.`,
     suggestion: 'Re-run Produce with cheaper modules.',
     fixDirection: `keep GPU cost under ${cap}ms by reducing emitter counts` };
 }
