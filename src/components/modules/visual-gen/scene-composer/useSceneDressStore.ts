@@ -23,6 +23,9 @@ import { useSceneComposerStore } from './useSceneComposerStore';
  * EXPLICITLY, because the route gates by default); Block out dispatches through the one
  * Blender dispatcher and believes only the receipt Blender prints.
  */
+/** Reference-image byte limit; mirrors MAX_SCENE_IMAGE_BYTES in the scene-decompose route, which enforces it again. */
+export const SCENE_IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+
 export type SceneDressStatus =
   | 'idle'
   | 'decomposing'

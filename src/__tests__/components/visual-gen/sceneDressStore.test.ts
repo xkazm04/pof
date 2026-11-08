@@ -8,10 +8,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createElement } from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { SceneDressPanel } from '@/components/modules/visual-gen/scene-composer/SceneDressPanel';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { useSceneDressStore } from '@/components/modules/visual-gen/scene-composer/useSceneDressStore';
+import { useSceneDressStore, SCENE_IMAGE_MAX_BYTES } from '@/components/modules/visual-gen/scene-composer/useSceneDressStore';
 import { useSceneComposerStore } from '@/components/modules/visual-gen/scene-composer/useSceneComposerStore';
 import { useBlenderStore } from '@/components/modules/visual-gen/blender-pipeline/useBlenderStore';
 import { DRESS_FIXTURE } from '../../lib/visual-gen/sceneDressFixture';
@@ -167,5 +167,56 @@ describe('SceneDressPanel', () => {
     expect(build.disabled).toBe(true);
     // Rendering the plan spent nothing beyond the one decompose.
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SceneDressPanel re-run after a build', () => {
+  async function planned() {
+    route({ [DECOMPOSE]: () => reply(200, { success: true, data: DRESS_FIXTURE }) });
+    useSceneDressStore.getState().setImage(IMAGE, 'scene.png');
+    await useSceneDressStore.getState().decompose();
+    const connection = useBlenderMCPStore.getState().connection;
+    useBlenderMCPStore.setState({ connection: { ...connection, connected: true } });
+  }
+
+  it.each(['built', 'unconfirmed'] as const)('labels a second Block out as another copy once status is %s', async (status) => {
+    await planned();
+    useSceneDressStore.setState({ status, builtCount: 4, buildError: status === 'built' ? null : 'no receipt' });
+    render(createElement(SceneDressPanel));
+    expect(screen.queryByRole('button', { name: /^Block out in Blender \(4\)$/ })).toBeNull();
+    const again = screen.getByRole('button', { name: /Block out another copy in Blender \(4\)/ }) as HTMLButtonElement;
+    expect(again.disabled).toBe(false);
+  });
+
+  it('keeps the plain label before any build', async () => {
+    await planned();
+    render(createElement(SceneDressPanel));
+    expect(screen.getByRole('button', { name: /^Block out in Blender \(4\)$/ })).toBeTruthy();
+  });
+});
+
+describe('SceneDressPanel oversized reference image', () => {
+  function pick(size: number) {
+    const file = new File(['x'], 'huge.png', { type: 'image/png' });
+    Object.defineProperty(file, 'size', { value: size });
+    const input = screen.getByLabelText('Reference image');
+    fireEvent.change(input, { target: { files: [file] } });
+  }
+
+  it('refuses a file over the ceiling before any FileReader read', () => {
+    const read = vi.spyOn(FileReader.prototype, 'readAsDataURL');
+    render(createElement(SceneDressPanel));
+    pick(SCENE_IMAGE_MAX_BYTES + 1);
+    expect(read).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toMatch(/huge\.png.*too large/);
+    expect(useSceneDressStore.getState().imageDataUrl).toBeNull();
+  });
+
+  it('reads a file exactly at the ceiling', () => {
+    const read = vi.spyOn(FileReader.prototype, 'readAsDataURL');
+    render(createElement(SceneDressPanel));
+    pick(SCENE_IMAGE_MAX_BYTES);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
