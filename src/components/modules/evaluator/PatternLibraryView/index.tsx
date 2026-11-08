@@ -268,7 +268,8 @@ export function PatternLibraryView() {
           <FetchError message={error} onRetry={fetchDashboard} />
         )}
 
-        {activeTab === 'patterns' && !isLoading && patterns.length === 0 && (
+        {/* Empty only when the list was actually read: a failed load shows its error alone. */}
+        {activeTab === 'patterns' && !isLoading && !error && patterns.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${MODULE_COLORS.systems}${OPACITY_10}` }}>
               <BookOpen className="w-6 h-6 text-violet-400" />
