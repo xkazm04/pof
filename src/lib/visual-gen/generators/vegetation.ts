@@ -16,7 +16,7 @@ export interface ScatterPoint {
   y: number;
   speciesId: string;
   rotation: number;  // 0-360 degrees
-  scale: number;     // 0.5-1.5
+  scale: number;     // 0.7-1.3
 }
 
 export interface VegetationConfig {

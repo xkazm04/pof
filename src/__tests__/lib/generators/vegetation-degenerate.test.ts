@@ -29,3 +29,14 @@ describe('generateVegetation degenerate inputs', () => {
     expect(generateVegetation(DEFAULT_VEGETATION_CONFIG).length).toBeGreaterThan(0);
   });
 });
+
+describe('ScatterPoint scale range', () => {
+  it('every seeded scale lies in 0.7-1.3 (the documented range)', () => {
+    const pts = generateVegetation(DEFAULT_VEGETATION_CONFIG);
+    expect(pts.length).toBeGreaterThan(20);
+    for (const p of pts) {
+      expect(p.scale).toBeGreaterThanOrEqual(0.7);
+      expect(p.scale).toBeLessThanOrEqual(1.3);
+    }
+  });
+});
