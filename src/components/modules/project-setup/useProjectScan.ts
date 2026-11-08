@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api-utils';
-import { missingRequirements } from '@/lib/project-setup/toolchain';
+import { missingRequirements, TOOLCHAIN } from '@/lib/project-setup/toolchain';
 
 export interface DetectedEngine {
   version: string;
@@ -29,6 +29,8 @@ export interface ChecklistItem {
   ok: boolean;
   detail: string;
   subDetail?: string;
+  /** The probe for this row failed, so nothing was measured: neither present nor missing. */
+  unknown?: boolean;
 }
 
 /** Lifecycle of the project scan, for deterministic test waits. */
@@ -68,6 +70,8 @@ export function useProjectScan(projectPath: string) {
     setScanState('scanning');
     const items: ChecklistItem[] = [];
     let detectedEngines: DetectedEngine[] = [];
+    let enginesProbeFailed = false;
+    let toolsProbeFailed = false;
     let dirData: ListResponse | null = null;
     let readError: string | null = null;
 
@@ -80,7 +84,7 @@ export function useProjectScan(projectPath: string) {
       });
       detectedEngines = data.engines ?? [];
     } catch {
-      // Non-critical
+      enginesProbeFailed = true;
     }
     if (!isCurrent()) return; // superseded by a newer scan
     setEngines(detectedEngines);
@@ -93,6 +97,14 @@ export function useProjectScan(projectPath: string) {
         ok: true,
         detail: `UE ${eng.version} detected`,
         subDetail: eng.path,
+      });
+    } else if (enginesProbeFailed) {
+      items.push({
+        id: 'engine',
+        label: 'Unreal Engine',
+        ok: false,
+        unknown: true,
+        detail: 'Could not check',
       });
     } else {
       items.push({
@@ -113,7 +125,15 @@ export function useProjectScan(projectPath: string) {
       });
       detectedTools = data.tools ?? [];
     } catch {
-      // Non-critical
+      toolsProbeFailed = true;
+    }
+
+    // A failed probe yields no rows, which would read as "nothing missing".
+    if (toolsProbeFailed) {
+      for (const row of TOOLCHAIN) {
+        if (row.id === 'engine') continue;
+        items.push({ id: row.checklistId, label: row.name, ok: false, unknown: true, detail: 'Could not check' });
+      }
     }
 
     for (const tool of detectedTools) {
@@ -235,6 +255,8 @@ export function useProjectScan(projectPath: string) {
   const hasProject = checklist.find((c) => c.id === 'uproject')?.ok ?? false;
   const okCount = checklist.filter((c) => c.ok).length;
   const missingToolCount = missingRequirements(checklist).length;
+  // Requirements whose probe failed: unmeasured, so no next step may be derived from them.
+  const unknownToolCount = checklist.filter((c) => c.unknown).length;
 
   return {
     engines,
@@ -246,6 +268,7 @@ export function useProjectScan(projectPath: string) {
     hasProject,
     okCount,
     missingToolCount,
+    unknownToolCount,
     projectReadError,
   };
 }

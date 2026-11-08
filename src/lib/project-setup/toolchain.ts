@@ -27,7 +27,7 @@ export interface ToolchainRow {
 export interface DetectedTool { id: string; name: string; ok: boolean; detail: string; path?: string }
 export interface DetectedEngine { version: string; path: string }
 /** The checklist shape this module reads (structurally the useProjectScan ChecklistItem). */
-export interface RequirementItem { id: string; ok: boolean; subDetail?: string }
+export interface RequirementItem { id: string; ok: boolean; subDetail?: string; unknown?: boolean }
 
 const VS_WORKLOAD = 'Microsoft.VisualStudio.Workload.NativeDesktopDevelopment';
 const VS_VC_TOOLS = 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64';
@@ -79,9 +79,9 @@ export function installCommand(id: ToolId, vsPath?: string): string {
   return LAUNCHER_INSTALL;
 }
 
-/** Checklist ids of the requirements that are present and failing, in checklist order. */
+/** Checklist ids of the requirements that are present and failing, in checklist order. An unknown row (probe failed) is not missing. */
 export function missingRequirements(checklist: readonly RequirementItem[]): string[] {
-  return checklist.filter((c) => !c.ok && BY_CHECKLIST_ID.has(c.id)).map((c) => c.id);
+  return checklist.filter((c) => !c.ok && !c.unknown && BY_CHECKLIST_ID.has(c.id)).map((c) => c.id);
 }
 
 // ── Bootstrap plan (the "Fix N Missing" CLI task) ──
