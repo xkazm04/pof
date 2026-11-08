@@ -7,6 +7,7 @@ import {
   SAVE_PERSISTED_FIELDS, SAVE_VERSION_FIELD, SAVE_SCHEMA_VERSION, saveFieldNote,
   type SaveFieldGroup,
 } from '@/lib/save-schema/fields';
+import { ENHANCED_SLOTS } from './data-budget';
 
 /* ── Accent ──────────────────────────────────────────────────────────────── */
 export const ACCENT = ACCENT_CYAN;
@@ -57,13 +58,10 @@ export type SaveSlot = {
   level?: number; zone?: string; playtime?: string; ts?: string; integrity?: string;
 };
 
-export const SAVE_SLOTS: SaveSlot[] = [
-  { id: 'auto', label: 'AUTO_SAVE', isAuto: true, level: 14, zone: 'The Ashlands', playtime: '4h 28m', ts: '8m ago', integrity: '100%' },
-  { id: 'slot-1', label: 'SLOT-01', isAuto: false, level: 14, zone: 'The Ashlands', playtime: '4h 32m', ts: '2h ago', integrity: '100%' },
-  { id: 'slot-2', label: 'SLOT-02', isAuto: false, level: 7, zone: 'Verdant Plains', playtime: '1h 58m', ts: '1d ago', integrity: '98%' },
-  { id: 'slot-3', label: 'SLOT-03', isAuto: false, level: 1, zone: 'Tutorial Zone', playtime: '0h 12m', ts: '3d ago', integrity: '100%' },
-  { id: 'slot-4', label: 'SLOT-04', isAuto: false, empty: true },
-];
+export const SAVE_SLOTS: SaveSlot[] = ENHANCED_SLOTS.map((s) => ({
+  id: s.id, label: s.label, isAuto: s.isAuto, level: s.level,
+  zone: s.zone, playtime: s.playtime, ts: s.lastPlayed, integrity: s.integrity,
+}));
 
 /* ── Schema Version History ──────────────────────────────────────────────── */
 
