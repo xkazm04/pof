@@ -1,10 +1,13 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { applyStyle, styleRequestOf } from '@/lib/visual-gen/style-apply';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
-type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
+const MODES = ['image', 'upscale', 'unzoom', 'texture3d'] as const;
+type Mode = (typeof MODES)[number];
+const isMode = (v: unknown): v is Mode => MODES.includes(v as Mode);
 
 /**
  * The hardcoded-Leonardo route. Its in-app callers are the Material Lab's
@@ -22,8 +25,11 @@ type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const mode: Mode = body?.mode ?? 'image';
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+    const mode = body.mode ?? 'image';
+    // Before the key check: a request that could never be served is wrong on every machine.
+    if (!isMode(mode)) return apiError(`Unknown mode "${String(mode)}"`, 400);
 
     if (!process.env.LEONARDO_API_KEY) {
       return apiError('LEONARDO_API_KEY not configured', 500);
@@ -80,16 +86,12 @@ export async function POST(request: Request) {
       return apiSuccess(result);
     }
 
-    if (mode === 'texture3d') {
-      const { objBase64, prompt, preview } = body ?? {};
-      if (!objBase64 || typeof objBase64 !== 'string') return apiError('Missing "objBase64" for texture3d', 400);
-      if (!prompt || typeof prompt !== 'string') return apiError('Missing "prompt" for texture3d', 400);
-      const objBytes = new Uint8Array(Buffer.from(objBase64, 'base64'));
-      const result = await generateTextureOn3DModel({ objBytes, prompt, preview: Boolean(preview) });
-      return apiSuccess(result);
-    }
-
-    return apiError(`Unknown mode "${String(mode)}"`, 400);
+    const { objBase64, prompt, preview } = body;
+    if (!objBase64 || typeof objBase64 !== 'string') return apiError('Missing "objBase64" for texture3d', 400);
+    if (!prompt || typeof prompt !== 'string') return apiError('Missing "prompt" for texture3d', 400);
+    const objBytes = new Uint8Array(Buffer.from(objBase64, 'base64'));
+    const result = await generateTextureOn3DModel({ objBytes, prompt, preview: Boolean(preview) });
+    return apiSuccess(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.warn(`[api/leonardo] ${message}`);
