@@ -148,9 +148,10 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
     recalc();
     window.addEventListener('resize', recalc);
     return () => window.removeEventListener('resize', recalc);
-  }, []);
+  }, [hasSurface]);
 
-  // Track container dimensions for minimap viewport calculation
+  // Track container dimensions for minimap viewport calculation. Keyed on
+  // hasSurface: the container is not rendered while the plan is still loading.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -160,7 +161,7 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
     observer.observe(el);
     setContainerSize({ w: el.clientWidth, h: el.clientHeight });
     return () => observer.disconnect();
-  }, []);
+  }, [hasSurface]);
 
   // --- Handlers ---
 
