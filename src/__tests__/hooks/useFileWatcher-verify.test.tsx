@@ -9,6 +9,7 @@ import { renderHook, act, cleanup } from '@testing-library/react';
 import { useFileWatcher } from '@/hooks/useFileWatcher';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
+import { logger } from '@/lib/logger';
 import type { FileChangeEvent, ScannedDeclaration } from '@/lib/file-watcher';
 
 afterEach(cleanup);
@@ -139,5 +140,20 @@ describe('useFileWatcher auto-verify - a late verdict never crosses a project sw
     });
     expect(setVerification).not.toHaveBeenCalled();
     expect(setChecklistItem).not.toHaveBeenCalled();
+  });
+});
+
+describe('useFileWatcher - handler faults are not swallowed as bad frames', () => {
+  it('a changes frame whose handling throws logs one warn; an unparsable frame stays quiet', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    useProjectStore.setState({ scanProject: vi.fn(() => { throw new Error('scan exploded'); }) });
+    await emit(changes(decl('UPROPERTY')));
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    warn.mockClear();
+    const es = FakeEventSource.instances.at(-1)!;
+    es.onmessage?.({ data: '{not json' });
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

@@ -154,14 +154,21 @@ export function useFileWatcher(): WatcherStatus {
         const es = new EventSource(url);
 
         es.onmessage = (event) => {
+          let data: { type?: string; events?: FileChangeEvent[] };
           try {
-            const data = JSON.parse(event.data);
+            data = JSON.parse(event.data);
+          } catch {
+            return; // a malformed frame is dropped
+          }
+          try {
             if (data.type === 'connected') {
               setStatus((prev) => ({ ...prev, connected: true }));
             } else if (data.type === 'changes') {
               handleChanges(data.events as FileChangeEvent[]);
             }
-          } catch { /* ignore parse errors */ }
+          } catch (err) {
+            logger.warn('[useFileWatcher] handling a changes frame failed', err);
+          }
         };
 
         es.onerror = () => {
