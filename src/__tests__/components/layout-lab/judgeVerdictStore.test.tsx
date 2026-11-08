@@ -160,4 +160,19 @@ describe('judge-verdict store — stale-while-revalidate', () => {
     expect(await readAllJudgeVerdicts()).toEqual({ ok: false, error: 'HTTP 500' });
     expect(peekAllJudgeVerdicts()).toBeUndefined();
   });
+
+  // A SUCCESS envelope can carry the wrong shape (another server on the port, an older API) —
+  // the same hazard `usePersistedEntityHydration` already checks for. Stored as `rows` it reaches
+  // `verdictsForStep` / `groupVerdictsByCatalog` as a non-array and throws in render.
+  it('[guard] a success envelope whose data is not a list is a failed read, never stored as rows', async () => {
+    fetchMock.mockResolvedValue({ ok: true, data: { verdicts: [] } as unknown as JudgeVerdict[] });
+    const { result } = renderHook(() => useCatalogJudgeVerdictState('items'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await act(async () => { await Promise.resolve(); });
+    expect(Array.isArray(result.current.rows)).toBe(true);
+    expect(result.current.loaded).toBe(false);
+    expect(result.current.error).toMatch(/expected a verdict list/);
+    const all = await readAllJudgeVerdicts();
+    expect(all.ok).toBe(false);
+  });
 });

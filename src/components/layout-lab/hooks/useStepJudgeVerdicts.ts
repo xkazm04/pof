@@ -109,7 +109,13 @@ function loadVerdicts(key: string): Promise<VerdictRead> {
   const url = key === ALL_KEY
     ? '/api/judge-verdicts'
     : `/api/judge-verdicts?catalogId=${encodeURIComponent(key)}`;
-  const p = tryApiFetch<JudgeVerdict[]>(url).then((r): VerdictRead => {
+  const p = tryApiFetch<JudgeVerdict[]>(url).then((fetched): VerdictRead => {
+    // A SUCCESS envelope can still carry the wrong shape (another server on the port, an older
+    // API). Stored as rows, a non-array throws in every downstream `.filter` during render, so
+    // it is a FAILED read — held rows stay served, exactly like any other failure.
+    const r: VerdictRead = fetched.ok && !Array.isArray(fetched.data)
+      ? { ok: false, error: `judge-verdicts: expected a verdict list, got ${typeof fetched.data}` }
+      : fetched;
     // An invalidation while this was in flight retired it: its answer may predate the write,
     // so it must not land over the entry the post-invalidation read will fetch.
     if (inflight.get(key) !== p) return r;
