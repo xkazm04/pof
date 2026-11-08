@@ -124,7 +124,7 @@ describe('PromptEvolutionView — Simple Mode', () => {
   it('shows a plain-language verdict with concrete counts instead of jargon', () => {
     render(<PromptEvolutionView />);
     expandTestCard();
-    expect(screen.getByText('Wording B wins')).toBeTruthy();
+    expect(screen.getByText('Wording B leads')).toBeTruthy();
     // "It succeeded 8 of 10 times (80%), compared with 50% for Wording A."
     expect(screen.getByText(/8 of 10/)).toBeTruthy();
     expect(screen.getByText(/80%/)).toBeTruthy();
@@ -183,7 +183,7 @@ describe('PromptEvolutionView — Advanced Mode', () => {
     render(<PromptEvolutionView />);
     fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
     expandTestCard();
-    expect(screen.getByText('Wording B wins')).toBeTruthy();
+    expect(screen.getByText('Wording B leads')).toBeTruthy();
     expect(screen.getByText('Confidence')).toBeTruthy();
     // 95% appears both in the plain note and the raw confidence line.
     expect(screen.getAllByText(/95%/).length).toBeGreaterThan(0);
