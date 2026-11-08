@@ -11,10 +11,12 @@ import { Button } from '@/components/ui/Button';
 interface CreateProjectPanelProps {
   engines: DetectedEngine[];
   isRunning: boolean;
+  /** A re-scan is in flight: the "no project here" this panel rests on may be stale. */
+  scanning: boolean;
   onSendPrompt: (prompt: string) => void;
 }
 
-export function CreateProjectPanel({ engines, isRunning, onSendPrompt }: CreateProjectPanelProps) {
+export function CreateProjectPanel({ engines, isRunning, scanning, onSendPrompt }: CreateProjectPanelProps) {
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
   const ueVersion = useProjectStore((s) => s.ueVersion);
@@ -37,7 +39,7 @@ export function CreateProjectPanel({ engines, isRunning, onSendPrompt }: CreateP
           data-testid="pof-setup-wizard-create-project-btn"
           intent="primary"
           onClick={handleCreate}
-          disabled={!projectName.trim() || engines.length === 0}
+          disabled={scanning || !projectName.trim() || engines.length === 0}
           loading={isRunning}
           loadingLabel="Creating Project..."
           leftIcon={<Rocket className="w-4 h-4" />}

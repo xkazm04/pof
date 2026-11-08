@@ -131,6 +131,25 @@ describe('ProjectSetupModule next-step banner', () => {
     expect(screen.getByTestId('pof-setup-project-read-error').textContent).toContain('EPERM');
   });
 
+  it('claims nothing before the first scan result arrives', () => {
+    setScan({ scanning: true, scanState: 'scanning', checklist: [], hasProject: false });
+    render(<ProjectSetupModule />);
+    expect(screen.queryByTestId('pof-setup-next-step-banner')).toBeNull();
+    expect(screen.queryByTestId('pof-setup-wizard-create-project-btn')).toBeNull();
+  });
+
+  it('disables Create Project while a re-scan may still contradict the stale checklist', () => {
+    setScan({
+      scanning: true,
+      scanState: 'scanning',
+      hasProject: false,
+      checklist: [{ id: 'uproject', label: 'UE Project', ok: false, detail: 'No .uproject found' }],
+    });
+    render(<ProjectSetupModule />);
+    expect((screen.getByTestId('pof-setup-next-step-cta') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('pof-setup-wizard-create-project-btn') as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it('triggers a tooling fetch when the Install Tools CTA is clicked', async () => {
     const fetchMock = mockFetch({ body: { success: true, data: { allInstalled: false, prompt: 'install winget pkgs' } } });
     setScan({ missingToolCount: 2, hasProject: false });

@@ -93,13 +93,16 @@ export function ProjectSetupModule() {
     setupCLI.sendPrompt(`Open the folder "${projectPath}" in Windows Explorer.`);
   }, [setupCLI, projectPath]);
 
+  // Before the first result the empty checklist would read as "no project here".
+  const hasScanResult = scanState === 'settled' || checklist.length > 0;
+
   // The single "do this next" action, derived from scan truth. Only shown once
   // a project path is configured (i.e. after the setup wizard). An unreadable
   // folder says nothing about whether a project is there, so no step is offered:
   // "Create project" here would scaffold over whatever could not be read.
   const nextStep = useMemo(
-    () => (projectPath.trim() && !projectReadError ? deriveNextStep({ missingToolCount, hasProject }) : null),
-    [projectPath, projectReadError, missingToolCount, hasProject],
+    () => (projectPath.trim() && !projectReadError && hasScanResult ? deriveNextStep({ missingToolCount, hasProject }) : null),
+    [projectPath, projectReadError, hasScanResult, missingToolCount, hasProject],
   );
 
   const handleNextStepAction = useCallback(() => {
@@ -118,10 +121,12 @@ export function ProjectSetupModule() {
     nextStep?.id === 'create-project' ? setupCLI.isRunning :
     nextStep?.id === 'build-verify' ? buildCLI.isRunning : false;
 
-  const nextStepDisabled =
-    nextStep?.id === 'install-tools' ? scanning :
+  // A re-scan keeps the previous checklist on screen, so nothing it derived may
+  // be acted on until the new result lands (a switched project still reads as
+  // the old one's "no project" until then).
+  const nextStepDisabled = scanning || (
     nextStep?.id === 'create-project' ? (!projectName.trim() || engines.length === 0) :
-    nextStep?.id === 'build-verify' ? engines.length === 0 : false;
+    nextStep?.id === 'build-verify' ? engines.length === 0 : false);
 
   // De-emphasize every panel except the one matching the suggested next step.
   const dimUnless = (stepId: NextStepId) =>
@@ -216,11 +221,12 @@ export function ProjectSetupModule() {
         )}
 
         {/* Create Project */}
-        {!hasProject && projectPath.trim() && !projectReadError && (
+        {!hasProject && projectPath.trim() && !projectReadError && hasScanResult && (
           <div className={dimUnless('create-project')}>
             <CreateProjectPanel
               engines={engines}
               isRunning={setupCLI.isRunning}
+              scanning={scanning}
               onSendPrompt={setupCLI.sendPrompt}
             />
           </div>
