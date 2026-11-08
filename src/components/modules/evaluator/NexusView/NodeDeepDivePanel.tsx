@@ -76,8 +76,12 @@ export function NodeDeepDivePanel({
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors">
-            <X className="w-4 h-4" />
+          <button
+            onClick={onClose}
+            aria-label={`Close ${node.label} details`}
+            className="focus-ring p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
+          >
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -253,13 +257,14 @@ function CollapsibleSection({
     <div className="rounded-md border border-border/50 overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
+        aria-expanded={isOpen}
+        className="focus-ring-inset w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
       >
         <span className="text-xs font-semibold text-text">{title}</span>
         <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ color, backgroundColor: `${color}15` }}>
           {count}
         </span>
-        <span className="ml-auto text-text-muted">
+        <span className="ml-auto text-text-muted" aria-hidden="true">
           {isOpen ? <X className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
         </span>
       </button>
