@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Swords, ArrowUp, ArrowDown, Crosshair } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT } from '../_shared/data';
-import { WEAPONS, COMBO_SEQUENCES, WEAPON_CATEGORIES } from '../_shared/data-metrics';
+import { WEAPONS, COMBO_SEQUENCES, WEAPON_CATEGORIES, comboDerivedDps } from '../_shared/data-metrics';
 import {
   MATCHUP_TARGETS, DUMMY_TARGET, rankForTarget, outOfBand, severityTone,
 } from '@/lib/combat/weapon-matchup';
@@ -53,8 +53,11 @@ export function WeaponMatchupPanel() {
     const cats = new Set(compared.map(r => r.weapon.category));
     return COMBO_SEQUENCES.filter(c => cats.has(c.weaponCategory));
   }, [compared]);
-  const shownCombos = comparedCombos.slice(0, RELATED_COMBOS_SHOWN);
-  const comboDpsMax = shownCombos.reduce((m, c) => Math.max(m, c.dps), 0) || 1;
+  const shownCombos = useMemo(
+    () => comparedCombos.slice(0, RELATED_COMBOS_SHOWN).map(c => ({ ...c, derivedDps: comboDerivedDps(c) })),
+    [comparedCombos],
+  );
+  const comboDpsMax = shownCombos.reduce((m, c) => Math.max(m, c.derivedDps), 0) || 1;
 
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
@@ -151,15 +154,15 @@ export function WeaponMatchupPanel() {
         )}
         {comparedCombos.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border/30">
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 block">Related Combos ({comparedCombos.length}) · authored DPS</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 block">Related Combos ({comparedCombos.length}) · derived DPS</span>
             <div className="space-y-1">
               {shownCombos.map(c => (
                 <div key={c.id} className="flex items-center gap-2 text-xs font-mono px-1 py-0.5">
                   <span className="text-text w-[130px] truncate">{c.name}</span>
                   <span className="text-text-muted w-[60px]">{c.weaponCategory}</span>
                   <span className="text-text-muted w-[40px]">{c.hits}h</span>
-                  <div className="flex-1"><NeonBar pct={(c.dps / comboDpsMax) * 100} color={ACCENT} /></div>
-                  <span className="font-bold w-[55px] text-right" style={{ color: ACCENT }} title="Authored value, not derived from the weapon table">{c.dps} DPS</span>
+                  <div className="flex-1"><NeonBar pct={(c.derivedDps / comboDpsMax) * 100} color={ACCENT} /></div>
+                  <span className="font-bold w-[55px] text-right" style={{ color: ACCENT }} title="Hits x category mean expected hit / combo time, on the weapon-DPS law">{c.derivedDps.toFixed(1)} DPS</span>
                 </div>
               ))}
             </div>

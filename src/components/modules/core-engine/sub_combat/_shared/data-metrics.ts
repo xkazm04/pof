@@ -4,7 +4,7 @@ import {
 } from '@/lib/chart-colors';
 import type { EntityGrouping } from '@/types/game-metadata';
 import type { HeatmapCell, TimelineEvent, SankeyLink, SankeyColumn } from '@/types/unique-tab-improvements';
-import { parseDamageRange, weaponRoster } from '@/lib/combat/weapon-throughput';
+import { parseDamageRange, weaponRoster, weaponThroughput } from '@/lib/combat/weapon-throughput';
 
 /* ── Weapon Categories & Tiers ─────────────────────────────────────────── */
 
@@ -185,6 +185,28 @@ export function parseDamageMidpoint(dmg: string): number | null {
 
 /** The weapon table ranked under the one weapon-DPS law (canon crit, no target). */
 export const WEAPON_ROSTER = weaponRoster(WEAPONS, { categoryOrder: WEAPON_GROUPINGS[0].order });
+
+/** Mean expected hit (canon kernel, no armour) of each weapon category. */
+const CATEGORY_EXPECTED_HIT: ReadonlyMap<string, number> = new Map(
+  WEAPON_CATEGORIES.map((cat) => {
+    const hits = WEAPONS.filter((w) => w.category === cat).flatMap((w) => {
+      const t = weaponThroughput(w);
+      return t.ok ? [t.data.expectedHit] : [];
+    });
+    return [cat, hits.length > 0 ? hits.reduce((s, h) => s + h, 0) / hits.length : 0] as const;
+  }),
+);
+
+/**
+ * Combo DPS on the weapon-DPS law: hits x the category's mean expected hit / total time.
+ * `ComboSequence.dps` is an authored score (6-13x this scale) and must not be shown
+ * beside weapon DPS; surfaces that sit next to weapon DPS read this instead.
+ */
+export function comboDerivedDps(c: Pick<ComboSequence, 'hits' | 'totalTime' | 'weaponCategory'>): number {
+  const seconds = Number.parseFloat(c.totalTime);
+  const hit = CATEGORY_EXPECTED_HIT.get(c.weaponCategory) ?? 0;
+  return seconds > 0 ? (c.hits * hit) / seconds : 0;
+}
 
 /* ── Damage Type Effectiveness data ────────────────────────────────────── */
 
