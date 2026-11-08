@@ -9,7 +9,8 @@ export function IconButton({ children, onClick, ariaLabel, active, disabled }: I
       className="focus-ring"
       style={{
         width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)', cursor: 'pointer',
+        border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)',
+        cursor: disabled ? 'not-allowed' : 'pointer', ...(disabled ? { opacity: 0.55 } : {}),
         background: active ? 'var(--lab-accent)' : 'transparent',
         color: active ? 'var(--lab-on-accent)' : 'var(--lab-ink)',
         transition: 'background-color var(--lab-dur-fast) var(--lab-ease)',

@@ -32,7 +32,10 @@ export function Button({ children, onClick, variant = 'ghost', active, mono, dis
         display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s2)',
         padding: 'var(--lab-s2) var(--lab-s4)', fontSize: 'var(--lab-fs-xs)',
         fontFamily: mono ? 'var(--lab-font-mono)' : 'var(--lab-font-body)',
-        cursor: 'pointer',
+        // Honest disablement: the inline background/colour would otherwise paint a disabled
+        // button identical to an enabled one (same cue as steps/controls LabButton).
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        ...(disabled ? { opacity: 0.55 } : {}),
         border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)',
         background: bg, color, whiteSpace: 'nowrap',
         transition: 'background-color var(--lab-dur-fast) var(--lab-ease), color var(--lab-dur-fast) var(--lab-ease)',

@@ -25,6 +25,19 @@ describe('Button', () => {
     render(<Button>Open</Button>);
     expect(screen.getByRole('button', { name: 'Open' }).getAttribute('aria-pressed')).toBeNull();
   });
+  it('a disabled button LOOKS disabled (cursor + dimmed), matching steps/controls LabButton', () => {
+    render(<Button disabled>Prev</Button>);
+    const b = screen.getByRole('button', { name: 'Prev' }) as HTMLButtonElement;
+    expect(b.disabled).toBe(true);
+    expect(b.style.cursor).toBe('not-allowed');
+    expect(b.style.opacity).toBe('0.55');
+  });
+  it('an enabled button keeps the pointer and full opacity', () => {
+    render(<Button>Next</Button>);
+    const b = screen.getByRole('button', { name: 'Next' });
+    expect(b.style.cursor).toBe('pointer');
+    expect(b.style.opacity).toBe('');
+  });
   it('accent variant uses accent tokens', () => {
     render(<Button variant="accent">A</Button>);
     expect(screen.getByRole('button', { name: 'A' }).style.background).toContain('var(--lab-accent)');
