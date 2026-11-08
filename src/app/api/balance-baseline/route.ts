@@ -30,6 +30,14 @@ export async function POST(req: NextRequest) {
     if (typeof body.threatScore !== 'number') return apiError('threatScore (number) is required', 400);
     if (!Array.isArray(body.stats)) return apiError('stats (array) is required', 400);
 
+    // Each row is read as { label: string, value: number } by the threat-score reader.
+    const badRow = (body.stats as unknown[]).findIndex((r) => {
+      if (typeof r !== 'object' || r === null || Array.isArray(r)) return true;
+      const row = r as Record<string, unknown>;
+      return typeof row.label !== 'string' || typeof row.value !== 'number' || !Number.isFinite(row.value);
+    });
+    if (badRow >= 0) return apiError(`stats[${badRow}] must be an object with a string label and a finite number value`, 400);
+
     const record: BalanceBaseline = {
       catalogId,
       entityId,
