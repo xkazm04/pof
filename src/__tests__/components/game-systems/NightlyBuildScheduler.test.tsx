@@ -61,4 +61,45 @@ describe('NightlyBuildScheduler', () => {
       expect(savePost).toBeTruthy();
     });
   });
+
+  describe('weekday toggles', () => {
+    /** The `days` array of every save POST, in order. */
+    function savedDays(fetchMock: ReturnType<typeof mockFetchRoutes>): number[][] {
+      return fetchMock.mock.calls
+        .map(([, init]) => (init as RequestInit | undefined)?.body)
+        .filter((b): b is string => typeof b === 'string' && b.includes('"action":"save"'))
+        .map((b) => (JSON.parse(b) as { days?: number[] }).days)
+        .filter((d): d is number[] => Array.isArray(d));
+    }
+    async function renderWithDays(days: number[]) {
+      const fetchMock = mockFetchRoutes([{
+        match: '/api/packaging/schedule',
+        response: { body: statusBody({ schedule: { enabled: true, time: '02:00', days, profileId: null, skipIfUnchanged: true, projectPath: '', projectName: '', ueVersion: '' } }) },
+      }]);
+      render(<NightlyBuildScheduler profiles={[profile]} />);
+      await screen.findByText('abc12345');
+      return fetchMock;
+    }
+
+    it('turning one day OFF from "every day" keeps the other six', async () => {
+      const fetchMock = await renderWithDays([]);
+      // Every button reads ON (empty days = every day); pressing Monday turns Monday off.
+      fireEvent.click(screen.getByTestId('pof-nightly-day-1'));
+      await waitFor(() => expect(savedDays(fetchMock)).toEqual([[0, 2, 3, 4, 5, 6]]));
+    });
+
+    it('turning OFF the only selected day does not widen the schedule to every day', async () => {
+      const fetchMock = await renderWithDays([3]);
+      fireEvent.click(screen.getByTestId('pof-nightly-day-3'));
+      // Nothing saved: an empty list would mean "every day", the opposite of the press.
+      await new Promise((r) => setTimeout(r, 20));
+      expect(savedDays(fetchMock)).toEqual([]);
+    });
+
+    it('selecting the seventh day normalizes to every day', async () => {
+      const fetchMock = await renderWithDays([0, 1, 2, 3, 4, 5]);
+      fireEvent.click(screen.getByTestId('pof-nightly-day-6'));
+      await waitFor(() => expect(savedDays(fetchMock)).toEqual([[]]));
+    });
+  });
 });

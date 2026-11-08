@@ -36,6 +36,21 @@ const OUTCOME_COLOR: Record<NonNullable<ScheduleState['lastOutcome']>, string> =
   skipped: STATUS_INFO,
 };
 
+/**
+ * The weekday list after pressing `day`. Empty `days` means EVERY day, so every
+ * button reads on: pressing one turns that day off (the other six stay). Turning
+ * off the last selected day would produce `[]` - every day, the opposite of the
+ * press - so it is refused (null). Selecting the seventh day normalizes to `[]`.
+ */
+export function nextScheduleDays(days: number[], day: number): number[] | null {
+  const current = days.length === 0 ? [0, 1, 2, 3, 4, 5, 6] : days;
+  const next = current.includes(day)
+    ? current.filter((d) => d !== day)
+    : [...current, day].sort((a, b) => a - b);
+  if (next.length === 0) return null;
+  return next.length === 7 ? [] : next;
+}
+
 function fmtTime(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -96,10 +111,8 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
   }, [projectPath, projectName, ueVersion, refresh]);
 
   const toggleDay = (day: number) => {
-    const days = schedule.days.includes(day)
-      ? schedule.days.filter((d) => d !== day)
-      : [...schedule.days, day].sort((a, b) => a - b);
-    save({ days });
+    const days = nextScheduleDays(schedule.days, day);
+    if (days) save({ days });
   };
 
   const running = status?.running ?? false;
@@ -152,6 +165,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
             return (
               <button
                 key={day}
+                data-testid={`pof-nightly-day-${day}`}
                 onClick={() => toggleDay(day)}
                 disabled={busy}
                 title={every ? 'Every day' : undefined}
