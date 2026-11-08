@@ -19,7 +19,12 @@ export async function POST(req: NextRequest) {
   const denied = requireOperator(req);
   if (denied) return denied;
   try {
-    const body = (await req.json()) as Partial<ExperimentSpec>;
+    const raw: unknown = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
+    const body = raw as Partial<ExperimentSpec>;
     if (!body.scenario && (typeof body.python !== 'string' || body.python.trim() === '')) {
       return apiError('python (a non-empty string) or a scenario is required', 400);
     }

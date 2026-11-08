@@ -7,7 +7,12 @@ import { attributeFilesSince } from '@/lib/evaluator/git-attribution';
  * since the previous scan. Body: `{ projectPath, files, since }`.
  */
 export const POST = withRoute(async (req: NextRequest) => {
-  const { projectPath, files, since } = (await req.json()) as {
+  const raw: unknown = await req.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
+  const { projectPath, files, since } = raw as {
     projectPath?: string;
     files?: unknown;
     since?: string | null;

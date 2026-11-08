@@ -53,6 +53,9 @@ export async function POST(request: NextRequest) {
   } catch {
     return apiError('Invalid JSON body', 400);
   }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
 
   const { name, intent, frameDir, framePaths, durationSeconds, model } = body;
   if (!name || !intent) {

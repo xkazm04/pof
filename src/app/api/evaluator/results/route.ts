@@ -8,7 +8,12 @@ import type { EvalFinding } from '@/lib/evaluator/finding-collector';
  * Body: `{ scanId, findings, modulesEvaluated, failedModules?, durationMs?, projectId?, scannedAt? }`.
  */
 export const POST = withRoute(async (req: NextRequest) => {
-  const body = (await req.json()) as {
+  const raw: unknown = await req.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
+  const body = raw as {
     scanId?: string;
     findings?: unknown;
     modulesEvaluated?: unknown;

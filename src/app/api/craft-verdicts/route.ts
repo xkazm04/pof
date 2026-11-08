@@ -154,7 +154,7 @@ const craftVerdictSchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
-    const parsed = craftVerdictSchema.safeParse(await req.json());
+    const parsed = craftVerdictSchema.safeParse(await req.json().catch(() => undefined));
     if (!parsed.success) return apiError('Invalid craft verdict', 400, parsed.error.issues);
     const { cost, coverageGaps, ...v } = parsed.data;
     if (v.aLevel !== 'A4' && v.findings.length === 0) {

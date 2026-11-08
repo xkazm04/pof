@@ -12,7 +12,12 @@ import { startDeepEvalJob, getDeepEvalJob, cancelDeepEvalJob } from '@/lib/evalu
  * DELETE `?project=<path>` cancels, kills every in-flight CLI pass, and answers `{ job }`.
  */
 export const POST = withRoute(async (req: NextRequest) => {
-  const body = (await req.json()) as {
+  const raw: unknown = await req.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
+  const body = raw as {
     projectPath?: unknown;
     projectName?: unknown;
     ueVersion?: unknown;
