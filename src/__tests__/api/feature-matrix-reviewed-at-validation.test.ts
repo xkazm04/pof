@@ -16,7 +16,8 @@ vi.hoisted(() => {
 });
 
 import { POST, parseReviewedAt } from '@/app/api/feature-matrix/import/route';
-import { getFeaturesByModule, clearModuleFeatures } from '@/lib/feature-matrix-db';
+import { getFeaturesByModule } from '@/lib/feature-matrix-db';
+import { clearFeatureMatrixExact } from '@/__tests__/helpers/clearFeatureMatrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import type { SubModuleId } from '@/types/modules';
 
@@ -39,7 +40,7 @@ async function importWith(reviewedAt: unknown) {
 }
 
 beforeEach(() => {
-  clearModuleFeatures(MODULE);
+  clearFeatureMatrixExact(MODULE);
 });
 
 describe('parseReviewedAt', () => {
