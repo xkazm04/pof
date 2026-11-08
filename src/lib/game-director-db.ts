@@ -622,7 +622,7 @@ export function getEvents(sessionId: string, limit = 100): DirectorEvent[] {
   ensureTables();
   const db = getDb();
   const rows = db.prepare(
-    'SELECT * FROM game_director_events WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?'
+    'SELECT * FROM game_director_events WHERE session_id = ? ORDER BY julianday(timestamp) DESC, rowid DESC LIMIT ?'
   ).all(sessionId, limit) as EventRow[];
   return rows.map(rowToEvent);
 }
