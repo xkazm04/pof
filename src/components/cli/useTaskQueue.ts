@@ -386,6 +386,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     }
   }, [flushLogBuffer]);
 
+  // A prompt that arrives while a run is live is not queued: say so in the transcript
+  // instead of dropping it silently.
+  const logBusyDrop = useCallback(() => {
+    addLog({ id: `busy-${Date.now()}`, type: 'system', content: 'Busy - prompt not sent', timestamp: Date.now() });
+  }, [addLog]);
+
   const addFileChange = useCallback((change: FileChange) => {
     setFileChanges((prev) => {
       const exists = prev.some((c) => c.filePath === change.filePath && c.toolUseId === change.toolUseId);
@@ -813,7 +819,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     // streaming-flag check that hasn't committed yet, and the second would
     // overwrite eventSourceRef/executionIdRef — orphaning the first run's
     // server process with no handle to abort it. Bail if a run is dispatching.
-    if (dispatchingRef.current) return;
+    if (dispatchingRef.current) { logBusyDrop(); return; }
     dispatchingRef.current = true;
     assistantOutputRef.current = '';
     completedRef.current = false;
@@ -862,7 +868,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       // Release session.isRunning for hosts that latched on SUBMIT_START.
       completeOnce(false);
     }
-  }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, onTaskStart, enabledSkills, reapAbortedStart]);
+  }, [projectPath, state.sessionId, addLog, logBusyDrop, connectToStream, completeOnce, onTaskStart, enabledSkills, reapAbortedStart]);
 
   // --- Attach (re-open a live server run this page did not dispatch) ---
 
@@ -1050,5 +1056,6 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     attachExecution,
     handleAbort,
     handleClear,
+    logBusyDrop,
   };
 }
