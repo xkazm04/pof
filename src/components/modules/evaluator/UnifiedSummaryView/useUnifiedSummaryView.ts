@@ -30,6 +30,9 @@ const NO_LIFTS: HealthLift[] = [];
 export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
   const [analytics, setAnalytics] = useState<AnalyticsDashboard | null>(null);
   const [isOwnLoading, setIsOwnLoading] = useState(true);
+  // First load only: a Refresh keeps the loaded dashboard on screen rather than
+  // unmounting it behind the full-page spinner.
+  const [ownLoaded, setOwnLoaded] = useState(false);
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('detailed');
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
@@ -58,6 +61,7 @@ export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
       if (analyticsRes.ok) setAnalytics(analyticsRes.data);
     } finally {
       setIsOwnLoading(false);
+      setOwnLoaded(true);
     }
   }, []);
 
@@ -71,7 +75,7 @@ export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
     fetchOwn();
   }, [fetchOwn]);
 
-  const isLoading = isOwnLoading || (aggLoading && !aggLoaded) || (statusesLoading && !statusesLoaded);
+  const isLoading = (isOwnLoading && !ownLoaded) || (aggLoading && !aggLoaded) || (statusesLoading && !statusesLoaded);
   // A source that FAILED is not a source that is empty. The health composite
   // treats a missing input as a zero, so an unreported failure reads as a
   // genuinely unhealthy project — surface the reason instead.
