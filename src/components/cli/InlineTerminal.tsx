@@ -13,6 +13,8 @@ import { useNavigationStore } from '@/stores/navigationStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { apiFetch } from '@/lib/api-utils';
 
+const RESIZE_KEY_STEP = 20;
+
 interface InlineTerminalProps {
   sessionId: string;
   minHeight?: number;
@@ -87,6 +89,17 @@ export function InlineTerminal({
     removeSession(sessionId);
   }, [sessionId, removeSession]);
 
+  // Keyboard parity for the drag handle: ArrowUp grows the terminal, ArrowDown shrinks it.
+  const handleResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();
+      const step = e.key === 'ArrowUp' ? RESIZE_KEY_STEP : -RESIZE_KEY_STEP;
+      setInlineTerminalHeight(Math.max(minHeight, Math.min(maxHeight, height + step)));
+    },
+    [height, minHeight, maxHeight, setInlineTerminalHeight]
+  );
+
   const handleSuggestionAction = useCallback((action: SuggestionAction) => {
     switch (action.type) {
       case 'redispatch':
@@ -131,7 +144,15 @@ export function InlineTerminal({
       {/* Resize handle (top edge — drag up to grow) */}
       <div
         onMouseDown={handleResizeMouseDown}
-        className="h-2 w-full cursor-ns-resize bg-border hover:bg-border-bright transition-colors flex items-center justify-center group shrink-0"
+        onKeyDown={handleResizeKeyDown}
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize terminal height"
+        aria-valuenow={height}
+        aria-valuemin={minHeight}
+        aria-valuemax={maxHeight}
+        tabIndex={0}
+        className="focus-ring h-2 w-full cursor-ns-resize bg-border hover:bg-border-bright transition-colors flex items-center justify-center group shrink-0"
         style={{ boxShadow: '0 -2px 4px rgba(0,0,0,0.3)' }}
       >
         <div className="flex items-center gap-1">
@@ -159,7 +180,7 @@ export function InlineTerminal({
         <div className="flex items-center gap-0.5">
           <button
             onClick={minimizeTab}
-            className="p-1.5 text-text-muted hover:text-text transition-colors"
+            className="focus-ring p-1.5 text-text-muted hover:text-text transition-colors"
             title="Minimize to bottom bar"
             aria-label="Minimize to bottom bar"
           >
@@ -167,7 +188,7 @@ export function InlineTerminal({
           </button>
           <button
             onClick={handleClose}
-            className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
+            className="focus-ring p-1.5 text-text-muted hover:text-red-400 transition-colors"
             title="Close terminal"
             aria-label="Close terminal"
           >
