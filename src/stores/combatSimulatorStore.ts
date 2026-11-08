@@ -59,8 +59,7 @@ interface CombatSimulatorState {
 
   // Actions
   fetchDefaults: () => Promise<void>;
-  runSimulation: (scenario: CombatScenario, tuning: TuningOverrides, config: CombatSimConfig) => Promise<SimulationResult | null>;
-  /** Like runSimulation, but consumes the endpoint's SSE stream and updates simProgress per batch. */
+  /** Run a simulation: consumes the endpoint's SSE stream and updates simProgress per batch. */
   runSimulationStreaming: (scenario: CombatScenario, tuning: TuningOverrides, config: CombatSimConfig) => Promise<SimulationResult | null>;
   setTuning: (tuning: TuningOverrides) => void;
   /** Pin the current result as the A/B baseline. No-op if there is no result. */
@@ -110,42 +109,6 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err), isLoading: false });
-    }
-  },
-
-  runSimulation: async (scenario, tuning, config) => {
-    const runToken = ++simRunCounter;
-    set({ isSimulating: true, error: null });
-    try {
-      const data = await apiFetch<{ result: SimulationResult }>(
-        '/api/combat-simulator',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'simulate', scenario, tuning, config }),
-        },
-      );
-      // A newer run started while we were in flight — discard this result.
-      if (runToken !== simRunCounter) return null;
-
-      // If a baseline is pinned, diff this candidate run against it.
-      const baseline = get().baselineResult;
-      const comparison = baseline
-        ? compareRuns(baseline, data.result, { baseline: 'Baseline', candidate: 'Candidate' })
-        : null;
-
-      set({
-        result: data.result,
-        summary: data.result.summary,
-        alerts: data.result.alerts,
-        comparison,
-        isSimulating: false,
-      });
-      return data.result;
-    } catch (err) {
-      if (runToken !== simRunCounter) return null;
-      set({ error: err instanceof Error ? err.message : String(err), isSimulating: false });
-      return null;
     }
   },
 

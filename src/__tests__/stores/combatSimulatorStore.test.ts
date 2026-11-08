@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { mockFetch } from '@/__tests__/setup';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
 import { DEFAULT_TUNING, DEFAULT_CONFIG, GEAR_LOADOUTS, PLAYER_ABILITIES } from '@/lib/combat/definitions';
 import type { CombatScenario, SimulationResult, CombatSummary } from '@/types/combat-simulator';
@@ -24,6 +23,23 @@ function makeSummary(over: Partial<CombatSummary> = {}): CombatSummary {
     threatBreakdown: { bySource: [], byEnemy: [], totalDeaths: 0, totalDamageTaken: 0 },
     ...over,
   };
+}
+
+/** Stub the route's SSE stream: one progress frame, then the `result` frame. */
+function stubSimulationStream(result: SimulationResult) {
+  const enc = new TextEncoder();
+  const frames = [
+    `data: ${JSON.stringify({ type: 'progress', completed: 1, total: 1 })}
+
+`,
+    `data: ${JSON.stringify({ type: 'result', result })}
+
+`,
+  ];
+  const body = new ReadableStream<Uint8Array>({
+    start(c) { for (const f of frames) c.enqueue(enc.encode(f)); c.close(); },
+  });
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, body }) as unknown as typeof fetch;
 }
 
 function makeResult(summary: CombatSummary): SimulationResult {
@@ -83,9 +99,9 @@ describe('combatSimulatorStore — A/B baseline', () => {
 
     // The next run returns a stronger candidate.
     const candidate = makeResult(makeSummary({ survivalRate: 0.7, avgDPS: 65 }));
-    mockFetch({ body: { success: true, data: { result: candidate } } });
+    stubSimulationStream(candidate);
 
-    await useCombatSimulatorStore.getState().runSimulation(
+    await useCombatSimulatorStore.getState().runSimulationStreaming(
       makeScenario(), { ...DEFAULT_TUNING }, { ...DEFAULT_CONFIG },
     );
 
@@ -99,9 +115,9 @@ describe('combatSimulatorStore — A/B baseline', () => {
 
   it('leaves comparison null when no baseline is pinned', async () => {
     const candidate = makeResult(makeSummary());
-    mockFetch({ body: { success: true, data: { result: candidate } } });
+    stubSimulationStream(candidate);
 
-    await useCombatSimulatorStore.getState().runSimulation(
+    await useCombatSimulatorStore.getState().runSimulationStreaming(
       makeScenario(), { ...DEFAULT_TUNING }, { ...DEFAULT_CONFIG },
     );
 
