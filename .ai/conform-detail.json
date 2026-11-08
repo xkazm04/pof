@@ -23829,6 +23829,63 @@
           "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/AffixAlertsTabs.tsx:40 The affix list takes the verdict's own threshold instead of restating it."
         }
       ]
+    },
+    "3628b30f-1462-4e6a-a097-c27bd02990f0/eval-harness": {
+      "context": "catalog-database",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:16:55.512Z",
+      "worker": "94cd1077-eeb1-4f90-a82c-7dd3fe0af499",
+      "techniques": [
+        {
+          "technique": "measurement-revision",
+          "verdict": "deviation",
+          "evidence": "src/lib/pipeline-artifacts-db.ts:414 Revisions are archived only on content change, and the comment at lines 407-408 says verdict-only writes are skipped on purpose. A search of CREATE TABLE names containing gate, drain, verdict or artifact found no artifact status history, only judge and craft verdict history. The technique requires a revision to be an additional record, not an edit."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:41 The producer cannot write its own status on a gradable step. This covers the status field only; the checker that reads the submitted data has its own gap, recorded on pipeline-acceptance-engine."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/settle/route.ts:88 The settle preview grades against an in-memory stage and persists nothing, matching the dry-mode rule. One exception: rowToArtifact reports a corrupt row as status fail, distinguished only by a CORRUPT: reason prefix, rather than as a separate error outcome."
+        }
+      ]
+    },
+    "fbf29127-2676-426a-82b7-d0588ca6bd81/eval-harness": {
+      "context": "pipeline-acceptance-engine",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T23:16:55.512Z",
+      "worker": "94cd1077-eeb1-4f90-a82c-7dd3fe0af499",
+      "techniques": [
+        {
+          "technique": "candidate-write-access",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:109 The gate reads imageUrl, glbUrl, assetUrl and assetPath from data the producer submits. Searches of galleryArtifact, bindGeneratedIcons, bindIconsAll, artifactCommit and artifact-validation found no existence check, and staticVerify, regrade, settlePlan, resolveStepAcceptance and artifactCommit never read these fields."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:166 The attribution emits the score and optional model but drops the rubric version, and rubricVersion appears nowhere in non-test code under src/lib/catalog or layout-lab, so a superseded verdict's score travels without its instrument identity. The bridge does stop old-rubric verdicts from condemning at line 96. Anchor sets and drift measurement sit outside this context and were not judged."
+        },
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:197 Deterministic checkers run first and the judge can only down-grade a shape pass. pythonDrain.ts:164 also keeps a transport failure out of the verdict, as a third outcome."
+        },
+        {
+          "technique": "certification-levels",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:33 What was not observed is deferred at the level that would observe it rather than passed. Caveat: gradeSelectedCandidate does not consult autoSelected, so an auto-picked real asset still passes the L1 selection gate, and only the ProvenanceStrip discloses that."
+        }
+      ]
     }
   }
 }

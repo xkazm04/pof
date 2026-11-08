@@ -8640,7 +8640,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/pipeline-artifacts-db.ts:414 A drain or re-verify that changes only the verdict on unchanged content overwrites status, tier and reason in place, so a pass that later reads fail leaves no earlier record and run-to-run flips cannot be seen.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "prompt-assembly",
@@ -21031,7 +21035,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:109 Any non-empty string the producer writes into a candidate's asset fields makes the gallery gate pass at L1 as a real generated asset, with no check that the file exists, so the candidate can assert the result it is measured on.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "mcp-tools",
