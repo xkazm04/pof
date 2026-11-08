@@ -207,6 +207,22 @@ function firstJsonObject(raw: string): string | null {
   return null;
 }
 
+/** A 0-100 judge score: rounded and clamped. */
+const clampScore = (n: number): number => Math.max(0, Math.min(100, Math.round(n)));
+
+/** Per-dimension scores held to the SAME 0-100 rule as the overall score. The verdict route
+ *  refuses a dimension outside 0-100 or not a number, and that 400 lands after the draw was
+ *  paid for, so the parser only ever returns what the route will admit: finite numbers are
+ *  clamped, anything else is dropped. */
+function sanitizeDimensions(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = clampScore(v);
+  }
+  return out;
+}
+
 /** Parse the judge's JSON verdict out of raw CLI stdout (tolerant of stray text before/after). */
 export function parseJudgeResult(raw: string): JudgeResult | null {
   const json = firstJsonObject(raw);
@@ -215,8 +231,8 @@ export function parseJudgeResult(raw: string): JudgeResult | null {
     const o = JSON.parse(json) as Partial<JudgeResult>;
     if (typeof o.score !== 'number' || (o.verdict !== 'pass' && o.verdict !== 'fail')) return null;
     return {
-      dimensions: (o.dimensions as Record<string, number>) ?? {},
-      score: Math.max(0, Math.min(100, Math.round(o.score))),
+      dimensions: sanitizeDimensions(o.dimensions),
+      score: clampScore(o.score),
       verdict: o.verdict,
       findings: String(o.findings ?? ''),
       fix: String(o.fix ?? ''),
