@@ -10,7 +10,7 @@
  *
  * Pure (no DB, no I/O) — the caller supplies the artifacts.
  */
-import { summarizeEvidence, type GateEvidence, type GateEvidenceKind } from '@/types/observation';
+import { hasProof, summarizeEvidence, type GateEvidence, type GateEvidenceKind } from '@/types/observation';
 import { isSyntheticEntity } from '@/lib/status/statusModel';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
@@ -81,7 +81,8 @@ export function buildEvidenceAudit(artifacts: PipelineArtifact[], filter: Eviden
       ...(a.tier ? { tier: a.tier } : {}),
     };
     const evidence = readEvidence(a);
-    if (!evidence) { missing.push(base); continue; }
+    // Empty evidence ({kind, at} with no proof field) is un-auditable: same as none.
+    if (!evidence || !hasProof(evidence)) { missing.push(base); continue; }
     const summary = summarizeEvidence(evidence);
     rows.push({
       ...base,

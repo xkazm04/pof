@@ -316,6 +316,18 @@ export function boundJudgeText(text: string, max = EVIDENCE_MAX_TEXT): string {
   return text.length <= max ? text : `${text.slice(0, max)}…`;
 }
 
+/** True when the evidence carries at least one non-empty proof field (markers, samples, stats,
+ *  screenshot or judge text). `{ kind, at }` alone is a timestamped claim, not a proof. Pure. */
+export function hasProof(e: GateEvidence): boolean {
+  return Boolean(
+    e.markers?.length ||
+    e.samples?.length ||
+    (e.stats && Object.keys(e.stats).length) ||
+    e.screenshotPath ||
+    e.judgeText,
+  );
+}
+
 /** One-line human summary of evidence for the notification payload / webhook. Pure. */
 export function summarizeEvidence(e?: GateEvidence): string | undefined {
   if (!e) return undefined;
