@@ -63,3 +63,9 @@ catalog-database {"better":4}
 catalog-pipeline-state {"better":6,"superseded":1}
 character-overview-input {"better":7}
 build-history-config {"better":8}
+models-asset-inventory {"better":7,"superseded":1}
+game-design-studio-api {"better":8,"superseded":1}
+shared-utility-hooks {"demoted":1,"better":8}
+visual-gen-contact-sheet-ue5-export {"superseded":1,"better":8,"demoted":1}
+blueprint-transpiler-game-systems {"partially_superseded":1,"better":7,"superseded":1,"unmeasurable":1}
+module-topology-graph {"better":10}
