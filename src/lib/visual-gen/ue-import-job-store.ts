@@ -99,7 +99,7 @@ type Importer = (
  * output is `finished`, anything else is generator output (`raw`). Pure.
  */
 export function importStageFor(glbPath: string): MeshStage {
-  return /(^|[\/])mesh-finish[\/]/i.test(glbPath) ? 'finished' : 'raw';
+  return /(^|[\\/])mesh-finish[\\/]/i.test(glbPath) ? 'finished' : 'raw';
 }
 
 /**
