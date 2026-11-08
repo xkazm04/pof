@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, forwardRef } from 'react';
 import { Package } from 'lucide-react';
 import Image from 'next/image';
-import { OVERLAY_WHITE, STATUS_SUCCESS, STATUS_ERROR,
+import { OVERLAY_WHITE, STATUS_SUCCESS, STATUS_ERROR, STATUS_SUBDUED,
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_5, OPACITY_8, OPACITY_25, OPACITY_12, OPACITY_30,
 } from '@/lib/chart-colors';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,7 +45,8 @@ interface TradingCardProps {
 
 export const TradingCard = forwardRef<HTMLDivElement, TradingCardProps>(
 function TradingCard({ item, tabIndex, onFocus: onFocusProp, onActivate }, ref) {
-  const color = RARITY_COLORS[item.rarity];
+  // rarity is a free string; an off-ladder value must not paint invalid `undefined…` colours.
+  const color = RARITY_COLORS[item.rarity] ?? STATUS_SUBDUED;
   const [showTooltip, setShowTooltip] = useState(false);
   const [isFocusVisible, setIsFocusVisible] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
