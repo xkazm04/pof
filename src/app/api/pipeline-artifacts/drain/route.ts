@@ -12,6 +12,9 @@ import { resolveUprojectPath } from '@/lib/ue5-bridge/build-pipeline';
 // key when both omitted) lives in `drain-lease.ts` so a GET status route can READ it (the lab
 // runner chip), turning a 409 surprise into visible truth. The SAME lease now also covers the
 // always-on worker (`worker.runDrainTick`), so route + worker are mutually exclusive.
+/** The body keys that NARROW a drain (the `DrainFilter` fields). */
+const SCOPE_KEYS: readonly (keyof DrainFilter)[] = ['tier', 'catalogId', 'entityId', 'entityIds'];
+
 /** Test-only: clear the lease registry between cases. */
 export function __resetDrainInFlight() { __resetLeases(); }
 
@@ -65,6 +68,14 @@ export async function POST(req: NextRequest) {
     }
     const request = parseDrainRequest(rawBody);
     const filter: DrainFilter = request.filter;
+    // A scope key the caller SENT but that did not parse (`entityId: 42`, `""`, `tier: "l3"`,
+    // `entityIds: []`) used to be dropped silently, so the request ran a WIDER drain than it
+    // named (catalog-wide or global). Narrowing is the caller's claim; refuse rather than widen.
+    const body = rawBody as Record<string, unknown>;
+    const unparsed = SCOPE_KEYS.filter((k) => body[k] !== undefined && body[k] !== null && filter[k] === undefined);
+    if (unparsed.length > 0) {
+      return apiError(`drain scope key(s) ${unparsed.join(', ')} did not parse — refusing rather than widening the drain`, 400);
+    }
 
     // Lease keys: one per requested entity for a batch, else the single (or global) key —
     // the same helper the worker uses, so both contend on one registry.
