@@ -58,12 +58,3 @@ export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color
     </div>
   );
 }
-
-export function StatBox({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div className="p-1.5 rounded-md bg-black/30 border border-border/30 text-center">
-      <div className="text-xs font-mono font-bold" style={{ color }}>{value}</div>
-      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</div>
-    </div>
-  );
-}

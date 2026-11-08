@@ -15,7 +15,7 @@ import type { TuningOverrides } from '@/types/combat-simulator';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import { FEEDBACK_CHANNEL_COLORS } from './types';
 import { UnifiedTimeline } from './UnifiedTimeline';
-import { TuningSlider, StatBox } from './TuningSlider';
+import { TuningSlider } from './TuningSlider';
 export { ArchetypePalette, GhostLegend } from './GridPanels';
 
 type SimResult = ChoreographySimResult;
