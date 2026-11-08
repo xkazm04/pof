@@ -71,7 +71,11 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
     if (diagnostic.rawText) {
       parts.push(diagnostic.rawText);
     }
-    await navigator.clipboard.writeText(parts.join('\n'));
+    try {
+      await navigator.clipboard.writeText(parts.join('\n'));
+    } catch {
+      return; // clipboard denied (insecure origin / permission): never claim "copied"
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [diagnostic]);
