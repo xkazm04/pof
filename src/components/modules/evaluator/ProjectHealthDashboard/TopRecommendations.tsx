@@ -26,7 +26,7 @@ export function TopRecommendations({
         </span>
       </div>
       <div className="space-y-2">
-        {lastScan.recommendations
+        {[...lastScan.recommendations]
           .sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority))
           .slice(0, 5)
           .map((rec) => {
