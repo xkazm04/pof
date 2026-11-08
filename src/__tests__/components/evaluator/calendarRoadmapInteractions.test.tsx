@@ -174,3 +174,14 @@ describe('icon-only roadmap controls', () => {
     screen.getByRole('button', { name: 'Cancel editing deadline for Combat' });
   });
 });
+
+describe('the legend', () => {
+  it('draws the deadline as the diamond the chart draws, and no fixed colour for predicted', async () => {
+    installFetch();
+    const { container, findByTestId } = render(<CalendarRoadmapView />);
+    await findByTestId('deadline-marker-ms-1');
+    expect(container.querySelector('.border-dashed')).toBeNull();
+    expect(container.querySelector('[data-testid="legend-deadline"]')?.className).toContain('rotate-45');
+    expect(container.querySelector('[data-testid="legend-predicted"]')?.getAttribute('style') ?? '').not.toContain('gradient');
+  });
+});
