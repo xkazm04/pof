@@ -36,6 +36,8 @@ export function AttackRingControls({ numPoints, setNumPoints, attackDist, setAtt
           step={1}
           value={numPoints}
           onChange={e => setNumPoints(Number(e.target.value))}
+          aria-label="NumberOfPoints"
+          aria-valuetext={`${numPoints} points`}
           data-testid="attack-ring-num-points"
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{
@@ -62,6 +64,8 @@ export function AttackRingControls({ numPoints, setNumPoints, attackDist, setAtt
           step={10}
           value={attackDist}
           onChange={e => setAttackDist(Number(e.target.value))}
+          aria-label="AttackDistance"
+          aria-valuetext={`${attackDist} UU`}
           data-testid="attack-ring-distance"
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{
@@ -82,7 +86,10 @@ export function AttackRingControls({ numPoints, setNumPoints, attackDist, setAtt
           <div className="text-[11px] text-text-muted">Inner ring at {Math.round(attackDist * 0.5)}u (50%)</div>
         </div>
         <button
+          type="button"
           onClick={() => setInnerRing(v => !v)}
+          aria-label="bGenerateInnerRing"
+          aria-pressed={innerRing}
           data-testid="attack-ring-inner-toggle"
           className="text-xs font-mono font-bold px-2.5 py-1 rounded border transition-all"
           style={{

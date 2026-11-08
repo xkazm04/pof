@@ -60,3 +60,25 @@ describe('EQS reference views — DOM ids are unique per mount', () => {
     }
   });
 });
+
+describe('AttackRingVisualizer controls — named like the squad editor sliders', () => {
+  it('both sliders have an accessible name and value text; the ring toggle reports pressed state', async () => {
+    const { AttackRingVisualizer } = await import('@/components/modules/game-systems/AttackRingVisualizer');
+    const { container } = render(<AttackRingVisualizer />);
+    const sliders = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="range"]'));
+    expect(sliders.length).toBe(2);
+    for (const s of sliders) {
+      expect(s.getAttribute('aria-label')).toBeTruthy();
+      expect(s.getAttribute('aria-valuetext')).toBeTruthy();
+    }
+    const dist = container.querySelector('[data-testid="attack-ring-distance"]')!;
+    expect(dist.getAttribute('aria-valuetext')).toBe(`${(dist as HTMLInputElement).value} UU`);
+    const toggle = container.querySelector('[data-testid="attack-ring-inner-toggle"]')!;
+    expect(toggle.getAttribute('type')).toBe('button');
+    expect(toggle.getAttribute('aria-label')).toBe('bGenerateInnerRing');
+    const before = toggle.getAttribute('aria-pressed');
+    expect(before === 'true' || before === 'false').toBe(true);
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe(before === 'true' ? 'false' : 'true');
+  });
+});
