@@ -41,6 +41,7 @@ export function ResultsSection({
   onBatchFix,
   onRunSingle,
   isFixRunning,
+  isRunning = false,
   fixTargetId,
 }: {
   result: DeepEvalResult;
@@ -60,6 +61,8 @@ export function ResultsSection({
   onBatchFix: (moduleFindings: ModuleFindings) => void;
   onRunSingle: (moduleId: SubModuleId) => void;
   isFixRunning: boolean;
+  /** A deep-eval job is running (disables per-module Re-evaluate). */
+  isRunning?: boolean;
   /** The finding id or `module:<id>` currently being fixed, or null. */
   fixTargetId: string | null;
 }) {
@@ -164,6 +167,7 @@ export function ResultsSection({
             onBatchFix={() => onBatchFix(mod)}
             onRunSingle={() => onRunSingle(mod.moduleId)}
             isFixRunning={isFixRunning}
+            isRunning={isRunning}
             fixTargetId={fixTargetId}
           />
         ))}
