@@ -6,6 +6,7 @@ import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import { ZoneEditor } from '@/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor';
 import { TransitionList } from '@/components/modules/content/level-design/StreamingZonePlanner/TransitionList';
 import { PaintPalette } from '@/components/modules/content/level-design/StreamingZonePlanner/PaintPalette';
+import { PreflightPanel } from '@/components/modules/content/level-design/StreamingZonePlanner/PreflightPanel';
 import type { StreamingZone } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
 
 afterEach(cleanup);
@@ -55,5 +56,13 @@ describe('accessible names', () => {
     expect(screen.getByRole('button', { name: /Town$/ }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: /Forest$/ }).getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByRole('button', { name: /Erase/ }).getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+describe('PreflightPanel on an empty plan', () => {
+  it('does not certify a plan with no zones', () => {
+    render(<PreflightPanel preflight={{ findings: [], blocksGenerate: false }} residency={{ byZone: {}, peak: null }} zones={[]} selectedZoneId={null} dispatch={() => {}} />);
+    expect(screen.queryByText(/every zone is reachable/)).toBeNull();
+    expect(screen.getByText(/No zones yet/)).toBeTruthy();
   });
 });

@@ -31,18 +31,20 @@ export function PreflightPanel({ preflight, residency, zones, selectedZoneId, di
   const nameOf = (id: string) => zones.find((z) => z.id === id)?.name ?? id;
   const { peak } = residency;
   const selectedResident = selectedZoneId ? residency.byZone[selectedZoneId] : undefined;
-  const clean = findings.length === 0;
+  const empty = zones.length === 0;
+  const clean = findings.length === 0 && !empty;
 
   return (
     <div data-testid="streaming-preflight" className="bg-[#03030a] rounded-xl border border-violet-900/30 p-4 space-y-2 text-xs">
       <div className="flex items-center gap-2 font-mono uppercase tracking-widest text-xs text-violet-300">
         {clean
           ? <ShieldCheck className="w-3.5 h-3.5" style={{ color: STATUS_SUCCESS }} />
-          : <ShieldAlert className="w-3.5 h-3.5" style={{ color: preflight.blocksGenerate ? STATUS_ERROR : STATUS_WARNING }} />}
+          : <ShieldAlert className="w-3.5 h-3.5" style={{ color: preflight.blocksGenerate ? STATUS_ERROR : empty ? STATUS_SUBDUED : STATUS_WARNING }} />}
         Preflight
         <span className="ml-auto text-violet-500">{findings.length} finding{findings.length === 1 ? '' : 's'}</span>
       </div>
 
+      {empty && <p className="text-text-muted">No zones yet. Paint a zone to run preflight and enable Generate.</p>}
       {clean && (
         <p className="text-text-muted">Identifiers compile, every zone is reachable, every seamless crossing is preloaded.</p>
       )}
