@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { existsSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { renderIconFromMesh } from '@/lib/visual-gen/icon-from-mesh';
 
 /**
@@ -22,6 +23,8 @@ import { renderIconFromMesh } from '@/lib/visual-gen/icon-from-mesh';
  * shipped asset" is checkable rather than asserted.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as {
       meshPath?: string;

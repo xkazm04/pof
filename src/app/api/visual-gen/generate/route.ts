@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { runnerDispatchFor, runnerRefusal, type RunnerMode } from '@/lib/visual-gen/runner-dispatch';
 import {
   routePromptShape,
@@ -41,6 +42,8 @@ import { meshPromptFor } from '@/lib/media-prompts/meshPrompts';
  * outcome rides on the 202 as `inputGate` — including when the gate could not run.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as {
       mode?: string;

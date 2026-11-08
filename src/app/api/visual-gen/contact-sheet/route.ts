@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import sharp from 'sharp';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { GENERATED_IMAGE_DIR, generateTwoDImage } from '@/lib/visual-gen/image-providers';
 import { DEFAULT_SHEET_PX, type ContactSheetSpec } from '@/lib/visual-gen/contact-sheet';
 import { runContactSheet, type SheetImageOps } from '@/lib/visual-gen/sheet-slice';
@@ -86,6 +87,8 @@ export const sharpImageOps: SheetImageOps = {
 };
 
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as {
       catalogId?: string;

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { gateInputImage, parseVisionImage } from '@/lib/visual-gen/input-gate';
 
 /**
@@ -19,6 +20,8 @@ import { gateInputImage, parseVisionImage } from '@/lib/visual-gen/input-gate';
  * Data: { verdict: 'pass'|'warn'|'fail', score: 0-100, reasons: string[], raw: string }
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as { imageDataUrl?: string; subject?: string };
     if (!body.imageDataUrl) return apiError('Missing required field: imageDataUrl', 400);

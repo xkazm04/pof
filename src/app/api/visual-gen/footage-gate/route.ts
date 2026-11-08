@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { gateFootage, type FootagePurpose } from '@/lib/visual-gen/footage-gate';
 
 /**
@@ -16,6 +17,8 @@ import { gateFootage, type FootagePurpose } from '@/lib/visual-gen/footage-gate'
  * Data: { verdict: 'pass'|'warn'|'fail', score: 0-100, reasons: string[], raw, frames }
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = (await request.json()) as { videoPath?: string; purpose?: FootagePurpose; frameCount?: number };
     if (!body.videoPath) return apiError('Missing required field: videoPath', 400);
