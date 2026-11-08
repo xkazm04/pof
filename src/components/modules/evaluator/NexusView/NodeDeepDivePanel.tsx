@@ -59,7 +59,7 @@ export function NodeDeepDivePanel({
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: `${ACCENT_VIOLET}${OPACITY_15}`, border: `1px solid ${ACCENT_VIOLET}${OPACITY_30}` }}
             >
-              <Network className="w-4 h-4 text-[#a78bfa]" />
+              <Network className="w-4 h-4" style={{ color: ACCENT_VIOLET }} />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-text">{node.label}</h3>
@@ -111,7 +111,7 @@ export function NodeDeepDivePanel({
               <div className="space-y-1.5">
                 {patterns.slice(0, 5).map((p) => (
                   <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-background">
-                    <BookOpen className="w-3 h-3 text-[#4ade80] flex-shrink-0" />
+                    <BookOpen className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
                     <span className="text-xs text-text flex-1 truncate">{p.title}</span>
                     <span className="text-2xs font-medium" style={{ color: p.successRate >= 0.7 ? STATUS_SUCCESS : STATUS_WARNING }}>
                       {Math.round(p.successRate * 100)}%
@@ -208,7 +208,7 @@ export function NodeDeepDivePanel({
                   );
                   return (
                     <div key={template.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-background">
-                      <Sparkles className="w-3 h-3 text-[#a78bfa] flex-shrink-0" />
+                      <Sparkles className="w-3 h-3 flex-shrink-0" style={{ color: ACCENT_VIOLET }} />
                       <span className="text-xs text-text">{template.label}</span>
                       <span className="text-2xs text-text-muted">{relevantItems.length} priority items</span>
                     </div>

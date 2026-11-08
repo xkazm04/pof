@@ -50,7 +50,7 @@ export function OverlapRow({ overlap, twin, reviewKeys, reviewBusy, onReview, is
   const toggleLabel = `${isExpanded ? 'Collapse' : 'Expand'} overlap between ${overlap.featureA} (${moduleLabel(overlap.moduleA)}) and ${overlap.featureB} (${moduleLabel(overlap.moduleB)}) — ${simPct}% ${cfg.label}${twinLabel}`;
 
   return (
-    <div className={`group rounded-lg overflow-hidden transition-colors hover:bg-surface-hover ${isExpanded ? 'bg-[#111130]' : ''}`}>
+    <div className={`group rounded-lg overflow-hidden transition-colors hover:bg-surface-hover ${isExpanded ? 'bg-state-active-bg' : ''}`}>
       {/* Control row: toggle, review and copy share one line; details open BELOW it. */}
       <div className="flex items-stretch">
         <button

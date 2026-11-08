@@ -5,7 +5,7 @@ import {
   Loader2, ZoomIn, ZoomOut, Maximize2,
   Network, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
-import { STATUS_BLOCKER, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { STATUS_BLOCKER, STATUS_SUCCESS, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
 import type { SourceStatus } from '@/lib/evaluator/nexus-signals';
 import { LAYERS } from './constants';
 import type { LayerConfig } from './constants';
@@ -72,7 +72,7 @@ export function NexusView() {
       {/* Header + Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Network className="w-4 h-4 text-[#a78bfa]" />
+          <Network className="w-4 h-4" style={{ color: ACCENT_VIOLET }} />
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Nexus Intelligence Map
           </span>
@@ -149,7 +149,7 @@ export function NexusView() {
         </span>
         {activeLayers.has('patterns') && (
           <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-4 rounded-sm bg-[#4ade80]" /> Pattern success
+            <span className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: STATUS_SUCCESS }} /> Pattern success
           </span>
         )}
         {activeLayers.has('builds') && (
@@ -162,7 +162,7 @@ export function NexusView() {
         )}
         {activeLayers.has('genre') && (
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded border border-[#a78bfa] opacity-60" style={{ boxShadow: '0 0 4px #a78bfa' }} /> Genre feature
+            <span className="w-3 h-3 rounded border opacity-60" style={{ borderColor: ACCENT_VIOLET, boxShadow: `0 0 4px ${ACCENT_VIOLET}` }} /> Genre feature
           </span>
         )}
       </div>
