@@ -229,7 +229,7 @@ export function parseUE5Config(text: string, base: HudTheme): HudImportResult {
     if (!f && !c) return bad('not a float or FLinearColor declaration');
     const name = (f ?? c)![1];
     const p = HUD_PARAM_BY_UE_NAME.get(name);
-    if (!p) { out.unknown.push(name); return; }
+    if (!p) { if (!out.unknown.includes(name)) out.unknown.push(name); return; }
     if (seen.has(name)) return bad(`duplicate declaration of ${name}`);
     if (p.kind === 'float' && !f) return bad(`${name} is a float, got a color`);
     if (p.kind === 'color' && !c) return bad(`${name} is a color, got a float`);
