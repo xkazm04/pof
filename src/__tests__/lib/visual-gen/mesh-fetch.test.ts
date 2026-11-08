@@ -47,6 +47,7 @@ function deps(res = response(), writes: { path: string; bytes: number }[] = []) 
       fetchFn: vi.fn().mockResolvedValue(res) as unknown as typeof fetch,
       writeFile: (p: string, data: Uint8Array) => { writes.push({ path: p, bytes: data.byteLength }); },
       mkdir: () => {},
+      rename: () => {},
       outDir: '/tmp/generated/mcp',
     },
   };
@@ -186,4 +187,43 @@ describe('generated/mcp is servable — and lists only what actually landed', ()
     expect(writes).toHaveLength(0);
     expect(buildAssetList([], new Set(), MCP_ASSET_DIR)).toEqual([]);
   });
+});
+
+describe('a partial download never poses as a cached one', () => {
+  /** An in-memory disk whose write can die halfway, leaving half the bytes under that name. */
+  function fakeDisk(failFirstWrite: boolean) {
+    const files = new Map<string, number>();
+    let failed = !failFirstWrite;
+    return {
+      files,
+      deps: {
+        writeFile: (p: string, data: Uint8Array) => {
+          if (!failed) { failed = true; files.set(p, data.byteLength >> 1); throw new Error('ENOSPC'); }
+          files.set(p, data.byteLength);
+        },
+        rename: (a: string, b: string) => { files.set(b, files.get(a) ?? 0); files.delete(a); },
+        fileExists: (p: string) => files.has(p),
+        mkdir: () => {},
+        outDir: '/tmp/generated/mcp',
+      },
+    };
+  }
+
+  for (const [arm, url, job] of [
+    ['glb', 'https://hyperhuman.deemos.com/out/job1.glb', 'job1'],
+    ['gltf', 'https://hyperhuman.deemos.com/out/job2.gltf', 'job2'],
+  ] as const) {
+    it(`re-fetches on the next poll after a write that died mid-file (${arm})`, async () => {
+      const disk = fakeDisk(true);
+      const fetchFn = vi.fn().mockImplementation(async () => response({ url })) as unknown as typeof fetch;
+      const first = await fetchMeshForGrading(url, job, { ...disk.deps, fetchFn });
+      expect(first.ok).toBe(false);
+      const second = await fetchMeshForGrading(url, job, { ...disk.deps, fetchFn });
+      expect(second.ok).toBe(true);
+      if (!second.ok) return;
+      expect(second.cached).toBeUndefined();
+      expect(disk.files.get(second.path)).toBe(1024);
+      expect(vi.mocked(fetchFn)).toHaveBeenCalledTimes(2);
+    });
+  }
 });
