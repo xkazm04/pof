@@ -67,6 +67,28 @@ describe('BuildHealthDashboard: a refetch never hides rendered rows (table: fetc
   });
 });
 
+describe('BuildHealthDashboard: a failed refetch keeps the rendered rows (async-ui-states)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('keeps the KPI row and offers an inline retry when the 2nd fetch fails', async () => {
+    useProjectStore.setState({ projectPath: 'C:\Proj', projectName: 'Did', ueVersion: '5.8.0' });
+    const populated = report({ success: 3, failed: 1, aborted: 0 });
+    let calls = 0;
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      calls += 1;
+      if (calls > 1) return { ok: false, status: 500, json: async () => ({ success: false, error: 'boom' }) };
+      return { ok: true, json: async () => ({ success: true, data: populated }) };
+    }));
+
+    const { container, findByLabelText, findByText } = render(<BuildHealthDashboard />);
+    const refresh = await findByLabelText('Refresh build health');
+    await act(async () => { fireEvent.click(refresh); });
+    await findByText('boom');
+    expect(container.querySelector('[data-stat="total-builds"]')).not.toBeNull();
+    expect(container.querySelector('[role="alert"] button')).not.toBeNull();
+  });
+});
+
 describe('BuildHealthDashboard: Total Builds verdict (quality-gates: no verdict reads as compliance)', () => {
   it('does not say "all passing" when builds were aborted', () => {
     const { container } = render(<BuildHealthDashboard initialReport={report({ success: 3, failed: 0, aborted: 2 })} />);

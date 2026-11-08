@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
 import { formatDuration } from '@/lib/format';
+import { logger } from '@/lib/logger';
 import { useProjectStore } from '@/stores/projectStore';
 import { useBuildRun } from '@/hooks/useBuildRun';
 import { isRunActive } from '@/lib/ue5-bridge/build-run';
@@ -14,6 +15,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { FetchError } from '../../shared/FetchError';
+import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
 import { BuildDurationTrendChart } from '../BuildDurationTrendChart';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, STATUS_STALE, successRateColor,
@@ -55,7 +57,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
       );
       setReport(data);
     } catch (e) {
-      console.error('[BuildHealthDashboard] Failed to fetch build health:', e);
+      logger.error('[BuildHealthDashboard] Failed to fetch build health:', { projectPath, error: e });
       setError(e instanceof Error ? e.message : 'Failed to load build health');
     } finally {
       setLoading(false);
@@ -83,7 +85,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
     );
   }
 
-  if (error) {
+  if (error && !report) {
     return <FetchError message={error} onRetry={fetchReport} />;
   }
 
@@ -136,6 +138,9 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
           </button>
         </div>
       </div>
+
+      {/* A failed refetch keeps the rows on screen and says so inline. */}
+      {error && <InlineErrorRetry message={error} onRetry={fetchReport} />}
 
       {/* Regression alerts */}
       {regressions.length > 0 && (

@@ -43,3 +43,37 @@ describe('CSVImportPanel file read failure is not silent', () => {
     expect(alert!.textContent).toContain('capture.csv');
   });
 });
+
+function okReader(text: string) {
+  return class OkReader {
+    result: string | null = null;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    readAsText() { this.result = text; this.onload?.(); }
+  };
+}
+
+describe('CSVImportPanel re-picks the same file', () => {
+  it('clears the file input after a pick so the same path fires change again', () => {
+    vi.stubGlobal('FileReader', okReader('frame,ms\n1,16\n'));
+    const { container } = render(<CSVImportPanel onImport={noop} isImporting={false} />);
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    // Browsers suppress change for an unchanged value; record what the handler writes back.
+    let value = 'C:\fakepath\capture.csv';
+    Object.defineProperty(fileInput, 'value', { configurable: true, get: () => value, set: (v: string) => { value = v; } });
+    const file = new File(['frame,ms\n1,16\n'], 'capture.csv', { type: 'text/csv' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    expect(value).toBe('');
+  });
+});
+
+describe('CSVImportPanel line readout', () => {
+  it('does not count the trailing newline as a line', () => {
+    vi.stubGlobal('FileReader', okReader('a\nb\n'));
+    const { container } = render(<CSVImportPanel onImport={noop} isImporting={false} />);
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['a\nb\n'], 'capture.csv', { type: 'text/csv' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    expect(container.textContent ?? '').toContain('Loaded 2 lines');
+  });
+});

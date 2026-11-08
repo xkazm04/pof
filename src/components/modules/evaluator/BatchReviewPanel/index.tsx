@@ -7,7 +7,7 @@ import {
   Play, Square, Loader2, RotateCcw, Zap, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { useBatchReview } from '@/hooks/useBatchReview';
-import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, statusBg, statusBorder, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, statusBg, statusBorder, OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_20, OPACITY_30, withOpacity } from '@/lib/chart-colors';
 import { formatDurationBetween } from '@/lib/format';
 import { ACCENT } from './constants';
 import { ModuleRow } from './ModuleRow';
@@ -27,7 +27,13 @@ export function BatchReviewPanel() {
   // can reach 100% instead of stalling short while the status reads "Complete".
   const skipped = batch?.modules.filter(m => m.status === 'skipped').length ?? 0;
   const total = batch?.modules.length ?? 0;
-  const pct = total > 0 ? Math.round(((completed + errored + skipped) / total) * 100) : 0;
+  const resolved = completed + errored + skipped;
+  const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
+  const breakdown = [
+    `${completed} ok`,
+    ...(errored > 0 ? [`${errored} err`] : []),
+    ...(skipped > 0 ? [`${skipped} skipped`] : []),
+  ].join(', ');
 
   return (
     <div className="space-y-3">
@@ -38,7 +44,7 @@ export function BatchReviewPanel() {
           <h3 className="text-sm font-semibold text-text">Batch Review</h3>
           {batch && (
             <span className="text-xs text-text-muted">
-              {completed}/{total} modules
+              {resolved}/{total} resolved ({breakdown})
             </span>
           )}
         </div>
@@ -122,7 +128,14 @@ export function BatchReviewPanel() {
               </span>
               <span className="text-text-muted-hover">{pct}%</span>
             </div>
-            <div className="h-1.5 bg-border rounded-full overflow-hidden flex">
+            <div
+              role="progressbar"
+              aria-label="Batch review progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={pct}
+              className="h-1.5 bg-border rounded-full overflow-hidden flex"
+            >
               {completed > 0 && (
                 <div
                   className="h-full transition-all duration-slow"
@@ -174,7 +187,7 @@ export function BatchReviewPanel() {
       {/* Empty state */}
       {!batch && !error && (
         <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${ACCENT}10` }}>
+          <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: withOpacity(ACCENT, OPACITY_5) }}>
             <Zap className="w-6 h-6" style={{ color: ACCENT }} />
           </div>
           <h3 className="text-sm font-semibold text-text mb-1">Batch Feature Review</h3>
@@ -185,7 +198,7 @@ export function BatchReviewPanel() {
             onClick={startBatch}
             disabled={isStarting}
             className="flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
-            style={{ backgroundColor: `${ACCENT}14`, color: ACCENT, border: `1px solid ${ACCENT}38` }}
+            style={{ backgroundColor: withOpacity(ACCENT, OPACITY_8), color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
           >
             {isStarting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
             Run First Review

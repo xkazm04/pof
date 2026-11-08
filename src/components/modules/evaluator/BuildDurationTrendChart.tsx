@@ -2,9 +2,8 @@
 
 import { useMemo } from 'react';
 import type { DurationTrendPoint } from '@/lib/ue5-bridge/build-health';
-import {
-  MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, STATUS_WARNING,
-} from '@/lib/chart-colors';
+import { MODULE_COLORS } from '@/lib/chart-colors';
+import { statusColor } from './BuildHealthDashboard/helpers';
 
 interface BuildDurationTrendChartProps {
   data: DurationTrendPoint[];
@@ -20,13 +19,6 @@ function fmtSeconds(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(0)}s`;
   return `${(ms / 60_000).toFixed(1)}m`;
-}
-
-function statusColor(status: DurationTrendPoint['status']): string {
-  if (status === 'success') return STATUS_SUCCESS;
-  if (status === 'failed') return STATUS_ERROR;
-  if (status === 'aborted') return STATUS_WARNING;
-  return STATUS_NEUTRAL;
 }
 
 /**
