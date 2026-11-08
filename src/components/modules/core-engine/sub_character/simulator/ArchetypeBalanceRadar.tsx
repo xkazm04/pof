@@ -12,9 +12,10 @@ import {
 } from '@/lib/chart-colors';
 import { RadarChart } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '../_shared/design';
-import { COMPARISON_STATS, deviationColor, type BalanceResult } from '../_shared/data';
+import { COMPARISON_STATS, DEVIATION_THRESHOLDS, deviationColor, type BalanceResult } from '../_shared/data';
 
 const TOP_N = 5;
+const pctLabel = (fraction: number) => `${+(fraction * 100).toFixed(1)}`;
 
 interface ArchetypeBalanceRadarProps {
   balanceResults: BalanceResult[];
@@ -145,7 +146,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
             <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/10 text-[9px] font-mono text-text-muted">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: withOpacity(STATUS_SUCCESS, OPACITY_12), border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_20)}` }} />
-                <span style={{ color: STATUS_SUCCESS }}>Balanced</span> (&lt;10%)
+                <span style={{ color: STATUS_SUCCESS }}>Balanced</span> (&lt;{pctLabel(DEVIATION_THRESHOLDS.balanced)}%)
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: withOpacity(STATUS_WARNING, OPACITY_12), border: `1px solid ${withOpacity(STATUS_WARNING, OPACITY_20)}` }} />
@@ -153,7 +154,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: withOpacity(STATUS_ERROR, OPACITY_12), border: `1px solid ${withOpacity(STATUS_ERROR, OPACITY_20)}` }} />
-                <span style={{ color: STATUS_ERROR }}>Outlier</span> (&ge;25%)
+                <span style={{ color: STATUS_ERROR }}>Outlier</span> (&ge;{pctLabel(DEVIATION_THRESHOLDS.outlier)}%)
               </span>
             </div>
           </div>
