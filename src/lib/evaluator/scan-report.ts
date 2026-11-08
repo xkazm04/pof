@@ -103,6 +103,9 @@ export function scansToReports(
   const reports: EvaluatorReport[] = [];
   for (const scan of [...scansNewestFirst].reverse()) {
     for (const m of scan.modulesEvaluated) if (!covered.includes(m)) covered.push(m);
+    // Until some module has been scored there is no health to report: a scan whose every
+    // module failed would otherwise read as overall 0 — a measurement it never took.
+    if (covered.length === 0) continue;
     const denominator = new Set([...universe, ...covered]).size;
     reports.push(reportOf(scan, [...covered], denominator));
   }
