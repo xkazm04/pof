@@ -21,9 +21,10 @@ export function WorstModulesPanel({ worstModules, setSelectedModule }: WorstModu
       </div>
       <div className="space-y-1.5">
         {worstModules.map((m) => (
-          <div
+          <button
+            type="button"
             key={m.moduleId}
-            className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
+            className="w-full text-left focus-ring flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
             onClick={() => setSelectedModule(m.moduleId)}
           >
             <XCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: STATUS_ERROR }} />
@@ -48,7 +49,7 @@ export function WorstModulesPanel({ worstModules, setSelectedModule }: WorstModu
             <span className="text-xs text-text-muted">
               {m.implemented + m.improved}/{m.total} done
             </span>
-          </div>
+          </button>
         ))}
       </div>
     </div>

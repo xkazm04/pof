@@ -109,7 +109,20 @@ export function HealthRadarChart({
           const color = scoreColor(d.score);
 
           return (
-            <g key={d.moduleId} className="cursor-pointer" onClick={() => setSelectedModule(isSelected ? null : d.moduleId)}>
+            <g
+              key={d.moduleId}
+              className="cursor-pointer focus-ring"
+              role="button"
+              tabIndex={0}
+              aria-label={`${d.label}: ${d.score} of 100`}
+              aria-pressed={isSelected}
+              onClick={() => setSelectedModule(isSelected ? null : d.moduleId)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                e.preventDefault();
+                setSelectedModule(isSelected ? null : d.moduleId);
+              }}
+            >
               {/* Hit area */}
               <circle cx={x} cy={y} r={12} fill="transparent" />
               {/* Dot */}

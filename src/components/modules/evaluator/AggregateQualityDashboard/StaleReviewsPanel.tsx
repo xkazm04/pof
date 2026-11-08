@@ -61,9 +61,10 @@ export function StaleReviewsPanel({
         <>
           <div className="space-y-1 mb-3">
             {staleModules.map((m) => (
-              <div
+              <button
+                type="button"
                 key={m.moduleId}
-                className="flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
+                className="w-full text-left focus-ring flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
                 onClick={() => setSelectedModule(m.moduleId)}
               >
                 <Clock className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_STALE }} />
@@ -73,7 +74,7 @@ export function StaleReviewsPanel({
                     ? `${m.daysSinceReview}d ago`
                     : 'Never reviewed'}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
           <button
