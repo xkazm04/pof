@@ -17,7 +17,7 @@ import { DURATION, SPRING } from '@/lib/motion';
  *     aria-label (fallback)
  *   - Tab / Shift+Tab focus trap that cycles within the dialog
  *   - moves focus to `initialFocusRef` (or the first focusable) on open
- *   - Escape to close
+ *   - Escape to close (document-level, topmost modal only, so it survives focus on the body)
  *   - restores focus to the trigger element on close
  *
  * It deliberately owns the header (title + close button) for the common case;
@@ -39,6 +39,23 @@ function getFocusable(root: HTMLElement | null): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
     (el) => !el.hasAttribute('aria-hidden') && el.getAttribute('aria-hidden') !== 'true',
   );
+}
+
+/**
+ * Open modals, in registration order. Keyboard handling lives on `document` (not on
+ * the panel) so Escape and the Tab trap survive focus falling to the body; only the
+ * topmost modal reacts. Nested modals register child-first (effects run bottom-up),
+ * so topmost = the last entry whose panel does not contain another open panel.
+ */
+const openModalPanels: Array<React.RefObject<HTMLDivElement | null>> = [];
+
+function isTopmost(ref: React.RefObject<HTMLDivElement | null>): boolean {
+  const candidates = openModalPanels.filter((r) => {
+    const el = r.current;
+    if (!el) return false;
+    return !openModalPanels.some((o) => o !== r && o.current && el.contains(o.current));
+  });
+  return candidates[candidates.length - 1] === ref;
 }
 
 export interface ModalProps {
@@ -118,7 +135,8 @@ export function Modal({
   }, [open, initialFocusRef]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
+    (e: KeyboardEvent) => {
+      if (!isTopmost(panelRef)) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -151,6 +169,24 @@ export function Modal({
     },
     [onClose],
   );
+
+  // Document-level so the trap holds when focus is on the body (removed/disabled
+  // control, backdrop click with closeOnBackdrop=false).
+  useEffect(() => {
+    if (!open) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, handleKeyDown]);
+
+  // Registered once per open (not per onClose identity) so sibling order is stable.
+  useEffect(() => {
+    if (!open) return;
+    openModalPanels.push(panelRef);
+    return () => {
+      const i = openModalPanels.indexOf(panelRef);
+      if (i >= 0) openModalPanels.splice(i, 1);
+    };
+  }, [open]);
 
   const backdropMotion = {
     initial: { opacity: 0 },
@@ -193,7 +229,6 @@ export function Modal({
             aria-labelledby={title != null ? titleId : undefined}
             aria-label={title == null ? label : undefined}
             tabIndex={-1}
-            onKeyDown={handleKeyDown}
             className={`relative w-full ${className} max-h-[90vh] overflow-y-auto p-5 bg-surface border border-border rounded-xl shadow-xl focus:outline-none`}
           >
             {title != null && (
