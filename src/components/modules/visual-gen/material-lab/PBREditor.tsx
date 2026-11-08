@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useId, useRef } from 'react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { Upload, X } from 'lucide-react';
 import {
@@ -168,6 +168,7 @@ const MESH_OPTIONS: { value: PreviewMesh; label: string }[] = [
 ];
 
 export function PBREditor() {
+  const baseColorId = useId();
   const params = useMaterialStore((s) => s.params);
   const previewMesh = useMaterialStore((s) => s.previewMesh);
   const setParam = useMaterialStore((s) => s.setParam);
@@ -207,9 +208,10 @@ export function PBREditor() {
 
       {/* Base Color */}
       <div>
-        <label className="text-xs text-text-muted mb-1.5 block">Base Color (Albedo)</label>
+        <label className="text-xs text-text-muted mb-1.5 block" htmlFor={baseColorId}>Base Color (Albedo)</label>
         <div className="flex items-center gap-2">
           <input
+            id={baseColorId}
             type="color"
             value={params.baseColor}
             onChange={(e) => setParam('baseColor', e.target.value)}

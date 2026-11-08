@@ -42,3 +42,11 @@ describe('PBREditor — preview shape selector exposes its selection', () => {
     expect(shapes.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);
   });
 });
+
+describe('PBREditor — base colour picker is labelled', () => {
+  it('the colour input is reachable by its visible label', () => {
+    render(<PBREditor />);
+    const input = screen.getByLabelText('Base Color (Albedo)') as HTMLInputElement;
+    expect(input.type).toBe('color');
+  });
+});
