@@ -89,3 +89,7 @@ catalog-seed-data {"better":3}
 visual-gen-core {"better":5,"demoted":1}
 lab-hooks {"better":3}
 module-system {"better":6}
+material-style-tools {"better":3}
+visual-gen-library {"better":3}
+project-ops-api {"unmeasurable":2,"better":3,"demoted":1,"not-better":1}
+build-quality-monitoring {"better":10}
