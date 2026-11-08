@@ -16,6 +16,7 @@ import { NextRequest } from 'next/server';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { parseHeader, checkExpectations, type SemanticResult } from '@/lib/cpp-semantic-parser';
 import { getExpectationsFor, getExpectationsForItem } from '@/lib/checklist-expectations';
 import { collectHeaders } from '@/lib/ue-source/collect-headers';
@@ -39,7 +40,9 @@ interface ItemVerification {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as VerifyRequest;
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as unknown as VerifyRequest;
     if (!body.projectPath || !body.items?.length) {
       return apiError('projectPath and items[] required', 400);
     }

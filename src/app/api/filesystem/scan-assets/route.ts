@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
 // ── Types ──
@@ -255,7 +256,8 @@ async function scanAssets(projectPath: string): Promise<AssetScanResult> {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const checked = checkLocalPath(body.projectPath, 'projectPath');
     if (!checked.ok) return apiError(checked.error, 400);
     const projectPath = checked.data;
