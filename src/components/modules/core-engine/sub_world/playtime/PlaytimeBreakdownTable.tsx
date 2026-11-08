@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { Timer, Skull, Swords, Footprints } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import {
   STATUS_ERROR,
   ACCENT_ORANGE, ACCENT_VIOLET, ACCENT_EMERALD,
@@ -16,6 +17,7 @@ import type { PlaytimePathMode } from '../_shared/data';
 
 /** Per-zone time bars for `world` (the what-if scenario, or the baseline when nothing is applied). */
 export function PlaytimeBreakdownTable({ mode, world }: { mode: PlaytimePathMode; world: WorldModel }) {
+  const prefersReduced = useReducedMotion();
   const zonePlaytime = useMemo(() => computeZonePlaytime(world), [world]);
   const nodesOnPath = useMemo(
     () => new Set(computeCumulativePath(world, mode).nodes.map(n => n.zoneId)),
@@ -35,9 +37,9 @@ export function PlaytimeBreakdownTable({ mode, world }: { mode: PlaytimePathMode
               <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate text-right flex-shrink-0">{zp.zoneName}</span>
               <div className="relative flex-1 h-6 bg-surface-deep rounded-md overflow-hidden border border-border/30">
                 <motion.div
-                  initial={{ width: 0 }}
+                  initial={prefersReduced ? false : { width: 0 }}
                   animate={{ width: `${barPct}%` }}
-                  transition={{ duration: 0.6 }}
+                  transition={motionSafe({ duration: 0.6 }, prefersReduced)}
                   className="absolute top-0 bottom-0 rounded-md"
                   style={{ background: `linear-gradient(90deg, ${withOpacity(ACCENT_ORANGE, OPACITY_25)}, ${withOpacity(ACCENT_ORANGE, OPACITY_12)})`, borderRight: `2px solid ${ACCENT_ORANGE}` }}
                 />

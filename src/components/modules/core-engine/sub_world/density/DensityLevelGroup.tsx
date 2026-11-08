@@ -1,7 +1,8 @@
 'use client';
 
 import { Target, TrendingUp, Gauge } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import {
   STATUS_WARNING, STATUS_ERROR,
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_PINK,
@@ -22,6 +23,7 @@ interface DensityLevelGroupProps {
 }
 
 export function DensityLevelGroup({ matchingIds, playerLevel }: DensityLevelGroupProps = {}) {
+  const prefersReduced = useReducedMotion();
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
   // Derive the axis scale from the actual zone data. MAX_LEVEL was frozen at 7
@@ -97,9 +99,9 @@ export function DensityLevelGroup({ matchingIds, playerLevel }: DensityLevelGrou
                   <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate text-right flex-shrink-0">{bar.zone}</span>
                   <div className="relative flex-1 h-6 bg-surface-deep rounded-md overflow-hidden border border-border/30">
                     <motion.div
-                      initial={{ width: 0 }}
+                      initial={prefersReduced ? false : { width: 0 }}
                       animate={{ width: `${widthPct}%` }}
-                      transition={{ duration: 0.6 }}
+                      transition={motionSafe({ duration: 0.6 }, prefersReduced)}
                       className="absolute top-0 bottom-0 rounded-md"
                       style={{
                         left: `${leftPct}%`,
