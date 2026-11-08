@@ -1,10 +1,11 @@
-import { ACCENT_EMERALD, ACCENT_ORANGE, STATUS_MUTED, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING } from '@/lib/chart-colors';
+import { ACCENT_ORANGE, STATUS_MUTED, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING } from '@/lib/chart-colors';
 import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { GaugeMetric, DiffEntry, HeatmapCell } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
 import { Layers, FlaskConical, Dices, Shield, DollarSign } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ARCHETYPES } from '../../sub_bestiary/_shared/data';
+import { rarityColor } from './rarityBadge';
 
 export const ACCENT = ACCENT_ORANGE;
 
@@ -51,9 +52,8 @@ export const TOTAL_WEIGHT = RARITY_TIERS.reduce((sum, t) => sum + t.weight, 0);
 /** Enemy archetype lookup by id. Shared by index.tsx and LootFilters.tsx. */
 export const enemyMap = new Map(ARCHETYPES.map(a => [a.id, a]));
 
-/** Resolve a rarity tier's color by name, falling back to the module ACCENT. */
-export const rarityColorFor = (name: string): string =>
-  RARITY_TIERS.find(t => t.name === name)?.color ?? ACCENT;
+/** Resolve a rarity tier's color by name - the one rule (rarityBadge.rarityColor): case-insensitive, muted fallback. */
+export const rarityColorFor = (name: string): string => rarityColor(name);
 
 /* -- World item examples per rarity --------------------------------------- */
 
@@ -87,11 +87,11 @@ export interface TreemapRect {
 }
 
 export const TREEMAP_DATA: TreemapRect[] = [
-  { name: 'Common', probability: 50, color: STATUS_MUTED, affixes: ['Sturdy', 'Worn', 'Basic', 'Plain'] },
-  { name: 'Uncommon', probability: 25, color: ACCENT_EMERALD, affixes: ['Keen', 'Swift', 'Reinforced'] },
-  { name: 'Rare', probability: 15, color: STATUS_INFO, affixes: ['Blazing', 'Frozen', 'Vampiric'] },
-  { name: 'Epic', probability: 8, color: ACCENT_VIOLET, affixes: ['Celestial', 'Void-touched'] },
-  { name: 'Legendary', probability: 2, color: STATUS_WARNING, affixes: ['Godslayer'] },
+  { name: 'Common', probability: 50, color: RARITY_COLOR_MAP.Common, affixes: ['Sturdy', 'Worn', 'Basic', 'Plain'] },
+  { name: 'Uncommon', probability: 25, color: RARITY_COLOR_MAP.Uncommon, affixes: ['Keen', 'Swift', 'Reinforced'] },
+  { name: 'Rare', probability: 15, color: RARITY_COLOR_MAP.Rare, affixes: ['Blazing', 'Frozen', 'Vampiric'] },
+  { name: 'Epic', probability: 8, color: RARITY_COLOR_MAP.Epic, affixes: ['Celestial', 'Void-touched'] },
+  { name: 'Legendary', probability: 2, color: RARITY_COLOR_MAP.Legendary, affixes: ['Godslayer'] },
 ];
 
 /* -- 7.3 Loot Table Diff data --------------------------------------------- */
@@ -203,15 +203,7 @@ export interface LootEditorEntryExpanded extends LootEditorEntry {
   [key: string]: unknown;
 }
 
-const RARITY_TO_COLOR: Record<string, string> = {
-  Common: STATUS_MUTED,
-  Uncommon: ACCENT_EMERALD,
-  Rare: STATUS_INFO,
-  Epic: ACCENT_VIOLET,
-  Legendary: STATUS_WARNING,
-};
-
-const rc = (r: string) => RARITY_TO_COLOR[r] ?? STATUS_MUTED;
+const rc = (r: string) => rarityColor(r);
 
 interface LootEntryRaw {
   id: string;
