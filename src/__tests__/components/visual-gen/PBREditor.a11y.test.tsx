@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, act } from '@testing-library/react';
 import { mockFetch } from '@/__tests__/setup';
 import { PBREditor } from '@/components/modules/visual-gen/material-lab/PBREditor';
 import { useMaterialStore } from '@/components/modules/visual-gen/material-lab/useMaterialStore';
@@ -30,5 +30,15 @@ describe('PBREditor — texture slot clear button is named', () => {
     useMaterialStore.setState({ [`${channel}Texture`]: `/maps/${channel}.png` });
     render(<PBREditor />);
     expect(screen.getByRole('button', { name: `Clear ${LABELS[channel]} map` })).toBeTruthy();
+  });
+});
+
+describe('PBREditor — preview shape selector exposes its selection', () => {
+  it('exactly the active shape is aria-pressed, and it follows the store', () => {
+    render(<PBREditor />);
+    const shapes = ['Sphere', 'Cube', 'Plane', 'Cylinder'].map((name) => screen.getByRole('button', { name }));
+    expect(shapes.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false', 'false']);
+    act(() => useMaterialStore.getState().setPreviewMesh('plane'));
+    expect(shapes.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true', 'false']);
   });
 });

@@ -251,7 +251,9 @@ export function PBREditor() {
           {MESH_OPTIONS.map(({ value, label }) => (
             <button
               key={value}
+              type="button"
               onClick={() => setPreviewMesh(value)}
+              aria-pressed={previewMesh === value}
               className={`px-2.5 py-1 rounded text-xs transition-colors ${
                 previewMesh === value
                   ? 'bg-[var(--visual-gen)] text-white'
