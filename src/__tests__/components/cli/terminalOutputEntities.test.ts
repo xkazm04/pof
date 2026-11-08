@@ -9,6 +9,23 @@ import { extractInlineEntities } from '@/components/cli/TerminalOutput/helpers';
 const classes = (text: string) =>
   extractInlineEntities(text).filter((e) => e.type === 'class').map((e) => e.value);
 
+const files = (text: string) =>
+  extractInlineEntities(text).filter((e) => e.type === 'file').map((e) => e.value);
+
+describe('extractInlineEntities — project files', () => {
+  it('tags Windows backslash paths, not only forward-slash ones', () => {
+    expect(files('I edited Source\\PoF\\Private\\Combat\\ARPGCombatComponent.cpp and its header.'))
+      .toEqual(['Source\\PoF\\Private\\Combat\\ARPGCombatComponent.cpp']);
+    expect(files('Then opened Content\\Maps\\Arena.umap to check the layout.'))
+      .toEqual(['Content\\Maps\\Arena.umap']);
+  });
+
+  it('still tags forward-slash paths', () => {
+    expect(files('I edited Source/PoF/Public/ARPGCharacter.h for the new UPROPERTY.'))
+      .toEqual(['Source/PoF/Public/ARPGCharacter.h']);
+  });
+});
+
 describe('extractInlineEntities — UE classes', () => {
   it('does not tag all-caps words as UE classes', () => {
     expect(classes('FATAL ERROR: the UPDATE step FAILED AFTER the build, ALSO check UNDER the hood.')).toEqual([]);

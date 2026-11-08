@@ -40,7 +40,8 @@ export const CARET_INSET = 12;
 
 export const UE_CLASS_RE = /\b([AUF][A-Z][A-Za-z0-9]+(?:Component|Controller|Character|Base|Instance|System|Subsystem|Widget|Effect|Ability|Set|Asset|Manager|Volume)?)\b/g;
 export const UE_CLASS_EXCLUDE = new Set(['ANSI', 'ASCII', 'ATTR', 'AUTO', 'UPROPERTY', 'UFUNCTION', 'UCLASS', 'USTRUCT', 'UENUM', 'UMETA', 'FORCEINLINE']);
-export const FILE_RE = /(?:Source\/|Private\/|Public\/|Content\/)[\w/.-]+\.\w{1,5}/g;
+/** Either separator: Claude on Windows reports `Source\PoF\Private\X.cpp`. */
+export const FILE_RE = /(?:Source|Private|Public|Content)[\\/][\w\\/.-]+\.\w{1,5}/g;
 export const WARNING_RE = /(?:⚠️|Warning|WARN|Caution|Important|Be careful|Caveat)[:\s]+(.{10,120}?)(?:\n|$)/gi;
 export const UE_CONCEPTS_SET = new Set([
   'gameplay ability system', 'gas', 'behavior tree', 'eqs', 'navmesh',
