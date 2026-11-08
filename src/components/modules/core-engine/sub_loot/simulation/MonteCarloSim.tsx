@@ -126,6 +126,7 @@ export function MonteCarloSim() {
                   <button
                     key={t.name}
                     onClick={() => setHistoRarity(t.name)}
+                    aria-pressed={histoRarity === t.name}
                     className="text-2xs font-mono px-1.5 py-0.5 rounded border transition-all cursor-pointer"
                     style={{
                       borderColor: histoRarity === t.name ? t.color : withOpacity(t.color, OPACITY_20),

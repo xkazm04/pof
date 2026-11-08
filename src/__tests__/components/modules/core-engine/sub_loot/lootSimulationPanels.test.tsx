@@ -22,6 +22,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
 
 import { EXPANDED_ENTRIES } from '@/components/modules/core-engine/sub_loot/_shared/data';
 import { ECONOMY_KILLS_PER_HOUR } from '@/components/modules/core-engine/sub_loot/simulation/lootSimEngine';
+import { MonteCarloSim } from '@/components/modules/core-engine/sub_loot/simulation/MonteCarloSim';
 import { SmartLoot } from '@/components/modules/core-engine/sub_loot/economy/SmartLoot';
 import { EconomyImpact } from '@/components/modules/core-engine/sub_loot/economy/EconomyImpact';
 import { PityCohortChart } from '@/components/modules/core-engine/sub_loot/pity/PityCohortChart';
@@ -179,5 +180,16 @@ describe('SmartLoot mode toggle', () => {
     expect(sw!.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(sw!);
     expect(sw!.getAttribute('aria-checked')).toBe('true');
+  });
+});
+
+describe('MonteCarloSim histogram rarity picker', () => {
+  it('exposes the selected rarity as aria-pressed', () => {
+    const { getByText, container } = render(<MonteCarloSim />);
+    fireEvent.click(getByText('10'));
+    const group = [...container.querySelectorAll('button')].filter((b) => ['Common', 'Rare', 'Legendary'].includes(b.textContent ?? ''));
+    expect(group.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+    fireEvent.click(group[2]);
+    expect(group.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true']);
   });
 });
