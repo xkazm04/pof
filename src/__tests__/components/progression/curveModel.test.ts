@@ -3,7 +3,7 @@ import { calculateXpForLevel, COMPARISON_LEVELS } from '@/components/modules/cor
 import * as data from '@/components/modules/core-engine/sub_progression/_shared/data';
 import { cumulativeMinutes, pacingModel } from '@/components/modules/core-engine/sub_progression/_shared/rewardPacing';
 import { generateProgressionTable } from '@/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers';
-import { curveDelta, curveTotals } from '@/components/modules/core-engine/sub_progression/_shared/curveModel';
+import { curveDelta, curveTotals, xpOverlaySeries } from '@/components/modules/core-engine/sub_progression/_shared/curveModel';
 
 describe('curveModel: one curve model over the XP law + the Rewards clock', () => {
   it('case 1: curveTotals(100, 1.5) reports the export total and the Rewards-clock hours', () => {
@@ -31,5 +31,14 @@ describe('curveModel: one curve model over the XP law + the Rewards clock', () =
     expect(d.snapshot.totalXp).toBe(724849);
     expect(d.live.totalXp).toBe(1449717);
     expect(d.live.hoursToMax).toBeCloseTo(7.968, 3);
+  });
+});
+
+describe('xpOverlaySeries always reaches the cap', () => {
+  it('ends on a cap that is not a multiple of 5', () => {
+    expect(xpOverlaySeries(100, 1.5, 52).at(-1)).toEqual({ x: 52, y: calculateXpForLevel(52, 100, 1.5) });
+  });
+  it('adds no duplicate when the cap is on the grid', () => {
+    expect(xpOverlaySeries(100, 1.5, 50).map((p) => p.x)).toEqual([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
   });
 });
