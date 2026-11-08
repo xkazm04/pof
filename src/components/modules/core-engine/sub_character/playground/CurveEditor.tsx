@@ -5,6 +5,7 @@ import { OPACITY_6, OPACITY_10, OPACITY_80, OVERLAY_WHITE, OVERLAY_BLACK,
   withOpacity, OPACITY_50,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 import type { CurvePoint } from './types';
 import { SVG_W, SVG_H, PAD, PLOT_W, PLOT_H } from './types';
 
@@ -28,6 +29,7 @@ export function CurveEditor({
 }: CurveEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
   const dragIds = draggableIndices ?? points.map((_, i) => i).filter(i => i > 0 && i < points.length - 1);
 
   const toSvg = useCallback((p: CurvePoint) => ({
@@ -70,6 +72,28 @@ export function CurveEditor({
   const handlePointerUp = useCallback(() => {
     setDraggingIdx(null);
   }, []);
+
+  /** Keyboard nudge: arrows move a handle 0.02 (Shift 0.1) through the same
+   *  neighbour-X constraint and onChange the drag uses. */
+  const handleKeyDown = useCallback((idx: number) => (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const dx = e.key === 'ArrowRight' ? step : e.key === 'ArrowLeft' ? -step : 0;
+    const dy = e.key === 'ArrowUp' ? step : e.key === 'ArrowDown' ? -step : 0;
+    if (dx === 0 && dy === 0) return;
+    e.preventDefault();
+    const cur = points[idx];
+    const newPt = {
+      x: Math.max(0, Math.min(1, cur.x + dx)),
+      y: Math.max(0, Math.min(1, cur.y + dy)),
+    };
+    const prev = points[idx - 1];
+    const next = points[idx + 1];
+    if (prev) newPt.x = Math.max(prev.x + 0.02, newPt.x);
+    if (next) newPt.x = Math.min(next.x - 0.02, newPt.x);
+    const updated = [...points];
+    updated[idx] = newPt;
+    onChange(updated);
+  }, [points, onChange]);
 
   // Build smooth path
   const pathD = useMemo(() => {
@@ -128,9 +152,9 @@ export function CurveEditor({
 
         {/* Axis labels */}
         <text x={PAD.left + PLOT_W / 2} y={SVG_H - 2} textAnchor="middle"
-          className="text-[9px] font-mono" fill="var(--text-muted)" style={{ fontSize: 9 }}>{xLabel}</text>
+          className={`${TEXT_SCALE.meta} font-mono`} fill="var(--text-muted)">{xLabel}</text>
         <text x={8} y={PAD.top + PLOT_H / 2} textAnchor="middle"
-          className="text-[9px] font-mono" fill="var(--text-muted)" style={{ fontSize: 9 }}
+          className={`${TEXT_SCALE.meta} font-mono`} fill="var(--text-muted)"
           transform={`rotate(-90, 8, ${PAD.top + PLOT_H / 2})`}>{yLabel}</text>
 
         {/* Area fill */}
@@ -144,12 +168,21 @@ export function CurveEditor({
         {points.map((pt, i) => {
           const sp = toSvg(pt);
           const isDraggable = dragIds.includes(i);
-          const isActive = draggingIdx === i;
+          const isActive = draggingIdx === i || focusedIdx === i;
           return (
             <g key={i}>
               {isDraggable && (
                 <circle cx={sp.x} cy={sp.y} r={12} fill="transparent"
                   className="cursor-grab active:cursor-grabbing"
+                  role="slider" tabIndex={0}
+                  aria-label={`${label} point ${i}`}
+                  aria-orientation="vertical"
+                  aria-valuemin={0} aria-valuemax={100}
+                  aria-valuenow={Math.round(pt.y * 100)}
+                  aria-valuetext={`${xLabel} ${pt.x.toFixed(2)}, ${yLabel} ${pt.y.toFixed(2)}`}
+                  onFocus={() => setFocusedIdx(i)}
+                  onBlur={() => setFocusedIdx((cur) => (cur === i ? null : cur))}
+                  onKeyDown={handleKeyDown(i)}
                   onPointerDown={handlePointerDown(i)} />
               )}
               <circle cx={sp.x} cy={sp.y}
@@ -166,10 +199,10 @@ export function CurveEditor({
               />
               {isActive && (
                 <g>
-                  <rect x={sp.x - 28} y={sp.y - 24} width={56} height={16} rx={4}
+                  <rect x={sp.x - 32} y={sp.y - 26} width={64} height={18} rx={4}
                     fill={withOpacity(OVERLAY_BLACK, OPACITY_80)} stroke={color} strokeWidth="0.5" />
-                  <text x={sp.x} y={sp.y - 13} textAnchor="middle"
-                    fill={color} className="text-[8px] font-mono font-bold" style={{ fontSize: 8 }}>
+                  <text x={sp.x} y={sp.y - 14} textAnchor="middle"
+                    fill={color} className={`${TEXT_SCALE.meta} font-mono font-bold`}>
                     {pt.x.toFixed(2)}, {pt.y.toFixed(2)}
                   </text>
                 </g>

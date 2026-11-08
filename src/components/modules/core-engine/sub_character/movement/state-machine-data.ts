@@ -1,23 +1,27 @@
-export const STATE_POSITIONS: { x: number; y: number }[] = [
-  { x: 110, y: 30 },   // Idle (top center)
-  { x: 40, y: 95 },    // Walk (mid-left)
-  { x: 180, y: 95 },   // Run (mid-right)
-  { x: 110, y: 160 },  // Sprint (bottom center)
-  { x: 210, y: 30 },   // Dodge (top right)
-];
+/* Keyed by MOVEMENT_STATES label (not array index), so reordering or inserting a state
+ * cannot mis-wire the graph; state-machine-data.guard.test pins it to the state list. */
+export const STATE_POSITIONS: Record<string, { x: number; y: number }> = {
+  Idle: { x: 110, y: 30 },    // top center
+  Walk: { x: 40, y: 95 },     // mid-left
+  Run: { x: 180, y: 95 },     // mid-right
+  Sprint: { x: 110, y: 160 }, // bottom center
+  Dodge: { x: 210, y: 30 },   // top right
+};
 
-export interface StateTransition { from: number; to: number; label?: string }
+export interface StateTransition { from: string; to: string; label?: string }
 export const STATE_TRANSITIONS: StateTransition[] = [
-  { from: 0, to: 1, label: 'Input' },
-  { from: 1, to: 0, label: 'Release' },
-  { from: 1, to: 2, label: 'Speed >' },
-  { from: 2, to: 1, label: 'Speed <' },
-  { from: 2, to: 3, label: 'Shift' },
-  { from: 3, to: 2, label: 'Release' },
-  { from: 0, to: 4, label: 'Space' },
-  { from: 1, to: 4, label: 'Space' },
-  { from: 2, to: 4, label: 'Space' },
-  { from: 4, to: 0, label: 'Done' },
+  { from: 'Idle', to: 'Walk', label: 'Input' },
+  { from: 'Walk', to: 'Idle', label: 'Release' },
+  { from: 'Walk', to: 'Run', label: 'Speed >' },
+  { from: 'Run', to: 'Walk', label: 'Speed <' },
+  { from: 'Run', to: 'Sprint', label: 'Shift' },
+  { from: 'Sprint', to: 'Run', label: 'Release' },
+  { from: 'Idle', to: 'Dodge', label: 'Space' },
+  { from: 'Walk', to: 'Dodge', label: 'Space' },
+  { from: 'Run', to: 'Dodge', label: 'Space' },
+  // UE ARPGCharacterBase::TryDodge cancels sprint and dodges, so Sprint reaches Dodge too.
+  { from: 'Sprint', to: 'Dodge', label: 'Space' },
+  { from: 'Dodge', to: 'Idle', label: 'Done' },
 ];
 
 export const NODE_RX = 28;

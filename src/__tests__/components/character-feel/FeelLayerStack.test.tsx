@@ -71,4 +71,25 @@ describe('FeelLayerStack', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`Move ${first.name} down`, 'i') }));
     expect(store.getState().feelLayers[1].id).toBe(first.id);
   });
+
+  it('Clear asks first: 3 layers stay until the confirm is accepted, and the dialog names the count', () => {
+    seed([
+      createLayerFromTemplate(LAYER_TEMPLATES[0].templateId)!,
+      createLayerFromTemplate(LAYER_TEMPLATES[1].templateId)!,
+      { id: 'playground-curves', name: 'Playground curves', enabled: true, modifiers: [] },
+    ]);
+    render(<FeelLayerStack basePreset={BASE} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(store.getState().feelLayers).toHaveLength(3);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.textContent).toContain('3 layers');
+    expect(dialog.textContent).toMatch(/curve edits/i);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(store.getState().feelLayers).toHaveLength(3);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all layers' }));
+    expect(store.getState().feelLayers).toHaveLength(0);
+  });
 });

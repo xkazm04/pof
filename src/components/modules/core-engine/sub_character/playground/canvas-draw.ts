@@ -105,12 +105,12 @@ export function drawSpeedHUD(
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = withOpacity(OVERLAY_WHITE, OPACITY_40);
-  ctx.font = '8px monospace';
+  ctx.font = '10px monospace';
   ctx.fillText(`${Math.round(currentSpeed)}/${Math.round(targetSpeed)} cm/s`, 10, 22);
 
   if (isDodging) {
     ctx.fillStyle = ACCENT_CYAN;
-    ctx.font = 'bold 9px monospace';
+    ctx.font = 'bold 10px monospace';
     ctx.fillText('DODGE', posX - 15, groundY - 55);
   }
 }
