@@ -25,6 +25,13 @@ export function useTabParam<T extends string>(
     if (fromUrl && (validValues as readonly string[]).includes(fromUrl)) {
       setTabState(fromUrl as T);
     }
+    // Back/Forward restores the entry's tab; an entry without the param shows the default.
+    const onPopState = () => {
+      const entry = new URLSearchParams(window.location.search).get(paramKey);
+      setTabState(entry && (validValues as readonly string[]).includes(entry) ? (entry as T) : defaultValue);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
     // Read the deep-linked tab once on mount; validValues/defaultValue are
     // captured from the initial render and intentionally not re-run.
     // eslint-disable-next-line react-hooks/exhaustive-deps
