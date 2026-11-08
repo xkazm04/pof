@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { searchPolyHaven, searchAmbientCG, type AssetSource, type AssetCategory } from '@/lib/visual-gen/asset-sources';
 
+const CATEGORIES: readonly string[] = ['hdris', 'textures', 'models', 'materials'] satisfies AssetCategory[];
+
 /**
  * GET /api/visual-gen/browse?source=polyhaven&category=textures&q=wood
  * Proxy search to free asset APIs (avoids CORS issues from client).
@@ -12,15 +14,15 @@ export async function GET(request: NextRequest) {
     const source = (searchParams.get('source') ?? 'polyhaven') as AssetSource;
     const category = (searchParams.get('category') ?? 'textures') as AssetCategory;
     const query = searchParams.get('q') ?? '';
+    if (!CATEGORIES.includes(category)) {
+      return apiError(`Unknown category: ${category}. Expected one of ${CATEGORIES.join(', ')}.`, 400);
+    }
 
     let results;
 
     if (source === 'polyhaven') {
       const polyCategory = category === 'materials' ? 'textures' : category;
-      const validCategory = (['hdris', 'textures', 'models'] as const).includes(polyCategory as 'hdris' | 'textures' | 'models')
-        ? (polyCategory as 'hdris' | 'textures' | 'models')
-        : 'textures';
-      results = await searchPolyHaven(validCategory);
+      results = await searchPolyHaven(polyCategory as 'hdris' | 'textures' | 'models');
 
       // Client-side filter by query since Poly Haven doesn't have search
       if (query) {
@@ -45,6 +47,6 @@ export async function GET(request: NextRequest) {
     return apiSuccess(results);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to search assets';
-    return apiError(message);
+    return apiError(message, 502);
   }
 }
