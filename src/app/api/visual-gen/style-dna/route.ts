@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { getDb } from '@/lib/db';
 import { parseVisionImage } from '@/lib/visual-gen/input-gate';
@@ -24,6 +25,9 @@ import { startStyleDnaJob } from '@/lib/visual-gen/style-dna-job-store';
  * Generation routes read the active profile (e.g. /api/leonardo `applyStyleDna`).
  */
 export async function POST(request: NextRequest) {
+  // Starts a metered vision job: refuse a cross-site POST.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = await readJsonObject(request);
     if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
