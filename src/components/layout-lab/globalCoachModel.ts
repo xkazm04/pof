@@ -171,6 +171,11 @@ function assembleCandidate(
   };
 }
 
+/** Project an `AcceptanceStatus` onto the rail/matrix display vocabulary (mirrors `displayStatus`). */
+function toDisplayStatus(status: AcceptanceResult['status']): StepDisplayStatus {
+  return status === 'pass' || status === 'fail' || status === 'deferred' ? status : 'pending';
+}
+
 /** Per-step state the coach needs, derived WITHOUT the produced blobs. */
 export interface EntitySummaryDerivation {
   displayStatus: (step: string, i: number) => StepDisplayStatus;
@@ -202,11 +207,6 @@ export interface EntitySummaryDerivation {
  * derivation whenever a catalog's blobs are already in the cache, so the catalog on screen
  * is never coached from a thinner input than the one the Matrix is rendering.
  */
-/** Project an `AcceptanceStatus` onto the rail/matrix display vocabulary (mirrors `displayStatus`). */
-function toDisplayStatus(status: AcceptanceResult['status']): StepDisplayStatus {
-  return status === 'pass' || status === 'fail' || status === 'deferred' ? status : 'pending';
-}
-
 export function deriveEntityFromSummary(
   catalogId: string,
   entityId: string,
