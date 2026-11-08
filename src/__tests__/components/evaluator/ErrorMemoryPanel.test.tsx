@@ -12,7 +12,6 @@ describe('ErrorMemoryPanel', () => {
       uniqueFingerprints: 0,
       unresolvedCount: 0,
       topCategories: [],
-      topPatterns: [],
     };
     const { getByTestId } = render(<ErrorMemoryPanel initialStats={stats} />);
     const empty = getByTestId('error-memory-empty');
@@ -25,7 +24,6 @@ describe('ErrorMemoryPanel', () => {
       uniqueFingerprints: 6,
       unresolvedCount: 2,
       topCategories: [{ category: 'missing-include', count: 9, unresolved: 1 }],
-      topPatterns: [],
     };
     const { container } = render(<ErrorMemoryPanel initialStats={stats} />);
     expect(container.querySelector('[data-stat="total"]')?.textContent).toBe('17');
@@ -43,7 +41,6 @@ describe('ErrorMemoryPanel', () => {
         { category: 'missing-include', count: 9, unresolved: 0 },
         { category: 'syntax', count: 3, unresolved: 0 },
       ],
-      topPatterns: [],
     };
     const { container } = render(<ErrorMemoryPanel initialStats={stats} />);
     const rows = Array.from(container.querySelectorAll('[data-category]'));
@@ -67,7 +64,6 @@ describe('ErrorMemoryPanel', () => {
         { category: 'missing-include', count: 4, unresolved: 1 }, // unresolved
         { category: 'syntax', count: 3, unresolved: 0 },          // resolved
       ],
-      topPatterns: [],
     };
     const { container } = render(<ErrorMemoryPanel initialStats={stats} />);
     const inc = container.querySelector('[data-category="missing-include"]')!;

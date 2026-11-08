@@ -7,7 +7,7 @@
  */
 
 import type { SubModuleId } from '@/types/modules';
-import type { ErrorContextEntry } from '@/types/error-memory';
+import type { ErrorCategory, ErrorContextEntry } from '@/types/error-memory';
 import type { PromptKind } from '@/lib/knowledge/types';
 import { formatGotchas } from '@/lib/knowledge/ue-gotchas';
 import { formatBinaryContentTripwire } from '@/lib/knowledge/binary-content';
@@ -226,7 +226,7 @@ export function getModuleDomainContext(
 
 /** Plain-English labels for error_memory `category` values — also used by the
  *  Error Memory dashboard so prompt + UI share one humanized vocabulary. */
-export const CATEGORY_LABELS: Record<string, string> = {
+export const CATEGORY_LABELS: Record<ErrorCategory, string> = {
   'missing-include': 'Missing #include',
   'unresolved-external': 'Linker / unresolved external',
   'gc-issue': 'Garbage Collection',
@@ -238,7 +238,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   'syntax': 'Syntax error',
   'access-specifier': 'Access specifier',
   'generated-header': '.generated.h issue',
-  'msvc-version': 'MSVC compiler version',
   'other': 'Build error',
 };
 

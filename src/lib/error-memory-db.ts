@@ -268,7 +268,6 @@ export interface ErrorMemoryStats {
   uniqueFingerprints: number;
   /** Per-category aggregate. `unresolved` is the count of categories' fingerprints not yet flagged resolved. */
   topCategories: { category: string; count: number; unresolved: number }[];
-  topPatterns: { pattern: string; occurrences: number; moduleId: SubModuleId }[];
   unresolvedCount: number;
 }
 
@@ -290,18 +289,10 @@ export function getErrorMemoryStats(): ErrorMemoryStats {
     LIMIT 5
   `).all() as { category: string; count: number; unresolved: number }[];
 
-  const topPatterns = db.prepare(`
-    SELECT pattern, occurrences, module_id
-    FROM error_memory
-    ORDER BY occurrences DESC
-    LIMIT 5
-  `).all() as { pattern: string; occurrences: number; module_id: string }[];
-
   return {
     totalErrors: total,
     uniqueFingerprints: unique,
     topCategories,
-    topPatterns: topPatterns.map((r) => ({ pattern: r.pattern, occurrences: r.occurrences, moduleId: r.module_id as SubModuleId })),
     unresolvedCount: unresolved,
   };
 }

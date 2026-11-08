@@ -169,7 +169,7 @@ export function HeatmapGrid({
                             </span>
                           </button>
                         ) : (
-                          <div className="w-full h-7 rounded-md" title={cellTitle} aria-label={cellTitle} />
+                          <div className="w-full h-7 rounded-md" aria-hidden="true" />
                         )}
 
                         {/* Tooltip */}

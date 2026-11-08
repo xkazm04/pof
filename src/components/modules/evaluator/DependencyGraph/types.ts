@@ -1,3 +1,4 @@
+import type { EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
 import type { SubModuleId } from '@/types/modules';
 import type { ResolvedDependency } from '@/lib/feature-definitions';
 
@@ -44,5 +45,5 @@ export interface Edge {
 // ─── Component ──────────────────────────────────────────────────────────────────
 
 export interface DependencyGraphProps {
-  onNavigateTab?: (tab: string) => void;
+  onNavigateTab?: (tab: EvaluatorTabId) => void;
 }
