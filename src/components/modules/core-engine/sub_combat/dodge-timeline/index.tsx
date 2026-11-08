@@ -95,6 +95,8 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
     const total = chainMode ? getChainEndTime(chain) : phases.totalTimeline;
     const posRef = chainMode ? chainPlayheadRef : playheadRef;
     const setPos = chainMode ? setChainPlayhead : setPlayhead;
+    // Play from `ended` replays from the start instead of re-clamping at once.
+    if (posRef.current >= total) { posRef.current = 0; setPos(0); }
     setIsPlaying(true);
     lastFrameRef.current = performance.now();
     const animate = (now: number) => {

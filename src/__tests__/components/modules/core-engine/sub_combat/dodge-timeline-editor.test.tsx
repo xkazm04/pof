@@ -89,7 +89,7 @@ describe('DodgeTimelineEditor playback', () => {
     expect(queue.size).toBe(0);
   });
 
-  it.skip('Play pressed at the end replays from the start', () => {
+  it('Play pressed at the end replays from the start', () => {
     const { container } = render(<DodgeTimelineEditor />);
     tick(0);
     fireEvent.click(buttonByText(container, 'Play'));
