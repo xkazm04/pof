@@ -148,7 +148,9 @@ export async function POST(req: Request) {
         if (typeof suggestionId !== 'string' || !suggestionId || !resolveAction || (resolveAction !== 'accept' && resolveAction !== 'dismiss')) {
           return apiError('suggestionId and resolveAction required', 400);
         }
-        resolveSuggestion(suggestionId, resolveAction);
+        if (!resolveSuggestion(suggestionId, resolveAction)) {
+          return apiError(`Unknown suggestion: ${suggestionId}`, 404);
+        }
         return apiSuccess({ ok: true });
       }
 

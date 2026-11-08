@@ -178,12 +178,14 @@ export function getAcceptedSubGenres(): SubGenreId[] {
   return rows.map(r => r.sub_genre as SubGenreId);
 }
 
-export function resolveSuggestion(id: string, action: 'accept' | 'dismiss'): void {
+/** @returns whether a suggestion with this id existed and was resolved. */
+export function resolveSuggestion(id: string, action: 'accept' | 'dismiss'): boolean {
   ensureTables();
   const db = getDb();
-  db.prepare(`
+  const { changes } = db.prepare(`
     UPDATE genre_suggestions SET status = ?, resolved_at = datetime('now') WHERE id = ?
   `).run(action === 'accept' ? 'accepted' : 'dismissed', id);
+  return changes > 0;
 }
 
 export function getAllSuggestions(limit?: number): GenreEvolutionSuggestion[] {
