@@ -40,7 +40,10 @@ function show(value: unknown): string {
 export function diffSyncState(prev: SyncView, next: SyncView): SyncLogEntry[] {
   const events: SyncLogEntry[] = [];
 
-  if (prev.snapshot && next.snapshot && next.snapshot.timestamp !== prev.snapshot.timestamp) {
+  // Every state.delta bumps the timestamp (a camera move streams them), so the timestamp alone
+  // would flood the bounded log and evict the writes and conflicts it exists to show.
+  if (prev.snapshot && next.snapshot
+    && (next.snapshot.editorState !== prev.snapshot.editorState || next.snapshot.openLevel !== prev.snapshot.openLevel)) {
     events.push(inbound('info', 'SNAP', `Editor: ${next.snapshot.editorState}`, `Level: ${next.snapshot.openLevel}`));
   }
 

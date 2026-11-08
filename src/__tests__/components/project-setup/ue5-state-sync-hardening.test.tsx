@@ -90,3 +90,20 @@ describe('sync log auto-scroll', () => {
     expect(box.scrollTop).toBe(500);
   });
 });
+
+describe('sync log SNAP events', () => {
+  const view = (timestamp: number, editorState = 'Editing', openLevel = '/Game/L'): SyncView => ({
+    snapshot: { timestamp, editorState, openLevel },
+    propertyWatches: new Map(),
+    writes: new Map(),
+  });
+
+  it('a delta that only moves the timestamp (camera, selection) logs nothing', () => {
+    expect(diffSyncState(view(1), view(2))).toEqual([]);
+  });
+
+  it('control: a real editor-state or level change still logs one SNAP', () => {
+    expect(diffSyncState(view(1), view(2, 'PIE'))).toHaveLength(1);
+    expect(diffSyncState(view(1), view(2, 'Editing', '/Game/M'))).toHaveLength(1);
+  });
+});
