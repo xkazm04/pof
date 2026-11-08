@@ -29,11 +29,23 @@ export function AbilityQuickPicker({ onSelect, selectedIds }: AbilityQuickPicker
         <span className="text-[10px] text-text-muted">{filtered.length}/{COMBO_ABILITIES.length}</span>
       </div>
       <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
-        {filtered.map(a => (
+        {/* Without an onSelect the chips are a read-only reference list: render
+            them as plain text so no element advertises a click that does nothing. */}
+        {!onSelect && filtered.map(a => (
+          <span
+            key={a.id}
+            className="px-2 py-0.5 rounded text-xs font-medium border border-border/30 bg-surface/30 text-text-muted"
+            style={{ borderLeftColor: a.color, borderLeftWidth: 2 }}
+          >
+            {a.name}
+          </span>
+        ))}
+        {onSelect && filtered.map(a => (
           <button
             key={a.id}
-            onClick={() => onSelect?.(a.id)}
-            className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-colors cursor-pointer ${
+            type="button"
+            onClick={() => onSelect(a.id)}
+            className={`px-2 py-0.5 rounded text-xs font-medium border transition-colors cursor-pointer ${
               selectedIds?.has(a.id)
                 ? 'border-border/30'
                 : 'border-border/30 bg-surface/30 text-text-muted hover:text-text hover:bg-surface/60'
