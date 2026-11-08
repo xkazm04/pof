@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
-import { CopyButton, TabHeader, ProgressChip } from '@/components/modules/core-engine/unique-tabs/_shared';
+import { CopyButton, TabHeader, ProgressChip, TabButtonGroup, SubTabNavigation } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { STATUS_SUCCESS, ACCENT_CYAN } from '@/lib/chart-colors';
 import { Box } from 'lucide-react';
 
@@ -56,5 +56,27 @@ describe('TabHeader — "complete" means the same thing as ProgressChip', () => 
   it('[control] 3 of 3 is complete in both', () => {
     const { container } = render(<TabHeader icon={Box} title="T" implemented={3} total={3} accent={ACCENT_CYAN} />);
     expect((container.querySelector('span.font-mono') as HTMLElement).style.color).toBe(rgbOf(STATUS_SUCCESS));
+  });
+});
+
+describe('TabButtonGroup — one tab stop, like SubTabNavigation', () => {
+  const items = [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }];
+  const stops = () => screen.getAllByRole('tab').filter((t) => t.getAttribute('tabindex') === '0').length;
+
+  it('a selection that is not one of the items still leaves exactly one tab stop', () => {
+    render(<TabButtonGroup items={items} selected="gone" onSelect={vi.fn()} accent={ACCENT_CYAN} ariaLabel="g" />);
+    expect(stops()).toBe(1);
+    expect(screen.getAllByRole('tab')[0].getAttribute('tabindex')).toBe('0');
+    cleanup();
+    render(<SubTabNavigation tabs={[{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]} activeTabId="gone" onChange={vi.fn()} accent={ACCENT_CYAN} />);
+    expect(stops()).toBe(1);
+  });
+
+  it('[control] a real selection is the only tab stop; null falls back to the first', () => {
+    render(<TabButtonGroup items={items} selected="b" onSelect={vi.fn()} accent={ACCENT_CYAN} ariaLabel="g" />);
+    expect(screen.getAllByRole('tab').map((t) => t.getAttribute('tabindex'))).toEqual(['-1', '0']);
+    cleanup();
+    render(<TabButtonGroup items={items} selected={null} onSelect={vi.fn()} accent={ACCENT_CYAN} ariaLabel="g" />);
+    expect(screen.getAllByRole('tab').map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1']);
   });
 });

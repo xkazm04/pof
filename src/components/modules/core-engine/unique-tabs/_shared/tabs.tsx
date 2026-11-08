@@ -27,6 +27,9 @@ export interface TabButtonGroupProps {
 
 export function TabButtonGroup({ items, selected, onSelect, accent, ariaLabel, className }: TabButtonGroupProps) {
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  // A selection outside `items` (stale or null) falls back to the first tab, so the
+  // strip always keeps exactly one tab stop (same rule as SubTabNavigation).
+  const hasSelected = items.some((it) => it.value === selected);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
     let nextIndex: number | null = null;
@@ -53,7 +56,7 @@ export function TabButtonGroup({ items, selected, onSelect, accent, ariaLabel, c
             ref={el => { buttonsRef.current[i] = el; }}
             role="tab"
             aria-selected={isSelected}
-            tabIndex={isSelected || (selected === null && i === 0) ? 0 : -1}
+            tabIndex={isSelected || (!hasSelected && i === 0) ? 0 : -1}
             onClick={() => onSelect(item.value)}
             onKeyDown={(e) => handleKeyDown(e, i)}
             className="text-2xs font-mono px-2 py-0.5 rounded border transition-all hover:opacity-80"
