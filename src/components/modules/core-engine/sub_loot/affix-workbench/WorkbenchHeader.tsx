@@ -48,7 +48,7 @@ export function WorkbenchHeader({
             {/* View mode toggle */}
             <div className="flex items-center rounded-lg border overflow-hidden"
               style={{ borderColor: `${withOpacity(ACCENT, OPACITY_15)}` }}>
-              <button onClick={() => setViewMode('workbench')}
+              <button onClick={() => setViewMode('workbench')} aria-pressed={viewMode === 'workbench'}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono uppercase tracking-[0.15em] transition-all"
                 style={{
                   backgroundColor: viewMode === 'workbench' ? `${ACCENT}${OPACITY_20}` : 'transparent',
@@ -56,7 +56,7 @@ export function WorkbenchHeader({
                 }}>
                 <Hammer className="w-3 h-3" /> Workbench
               </button>
-              <button onClick={() => setViewMode('breakpoints')}
+              <button onClick={() => setViewMode('breakpoints')} aria-pressed={viewMode === 'breakpoints'}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono uppercase tracking-[0.15em] transition-all"
                 style={{
                   backgroundColor: viewMode === 'breakpoints' ? `${STATUS_INFO}${OPACITY_20}` : 'transparent',
@@ -74,7 +74,7 @@ export function WorkbenchHeader({
                   style={{ backgroundColor: `${ACCENT_VIOLET}${OPACITY_15}`, color: ACCENT_VIOLET, border: `1px solid ${ACCENT_VIOLET}${OPACITY_30}` }}>
                   <Shuffle className="w-3 h-3" /> Random Roll
                 </button>
-                <button onClick={onClear}
+                <button onClick={onClear} aria-label="Clear all affixes" title="Clear all affixes"
                   className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-text-muted hover:text-text transition-colors"
                   style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_15)}` }}>
                   <RotateCcw className="w-3 h-3" />

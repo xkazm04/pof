@@ -147,7 +147,7 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
           style={{ color: catColor, textShadow: `0 0 12px ${withOpacity(catColor, OPACITY_25)}` }}>
           +{scaledMag.toFixed(1)} {affix.stat}
         </span>
-        <button onClick={() => onRemove(affix.tag)}
+        <button onClick={() => onRemove(affix.tag)} aria-label={`Remove ${affix.displayName}`}
           className="p-0.5 rounded hover:bg-red-500/20 text-text-muted hover:text-red-400 transition-colors">
           <Trash2 className="w-3 h-3" />
         </button>

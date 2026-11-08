@@ -34,7 +34,7 @@ export function BreakpointFilters({
       </div>
       <div className="flex gap-1">
         {(['all', 'offensive', 'defensive', 'utility'] as const).map(cat => (
-          <button key={cat} onClick={() => setBpCategoryFilter(cat)}
+          <button key={cat} onClick={() => setBpCategoryFilter(cat)} aria-pressed={bpCategoryFilter === cat}
             className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] capitalize transition-all"
             style={{
               backgroundColor: bpCategoryFilter === cat ? `${cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]}${OPACITY_20}` : 'transparent',
@@ -46,7 +46,7 @@ export function BreakpointFilters({
         ))}
       </div>
       <div className="flex gap-1">
-        <button onClick={() => setBpRarityFilter('all')}
+        <button onClick={() => setBpRarityFilter('all')} aria-pressed={bpRarityFilter === 'all'}
           className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] transition-all"
           style={{
             backgroundColor: bpRarityFilter === 'all' ? `${ACCENT}${OPACITY_20}` : 'transparent',
@@ -56,7 +56,7 @@ export function BreakpointFilters({
           All
         </button>
         {RARITIES.map(r => (
-          <button key={r} onClick={() => setBpRarityFilter(r)}
+          <button key={r} onClick={() => setBpRarityFilter(r)} aria-pressed={bpRarityFilter === r}
             className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] transition-all"
             style={{
               backgroundColor: bpRarityFilter === r ? `${RARITY_COLORS[r]}${OPACITY_20}` : 'transparent',
@@ -68,7 +68,7 @@ export function BreakpointFilters({
         ))}
       </div>
       <input type="text" value={bpSearch} onChange={(e) => setBpSearch(e.target.value)}
-        placeholder="Search affixes..."
+        placeholder="Search affixes..." aria-label="Search the breakpoint table"
         className="px-2 py-1 rounded text-xs font-mono bg-surface-deep text-text placeholder:text-text-muted/50 w-40 focus:outline-none focus:ring-1"
         style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_15)}`, '--tw-ring-color': STATUS_INFO } as React.CSSProperties} />
       <span className="ml-auto text-xs font-mono text-text-muted">{resultCount} affix{resultCount !== 1 ? 'es' : ''}</span>

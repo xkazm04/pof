@@ -38,7 +38,7 @@ export function CraftingStation({
   return (
     <BlueprintPanel color={ACCENT_PURPLE} className="p-3 space-y-3 relative overflow-hidden">
       <div className="flex items-center justify-between">
-        <button onClick={onToggleCraftPanel} className="flex items-center gap-2">
+        <button onClick={onToggleCraftPanel} aria-expanded={showCraftPanel} className="flex items-center gap-2">
           <FlaskConical className="w-3.5 h-3.5" style={{ color: ACCENT_PURPLE }} />
           <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text">
             Crafting Station
