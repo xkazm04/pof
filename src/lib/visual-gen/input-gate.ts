@@ -48,7 +48,7 @@ export interface GateReply {
 
 /** Parse the SCORE/DEFECTS/VERDICT line out of a (possibly chatty/fenced) reply. Pure. */
 export function parseGateReply(text: string): GateReply {
-  const score = text.match(/SCORE=\s*(\d+)/);
+  const score = text.match(/SCORE=\s*(\d+(?:\.\d+)?)/);
   if (!score) return { ok: false, error: 'no SCORE marker in the vision reply' };
   // The protocol is 0-10. A grader answering on another scale (SCORE=40 meaning 40/100) is
   // outside its own schema: read as-is it clears passAt and sends a rejected image to a paid

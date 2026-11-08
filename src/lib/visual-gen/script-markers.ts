@@ -96,6 +96,16 @@ export const SCRIPT_MARKERS = {
     keys: { DONE: 'result', ERROR: 'error', PALETTE_SKIPPED: 'diagnostic' },
     templates: { '{n}': 'repeat' },
   },
+  meshCritique: {
+    script: 'pof_mesh_critique.py',
+    prefix: 'POF_CRITIQUE_',
+    keys: {
+      DONE: 'result', ERROR: 'error', VERTS: 'metric', FACES: 'metric', WATERTIGHT: 'metric',
+      WINDING_CONSISTENT: 'metric', COMPONENTS: 'metric', COMPONENT_FACES: 'metric',
+      COMPONENT_FACES_OMITTED: 'metric', EULER: 'metric', BBOX: 'metric', VOLUME: 'metric',
+      AREA: 'metric', DEGENERATE_FACES: 'metric',
+    },
+  },
   tripo: {
     script: 'pof_tripo.mjs',
     source: 'src/lib/visual-gen/tripo-cli.ts',

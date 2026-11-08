@@ -8,20 +8,13 @@ SAME script runs Qwen3-VL-4B, Gemma 4 12B, InternVL3.5, etc. Emits POF_VLM_* mar
     --model Qwen/Qwen3-VL-4B-Instruct --subject chair [--load-4bit]
 """
 import argparse
-import re
+import os
 import sys
 
 
-# The prompt asks for 0-10: anything else is no verdict, never a number to pass along.
-SCORE_RE = re.compile(r"\s*(\d+(?:\.\d+)?)\s*(?:(?:/|out of)\s*10)?\s*\.?\s*")
-
-
-def parse_score(raw):
-    m = SCORE_RE.fullmatch(raw or "")
-    if not m:
-        return None
-    value = float(m.group(1))
-    return value if 0 <= value <= 10 else None
+# `python -I` drops the script directory from sys.path; put it back for the shared parser.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pof_vlm_reply import parse_fields, parse_score  # noqa: E402
 
 
 def main() -> int:
@@ -81,11 +74,7 @@ def main() -> int:
         gen = proc.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
         print(f"POF_VLM_INFER_S={time.time() - ti:.1f}")
         print("POF_VLM_RAW=" + gen.replace("\n", " ").strip())
-        fields = {}
-        for key in ("SCORE", "DEFECTS", "VERDICT"):
-            m = re.search(key + r"=([^;]+)", gen)
-            if m:
-                fields[key] = m.group(1).strip()
+        fields = parse_fields(gen)
         for key in ("DEFECTS", "VERDICT"):
             if key in fields:
                 print(f"POF_VLM_{key}=" + fields[key])

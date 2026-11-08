@@ -87,11 +87,16 @@ def measure() -> int:
 
     root_travel_mm = float(np.linalg.norm(root[-1] - root[0])) * MM
 
+    # Motion amplitude: the furthest any joint strays from its frame-0 pose. A frozen export is 0
+    # on every seam axis above, so without this a motionless clip reads as a perfect loop.
+    motion_range_mm = float(np.max(np.linalg.norm(rel - rel[0], axis=-1))) * MM
+
     print(f"POF_LOOP_POSE_GAP_MM={pose_gap_mm:.4f}")
     print(f"POF_LOOP_WORST_JOINT_MM={worst_joint_mm:.4f}")
     print(f"POF_LOOP_VEL_JUMP_MM={vel_jump_mm:.4f}")
     print(f"POF_LOOP_ROOT_TRAVEL_MM={root_travel_mm:.4f}")
     print(f"POF_LOOP_FRAMES={frames}")
+    print(f"POF_LOOP_MOTION_RANGE_MM={motion_range_mm:.4f}")
     return 0
 
 
