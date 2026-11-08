@@ -40,9 +40,42 @@ describe('contracts Council — a declared runId stays inside _council/', () => 
     });
   }
 
-  it('a declared single-segment runId whose folder exists still passes (control)', () => {
+  it('a declared single-segment runId whose folder exists passes (control)', () => {
     const pkg = questPackage('fax-jam');
     writeQuest(ROOT, 'fax-jam', { pkg: { ...pkg, provenance: { ...pkg.provenance, runId: '20261102-1500-real' } }, runId: '20261102-1500-real' });
     expect(council('fax-jam').status).toBe('pass');
+  });
+});
+
+/**
+ * `readQuestSnapshot` promises it never throws for a malformed package. Before, a folder entry of the
+ * wrong KIND threw out of the fs reads (`evidence/frame.png` as a directory → EISDIR; `art` or
+ * `evidence` as a plain file → ENOTDIR), and `contractsLedger` maps every quest, so ONE bad folder
+ * turned GET /api/games/gtai/quests and the sync into a 500 for every quest.
+ */
+describe('contracts snapshot — a malformed folder entry is measured, never thrown', () => {
+  const step = (id: string, label: string) => ledgerRow(readQuestSnapshot(ROOT, id)).steps.find((s) => s.label === label)!.acceptance;
+
+  it('a directory named *.png under evidence/ is not a frame and does not throw', () => {
+    writeQuest(ROOT, 'fax-jam', { selftest: 'succeeded' });
+    fs.mkdirSync(path.join(ROOT, 'games/gtai/quests/fax-jam/evidence/frame-000.png'), { recursive: true });
+    expect(() => readQuestSnapshot(ROOT, 'fax-jam')).not.toThrow();
+    expect(readQuestSnapshot(ROOT, 'fax-jam').inGame.frames).toEqual([]);
+    expect(step('fax-jam', 'In-game').status).not.toBe('pass');
+  });
+
+  it('`evidence` as a plain file does not throw and nothing passes In-game', () => {
+    writeQuest(ROOT, 'fax-jam');
+    fs.writeFileSync(path.join(ROOT, 'games/gtai/quests/fax-jam/evidence'), 'oops');
+    expect(() => readQuestSnapshot(ROOT, 'fax-jam')).not.toThrow();
+    expect(step('fax-jam', 'In-game').status).not.toBe('pass');
+  });
+
+  it('`art` as a plain file does not throw and the new character reads as having no art', () => {
+    writeQuest(ROOT, 'fax-jam', { art: false });
+    fs.writeFileSync(path.join(ROOT, 'games/gtai/quests/fax-jam/art'), 'oops');
+    expect(() => readQuestSnapshot(ROOT, 'fax-jam')).not.toThrow();
+    expect(readQuestSnapshot(ROOT, 'fax-jam').package.newCharacters[0].art).toEqual([]);
+    expect(step('fax-jam', 'Package').status).not.toBe('pass');
   });
 });

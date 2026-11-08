@@ -32,6 +32,27 @@ function readJsonFile(file: string): { present: boolean; value: unknown; error?:
   }
 }
 
+/** Entries of a DIRECTORY, `[]` when the path is absent or not a directory (a plain file named `art`). */
+function dirEntries(dir: string): fs.Dirent[] {
+  return fs.existsSync(dir) && fs.statSync(dir).isDirectory() ? fs.readdirSync(dir, { withFileTypes: true }) : [];
+}
+
+/** A regular file whose first 8 bytes are the PNG signature. Anything unreadable is not a frame. */
+function isPngFile(file: string): boolean {
+  try {
+    if (!fs.statSync(file).isFile()) return false;
+    const fd = fs.openSync(file, 'r');
+    try {
+      const head = Buffer.alloc(8);
+      return fs.readSync(fd, head, 0, 8, 0) === 8 && head.equals(PNG_SIGNATURE);
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return false;
+  }
+}
+
 /** Every quest folder id: directories under `games/gtai/quests/` not starting with `_` or `.`. Sorted. */
 export function listQuestIds(root: string): string[] {
   const dir = path.join(root, QUESTS_REL);
@@ -86,10 +107,10 @@ function guardsFacts(root: string, pkg: QuestPackage | null, judge: { facts: Jud
 function artFor(root: string, questId: string, characterId: string): string[] {
   const rel = `${questDirRel(questId)}/art`;
   const dir = path.join(root, rel);
-  if (!characterId || !fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir, { withFileTypes: true })
+  if (!characterId) return [];
+  return dirEntries(dir)
     .filter((d) => d.name === characterId || (d.name.startsWith(characterId) && '.-_'.includes(d.name[characterId.length])))
-    .filter((d) => d.isFile() || (d.isDirectory() && fs.readdirSync(path.join(dir, d.name)).length > 0))
+    .filter((d) => d.isFile() || (d.isDirectory() && dirEntries(path.join(dir, d.name)).length > 0))
     .map((d) => `${rel}/${d.name}`)
     .sort();
 }
@@ -116,17 +137,11 @@ function inGameFacts(root: string, questId: string): InGameFacts {
   const selftestRel = `${evRel}/selftest.json`;
   const read = readJsonFile(path.join(root, selftestRel));
   const parsed = read.present && !read.error ? parseSelftest(read.value) : null;
-  const frames = fs.existsSync(evAbs)
-    ? fs.readdirSync(evAbs).filter((n) => n.toLowerCase().endsWith('.png')).filter((n) => {
-      const fd = fs.openSync(path.join(evAbs, n), 'r');
-      try {
-        const head = Buffer.alloc(8);
-        return fs.readSync(fd, head, 0, 8, 0) === 8 && head.equals(PNG_SIGNATURE);
-      } finally {
-        fs.closeSync(fd);
-      }
-    }).sort().map((n) => `${evRel}/${n}`)
-    : [];
+  const frames = dirEntries(evAbs)
+    .map((d) => d.name)
+    .filter((n) => n.toLowerCase().endsWith('.png') && isPngFile(path.join(evAbs, n)))
+    .sort()
+    .map((n) => `${evRel}/${n}`);
   const error = read.error ?? (parsed && !parsed.ok ? parsed.error : undefined);
   return {
     engine: 'godot',
