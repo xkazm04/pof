@@ -61,10 +61,12 @@ export function CraftingRecipeSection() {
         </div>
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <button className="text-sm font-mono font-bold px-3 py-1.5 rounded-lg border transition-colors hover:bg-surface-hover/30 cursor-pointer"
+        {/* Not implemented yet: disabled so it neither looks nor announces as a working action. */}
+        <button type="button" disabled aria-describedby="crafting-static-note"
+          className="text-sm font-mono font-bold px-3 py-1.5 rounded-lg border opacity-50 cursor-not-allowed"
           style={{ borderColor: `${withOpacity(ACCENT, OPACITY_25)}`, color: ACCENT, backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }}
-          onClick={() => { }}>Simulate 100 Crafts</button>
-        <span className="text-xs font-mono text-text-muted italic">(Static preview)</span>
+          title="Not available in the static preview">Simulate 100 Crafts</button>
+        <span id="crafting-static-note" className="text-xs font-mono text-text-muted italic">(Static preview)</span>
       </div>
     </BlueprintPanel>
   );
