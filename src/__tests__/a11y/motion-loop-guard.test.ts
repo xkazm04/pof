@@ -117,10 +117,6 @@ const POSITIONAL_ONLY_LOOPS: Record<string, Exemption> = {
     animates: ['y'],
     why: 'Beam highlight travels up each bar on y.',
   },
-  'components/modules/core-engine/unique-tabs/index.tsx': {
-    animates: ['rotate'],
-    why: 'Loading ring — rotate only.',
-  },
 };
 
 /**
