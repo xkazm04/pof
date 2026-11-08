@@ -134,6 +134,7 @@ export function CameraProfileComparison() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1, duration: 0.3 }}
                   onClick={() => toggleProfile(i)}
+                  aria-pressed={active}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-md border group cursor-pointer transition-all"
                   style={active ? {
                     borderColor: withOpacity(profile.color, OPACITY_15),

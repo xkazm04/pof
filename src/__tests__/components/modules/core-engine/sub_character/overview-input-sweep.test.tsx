@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { AbilityQuickPicker } from '@/components/modules/core-engine/sub_character/input/AbilityQuickPicker';
 import { COMBO_ABILITIES } from '@/components/modules/core-engine/sub_ability/_shared/data';
@@ -8,6 +8,13 @@ import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
 import { resolveBindings, normalizeKeyEvent } from '@/lib/character/input-bindings';
 import { INPUT_BINDINGS } from '@/components/modules/core-engine/sub_character/_shared/data';
+vi.mock('@/hooks/useModuleCLI', () => ({
+  useModuleCLI: () => ({ execute: vi.fn(), sendPrompt: vi.fn(), isRunning: false }),
+}));
+import { CameraProfileComparison } from '@/components/modules/core-engine/sub_character/overview/CameraProfileComparison';
+import { HitboxWireframeViewer } from '@/components/modules/core-engine/sub_character/overview/HitboxWireframeViewer';
+import { InputTab } from '@/components/modules/core-engine/sub_character/input/InputTab';
+import type { SubModuleId } from '@/types/modules';
 import { buildBindingsApplyPrompt } from '@/components/modules/core-engine/sub_character/input/build-bindings-apply-prompt';
 
 afterEach(() => cleanup());
@@ -62,4 +69,26 @@ describe('Apply-to-IMC prompt names real UE EKeys for every capturable key', () 
     const prompt = buildBindingsApplyPrompt(resolveBindings(INPUT_BINDINGS, { IA_Interact: label }));
     expect(prompt).toContain(`IA_Interact: E -> ${label} (EKeys::${ue})`);
   });
+});
+
+describe('toggle buttons expose their on/off state, not only a tint', () => {
+  const pressed = (root: HTMLElement) =>
+    [...root.querySelectorAll('button[aria-pressed]')].map((b) => b.getAttribute('aria-pressed'));
+
+  it('camera profile toggles: 6 toggles, the 3 default-selected pressed', () => {
+    const { container } = render(<CameraProfileComparison />);
+    expect(pressed(container)).toEqual(['true', 'true', 'true', 'false', 'false', 'false']);
+  });
+
+  it('hitbox layer toggles: 3 toggles that flip aria-pressed on click', () => {
+    const { container } = render(<HitboxWireframeViewer />);
+    expect(pressed(container)).toEqual(['true', 'true', 'true']);
+    fireEvent.click(container.querySelectorAll('button[aria-pressed]')[1]);
+    expect(pressed(container)).toEqual(['true', 'false', 'true']);
+  });
+
+  it('ability sort keys: exactly the active key is pressed', () => {
+    const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
+    expect(pressed(container)).toEqual(['true', 'false', 'false']);
+  }, 15000);
 });

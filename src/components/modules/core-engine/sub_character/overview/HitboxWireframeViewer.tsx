@@ -135,6 +135,7 @@ export function HitboxWireframeViewer() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * MOTION_CONFIG.stagger }}
                     onClick={() => setToggles(prev => ({ ...prev, [zone.type]: !prev[zone.type] }))}
+                    aria-pressed={active}
                     onMouseEnter={() => setHoveredZone(zone.type)}
                     onMouseLeave={() => setHoveredZone(null)}
                     className="flex items-center gap-2.5 w-full px-3 py-2 rounded-md border text-left transition-all cursor-pointer group"

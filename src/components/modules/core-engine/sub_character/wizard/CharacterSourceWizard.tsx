@@ -140,6 +140,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
                 key={s.id}
                 type="button"
                 onClick={() => pickSource(s.id)}
+                aria-pressed={active}
                 className="flex flex-col gap-1 p-2.5 rounded-lg text-left transition-all hover:brightness-110"
                 style={{
                   backgroundColor: withOpacity(ACCENT, active ? OPACITY_20 : OPACITY_8),

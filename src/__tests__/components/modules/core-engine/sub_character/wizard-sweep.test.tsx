@@ -45,3 +45,14 @@ describe('CharacterSourceWizard — locked steps are out of reach for keyboard t
     expect(screen.getByText('Prepare Source').closest('[inert]')).toBeNull();
   });
 });
+
+describe('CharacterSourceWizard — the chosen source is announced', () => {
+  it('source buttons carry aria-pressed for the selected source only', () => {
+    render(<CharacterSourceWizard moduleId={MODULE} />);
+    const state = ['UE Mannequin', 'Mixamo', 'Custom (Blender)'].map((l) =>
+      screen.getByText(l).closest('button')!.getAttribute('aria-pressed'));
+    expect(state).toEqual(['true', 'false', 'false']);
+    fireEvent.click(screen.getByText('Mixamo'));
+    expect(screen.getByText('Mixamo').closest('button')!.getAttribute('aria-pressed')).toBe('true');
+  });
+});
