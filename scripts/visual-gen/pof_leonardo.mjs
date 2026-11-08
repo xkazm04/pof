@@ -71,7 +71,8 @@ async function main() {
     const img = (gen.generated_images || [])[0];
     if (!img) throw new Error('no images (timed out?)');
     const r = await fetch(img.url);
-    const buf = Buffer.from(await r.arrayBuffer());
+    if (!r.ok) throw new Error(`image download ${r.status}`);
+    const buf =Buffer.from(await r.arrayBuffer());
     const p = resolve(a.output);
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, buf);
