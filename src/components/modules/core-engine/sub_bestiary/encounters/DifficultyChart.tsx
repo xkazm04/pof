@@ -48,8 +48,8 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
   }).join(', ');
 
   return (
-    <div className="min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-      <svg width={CHART_W} height={200} viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="w-full max-w-[280px] focus-ring"
+    <div className="min-h-[120px] bg-surface-deep/30 rounded-lg p-2">
+      <svg width={CHART_W} height={CHART_H} viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="w-full h-auto max-w-[280px] focus-ring"
         role="img" tabIndex={0} onKeyDown={onKeyDown}
         aria-label={`Enemy difficulty curve, levels 1 to ${LEVELS}: ${series.map(s => s.label).join(', ')}. Use arrow keys to read values.`}
         onMouseLeave={() => setHoverLevel(null)}
