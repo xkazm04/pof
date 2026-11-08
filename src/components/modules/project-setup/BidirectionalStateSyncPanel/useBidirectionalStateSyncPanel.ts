@@ -14,6 +14,7 @@ import type { SyncDirection, LogLevel, SyncLogEntry, PropertyEdit, ViewportTarge
 
 export function useBidirectionalStateSyncPanel() {
   const {
+    wsStatus,
     snapshot,
     propertyWatches,
     frameRate,
@@ -182,6 +183,7 @@ export function useBidirectionalStateSyncPanel() {
   }, [pushEvents]);
 
   return {
+    wsStatus,
     snapshot,
     frameRate,
     isLive,

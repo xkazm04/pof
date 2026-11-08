@@ -32,6 +32,7 @@ export function BidirectionalStateSyncPanel() {
       {/* ── Header ───────────────────────────────────────────────── */}
       <PanelHeader
         isLive={s.isLive}
+        wsStatus={s.wsStatus}
         conflicts={s.conflicts}
         outboundCount={s.outboundCount}
         inboundCount={s.inboundCount}
