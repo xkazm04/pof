@@ -41,11 +41,20 @@ export const TUNING_SLIDERS: { key: keyof TuningOverrides; label: string; icon: 
   { key: 'armorEffectivenessWeight', label: 'Armor Weight', icon: Shield },
 ];
 
-/** Display order + labels for grouping the ability picker by CombatAbility.type. */
-export const ABILITY_GROUPS: { type: CombatAbility['type']; label: string }[] = [
-  { type: 'melee', label: 'Melee' },
-  { type: 'ranged', label: 'Ranged' },
-  { type: 'aoe', label: 'AoE' },
-  { type: 'buff', label: 'Buff' },
-  { type: 'dodge', label: 'Dodge' },
-];
+/**
+ * Labels for grouping the ability picker by CombatAbility.type. Keyed by the union so
+ * tsc rejects a new type without a group (it would otherwise vanish from the picker
+ * while the selected count still includes it). Key order is the display order.
+ */
+const ABILITY_TYPE_LABELS: Record<CombatAbility['type'], string> = {
+  melee: 'Melee',
+  ranged: 'Ranged',
+  aoe: 'AoE',
+  buff: 'Buff',
+  dodge: 'Dodge',
+};
+
+export const ABILITY_GROUPS: { type: CombatAbility['type']; label: string }[] =
+  (Object.keys(ABILITY_TYPE_LABELS) as CombatAbility['type'][]).map((type) => ({
+    type, label: ABILITY_TYPE_LABELS[type],
+  }));

@@ -81,8 +81,10 @@ describe('solveCellTuning — one cell, one lever, on the sweep job', () => {
     expect(r.reason).toContain('not monotonic over [0.5, 8]');
   });
 
-  it('every TuningOverrides multiplier is a lever with a label and a range', () => {
-    expect(COMBAT_TUNING_LEVERS.map((l) => l.lever).sort()).toEqual(Object.keys(D.tuning).sort());
+  it('every engine-read TuningOverrides multiplier is a lever with a label and a range', () => {
+    // healingMul is declared but the engine never reads it; it stays out of the lever list.
+    const engineRead = Object.keys(D.tuning).filter((k) => k !== 'healingMul');
+    expect(COMBAT_TUNING_LEVERS.map((l) => l.lever).sort()).toEqual(engineRead.sort());
     for (const l of COMBAT_TUNING_LEVERS) {
       expect(l.label.length).toBeGreaterThan(0);
       expect(l.range[0]).toBeLessThan(l.range[1]);
