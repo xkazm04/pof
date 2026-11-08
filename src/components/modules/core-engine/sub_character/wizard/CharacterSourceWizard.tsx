@@ -154,7 +154,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
             );
           })}
         </div>
-        <DispatchButton onClick={dispatchEnable} isRunning={isRunning} icon={Wand2} label="Prepare Source" />
+        <DispatchButton onClick={dispatchEnable} isRunning={steps[0] === 'running'} disabled={isRunning} icon={Wand2} label="Prepare Source" />
         <StepResult status={steps[0]} runningLabel="Preparing source…" />
       </Step>
 
@@ -173,7 +173,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
             />
           </label>
         ))}
-        <DispatchButton onClick={dispatchWire} isRunning={isRunning} disabled={!reachable(2)} icon={ArrowRight} label="Wire Characters" />
+        <DispatchButton onClick={dispatchWire} isRunning={steps[1] === 'running'} disabled={isRunning || !reachable(2)} icon={ArrowRight} label="Wire Characters" />
         <StepResult status={steps[1]} runningLabel="Wiring characters…" />
       </Step>
 
@@ -183,7 +183,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
           Launches the slice, screenshots it, and asks Gemini whether the character is a humanoid in a
           natural pose (not T-posed) and the enemy is visually distinct.
         </p>
-        <DispatchButton onClick={dispatchVerify} isRunning={isRunning} disabled={!reachable(3)} icon={Eye} label="Verify Locomotes" />
+        <DispatchButton onClick={dispatchVerify} isRunning={steps[2] === 'running'} disabled={isRunning || !reachable(3)} icon={Eye} label="Verify Locomotes" />
         <StepResult status={steps[2]} runningLabel="Verifying locomotion…" />
       </Step>
     </div>
