@@ -24,6 +24,7 @@ export function AbilityQuickPicker({ onSelect, selectedIds }: AbilityQuickPicker
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search abilities..."
+          aria-label="Search abilities"
           className="flex-1 bg-transparent text-sm text-text placeholder-text-muted/50 outline-none"
         />
         <span className="text-[10px] text-text-muted">{filtered.length}/{COMBO_ABILITIES.length}</span>

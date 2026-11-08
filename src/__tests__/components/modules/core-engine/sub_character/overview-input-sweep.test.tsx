@@ -16,6 +16,7 @@ import { HitboxWireframeViewer } from '@/components/modules/core-engine/sub_char
 import { InputTab } from '@/components/modules/core-engine/sub_character/input/InputTab';
 import { ClassHierarchy } from '@/components/modules/core-engine/sub_character/overview/ClassHierarchy';
 import { PropertyInspector } from '@/components/modules/core-engine/sub_character/overview/PropertyInspector';
+import { CharacterScalingPreview } from '@/components/modules/core-engine/sub_character/overview/CharacterScalingPreview';
 import type { SubModuleId } from '@/types/modules';
 import { buildBindingsApplyPrompt } from '@/components/modules/core-engine/sub_character/input/build-bindings-apply-prompt';
 
@@ -122,4 +123,23 @@ describe('disclosure toggles announce what they expand and whether it is open', 
     const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
     expect(expanded(container)).toEqual(['true', 'true', 'true', 'true']);
   }, 15000);
+});
+
+describe('form controls have an accessible name (placeholder is not one)', () => {
+  const named = (root: HTMLElement) =>
+    [...root.querySelectorAll('input')].filter((i) => i.getAttribute('aria-label') || i.labels?.length).length;
+
+  it('PropertyInspector search, AbilityQuickPicker search and the scaling level slider are named', () => {
+    useCharacterBlueprintStore.setState({ baseFeelPresetId: FEEL_PRESETS[0].id, feelLayers: [] });
+    for (const [ui, label] of [
+      [<PropertyInspector key="p" />, 'Search properties'],
+      [<AbilityQuickPicker key="a" />, 'Search abilities'],
+      [<CharacterScalingPreview key="c" />, 'Character level'],
+    ] as const) {
+      const { container, getByLabelText, unmount } = render(ui);
+      expect(getByLabelText(label)).toBeTruthy();
+      expect(named(container)).toBe(container.querySelectorAll('input').length);
+      unmount();
+    }
+  });
 });

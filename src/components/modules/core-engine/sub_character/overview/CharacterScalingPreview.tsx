@@ -20,6 +20,7 @@ export function CharacterScalingPreview() {
         <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Level</span>
         <input
           type="range" min={1} max={50} value={scalingLevel}
+          aria-label="Character level"
           onChange={(e) => setScalingLevel(Number(e.target.value))}
           className="flex-1 h-1 rounded-full appearance-none cursor-pointer"
           style={{ accentColor: ACCENT_VIOLET }}
