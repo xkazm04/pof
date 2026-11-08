@@ -245,6 +245,7 @@ export function BuildConfigSelector() {
           <button
             onClick={fetchProfiles}
             disabled={loading}
+            aria-label="Refresh build profiles"
             className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />

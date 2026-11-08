@@ -22,6 +22,7 @@ export function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (i
     <div className="border-b border-border/40 last:border-b-0">
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="w-full grid grid-cols-[auto_1fr_80px_80px_80px_60px_auto] gap-2 items-center px-2 py-1.5 text-left hover:bg-surface-hover/30 transition-colors text-xs"
       >
         {expanded

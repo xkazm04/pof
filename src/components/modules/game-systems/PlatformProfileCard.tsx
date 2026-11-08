@@ -107,6 +107,8 @@ export function PlatformProfileCard({
           </button>
           <button
             onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+            aria-label={`${expanded ? 'Collapse' : 'Expand'} ${profile.name} details`}
             className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
           >
             {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}

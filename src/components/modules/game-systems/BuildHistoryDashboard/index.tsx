@@ -230,6 +230,7 @@ export function BuildHistoryDashboard() {
           <button
             onClick={fetchAll}
             disabled={loading}
+            aria-label="Refresh build history"
             className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />

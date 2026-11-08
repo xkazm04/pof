@@ -64,7 +64,7 @@ export function HistoryTab({
 
       <div className="rounded border border-border bg-background/60 overflow-hidden">
         {/* Sortable table header */}
-        <div className="grid grid-cols-[auto_1fr_80px_80px_80px_60px_auto] gap-2 px-2 py-1.5 bg-surface-deep border-b border-border">
+        <div role="row" className="grid grid-cols-[auto_1fr_80px_80px_80px_60px_auto] gap-2 px-2 py-1.5 bg-surface-deep border-b border-border">
           <span className="w-2.5" />
           <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Build</span>
           <SortableHeader label="Platform" sortKey="platform" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
