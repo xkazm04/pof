@@ -7,7 +7,7 @@ import { STATUS_WARNING } from '@/lib/chart-colors';
 import type { ChartSeries } from '@/types/unique-tab-improvements';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { NormalizedLineChart } from '../../unique-tabs/_shared';
-import { ACCENT, MULTI_CURVE_SERIES } from '../_shared/data';
+import { ACCENT, MAX_LEVEL, MULTI_CURVE_SERIES } from '../_shared/data';
 import { xpOverlaySeries } from '@/components/modules/core-engine/sub_progression/_shared/curveModel';
 
 interface MultiCurveOverlayProps {
@@ -55,7 +55,7 @@ export const MultiCurveOverlay = memo(function MultiCurveOverlay({ baseXp, curve
       <NormalizedLineChart
         height="h-[260px]"
         yLabels={[multiCurveMax.toLocaleString(), Math.floor(multiCurveMax / 2).toLocaleString(), '0']}
-        xLabels={['Lv 0', 'Lv 25', 'Lv 50']}
+        xLabels={['Lv 0', `Lv ${Math.round(MAX_LEVEL / 2)}`, `Lv ${MAX_LEVEL}`]}
         defs={visibleSeries.map(s => (
           <linearGradient key={`grad-${s.id}`} id={`mcGrad-${s.id}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={s.color} stopOpacity="0.15" />
@@ -66,13 +66,13 @@ export const MultiCurveOverlay = memo(function MultiCurveOverlay({ baseXp, curve
         {visibleSeries.map(s => {
           const pathD = s.points
             .map((p, i) => {
-              const x = (p.x / 50) * 100;
+              const x = (p.x / MAX_LEVEL) * 100;
               const y = 100 - (p.y / multiCurveMax) * 100;
               return i === 0 ? `M ${x},${y}` : `L ${x},${y}`;
             })
             .join(' ');
           const lastPt = s.points[s.points.length - 1];
-          const areaD = `${pathD} L ${(lastPt.x / 50) * 100},100 L 0,100 Z`;
+          const areaD = `${pathD} L ${(lastPt.x / MAX_LEVEL) * 100},100 L 0,100 Z`;
 
           return (
             <g key={s.id}>
