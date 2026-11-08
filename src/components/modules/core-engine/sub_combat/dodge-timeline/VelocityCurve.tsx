@@ -5,7 +5,7 @@ import { ACCENT_CYAN, OVERLAY_WHITE,
   withOpacity, OPACITY_6, OPACITY_37, OPACITY_80,
 } from '@/lib/chart-colors';
 import type { DodgeParams, DodgePhases } from '../_shared/dodge-types';
-import { speedCurve } from '../_shared/dodge-math';
+import { speedCurve, safeDur } from '../_shared/dodge-math';
 
 export function VelocityCurve({
   params,
@@ -16,7 +16,7 @@ export function VelocityCurve({
   phases: DodgePhases;
   playhead: number;
 }) {
-  const maxSpeed = params.dodgeDistance / params.dodgeDuration;
+  const maxSpeed = params.dodgeDistance / safeDur(params.dodgeDuration);
 
   const curveD = useMemo(() => {
     return Array.from({ length: 51 }, (_, i) => {
@@ -30,7 +30,7 @@ export function VelocityCurve({
     }).join(' ');
   }, [params, phases.totalTimeline]);
 
-  const playFrac = playhead / phases.totalTimeline;
+  const playFrac = phases.totalTimeline > 0 ? playhead / phases.totalTimeline : 0;
   const playAlpha = params.dodgeDuration > 0 ? Math.min(playhead / params.dodgeDuration, 1) : 0;
   const playSpeed = playhead <= params.dodgeDuration ? speedCurve(playAlpha) * maxSpeed : 0;
   const playX = playFrac * 200;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import type { DodgeParams, DodgePhases, HitMarker } from '../_shared/dodge-types';
-import { speedCurve, distanceCurve } from '../_shared/dodge-math';
+import { speedCurve, distanceCurve, safeDur } from '../_shared/dodge-math';
 import type { HapticEffect, PlayheadStats } from './types';
 
 /**
@@ -34,7 +34,7 @@ export function usePlayheadStats(playhead: number, params: DodgeParams, phases: 
   return useMemo(() => {
     const t = playhead;
     const alpha = params.dodgeDuration > 0 ? Math.min(t / params.dodgeDuration, 1) : 0;
-    const maxSpeed = params.dodgeDistance / params.dodgeDuration;
+    const maxSpeed = params.dodgeDistance / safeDur(params.dodgeDuration);
     const speed = t <= params.dodgeDuration ? speedCurve(alpha) * maxSpeed : 0;
     const dist = t <= params.dodgeDuration ? distanceCurve(alpha) * params.dodgeDistance : params.dodgeDistance;
     return {

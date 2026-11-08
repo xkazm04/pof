@@ -36,6 +36,8 @@ import { usePlayheadStats } from '@/components/modules/core-engine/sub_combat/do
 import { DEFAULT_PARAMS } from '@/components/modules/core-engine/sub_combat/_shared/dodge-types';
 import { computePhases } from '@/components/modules/core-engine/sub_combat/_shared/dodge-math';
 import { useCharacterHeuristicStore } from '@/stores/heuristicTuningStore';
+import { VelocityCurve } from '@/components/modules/core-engine/sub_combat/dodge-timeline/VelocityCurve';
+import { ParameterEditor } from '@/components/modules/core-engine/sub_combat/dodge-timeline/ParameterEditor';
 
 /* ── Manual rAF clock ─────────────────────────────────────────────────────── */
 
@@ -132,9 +134,21 @@ describe('DodgeTimelineEditor param edits keep the cross-field invariants', () =
 });
 
 describe('usePlayheadStats', () => {
-  it.skip('reports a finite speed when the dodge duration is zero', () => {
+  it('reports a finite speed when the dodge duration is zero', () => {
     const params = { ...DEFAULT_PARAMS, dodgeDuration: 0 };
     const { result } = renderHook(() => usePlayheadStats(0, params, computePhases(params), []));
     expect(Number.isFinite(result.current.speed)).toBe(true);
+  });
+});
+
+describe('zero dodge duration never renders Infinity/NaN readouts', () => {
+  const params = { ...DEFAULT_PARAMS, dodgeDuration: 0 };
+  it('VelocityCurve speed readout is finite', () => {
+    const { container } = render(<VelocityCurve params={params} phases={computePhases(params)} playhead={0} />);
+    expect(container.textContent).not.toMatch(/Infinity|NaN/);
+  });
+  it('ParameterEditor quick stats are finite', () => {
+    const { container } = render(<ParameterEditor params={params} onUpdate={() => {}} onReset={() => {}} />);
+    expect(container.textContent).not.toMatch(/Infinity|NaN/);
   });
 });

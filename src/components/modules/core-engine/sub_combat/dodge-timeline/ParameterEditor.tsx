@@ -8,6 +8,7 @@ import { ACCENT_CYAN, ACCENT_ORANGE, ACCENT_VIOLET,
 import type { DodgeParams } from '../_shared/dodge-types';
 import { PARAM_FIELDS, DEFAULT_PARAMS } from '../_shared/dodge-types';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { safeDur } from '../_shared/dodge-math';
 
 export function ParameterEditor({
   params,
@@ -18,6 +19,7 @@ export function ParameterEditor({
   onUpdate: (key: keyof DodgeParams, value: number) => void;
   onReset: () => void;
 }) {
+  const dur = safeDur(params.dodgeDuration);
   return (
     <motion.div
       initial={{ height: 0, opacity: 0 }}
@@ -79,19 +81,19 @@ export function ParameterEditor({
           <span>
             Max Speed:{' '}
             <span className="font-bold" style={{ color: ACCENT_CYAN, textShadow: `0 0 12px ${withOpacity(ACCENT_CYAN, OPACITY_25)}` }}>
-              {(params.dodgeDistance / params.dodgeDuration).toFixed(0)} cm/s
+              {(params.dodgeDistance / dur).toFixed(0)} cm/s
             </span>
           </span>
           <span>
             I-Frame Window:{' '}
             <span className="font-bold" style={{ color: ACCENT_ORANGE, textShadow: `0 0 12px ${withOpacity(ACCENT_ORANGE, OPACITY_25)}` }}>
-              {(params.iFrameDuration / params.dodgeDuration * 100).toFixed(0)}%
+              {(params.iFrameDuration / dur * 100).toFixed(0)}%
             </span>
           </span>
           <span>
             Cancel Window:{' '}
             <span className="font-bold" style={{ color: ACCENT_VIOLET, textShadow: `0 0 12px ${withOpacity(ACCENT_VIOLET, OPACITY_25)}` }}>
-              {((params.cancelWindowEnd - params.cancelWindowStart) / params.dodgeDuration * 100).toFixed(0)}%
+              {((params.cancelWindowEnd - params.cancelWindowStart) / dur * 100).toFixed(0)}%
             </span>
           </span>
         </div>
