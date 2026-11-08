@@ -12,7 +12,17 @@ import {
 import { runFastPreflight } from '@/lib/packaging/preflight-runner';
 import { spawnCapture, type SpawnCaptureResult } from '@/lib/packaging/process-utils';
 
-type CheckKind = 'fast' | 'build-verify-editor' | 'build-verify-shipping' | 'asset-validation';
+const CHECK_KINDS = ['fast', 'build-verify-editor', 'build-verify-shipping', 'asset-validation'] as const;
+type CheckKind = (typeof CHECK_KINDS)[number];
+
+/**
+ * The dispatch below ends in an `else` that spawns UnrealBuildTool, so an
+ * unrecognised `check` must be refused here — otherwise a typo starts a real
+ * 10-minute editor compile.
+ */
+function isCheckKind(v: unknown): v is CheckKind {
+  return typeof v === 'string' && (CHECK_KINDS as readonly string[]).includes(v);
+}
 
 interface PreflightRequest {
   projectPath: string;
@@ -84,6 +94,9 @@ export async function POST(req: Request): Promise<Response> {
     return apiError('missing required fields: projectPath, projectName, ueVersion', 400);
   }
   const request = body as PreflightRequest;
+  if (request.check !== undefined && !isCheckKind(request.check)) {
+    return apiError(`unknown check — expected one of: ${CHECK_KINDS.join(', ')}`, 400);
+  }
   const check: CheckKind = request.check ?? 'fast';
 
   try {
