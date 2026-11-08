@@ -39,6 +39,7 @@ import { BuildHealthDashboard } from '../BuildHealthDashboard';
 import { JudgeVerdictsView } from '../JudgeVerdictsView';
 import { EvaluatorCoachmark } from '../EvaluatorCoachmark';
 import { EVALUATOR_TAB_INFO } from '@/lib/evaluator/tab-glossary';
+import { logger } from '@/lib/logger';
 import { type TabId } from './types';
 import { TabDivider, ScrollableTabBar, TabButton } from './TabControls';
 
@@ -51,6 +52,16 @@ export function EvaluatorModule() {
     captureScroll();
     setActiveTab(tab);
   }, [captureScroll]);
+
+  // Child views name tabs as plain strings; an id the glossary does not know
+  // would make the subtitle read EVALUATOR_TAB_INFO[undefined] and crash the shell.
+  const navigateTab = useCallback((tab: string) => {
+    if (!Object.hasOwn(EVALUATOR_TAB_INFO, tab)) {
+      logger.warn(`[EvaluatorModule] ignoring navigation to unknown tab "${tab}"`);
+      return;
+    }
+    switchTab(tab as TabId);
+  }, [switchTab]);
 
   const handleTabArrowNav = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -164,11 +175,11 @@ export function EvaluatorModule() {
         )}
 
         {activeTab === 'dependencies' && (
-          <DependencyGraph onNavigateTab={(t) => switchTab(t as TabId)} />
+          <DependencyGraph onNavigateTab={navigateTab} />
         )}
 
         {activeTab === 'analytics' && (
-          <SessionAnalyticsDashboard onNavigateTab={(t) => switchTab(t as TabId)} />
+          <SessionAnalyticsDashboard onNavigateTab={navigateTab} />
         )}
 
         {activeTab === 'spend' && (
@@ -180,7 +191,7 @@ export function EvaluatorModule() {
             <BatchReviewPanel />
             <ErrorMemoryPanel />
             <div className="border-t border-border pt-6">
-              <ProjectHealthDashboard onNavigateTab={(t) => switchTab(t as TabId)} />
+              <ProjectHealthDashboard onNavigateTab={navigateTab} />
             </div>
           </div>
         )}
@@ -230,7 +241,7 @@ export function EvaluatorModule() {
         )}
 
         {activeTab === 'health' && (
-          <HolisticHealthView onNavigateTab={(t) => switchTab(t as TabId)} />
+          <HolisticHealthView onNavigateTab={navigateTab} />
         )}
 
         {activeTab === 'build-health' && (
