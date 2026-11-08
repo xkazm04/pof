@@ -63,6 +63,7 @@ export function EconomyImpactTable({
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={safePage === 0}
+            aria-label="Previous page"
             className="p-1 rounded border border-border/30 disabled:opacity-30 cursor-pointer"
           >
             <ChevronLeft className="w-3.5 h-3.5 text-text-muted" />
@@ -73,6 +74,7 @@ export function EconomyImpactTable({
           <button
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={safePage >= totalPages - 1}
+            aria-label="Next page"
             className="p-1 rounded border border-border/30 disabled:opacity-30 cursor-pointer"
           >
             <ChevronRight className="w-3.5 h-3.5 text-text-muted" />

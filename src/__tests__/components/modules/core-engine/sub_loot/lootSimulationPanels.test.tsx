@@ -20,6 +20,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
   ),
 }));
 
+import { EconomyImpact } from '@/components/modules/core-engine/sub_loot/economy/EconomyImpact';
 import { PityCohortChart } from '@/components/modules/core-engine/sub_loot/pity/PityCohortChart';
 import { PityTimerSection } from '@/components/modules/core-engine/sub_loot/pity/PityTimerSection';
 import { DroughtCalculator } from '@/components/modules/core-engine/sub_loot/pity/DroughtCalculator';
@@ -115,5 +116,14 @@ describe('PityCohortChart', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('EconomyImpact table controls are named', () => {
+  it('the pagination chevrons carry an accessible name', () => {
+    const { container } = render(<EconomyImpact />);
+    const chevrons = [...container.querySelectorAll('button')].filter((b) => b.querySelector('svg') && !b.textContent?.trim());
+    expect(chevrons.length).toBe(2);
+    expect(chevrons.map((b) => b.getAttribute('aria-label'))).toEqual(['Previous page', 'Next page']);
   });
 });
