@@ -558,10 +558,20 @@ export function markFindingFixDispatched(findingId: string): PlaytestFinding | n
   return row ? rowToFinding(row) : null;
 }
 
+/**
+ * Severity rank as an ORDER BY expression, worst first — the order
+ * `SEVERITY_ORDER` (game-director-styles) declares and the findings list renders
+ * as returned. A bare `ORDER BY severity` sorts the TEXT alphabetically and put
+ * every `low` finding above every `medium` one.
+ */
+const SEVERITY_RANK_SQL = `CASE severity
+  WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2
+  WHEN 'low' THEN 3 WHEN 'positive' THEN 4 ELSE 5 END`;
+
 export function getFindings(sessionId: string): PlaytestFinding[] {
   ensureTables();
   const rows = prepareCached(
-    'SELECT * FROM game_director_findings WHERE session_id = ? ORDER BY severity, created_at'
+    `SELECT * FROM game_director_findings WHERE session_id = ? ORDER BY ${SEVERITY_RANK_SQL}, created_at, rowid`
   ).all(sessionId) as FindingRow[];
   return rows.map(rowToFinding);
 }
