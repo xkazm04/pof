@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
           propertyName: string;
           value: unknown;
         };
-        if (!objectPath || !propertyName) {
+        // `undefined`, not falsy: 0, false, '' and null are all values a property can be set to.
+        if (!objectPath || !propertyName || value === undefined) {
           return apiError('objectPath, propertyName, and value are required', 400);
         }
         const result = await client.setProperty(objectPath, propertyName, value);
