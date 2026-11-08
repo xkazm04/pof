@@ -65,6 +65,14 @@ export function layoutEndLabels(ys: readonly number[], minGap: number, top: numb
   return out;
 }
 
+/** First / latest confidence and drift of one strand across the scan history. */
+function strandStats(scans: TelemetrySnapshot[], pattern: GameplayPattern) {
+  const conf = (s: TelemetrySnapshot) => s.detectedPatterns.find((p) => p.pattern === pattern)?.confidence ?? 0;
+  const first = conf(scans[0]);
+  const latest = conf(scans[scans.length - 1]);
+  return { first, latest, delta: latest - first };
+}
+
 function formatPatternName(p: string): string {
   return p.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
@@ -246,10 +254,29 @@ export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) 
           ))}
         </svg>
 
+        {/* The same figures the hover readout shows, for keyboard / screen-reader users. */}
+        <table className="sr-only">
+          <caption>Pattern confidence, first scan to latest scan</caption>
+          <thead>
+            <tr><th scope="col">Pattern</th><th scope="col">First</th><th scope="col">Latest</th><th scope="col">Change</th></tr>
+          </thead>
+          <tbody>
+            {patterns.map((pattern) => {
+              const { first, latest, delta } = strandStats(scans, pattern);
+              return (
+                <tr key={pattern}>
+                  <th scope="row">{formatPatternName(pattern)}</th>
+                  <td>{first}%</td>
+                  <td>{latest}%</td>
+                  <td>{delta > 0 ? '+' : ''}{delta}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
         {hovered && (() => {
-          const first = scans[0].detectedPatterns.find(p => p.pattern === hovered)?.confidence ?? 0;
-          const latest = scans[scans.length - 1].detectedPatterns.find(p => p.pattern === hovered)?.confidence ?? 0;
-          const delta = latest - first;
+          const { first, latest, delta } = strandStats(scans, hovered);
           const color = PATTERN_COLORS[hovered] ?? STATUS_INFO;
           const deltaColor = delta > 0 ? STATUS_SUCCESS : delta < 0 ? STATUS_ERROR : 'var(--text-muted)';
           return (
