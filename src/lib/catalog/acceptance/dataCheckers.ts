@@ -219,16 +219,17 @@ export function materialShape(field: string, label: string): Checker {
       const req = ['surface', 'parentMaterial', 'textures'];
       for (let i = 0; i < masters.length; i++) {
         const m = (masters[i] ?? {}) as Record<string, unknown>;
-        const missing = req.filter((k) => m[k] == null);
+        const missing = req.filter((k) => m[k] == null || isDeclaredGap(m[k]));
         if (missing.length) {
           return { label, tier: 'L0', status: 'fail', detail: `master[${i}] incomplete`, reason: `field "${field}.parentMaterials[${i}]" missing: ${missing.join(', ')}` };
         }
       }
       return { label, tier: 'L0', status: 'pass', detail: `${masters.length} master(s), each surface / parentMaterial / textures populated` };
     }
-    // Legacy single-master shape (parentMaterial + textures), same strictness as fieldsPopulated.
+    // Legacy single-master shape (parentMaterial + textures), same strictness as fieldsPopulated —
+    // a DECLARED gap ("not in the reference") is not a value on either path.
     const req = ['parentMaterial', 'textures'];
-    const missing = req.filter((k) => obj[k] == null);
+    const missing = req.filter((k) => obj[k] == null || isDeclaredGap(obj[k]));
     const ok = missing.length === 0;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${req.length - missing.length} / ${req.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
   }, { field, keys: ['parentMaterial', 'textures'] });
