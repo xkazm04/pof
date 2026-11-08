@@ -13,6 +13,9 @@ import {
   type CommandCategory,
 } from '../_shared/data';
 
+/** `<x>` is required, `[x]` optional (the catalog's own params notation). */
+const needsArg = (params?: string) => !!params && params.includes('<');
+
 interface Props {
   onExecute: (command: string) => void;
   onPopulate: (syntax: string) => void;
@@ -81,10 +84,18 @@ export function CommandCatalog({ onExecute, onPopulate, isExecuting }: Props) {
                 <div className="text-xs font-mono text-text-muted uppercase mt-0.5">{cmd.description}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={(e) => { e.stopPropagation(); onExecute(cmd.syntax); }} disabled={isExecuting}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // A required <param> cannot be guessed: fill the input, never send it bare.
+                    if (needsArg(cmd.params)) onPopulate(`${cmd.syntax} `);
+                    else onExecute(cmd.syntax);
+                  }}
+                  disabled={isExecuting}
+                  title={needsArg(cmd.params) ? `Needs ${cmd.params}: fills the console input` : undefined}
                   className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-all opacity-0 group-hover:opacity-100 disabled:opacity-30"
                   style={{ backgroundColor: `${ACCENT_EMERALD}${OPACITY_10}`, color: ACCENT_EMERALD, borderColor: `${ACCENT_EMERALD}${OPACITY_30}` }}>
-                  <Play className="w-3 h-3" /> RUN
+                  <Play className="w-3 h-3" /> {needsArg(cmd.params) ? 'FILL' : 'RUN'}
                 </button>
                 <CopyButton text={cmd.syntax} />
               </div>
