@@ -62,7 +62,11 @@ export function startTriposrJob(spec: TriposrJobSpec, runner: Runner = runTripos
     .then(async (result) => {
       job.result = result;
       if (result.ok && result.meshPath) {
-        try { job.critique = await critic(result.meshPath, gate.deps); } catch { /* critique is best-effort */ }
+        // Best-effort, but a throw is still reported: with no card the gate summary would
+        // claim "no mesh was produced" about a mesh that was.
+        try { job.critique = await critic(result.meshPath, gate.deps); } catch (e) {
+          job.critique = { ok: false, error: e instanceof Error ? e.message : String(e) };
+        }
       }
       // A produced mesh always reports HOW it was gated — including "nothing gated it".
       if (result.ok) {
