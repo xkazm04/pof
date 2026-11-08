@@ -94,6 +94,8 @@ export interface ConsoleHistoryEntry {
   timestamp: number;
   status: 'pending' | 'success' | 'error';
   output?: string;
+  /** A UI action logged into the history (e.g. a failed CONNECT): shown, never recalled as a command. */
+  system?: true;
 }
 
 /* -- 12.5 Network Replication Monitor -------------------------------------- */
