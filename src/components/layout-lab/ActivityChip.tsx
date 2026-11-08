@@ -102,7 +102,7 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
               }
             />
           ))}
-          <p style={{ margin: 0, fontSize: 'var(--lab-fs-xs)', color: t.muted, fontFamily: t.fontMono }}>
+          <p style={{ margin: 0, fontSize: 'var(--lab-fs-xs)', color: t.muted, fontFamily: 'var(--lab-font-mono)' }}>
             Not covered here: a CLI produce dispatch in flight (its state lives in the step panel that
             started it) and anything launched outside the browser. These engines stay separate runtimes —
             this panel only reads them.
@@ -138,10 +138,10 @@ function LaneRow({ lane, t, actions }: {
   return (
     <div data-testid={`lab-activity-lane-${lane.id}`} data-state={lane.state} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)', flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: t.fontMono, fontSize: 'var(--lab-fs-xs)', color: tone }}>
+        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: tone }}>
           <span aria-hidden="true">{LANE_GLYPH[lane.state]}</span> {LANE_WORD[lane.state]}
         </span>
-        <span style={{ fontFamily: t.fontMono, fontSize: 'var(--lab-fs-xs)', color: t.ink }}>{lane.title}</span>
+        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: t.ink }}>{lane.title}</span>
         {actions.map((a, i) => (
           <Button key={a.aria} onClick={a.onClick} ariaLabel={a.aria} mono style={i === 0 ? { marginLeft: 'auto' } : undefined}>
             {a.label}
