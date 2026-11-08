@@ -38,8 +38,11 @@ export function useGeneratedMeshAssets(enabled: boolean): GenAssetRef[] {
     void (async () => {
       const res = await tryApiFetch<{ assets: GeneratedAsset[] }>(GENERATED_ASSETS_ENDPOINT);
       if (!live || !res.ok) return;
+      // `tryApiFetch` guarantees the envelope, never the payload: a body without an `assets`
+      // list threw inside this un-awaited IIFE. Same rule as `useGeneratedImageAssets`.
+      const listed = Array.isArray(res.data?.assets) ? res.data.assets : [];
       setAssets(
-        res.data.assets.map((a) => ({
+        listed.map((a) => ({
           name: `${a.name.replace(/\.glb$/i, '')} · ${a.provider ?? 'unknown source'}`,
           url: a.url,
           slug: meshSlug(a.name),
