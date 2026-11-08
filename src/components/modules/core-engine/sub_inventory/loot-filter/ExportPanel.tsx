@@ -62,13 +62,18 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
     setBusy(STEP_GENERATE);
     const rows = rulesetToDataTableRows(ruleset);
     const json = rulesetToDataTableJson(ruleset);
-    await postArtifact({
+    const write = await postArtifact({
       catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step: STEP_GENERATE,
       data: { json, rowCount: rows.length, assetPath, name: ruleset.name },
       ueAssets: [assetPath], status: 'pass', tier: STEP_TIER[STEP_GENERATE],
     });
-    setLifecycle((cur) => (RANK[cur] > RANK.generated ? cur : 'generated'));
-    setNote(`Generated ${rows.length} rows → ${assetPath}`);
+    // The lifecycle is the pipeline's truth: advance it only when the write was recorded.
+    if (write.ok) {
+      setLifecycle((cur) => (RANK[cur] > RANK.generated ? cur : 'generated'));
+      setNote(`Generated ${rows.length} rows → ${assetPath}`);
+    } else {
+      setNote(`Pipeline write failed: ${write.error} (DataTable downloaded, not recorded)`);
+    }
     downloadBlob(new Blob([json], { type: 'application/json' }), `${assetPath.split('/').pop()}.json`);
     setBusy(null);
   }, [ruleset, assetPath]);
@@ -86,9 +91,13 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
       { assetPath, rows: rulesetToDataTableRows(ruleset) },
       { bridgeUrl: `http://localhost:${port}/pof/python/run`, authToken: authToken || undefined });
     if (res.ok) {
-      setLifecycle((cur) => (RANK[cur] > RANK[okState] ? cur : okState));
-      setNote(okMsg);
-      await postArtifact({ catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step, data: { assetPath }, ueAssets: [assetPath], status: 'pass', tier });
+      const write = await postArtifact({ catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step, data: { assetPath }, ueAssets: [assetPath], status: 'pass', tier });
+      if (write.ok) {
+        setLifecycle((cur) => (RANK[cur] > RANK[okState] ? cur : okState));
+        setNote(okMsg);
+      } else {
+        setNote(`${okMsg} Pipeline write failed: ${write.error} (not recorded)`);
+      }
     } else {
       setNote(res.error);
       await postArtifact({ catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step, data: { assetPath }, ueAssets: [assetPath], status: 'deferred', tier, reason: res.error });
