@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 // Mock the DB + generator so the route is exercised without touching SQLite.
 vi.mock('@/lib/level-design-db', () => ({
@@ -94,6 +97,42 @@ describe('POST /api/quest-generation — project scan handling', () => {
     expect(res.status).toBe(200);
     // Proceeds with empty classes rather than aborting.
     expect(generateQuests).toHaveBeenCalledWith([], expect.anything());
+  });
+
+  describe('UE5 projects (scan-project requires moduleName)', () => {
+    let dir: string;
+    beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'quest-ue5-')); });
+    afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+    // Answers like scan-project: 400 without a moduleName, classes with one.
+    function mockScanLikeRoute() {
+      return vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+        const sent = JSON.parse(String((init as RequestInit).body)) as { moduleName?: string };
+        const payload = sent.moduleName
+          ? { success: true, data: { classes: [{ name: 'AGoblin', prefix: 'A', headerPath: 'g.h' }] } }
+          : { success: false, error: 'moduleName is required for UE5 projects' };
+        return new Response(JSON.stringify(payload), { status: sent.moduleName ? 200 : 400 });
+      });
+    }
+
+    it('derives moduleName from the .uproject file name so classes reach generation', async () => {
+      writeFileSync(join(dir, 'Pillars.uproject'), '{}');
+      const fetchSpy = mockScanLikeRoute();
+      const res = await POST(makePost({ projectPath: dir }));
+      expect(res.status).toBe(200);
+      expect(JSON.parse(String((fetchSpy.mock.calls[0][1] as RequestInit).body)).moduleName).toBe('Pillars');
+      expect(generateQuests).toHaveBeenCalledWith(
+        [{ name: 'AGoblin', prefix: 'A', headerPath: 'g.h' }],
+        expect.anything(),
+      );
+    });
+
+    it('prefers an explicit moduleName from the request', async () => {
+      writeFileSync(join(dir, 'Pillars.uproject'), '{}');
+      const fetchSpy = mockScanLikeRoute();
+      await POST(makePost({ projectPath: dir, moduleName: 'PoFGame' }));
+      expect(JSON.parse(String((fetchSpy.mock.calls[0][1] as RequestInit).body)).moduleName).toBe('PoFGame');
+    });
   });
 
   it('surfaces the reason in a 502 when the scan request throws', async () => {

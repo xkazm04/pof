@@ -23,6 +23,9 @@ import { getExpectationsFor, getExpectationsForItem } from '@/lib/checklist-expe
 import { collectHeaders } from '@/lib/ue-source/collect-headers';
 import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
+/** Header reads in flight at once (matches scan-project and scan-animbp). */
+const HEADER_READ_BATCH = 20;
+
 interface VerifyRequest {
   projectPath: string;
   /** Items to verify — module-scoped { moduleId, itemId }; bare { itemId } is legacy */
@@ -64,19 +67,25 @@ export async function POST(request: NextRequest) {
     // Collect all .h files from Source/ for parsing
     const headerFiles = await collectHeaders(sourceDir);
 
-    // Parse all headers once; an unreadable header is disclosed, not fatal
+    // Parse all headers once, in batches of 20 like scan-project/scan-animbp: opening every
+    // header at once can hit EMFILE, which would land here as "unreadable". An unreadable
+    // header is disclosed, not fatal.
     const unreadable: string[] = [];
-    const parsedOrNull = await Promise.all(
-      headerFiles.map(async (fp): Promise<HeaderParseResult | null> => {
-        try {
-          const content = await fsPromises.readFile(fp, 'utf-8');
-          return parseHeader(content, fp);
-        } catch {
-          unreadable.push(path.relative(sourceDir, fp).split(path.sep).join('/'));
-          return null;
-        }
-      }),
-    );
+    const parsedOrNull: (HeaderParseResult | null)[] = [];
+    for (let i = 0; i < headerFiles.length; i += HEADER_READ_BATCH) {
+      const batch = await Promise.all(
+        headerFiles.slice(i, i + HEADER_READ_BATCH).map(async (fp): Promise<HeaderParseResult | null> => {
+          try {
+            const content = await fsPromises.readFile(fp, 'utf-8');
+            return parseHeader(content, fp);
+          } catch {
+            unreadable.push(path.relative(sourceDir, fp).split(path.sep).join('/'));
+            return null;
+          }
+        }),
+      );
+      parsedOrNull.push(...batch);
+    }
     const parsedHeaders = parsedOrNull.filter((p): p is HeaderParseResult => p !== null);
     unreadable.sort();
 

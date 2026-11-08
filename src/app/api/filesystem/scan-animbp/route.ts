@@ -37,6 +37,8 @@ export interface AnimBPScanResult {
   montageRefs: string[];
   /** Variables exposed for animation (Speed, Direction, etc.) */
   animVariables: string[];
+  /** True when the source walk stopped at its file cap, so the scan may be partial. */
+  truncated?: boolean;
   scanDurationMs: number;
 }
 
@@ -52,17 +54,22 @@ async function directoryExists(dirPath: string): Promise<boolean> {
 }
 
 /**
- * Recursively collect all .h and .cpp files under a directory.
+ * Recursively collect all .h and .cpp files under a directory, up to a cap; `truncated` is
+ * true only when a further file existed past it.
  */
-async function collectSourceFiles(dir: string, extensions: string[], maxFiles = 500): Promise<string[]> {
+async function collectSourceFiles(
+  dir: string,
+  extensions: string[],
+  maxFiles = 500,
+): Promise<{ files: string[]; truncated: boolean }> {
   const results: string[] = [];
 
   async function walk(current: string) {
-    if (results.length >= maxFiles) return;
+    if (results.length > maxFiles) return;
     try {
       const entries = await fs.readdir(current, { withFileTypes: true });
       for (const entry of entries) {
-        if (results.length >= maxFiles) return;
+        if (results.length > maxFiles) return;
         const full = path.join(current, entry.name);
         if (entry.isDirectory() && !entry.name.startsWith('.')) {
           await walk(full);
@@ -76,7 +83,7 @@ async function collectSourceFiles(dir: string, extensions: string[], maxFiles = 
   }
 
   await walk(dir);
-  return results;
+  return { files: results.slice(0, maxFiles), truncated: results.length > maxFiles };
 }
 
 /**
@@ -237,6 +244,7 @@ async function scanAnimBP(projectPath: string, moduleName: string): Promise<Anim
     transitions: [],
     montageRefs: [],
     animVariables: [],
+    truncated: false,
     scanDurationMs: 0,
   };
 
@@ -246,7 +254,8 @@ async function scanAnimBP(projectPath: string, moduleName: string): Promise<Anim
   }
 
   // Collect all source files
-  const sourceFiles = await collectSourceFiles(sourceRoot, ['.h', '.cpp']);
+  const { files: sourceFiles, truncated } = await collectSourceFiles(sourceRoot, ['.h', '.cpp']);
+  result.truncated = truncated;
   const sourceRootParent = path.join(projectPath, 'Source');
 
   // Read all files in parallel (batch of 20)

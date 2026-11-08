@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { requireOperator } from '@/lib/api-auth';
 import { apiError, apiSuccess, respondFromResult, withRoute } from '@/lib/api-utils';
 import { getService } from '@/lib/blender-mcp/service';
 import { mcpGateForJob } from '@/lib/blender-mcp/mcp-gate';
@@ -7,6 +8,9 @@ import { isGenerationProvider } from '@/app/api/blender-mcp/_lib/provider';
 
 // GET /api/blender-mcp/generate/status?jobId=...&provider=...
 export const GET = withRoute(async (req: NextRequest) => {
+  // A completed job with a provider URL makes the gate download a mesh: not for a cross-site page.
+  const denied = requireOperator(req);
+  if (denied) return denied;
   const { searchParams } = new URL(req.url);
   const jobId = searchParams.get('jobId');
   const provider = searchParams.get('provider');
