@@ -43,6 +43,7 @@ export function CSVImportPanel({ onImport, isImporting }: {
         <input
           type="text"
           placeholder="Session name"
+          aria-label="Session name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="flex-1 px-2.5 py-1.5 bg-surface border border-border rounded-lg text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-rose-500/40"

@@ -15,3 +15,12 @@ describe('CSVImportPanel copy matches its controls', () => {
     expect(container.textContent ?? '').not.toMatch(/paste/i);
   });
 });
+
+describe('CSVImportPanel session-name field has an accessible name', () => {
+  it('is findable by label, not only by placeholder', () => {
+    const { getByLabelText } = render(<CSVImportPanel onImport={noop} isImporting={false} />);
+    const input = getByLabelText('Session name');
+    expect(input.tagName).toBe('INPUT');
+    expect(input.getAttribute('type')).toBe('text');
+  });
+});
