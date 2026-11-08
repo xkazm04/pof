@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, cleanup } from '@testing-library/react';
-import { useLatestTriage } from '@/components/modules/core-engine/sub_debug/_shared/useLatestTriage';
+import { useDebugSnapshot } from '@/components/modules/core-engine/sub_debug/_shared/useDebugSnapshot';
 import { SAMPLE_SESSION } from '@/components/modules/core-engine/sub_debug/_shared/sampleSession';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import type { PerformanceFinding, ProfilingSession, ProfileSourceType } from '@/types/performance-profiling';
@@ -57,10 +57,10 @@ beforeEach(() => {
   usePerformanceProfilingStore.setState({ sessionList: [], activeSession: null, error: null, isLoading: false });
 });
 
-describe('useLatestTriage', () => {
+describe('useDebugSnapshot().latest', () => {
   it('no sessions -> no-capture after exactly one fetch', async () => {
     mockProfiler([]);
-    const { result } = renderHook(() => useLatestTriage());
+    const { result } = renderHook(() => useDebugSnapshot().latest);
     await waitFor(() => expect(result.current.kind).toBe('no-capture'));
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
@@ -69,7 +69,7 @@ describe('useLatestTriage', () => {
     const newest: Row = { id: 'n1', source: 'csv-stats', importedAt: '2026-09-30T10:00:00.000Z', hasTriage: false };
     const older: Row = { id: 'o1', source: 'csv-stats', importedAt: '2026-09-29T10:00:00.000Z', hasTriage: true };
     mockProfiler([newest, older]);
-    const { result } = renderHook(() => useLatestTriage());
+    const { result } = renderHook(() => useDebugSnapshot().latest);
     await waitFor(() => expect(result.current.kind).toBe('ready'));
     expect(calls).toContainEqual({ action: 'triage', sessionId: 'n1' });
     expect(calls).toContainEqual({ action: 'compare', baseId: 'o1', headId: 'n1' });
