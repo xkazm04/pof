@@ -344,6 +344,20 @@ export function calibrationHistoryPath(env: Record<string, string | undefined> =
   return env.POF_JUDGE_CALIBRATION_PATH || join(homedir(), '.pof', 'judge-calibration.jsonl');
 }
 
+/** An agreement block `evaluateCalibration` can read without throwing. */
+function isAgreement(v: unknown): v is AgreementResult {
+  const a = v as Partial<AgreementResult> | null;
+  return !!a && typeof a === 'object' && typeof a.scored === 'number' && typeof a.rate === 'number' && typeof a.total === 'number';
+}
+
+/** A line is a run only when it carries every field the evaluator dereferences — a JSON object
+ *  with `overall` alone (a hand edit, a partial record) would make the guard throw, not report. */
+function isWholeRun(v: unknown): v is CalibrationRun {
+  const r = v as Partial<CalibrationRun> | null;
+  return !!r && typeof r === 'object' && typeof r.rubricVersion === 'number' && typeof r.ranAt === 'string'
+    && isAgreement(r.overall) && isAgreement(r.confirmed);
+}
+
 /**
  * Read the persisted runs, oldest first. A missing file is an empty history (which
  * `evaluateCalibration` reports as the honest `unrun`, never as a pass); a corrupt LINE is
@@ -362,8 +376,8 @@ export function readCalibrationHistory(path = calibrationHistoryPath()): Calibra
     const s = line.trim();
     if (!s) continue;
     try {
-      const parsed = JSON.parse(s) as CalibrationRun;
-      if (parsed && typeof parsed === 'object' && parsed.overall) runs.push(parsed);
+      const parsed = JSON.parse(s) as unknown;
+      if (isWholeRun(parsed)) runs.push(parsed);
     } catch {
       // a truncated/corrupt line is skipped, never thrown
     }
