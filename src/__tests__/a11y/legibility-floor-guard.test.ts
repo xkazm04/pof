@@ -149,7 +149,6 @@ const CONTRAST_BASELINE: Record<string, Partial<Record<HitKind, number>>> = {
   'modules/project-setup/LiveStateSyncPanel/PropertyWatchForm.tsx': { text: 1 },
   'modules/project-setup/LiveStateSyncPanel/WatchesSection.tsx': { text: 1 },
   'modules/project-setup/PathBrowser/index.tsx': { icons: 1 },
-  'modules/project-setup/ProjectFilesPanel.tsx': { text: 1, icons: 1 },
   // Owned by another lot this wave (RoadmapChecklist) — flagged, not edited here.
   'modules/shared/RoadmapChecklist/ChecklistContextMenu.tsx': { text: 1 },
   'ui/MicroLabel.tsx': { docs: 1 },
