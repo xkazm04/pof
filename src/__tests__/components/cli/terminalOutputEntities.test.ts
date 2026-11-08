@@ -26,6 +26,20 @@ describe('extractInlineEntities — project files', () => {
   });
 });
 
+const concepts = (text: string) =>
+  extractInlineEntities(text).filter((e) => e.type === 'concept').map((e) => e.value);
+
+describe('extractInlineEntities — UE concepts', () => {
+  it('matches a concept as a whole word, not inside another word', () => {
+    expect(concepts('Swap the gasket on the Vegas build, then list the reqs and the frequencies.')).toEqual([]);
+  });
+
+  it('still matches whole-word concepts', () => {
+    expect(concepts('Grant the ability through GAS, then drive the AI with a behavior tree and EQS.'))
+      .toEqual(['GAS', 'Behavior Tree', 'EQS']);
+  });
+});
+
 describe('extractInlineEntities — UE classes', () => {
   it('does not tag all-caps words as UE classes', () => {
     expect(classes('FATAL ERROR: the UPDATE step FAILED AFTER the build, ALSO check UNDER the hood.')).toEqual([]);

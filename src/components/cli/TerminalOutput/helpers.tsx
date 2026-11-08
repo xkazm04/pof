@@ -73,6 +73,9 @@ export function groupLogs(logs: LogEntry[]): GroupedLogEntry[] {
   return result;
 }
 
+/** One whole-word matcher per concept (concepts are plain lowercase words and spaces). */
+const CONCEPT_RES = new Map([...UE_CONCEPTS_SET].map((c) => [c, new RegExp(`\\b${c}\\b`)]));
+
 export function extractInlineEntities(text: string): InlineEntity[] {
   if (text.length < 20) return [];
   const entities: InlineEntity[] = [];
@@ -100,10 +103,10 @@ export function extractInlineEntities(text: string): InlineEntity[] {
     }
   }
 
-  // Concepts
+  // Concepts — whole words only ('gas' must not fire inside 'Vegas' or 'gasket')
   const lower = text.toLowerCase();
   for (const concept of UE_CONCEPTS_SET) {
-    if (lower.includes(concept) && !seen.has(concept)) {
+    if (CONCEPT_RES.get(concept)!.test(lower) && !seen.has(concept)) {
       seen.add(concept);
       entities.push({ type: 'concept', value: UE_CONCEPT_LABELS[concept] ?? concept });
     }
