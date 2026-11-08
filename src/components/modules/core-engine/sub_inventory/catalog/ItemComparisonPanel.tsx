@@ -29,12 +29,15 @@ export function ItemComparisonPanel({ items: explicitItems }: { items?: ItemData
     [items, category],
   );
 
+  // One column per DISTINCT item: the same item picked in two slots would otherwise be
+  // compared against itself (a fake "tie") and render duplicate React keys.
   const selectedItems = useMemo(
-    () => slotIds.map(id => pool.find(i => i.id === id)).filter((i): i is ItemData => i != null),
+    () => [...new Set(slotIds.filter(Boolean))]
+      .map(id => pool.find(i => i.id === id)).filter((i): i is ItemData => i != null),
     [slotIds, pool],
   );
 
-  const canCompare = selectedItems.length >= 2 && new Set(slotIds.filter(Boolean)).size >= 2;
+  const canCompare = selectedItems.length >= 2;
 
   const handleClear = useCallback(() => {
     setCategory(null);
