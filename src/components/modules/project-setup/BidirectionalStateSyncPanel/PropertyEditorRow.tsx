@@ -35,6 +35,7 @@ export function PropertyEditorRow({
   }, [currentValue]);
 
   const handlePush = useCallback(() => {
+    if (typeof currentValue !== 'string' && !draft.trim()) return; // blank is not a value here
     let parsed: unknown = draft; // a string property stays a string, whatever the text looks like
     if (typeof currentValue !== 'string') {
       try {

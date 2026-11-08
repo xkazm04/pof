@@ -181,3 +181,31 @@ describe('viewport teleport refuses incomplete targets', () => {
     expect(setFrames(ws)).toHaveLength(3);
   });
 });
+
+describe('blank values are not writes', () => {
+  function fillDirect(value: string) {
+    fireEvent.change(screen.getByLabelText('Object Path'), { target: { value: '/Game/A' } });
+    fireEvent.change(screen.getByLabelText('Property'), { target: { value: 'Health' } });
+    fireEvent.change(screen.getByLabelText('Value'), { target: { value } });
+    return screen.getByTitle('Push to UE5') as HTMLButtonElement;
+  }
+
+  it('the direct form stays disabled with an empty value', () => {
+    renderLivePanel();
+    expect(fillDirect('').disabled).toBe(true);
+  });
+
+  it('control: an explicit empty string can still be sent', () => {
+    renderLivePanel();
+    expect(fillDirect('""').disabled).toBe(false);
+  });
+
+  it('a cleared number row does not push an empty string', () => {
+    const onPush = vi.fn();
+    render(<PropertyEditorRow objectPath="/Game/A" propertyName="P" currentValue={5} onPush={onPush} />);
+    fireEvent.click(screen.getByTitle('Edit & push to UE5'));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '  ' } });
+    fireEvent.click(screen.getByTitle('Push to UE5'));
+    expect(onPush).not.toHaveBeenCalled();
+  });
+});

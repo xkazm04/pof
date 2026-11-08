@@ -71,7 +71,7 @@ export function useBidirectionalStateSyncPanel() {
   const [propEdit, setPropEdit] = useState<PropertyEdit>({ objectPath: '', propertyName: '', value: '' });
 
   const handleDirectPropertyPush = useCallback(() => {
-    if (!propEdit.objectPath.trim() || !propEdit.propertyName.trim()) return;
+    if (!propEdit.objectPath.trim() || !propEdit.propertyName.trim() || !propEdit.value.trim()) return;
     let parsed: unknown;
     try {
       parsed = JSON.parse(propEdit.value);

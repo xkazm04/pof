@@ -107,7 +107,7 @@ export function PropertyWriteSection({
                   </div>
                   <button
                     onClick={handleDirectPropertyPush}
-                    disabled={!propEdit.objectPath.trim() || !propEdit.propertyName.trim()}
+                    disabled={!propEdit.objectPath.trim() || !propEdit.propertyName.trim() || !propEdit.value.trim()}
                     className="px-2.5 py-1 rounded text-xs font-bold border transition-colors disabled:opacity-40"
                     style={{ borderColor: `${ACCENT_ORANGE}40`, color: ACCENT_ORANGE }}
                     title="Push to UE5"
