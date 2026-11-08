@@ -121,3 +121,11 @@ describe('a deadline write the server refuses', () => {
     expect(container.textContent).toContain(cardDate(newer));
   });
 });
+
+describe('deadlines that could not be loaded', () => {
+  it('says so instead of offering every milestone as unset', async () => {
+    installFetch({ get: respond({ success: false, error: 'db locked' }, 500) });
+    const { findByRole } = render(<CalendarRoadmapView />);
+    expect((await findByRole('alert')).textContent).toContain('db locked');
+  });
+});

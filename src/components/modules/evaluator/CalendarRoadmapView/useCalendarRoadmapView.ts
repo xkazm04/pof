@@ -27,6 +27,7 @@ export function useCalendarRoadmapView() {
   const [editDate, setEditDate] = useState('');
   const [scrollOffset, setScrollOffset] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   // What the server last confirmed: the only value a refused write may restore.
   const settledRef = useRef<DeadlineMap>({});
   const dragRef = useRef<DragState | null>(null);
@@ -46,10 +47,14 @@ export function useCalendarRoadmapView() {
 
   // Fetch deadlines from API
   useEffect(() => {
-    fetch('/api/milestone-deadlines')
-      .then((r) => r.json())
-      .then((j) => { if (j.success) { settledRef.current = j.data; setDeadlines(j.data); } })
-      .catch(() => {});
+    void tryApiFetch<DeadlineMap>('/api/milestone-deadlines').then((result) => {
+      if (result.ok) {
+        settledRef.current = result.data;
+        setDeadlines(result.data);
+      } else {
+        setLoadError(`Deadlines could not be loaded: ${result.error}`);
+      }
+    });
   }, []);
 
   // Save a deadline
@@ -232,6 +237,6 @@ export function useCalendarRoadmapView() {
     saveDeadline,
     handleDragStart,
     getVariance,
-    alerts: [saveError].filter((m): m is string => m !== null),
+    alerts: [loadError, saveError].filter((m): m is string => m !== null),
   };
 }
