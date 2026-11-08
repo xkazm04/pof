@@ -134,7 +134,17 @@ const CRASH_TERMS: Record<string, JargonEntry> = {
  * Matching is case-sensitive — engine tokens are.
  */
 export function lookupCrashTerm(term: string): JargonEntry | undefined {
-  return CRASH_TERMS[term] ?? lookupJargon(term);
+  // Both dictionaries are plain object literals, so a bare `MAP[term]` would
+  // answer `toString` / `__proto__` / `constructor` with inherited
+  // Object.prototype members. Own keys only here; the base dictionary's answer
+  // is accepted only when it is a real entry.
+  if (Object.hasOwn(CRASH_TERMS, term)) return CRASH_TERMS[term];
+  const base: unknown = lookupJargon(term);
+  return isJargonEntry(base) ? base : undefined;
+}
+
+function isJargonEntry(v: unknown): v is JargonEntry {
+  return typeof v === 'object' && v !== null && typeof (v as JargonEntry).plain === 'string';
 }
 
 /** The full hover string for an entry: plain text + optional "why it matters". */
