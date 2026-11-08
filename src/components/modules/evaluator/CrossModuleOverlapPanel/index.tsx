@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  Loader2,
   RefreshCw,
   AlertTriangle,
   Layers,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { KPICard } from '@/components/ui/KPICard';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { OverlapReport, OverlapPair } from '@/lib/overlap-detection';
@@ -149,11 +149,7 @@ export function CrossModuleOverlapPanel() {
   }, []);
 
   if (source.state === 'loading') {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
-      </div>
-    );
+    return <LoadingRow label="Loading overlap report…" />;
   }
 
   // A failed read is an error with Retry - never the clean-separation empty state.

@@ -2,10 +2,11 @@
 
 import { useState, useMemo, useId } from 'react';
 import type { KeyboardEvent } from 'react';
-import { Sparkles, Loader2, RefreshCw, Stars } from 'lucide-react';
+import { Sparkles, RefreshCw, Stars } from 'lucide-react';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { layoutModuleConstellation } from '@/lib/constellation/layout';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { MatrixScopeBanner } from '@/components/modules/shared/FeatureMatrix/MatrixScopeBanner';
@@ -86,11 +87,7 @@ export function FeatureConstellation() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
-      </div>
-    );
+    return <LoadingRow label="Loading feature statuses…" />;
   }
 
   // A failed status load must NOT fall through to the constellation: every node
