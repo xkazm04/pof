@@ -46,6 +46,9 @@ export function ComponentCard({ comp }: { comp: EQSComponentDef }) {
   const KindIcon = km.icon;
 
   const toggle = useCallback(() => setExpanded((v) => !v), []);
+  // Same disclosure contract as EQSPipelineDiagram/StepCard: the panel is always
+  // mounted (so `aria-controls` always resolves) and `hidden` handles visibility.
+  const detailId = `eqs-component-${comp.id}-detail`;
 
   return (
     <div
@@ -55,15 +58,18 @@ export function ComponentCard({ comp }: { comp: EQSComponentDef }) {
     >
       {/* Header */}
       <button
+        type="button"
         onClick={toggle}
-        className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/3 transition-colors"
+        aria-expanded={expanded}
+        aria-controls={detailId}
+        className="focus-ring-inset w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/3 transition-colors"
         data-testid={`eqs-component-${comp.id}-toggle`}
       >
         {expanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted shrink-0" />
-          : <ChevronRight className="w-3 h-3 text-text-muted shrink-0" />
+          ? <ChevronDown aria-hidden="true" className="w-3 h-3 text-text-muted shrink-0" />
+          : <ChevronRight aria-hidden="true" className="w-3 h-3 text-text-muted shrink-0" />
         }
-        <span style={{ color: km.color }}><KindIcon className="w-3.5 h-3.5" /></span>
+        <span aria-hidden="true" style={{ color: km.color }}><KindIcon className="w-3.5 h-3.5" /></span>
         <span className="text-xs font-bold text-text">{comp.displayName}</span>
 
         {/* Kind badge */}
@@ -90,56 +96,58 @@ export function ComponentCard({ comp }: { comp: EQSComponentDef }) {
       </button>
 
       {/* Expanded detail */}
-      {expanded && (
-        <div className="px-3 pb-3 pt-1 border-t border-border/20 space-y-2">
-          <p className="text-2xs text-text-muted leading-relaxed">{comp.description}</p>
+      <div
+        id={detailId}
+        hidden={!expanded}
+        className="px-3 pb-3 pt-1 border-t border-border/20 space-y-2"
+      >
+        <p className="text-2xs text-text-muted leading-relaxed">{comp.description}</p>
 
-          {/* Class info */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-2xs font-mono" style={{ color: km.color }}>
-              {comp.cppClass}
-            </span>
-            <span className="text-2xs text-text-muted">
-              extends <span className="font-mono">{comp.parentClass}</span>
-            </span>
-          </div>
-
-          {/* Output type */}
-          {comp.outputType && (
-            <div className="flex items-center gap-2">
-              <span className="text-2xs text-text-muted">Output:</span>
-              <span
-                className="text-2xs font-mono px-1.5 py-0.5 rounded"
-                style={{ backgroundColor: `${ACCENT_ORANGE}${OPACITY_10}`, color: ACCENT_ORANGE }}
-              >
-                {comp.outputType}
-              </span>
-            </div>
-          )}
-
-          {/* Properties table */}
-          <div className="mt-1.5">
-            <div className="grid grid-cols-[120px_80px_1fr] gap-2 pb-1 border-b border-border/30">
-              <span className="text-2xs font-semibold text-text-muted">Property</span>
-              <span className="text-2xs font-semibold text-text-muted">Type</span>
-              <span className="text-2xs font-semibold text-text-muted">Default / Meta</span>
-            </div>
-            {comp.properties.map((p) => (
-              <PropertyRow key={p.name} prop={p} />
-            ))}
-          </div>
-
-          {/* Descriptions under props */}
-          <div className="space-y-1 mt-1">
-            {comp.properties.map((p) => (
-              <div key={`desc-${p.name}`} className="flex gap-2 items-start">
-                <span className="text-2xs font-mono text-text-muted shrink-0 w-28">{p.name}</span>
-                <span className="text-2xs text-text-muted/70">{p.description}</span>
-              </div>
-            ))}
-          </div>
+        {/* Class info */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-2xs font-mono" style={{ color: km.color }}>
+            {comp.cppClass}
+          </span>
+          <span className="text-2xs text-text-muted">
+            extends <span className="font-mono">{comp.parentClass}</span>
+          </span>
         </div>
-      )}
+
+        {/* Output type */}
+        {comp.outputType && (
+          <div className="flex items-center gap-2">
+            <span className="text-2xs text-text-muted">Output:</span>
+            <span
+              className="text-2xs font-mono px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: `${ACCENT_ORANGE}${OPACITY_10}`, color: ACCENT_ORANGE }}
+            >
+              {comp.outputType}
+            </span>
+          </div>
+        )}
+
+        {/* Properties table */}
+        <div className="mt-1.5">
+          <div className="grid grid-cols-[120px_80px_1fr] gap-2 pb-1 border-b border-border/30">
+            <span className="text-2xs font-semibold text-text-muted">Property</span>
+            <span className="text-2xs font-semibold text-text-muted">Type</span>
+            <span className="text-2xs font-semibold text-text-muted">Default / Meta</span>
+          </div>
+          {comp.properties.map((p) => (
+            <PropertyRow key={p.name} prop={p} />
+          ))}
+        </div>
+
+        {/* Descriptions under props */}
+        <div className="space-y-1 mt-1">
+          {comp.properties.map((p) => (
+            <div key={`desc-${p.name}`} className="flex gap-2 items-start">
+              <span className="text-2xs font-mono text-text-muted shrink-0 w-28">{p.name}</span>
+              <span className="text-2xs text-text-muted/70">{p.description}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
