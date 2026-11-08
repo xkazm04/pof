@@ -25,37 +25,30 @@ export const CRAFTING_ACTIONS: CraftingActionDef[] = [
   {
     id: 'reforge', name: 'Reforge', description: 'Destroy all unlocked affixes and re-roll randomly',
     costs: { chaos: 3, forging: 8 }, successChance: 1.0, color: STATUS_ERROR,
-    requiresAffixes: false, requiresSpace: false,
   },
   {
     id: 'augment', name: 'Augment', description: 'Add one random affix to an open slot',
     costs: { exalted: 1, forging: 5 }, successChance: 0.85, color: STATUS_WARNING,
-    requiresAffixes: false, requiresSpace: true,
   },
   {
     id: 'remove_add', name: 'Annul & Exalt', description: 'Remove a random unlocked affix then add a new one',
     costs: { annulment: 1, exalted: 1, forging: 10 }, successChance: 0.7, color: ACCENT_ORANGE,
-    requiresAffixes: true, requiresSpace: false,
   },
   {
     id: 'divine_roll', name: 'Divine Roll', description: 'Re-roll magnitudes of all affixes (keeps types)',
     costs: { divine: 1, forging: 3 }, successChance: 1.0, color: STATUS_INFO,
-    requiresAffixes: true, requiresSpace: false,
   },
   {
     id: 'lock_prefix', name: 'Lock Prefixes', description: 'Protect all prefixes from modification (1 craft)',
     costs: { eternal: 1, forging: 2 }, successChance: 1.0, color: ACCENT_PURPLE,
-    requiresAffixes: true, requiresSpace: false,
   },
   {
     id: 'lock_suffix', name: 'Lock Suffixes', description: 'Protect all suffixes from modification (1 craft)',
     costs: { eternal: 1, forging: 2 }, successChance: 1.0, color: ACCENT_PURPLE,
-    requiresAffixes: true, requiresSpace: false,
   },
   {
     id: 'unlock', name: 'Unlock All', description: 'Remove all locks (free)',
     costs: {}, successChance: 1.0, color: STATUS_INFO,
-    requiresAffixes: false, requiresSpace: false,
   },
 ];
 

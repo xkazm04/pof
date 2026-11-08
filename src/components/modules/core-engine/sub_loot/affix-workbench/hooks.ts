@@ -195,6 +195,6 @@ export function useAffixWorkbench() {
     resetWallet: crafting.resetWallet, applyArchetype, priceCurrentItem,
     handleCopy: exporting.handleCopy, handleExportFile: exporting.handleExportFile,
     handleInjectToUE5: exporting.handleInjectToUE5, selectBase,
-    canAfford: crafting.canAfford,
+    refusalFor: crafting.refusalFor,
   };
 }

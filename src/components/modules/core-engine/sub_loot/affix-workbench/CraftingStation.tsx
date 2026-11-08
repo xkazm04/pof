@@ -11,8 +11,7 @@ import {
 } from '@/lib/chart-colors';
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import { CURRENCIES, CRAFTING_ACTIONS } from './constants';
-import type { CurrencyId, CraftingActionId, CraftLogEntry, CraftingActionDef } from './types';
-import type { CraftedAffix } from './data';
+import type { CurrencyId, CraftingActionId, CraftLogEntry } from './types';
 import { CraftLogSection } from './CraftLogSection';
 
 interface CraftingStationProps {
@@ -22,20 +21,19 @@ interface CraftingStationProps {
   suffixLocked: boolean;
   craftCount: number;
   wallet: Record<CurrencyId, number>;
-  craftedAffixes: CraftedAffix[];
-  maxAffixes: number;
   craftFlash: string | null;
   craftLog: CraftLogEntry[];
   avgCraftCost: Partial<Record<CurrencyId, number>> | null;
   onExecuteCraft: (actionId: CraftingActionId) => void;
   onResetWallet: () => void;
-  canAfford: (action: CraftingActionDef) => boolean;
+  /** The kernel's refusal for this action on the current item, or null when it would run. */
+  refusalFor: (actionId: CraftingActionId) => string | null;
 }
 
 export function CraftingStation({
   showCraftPanel, onToggleCraftPanel, prefixLocked, suffixLocked,
-  craftCount, wallet, craftedAffixes, maxAffixes, craftFlash,
-  craftLog, avgCraftCost, onExecuteCraft, onResetWallet, canAfford,
+  craftCount, wallet, craftFlash,
+  craftLog, avgCraftCost, onExecuteCraft, onResetWallet, refusalFor,
 }: CraftingStationProps) {
   return (
     <BlueprintPanel color={ACCENT_PURPLE} className="p-3 space-y-3 relative overflow-hidden">
@@ -99,16 +97,15 @@ export function CraftingStation({
           {/* Crafting actions */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {CRAFTING_ACTIONS.map(action => {
-              const affordable = canAfford(action);
-              const hasAffixes = craftedAffixes.some(a => !a.locked) || !action.requiresAffixes;
-              const hasSpace = craftedAffixes.length < maxAffixes || !action.requiresSpace;
-              const enabled = affordable && hasAffixes && hasSpace;
+              const refused = refusalFor(action.id);
+              const enabled = refused === null;
               const isFlashing = craftFlash === action.id;
 
               return (
                 <motion.button key={action.id}
                   onClick={() => onExecuteCraft(action.id)}
                   disabled={!enabled}
+                  title={refused ? `${action.name}: ${refused}` : undefined}
                   className="text-left px-2.5 py-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
                   style={{
                     border: `1px solid ${isFlashing ? withOpacity(action.color, OPACITY_50) : enabled ? withOpacity(action.color, OPACITY_20) : withOpacity(action.color, OPACITY_10)}`,

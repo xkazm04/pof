@@ -139,10 +139,9 @@ export function AffixCraftingWorkbench({ moduleId }: { moduleId: SubModuleId }) 
                 onToggleCraftPanel={() => wb.setShowCraftPanel(!wb.showCraftPanel)}
                 prefixLocked={wb.prefixLocked} suffixLocked={wb.suffixLocked}
                 craftCount={wb.craftCount} wallet={wb.wallet}
-                craftedAffixes={wb.craftedAffixes} maxAffixes={wb.maxAffixes}
                 craftFlash={wb.craftFlash} craftLog={wb.craftLog}
                 avgCraftCost={wb.avgCraftCost} onExecuteCraft={wb.executeCraft}
-                onResetWallet={wb.resetWallet} canAfford={wb.canAfford} />
+                onResetWallet={wb.resetWallet} refusalFor={wb.refusalFor} />
             </div>
 
             {/* Right: Budget + Synergies + Stats */}

@@ -131,15 +131,15 @@ export function addAffix<S extends { affixes: CraftedAffix[] }>(s: S, entry: Aff
 type Effect = (affixes: CraftedAffix[], ctx: CraftCtx) => { affixes: CraftedAffix[]; detail: string };
 
 /** Why an action cannot run on this item (charged nothing), or null. */
-function refusal(id: CraftingActionId, affixes: CraftedAffix[], ctx: CraftCtx, pool: AffixPoolEntry[]): string | null {
+function refusal(id: CraftingActionId, affixes: CraftedAffix[], rarity: Rarity, pool: AffixPoolEntry[]): string | null {
   const unlocked = affixes.filter((a) => !a.locked);
   const used = new Set(affixes.map((a) => a.tag));
   switch (id) {
     case 'reforge': // keeps the locked affixes and fills the rest — so it needs a slot to fill
-      return affixes.length - unlocked.length >= RARITY_AFFIX_COUNTS[ctx.rarity].max ? 'no unlocked slot to reforge' : null;
+      return affixes.length - unlocked.length >= RARITY_AFFIX_COUNTS[rarity].max ? 'no unlocked slot to reforge' : null;
     case 'augment':
-      if (affixes.length >= RARITY_AFFIX_COUNTS[ctx.rarity].max) return 'no open slot';
-      return eligiblePool(pool, ctx.rarity).some((a) => !used.has(a.tag)) ? null : 'no eligible affix left';
+      if (affixes.length >= RARITY_AFFIX_COUNTS[rarity].max) return 'no open slot';
+      return eligiblePool(pool, rarity).some((a) => !used.has(a.tag)) ? null : 'no eligible affix left';
     case 'remove_add': return unlocked.length === 0 ? 'no unlocked affix to remove' : null;
     case 'divine_roll': return unlocked.length === 0 ? 'no unlocked affix to re-roll' : null;
     case 'lock_prefix': case 'lock_suffix': {
@@ -190,12 +190,24 @@ function effect(id: CraftingActionId, pool: AffixPoolEntry[]): Effect {
  * returns the input state unchanged (`refused` names why); otherwise the costs
  * are spent, the success roll is made, and the log/craft count advance.
  */
-export function applyCraft(state: CraftState, actionId: CraftingActionId, ctx: CraftCtx, pool: AffixPoolEntry[] = AFFIX_POOL): CraftOutcome {
+/**
+ * Why `applyCraft` would refuse this action on this item (charging nothing), or
+ * null when it would run. The UI disables a craft button from this, so a button
+ * can never be live for a craft the kernel will refuse.
+ */
+export function craftRefusal(
+  state: Pick<CraftState, 'affixes' | 'wallet'>, actionId: CraftingActionId, rarity: Rarity, pool: AffixPoolEntry[] = AFFIX_POOL,
+): string | null {
   const action = CRAFTING_ACTIONS.find((a) => a.id === actionId);
-  if (!action) return { state, entry: null, refused: `unknown action ${actionId}` };
-  if (!canAfford(state.wallet, action.costs)) return { state, entry: null, refused: 'cannot afford' };
-  const why = refusal(actionId, state.affixes, ctx, pool);
+  if (!action) return `unknown action ${actionId}`;
+  if (!canAfford(state.wallet, action.costs)) return 'cannot afford';
+  return refusal(actionId, state.affixes, rarity, pool);
+}
+
+export function applyCraft(state: CraftState, actionId: CraftingActionId, ctx: CraftCtx, pool: AffixPoolEntry[] = AFFIX_POOL): CraftOutcome {
+  const why = craftRefusal(state, actionId, ctx.rarity, pool);
   if (why) return { state, entry: null, refused: why };
+  const action = CRAFTING_ACTIONS.find((a) => a.id === actionId)!;
 
   const wallet = { ...state.wallet };
   const totalSpent = { ...state.totalSpent };

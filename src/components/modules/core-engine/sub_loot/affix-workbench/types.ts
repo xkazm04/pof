@@ -25,8 +25,6 @@ export interface CraftingActionDef {
   costs: Partial<Record<CurrencyId, number>>;
   successChance: number;
   color: string;
-  requiresAffixes: boolean;
-  requiresSpace: boolean;
 }
 
 /* ── Craft Log ──────────────────────────────────────────────────────────── */

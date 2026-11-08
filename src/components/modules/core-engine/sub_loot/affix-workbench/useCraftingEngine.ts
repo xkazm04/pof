@@ -2,9 +2,9 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import type { CraftedAffix, ItemBase } from './data';
-import type { CurrencyId, CraftingActionId } from './types';
+import type { CraftingActionId } from './types';
 import {
-  applyCraft, canAfford as walletCanAfford, defaultWallet, deriveLocks, zeroWallet,
+  applyCraft, craftRefusal, defaultWallet, deriveLocks, zeroWallet,
 } from './craftingKernel';
 import type { CraftState } from './craftingKernel';
 
@@ -33,9 +33,9 @@ export function useCraftingEngine(
   const [craftFlash, setCraftFlash] = useState<string | null>(null);
   const { prefixLocked, suffixLocked } = useMemo(() => deriveLocks(craftedAffixes), [craftedAffixes]);
 
-  const canAfford = useCallback(
-    (action: { costs: Partial<Record<CurrencyId, number>> }): boolean => walletCanAfford(ledger.wallet, action.costs),
-    [ledger.wallet],
+  const refusalFor = useCallback(
+    (actionId: CraftingActionId) => craftRefusal({ affixes: craftedAffixes, wallet: ledger.wallet }, actionId, selectedBase.rarity),
+    [craftedAffixes, ledger.wallet, selectedBase.rarity],
   );
 
   const executeCraft = useCallback((actionId: CraftingActionId) => {
@@ -56,6 +56,6 @@ export function useCraftingEngine(
     wallet: ledger.wallet, prefixLocked, suffixLocked, craftLog: ledger.log, showCraftPanel,
     craftFlash, totalSpent: ledger.totalSpent, craftCount: ledger.craftCount,
     setShowCraftPanel,
-    canAfford, executeCraft, resetWallet,
+    refusalFor, executeCraft, resetWallet,
   };
 }
