@@ -849,6 +849,9 @@ export function computeThreatBreakdown(
   };
 }
 
+/** Nerf suggestion meaning "no change needed"; the threat view hides the hint when it sees this. */
+export const NO_NERF_NEEDED = 'Within tolerance.';
+
 function suggestAbilityNerf(
   ability: CombatAbility | undefined,
   damageShare: number,
@@ -857,7 +860,7 @@ function suggestAbilityNerf(
   if (!ability) {
     return killShare > 0.25 || damageShare > 0.25
       ? 'Reduce base damage or extend cooldown.'
-      : 'Within tolerance.';
+      : NO_NERF_NEEDED;
   }
 
   // Top killer with one-shot risk — usually a high-baseDamage burst
@@ -892,7 +895,7 @@ function suggestAbilityNerf(
     return `Notable threat — minor 10–15% baseDamage trim or telegraph the wind-up.`;
   }
 
-  return 'Within tolerance.';
+  return NO_NERF_NEEDED;
 }
 
 function suggestEnemyNerf(killShare: number, damageShare: number): string {
@@ -905,7 +908,7 @@ function suggestEnemyNerf(killShare: number, damageShare: number): string {
   if (damageShare >= 0.4) {
     return `Damage-tax enemy (${pct(damageShare)} of damage) — reduce attackPower or attackInterval.`;
   }
-  return 'Within tolerance.';
+  return NO_NERF_NEEDED;
 }
 
 function pct(v: number): string {
