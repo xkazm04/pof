@@ -35,6 +35,36 @@ import { startViewGateJob, type ViewGateMemberSpec } from '@/lib/visual-gen/view
  */
 export const MAX_KIT_MEMBERS = 12;
 
+/** Blender renders resolution-squared pixels per view; the default is 512. */
+const MIN_RESOLUTION = 64;
+const MAX_RESOLUTION = 2048;
+
+const isOptionalString = (v: unknown): boolean => v === undefined || typeof v === 'string';
+
+/** The refusal for the first field that is the wrong shape, or null. Pure. */
+function invalidField(body: Record<string, unknown>): string | null {
+  const { members, meshPath, subject, referencePath, views, resolution, outDir } = body;
+  if (members !== undefined) {
+    if (!Array.isArray(members)) return 'members must be an array';
+    for (const m of members) {
+      if (typeof m !== 'object' || m === null || Array.isArray(m)) return 'each member must be an object';
+      for (const field of ['meshPath', 'name', 'subject', 'referencePath']) {
+        if (!isOptionalString((m as Record<string, unknown>)[field])) return `member ${field} must be a string`;
+      }
+    }
+  }
+  if (!isOptionalString(meshPath)) return 'meshPath must be a string';
+  if (!isOptionalString(subject)) return 'subject must be a string';
+  if (!isOptionalString(referencePath)) return 'referencePath must be a string';
+  if (!isOptionalString(outDir)) return 'outDir must be a string';
+  // A non-numeric count would otherwise fall back to the default without saying so.
+  if (views !== undefined && !(typeof views === 'number' && Number.isFinite(views))) return 'views must be a number';
+  if (resolution !== undefined && !(Number.isInteger(resolution) && (resolution as number) >= MIN_RESOLUTION && (resolution as number) <= MAX_RESOLUTION)) {
+    return `resolution must be an integer from ${MIN_RESOLUTION} to ${MAX_RESOLUTION}`;
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
@@ -42,6 +72,8 @@ export async function POST(request: NextRequest) {
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const invalid = invalidField(parsed);
+    if (invalid) return apiError(invalid, 400);
     const body = parsed as {
       meshPath?: string;
       subject?: string;

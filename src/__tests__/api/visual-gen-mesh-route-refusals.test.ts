@@ -158,4 +158,51 @@ describe('mesh-finish fields', () => {
   });
 });
 
+describe('view-gate fields', () => {
+  it('refuses a non-array members', async () => {
+    const res = await viewGate(json({ members: 'crate.glb' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('members');
+    expectNothingStarted();
+  });
+
+  it('refuses a member that is not an object', async () => {
+    const res = await viewGate(json({ members: [7] }));
+    expect(res.status).toBe(400);
+    expectNothingStarted();
+  });
+
+  for (const [field, value] of [['meshPath', 7], ['referencePath', 7], ['subject', 7], ['name', 7]] as const) {
+    it(`refuses a member whose ${field} is not a string`, async () => {
+      const res = await viewGate(json({ members: [{ meshPath: glb, [field]: value }] }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['meshPath', 7],
+    ['views', 'six'],
+    ['resolution', 0],
+    ['resolution', 99999],
+    ['resolution', 'big'],
+    ['outDir', 7],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)}`, async () => {
+      const res = await viewGate(json({ meshPath: glb, [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  it('still starts a job for a valid request', async () => {
+    const res = await viewGate(json({ meshPath: glb, views: 6, resolution: 512 }));
+    expect(res.status).toBe(202);
+    expect(seams.startView).toHaveBeenCalledTimes(1);
+  });
+});
+
 // FINDINGS-APPEND
