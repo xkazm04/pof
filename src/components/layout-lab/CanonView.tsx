@@ -80,9 +80,11 @@ export function CanonView({ t }: { t: LabTheme }) {
     return r;
   };
 
-  const handleDelete = (id: string) => {
-    void remove(id);
-    if (editingId === id) setEditingId(null);
+  // Returned to ConfirmDialog: a refused delete keeps the dialog open naming the reason (Retry).
+  const handleDelete = async (id: string) => {
+    const r = await remove(id);
+    if (r?.ok !== false && editingId === id) setEditingId(null);
+    return r;
   };
 
   return (
@@ -162,7 +164,7 @@ export function CanonView({ t }: { t: LabTheme }) {
       <ConfirmDialog
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
-        onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete.id); }}
+        onConfirm={() => (pendingDelete ? handleDelete(pendingDelete.id) : undefined)}
         title={`Delete “${pendingDelete?.title || 'Untitled'}”?`}
         description={`This law stops entering the ${selectedProfile.title} produce prompts it reaches today. There is no undo for a delete here.`}
         confirmLabel="Delete law"

@@ -15,8 +15,9 @@ vi.mock('next/font/google', () => {
 import { CanonView } from '@/components/layout-lab/CanonView';
 import { useCanonStore } from '@/components/layout-lab/canonStore';
 import { LIGHT } from '@/components/layout-lab/theme';
+import type { Result } from '@/types/result';
 
-const remove = vi.fn(async () => {});
+const remove = vi.fn(async (): Promise<Result<void, string>> => ({ ok: true, data: undefined }));
 beforeEach(() => {
   remove.mockClear();
   useCanonStore.setState({
@@ -39,5 +40,16 @@ describe('CanonView — deleting a law is confirmed', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete law' }));
     expect(remove).toHaveBeenCalledWith('pof-own');
+  });
+});
+
+describe('CanonView — a refused delete is reported', () => {
+  it('keeps the dialog open and names the reason', async () => {
+    remove.mockResolvedValueOnce({ ok: false, error: 'db locked' });
+    render(<CanonView t={LIGHT} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete law' }));
+    await screen.findByText('db locked');
+    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 });
