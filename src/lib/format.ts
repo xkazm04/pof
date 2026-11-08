@@ -42,15 +42,15 @@ export function formatBytes(bytes: number, options: FormatBytesOptions = {}): st
  */
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  if (ms < 3_600_000) {
-    const mins = Math.floor(ms / 60_000);
-    const secs = Math.round((ms % 60_000) / 1000);
-    return `${mins}m ${secs}s`;
+  if (ms < 59_950) return `${(ms / 1000).toFixed(1)}s`;
+  // Round to the displayed unit BEFORE splitting, so a remainder never prints as
+  // 60 of the unit below (119 600 ms is 2m 0s, not 1m 60s).
+  const totalSecs = Math.round(ms / 1000);
+  if (totalSecs < 3600) {
+    return `${Math.floor(totalSecs / 60)}m ${totalSecs % 60}s`;
   }
-  const hours = Math.floor(ms / 3_600_000);
-  const mins = Math.round((ms % 3_600_000) / 60_000);
-  return `${hours}h ${mins}m`;
+  const totalMins = Math.round(ms / 60_000);
+  return `${Math.floor(totalMins / 60)}h ${totalMins % 60}m`;
 }
 
 /**
