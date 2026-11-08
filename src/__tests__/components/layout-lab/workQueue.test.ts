@@ -76,4 +76,24 @@ describe('reconcileQueue', () => {
     expect(reconcileQueue(q, { catalogId: 'items', entityId: 'r1' })).toBeNull();
     expect(reconcileQueue(q, { catalogId: 'bestiary', entityId: null })).toBeNull();
   });
+  it('a queue with two stops on ONE entity (the regression queue) keeps the cursor on the second stop', () => {
+    // regressionQueue emits one stop per regressed STEP, so an entity can own several stops.
+    // Re-anchoring by "first stop of this entity" snapped the cursor back from stop 2 to stop 1
+    // on every Next, so the queue could never get past that entity.
+    const multi = {
+      catalogId: 'bestiary', label: 'stopped passing', cursor: 1,
+      items: [
+        { entityId: 'r1', entityName: 'A', step: 'Brief', stepIndex: 0 },
+        { entityId: 'r1', entityName: 'A', step: 'Stats', stepIndex: 2 },
+        { entityId: 'r2', entityName: 'B', step: 'Brief', stepIndex: 0 },
+      ],
+    };
+    expect(reconcileQueue(multi, { catalogId: 'bestiary', entityId: 'r1' })).toBe(multi);
+    const n = queueNext(multi);
+    expect(n.done).toBe(false);
+    if (n.done) return;
+    expect(n.item.entityId).toBe('r2');
+    // Landing elsewhere still re-anchors to that entity's first stop.
+    expect(reconcileQueue({ ...multi, cursor: 2 }, { catalogId: 'bestiary', entityId: 'r1' })?.cursor).toBe(0);
+  });
 });
