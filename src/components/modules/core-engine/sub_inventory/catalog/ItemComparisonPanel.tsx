@@ -99,6 +99,7 @@ export function ItemComparisonPanel({ items: explicitItems }: { items?: ItemData
           {slotIds.map((id, idx) => (
             <div key={idx} className="flex items-center gap-1 flex-1 min-w-[150px]">
               <select value={id} onChange={e => handleSetSlot(idx, e.target.value)}
+                aria-label={`Comparison slot ${String.fromCharCode(65 + idx)}`}
                 className="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
                 <option value="">{`— Slot ${String.fromCharCode(65 + idx)} —`}</option>
                 {pool.map(i => <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>)}

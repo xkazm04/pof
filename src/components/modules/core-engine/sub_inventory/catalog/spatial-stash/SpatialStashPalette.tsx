@@ -44,6 +44,7 @@ export function SpatialStashPalette({ accent }: Props) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search items…"
+          aria-label="Search stash palette items"
           className="w-full text-xs font-mono px-2 py-1 rounded-md bg-surface-deep border outline-none"
           style={{ borderColor: withOpacity(accent, OPACITY_25) }}
         />
