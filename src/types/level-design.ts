@@ -111,8 +111,6 @@ export interface LevelDesignSummary {
   syncedCount: number;
   divergedCount: number;
   unlinkedCount: number;
-  difficultyDistribution: Record<DifficultyLevel, number>;
-  roomTypeDistribution: Record<RoomType, number>;
 }
 
 // ── API payloads ──

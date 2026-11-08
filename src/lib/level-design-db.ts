@@ -7,8 +7,6 @@ import type {
   CreateDocPayload,
   UpdateDocPayload,
   RoomNode,
-  DifficultyLevel,
-  RoomType,
 } from '@/types/level-design';
 
 // ── Schema bootstrap ──
@@ -189,12 +187,6 @@ export function getSummary(): LevelDesignSummary {
     .prepare('SELECT rooms, sync_status, last_code_hash FROM level_design_docs')
     .all() as { rooms: string; sync_status: LevelDesignDocument['syncStatus']; last_code_hash: string | null }[];
 
-  const diffDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<DifficultyLevel, number>;
-  const typeDist = {
-    combat: 0, puzzle: 0, exploration: 0, boss: 0,
-    safe: 0, transition: 0, cutscene: 0, hub: 0,
-  } as Record<RoomType, number>;
-
   let totalRooms = 0;
   let syncedCount = 0;
   let divergedCount = 0;
@@ -211,10 +203,6 @@ export function getSummary(): LevelDesignSummary {
     // (and with it the whole document list) for every other level.
     const rooms = parseBlob<RoomNode>(row.rooms, 'rooms', []);
     totalRooms += rooms.length;
-    for (const room of rooms) {
-      if (room.difficulty >= 1 && room.difficulty <= 5) diffDist[room.difficulty]++;
-      if (room.type in typeDist) typeDist[room.type]++;
-    }
   }
 
   return {
@@ -223,7 +211,5 @@ export function getSummary(): LevelDesignSummary {
     syncedCount,
     divergedCount,
     unlinkedCount,
-    difficultyDistribution: diffDist,
-    roomTypeDistribution: typeDist,
   };
 }

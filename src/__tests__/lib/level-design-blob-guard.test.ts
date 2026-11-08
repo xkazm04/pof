@@ -114,7 +114,5 @@ describe('getSummary', () => {
     expect(summary.totalRooms).toBe(1);
     expect(summary.syncedCount).toBe(1);
     expect(summary.unlinkedCount).toBe(1);
-    expect(summary.difficultyDistribution[3]).toBe(1);
-    expect(summary.roomTypeDistribution.combat).toBe(1);
   });
 });
