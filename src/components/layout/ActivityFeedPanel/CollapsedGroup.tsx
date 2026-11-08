@@ -27,6 +27,7 @@ export function CollapsedGroup({
       {/* Summary row */}
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors focus-ring-inset"
       >
         {expanded
@@ -37,7 +38,12 @@ export function CollapsedGroup({
         <TruncateWithTooltip className="text-xs font-medium text-text truncate block" side="bottom">
           {count} {config.label.toLowerCase()} events{moduleLabel ? ` in ${moduleLabel}` : ''}
         </TruncateWithTooltip>
-        <span className="text-2xs text-text-muted ml-auto flex-shrink-0">
+        {group.unread > 0 && (
+          <span className="text-2xs font-medium flex-shrink-0 ml-auto" style={{ color: config.color }}>
+            {group.unread} unread
+          </span>
+        )}
+        <span className={`text-2xs text-text-muted flex-shrink-0 ${group.unread > 0 ? '' : 'ml-auto'}`}>
           {formatTimeAgo(group.events[0].timestamp)}
         </span>
       </button>
