@@ -19,6 +19,8 @@ import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore
 import { useCrashAnalyzerStore } from '@/stores/crashAnalyzerStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { SuspendContext } from '@/hooks/useSuspend';
+import { QualityTab } from '@/components/modules/evaluator/HolisticHealthView/QualityTab';
+import { scoreStatusToken } from '@/lib/status-token';
 import type { ProjectHealthSummary, SubsystemSignal } from '@/types/project-health';
 
 const SIGNALS: SubsystemSignal[] = [
@@ -117,5 +119,16 @@ describe('HolisticHealthView — hardening', () => {
     expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false']);
     fireEvent.click(tabs[1]);
     expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
+  });
+
+  it('the Issues Trend score rings read the one SCORE_BANDS table, not a private 70 cut', () => {
+    const point = (label: string, overallScore: number) => ({ timestamp: '2026-11-08T00:00:00Z', label, overallScore, criticalIssues: 0, highIssues: 0 });
+    const { container } = render(<QualityTab qualityHistory={[point('Scan 1', 75), point('Scan 2', 30)]} />);
+    // Each ProgressRing draws a track circle then the value circle (stroke = band colour);
+    // the trend line's dots are fill-only (no stroke).
+    const strokes = [...container.querySelectorAll('circle')]
+      .map((c) => c.getAttribute('stroke'))
+      .filter((s) => s !== null && s !== 'var(--border)');
+    expect(strokes).toEqual([scoreStatusToken(75).color, scoreStatusToken(30).color]);
   });
 });

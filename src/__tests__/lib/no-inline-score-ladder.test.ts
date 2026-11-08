@@ -36,6 +36,7 @@ const MIGRATED: Record<string, RegExp[]> = {
     /scoreStatusToken\(summary\.currentQualityScore\)/,
   ],
   'modules/evaluator/HolisticHealthView/PerformanceStatCard.tsx': [/scoreStatusToken\(score\)/],
+  'modules/evaluator/HolisticHealthView/QualityTab.tsx': [/scoreStatusToken\(q\.overallScore\)/],
   'modules/game-director/SessionDetail/CoverageView.tsx': [/scoreStatusToken\(pct\)/],
 };
 
