@@ -32,6 +32,7 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
           <div className="flex items-center gap-1">
             <input
               type="number" min={SWEEP_LEVEL_BOUNDS[0]} max={SWEEP_LEVEL_BOUNDS[1]}
+              aria-label="Lowest player level"
               value={config.levelRange[0]}
               onChange={e => setConfig(c => ({ ...c, levelRange: [+e.target.value, c.levelRange[1]] }))}
               className="w-12 px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text text-center"
@@ -39,6 +40,7 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
             <span className="text-text-muted">&mdash;</span>
             <input
               type="number" min={SWEEP_LEVEL_BOUNDS[0]} max={SWEEP_LEVEL_BOUNDS[1]}
+              aria-label="Highest player level"
               value={config.levelRange[1]}
               onChange={e => setConfig(c => ({ ...c, levelRange: [c.levelRange[0], +e.target.value] }))}
               className="w-12 px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text text-center"
@@ -51,6 +53,7 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
             Iterations
           </span>
           <select
+            aria-label="Iterations"
             value={config.iterations}
             onChange={e => setConfig(c => ({ ...c, iterations: +e.target.value }))}
             className="px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text"
@@ -64,6 +67,7 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
             Gear
           </span>
           <select
+            aria-label="Gear"
             value={config.gearId}
             onChange={e => setConfig(c => ({ ...c, gearId: e.target.value }))}
             className="px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text"
@@ -77,6 +81,7 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
             Level Step
           </span>
           <select
+            aria-label="Level step"
             value={config.levelStep}
             onChange={e => setConfig(c => ({ ...c, levelStep: +e.target.value }))}
             className="px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text"
@@ -120,6 +125,7 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
                 style={{ backgroundColor: ENCOUNTER_COLORS[i % ENCOUNTER_COLORS.length] }}
               />
               <select
+                aria-label={`Encounter ${i + 1} archetype`}
                 value={ec.archetypeId}
                 onChange={e => {
                   const next = [...config.enemyConfigs];
@@ -137,6 +143,7 @@ export function ConfigPanel({ config, setConfig, registry = ENEMY_ARCHETYPE_BY_I
               <span className="text-text-muted">&times;</span>
               <input
                 type="number" min={SWEEP_COUNT_BOUNDS[0]} max={SWEEP_COUNT_BOUNDS[1]}
+                aria-label={`Encounter ${i + 1} enemy count`}
                 value={ec.count}
                 onChange={e => {
                   const next = [...config.enemyConfigs];
