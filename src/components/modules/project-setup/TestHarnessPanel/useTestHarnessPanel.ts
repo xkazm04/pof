@@ -17,7 +17,7 @@ export function useTestHarnessPanel() {
 
   // ── Suites ──
   const [suites, setSuites] = useState<TestSuite[]>([]);
-  const [activeSuiteId, setActiveSuiteId] = useState<string | null>(null);
+  const [activeSuiteId, setActiveSuiteIdState] = useState<string | null>(null);
   const [suiteRunHistory, setSuiteRunHistory] = useState<SuiteRunResult[]>([]);
 
   // ── UI state ──
@@ -38,6 +38,13 @@ export function useTestHarnessPanel() {
     [suites, activeSuiteId],
   );
 
+  /** The JSON draft and the expanded row belong to the suite they were opened on. */
+  const setActiveSuiteId = useCallback((id: string | null) => {
+    setActiveSuiteIdState(id);
+    setJsonEditorOpen(false);
+    setEditingScenarioIdx(null);
+  }, []);
+
   // ── Suite CRUD ──
 
   const createSuite = useCallback(() => {
@@ -52,12 +59,12 @@ export function useTestHarnessPanel() {
     };
     setSuites((prev) => [...prev, newSuite]);
     setActiveSuiteId(id);
-  }, [suites.length]);
+  }, [suites.length, setActiveSuiteId]);
 
   const deleteSuite = useCallback((id: string) => {
     setSuites((prev) => prev.filter((s) => s.id !== id));
     if (activeSuiteId === id) setActiveSuiteId(null);
-  }, [activeSuiteId]);
+  }, [activeSuiteId, setActiveSuiteId]);
 
   const duplicateSuite = useCallback((id: string) => {
     const source = suites.find((s) => s.id === id);
@@ -72,7 +79,7 @@ export function useTestHarnessPanel() {
     };
     setSuites((prev) => [...prev, dup]);
     setActiveSuiteId(newId);
-  }, [suites]);
+  }, [suites, setActiveSuiteId]);
 
   const updateSuiteField = useCallback((id: string, field: keyof TestSuite, value: unknown) => {
     setSuites((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
@@ -139,7 +146,7 @@ export function useTestHarnessPanel() {
   }, [activeSuite]);
 
   const applyJsonDraft = useCallback(() => {
-    if (!activeSuiteId) return;
+    if (!activeSuiteId || !jsonEditorOpen) return;
     try {
       const parsed = JSON.parse(jsonDraft) as PofTestSpec[];
       if (!Array.isArray(parsed)) return;
@@ -148,7 +155,7 @@ export function useTestHarnessPanel() {
     } catch {
       // invalid JSON — don't apply
     }
-  }, [activeSuiteId, jsonDraft, updateSuiteField]);
+  }, [activeSuiteId, jsonEditorOpen, jsonDraft, updateSuiteField]);
 
   // ── Run suite ──
 
