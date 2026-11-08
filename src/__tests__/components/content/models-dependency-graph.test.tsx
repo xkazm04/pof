@@ -58,3 +58,29 @@ describe('DependencyGraph truncated node names', () => {
     expect(nodeTitles.some((t) => t.includes(center.name) && t.includes(center.relativePath))).toBe(true);
   });
 });
+
+describe('DependencyGraph hub asset', () => {
+  const hub = scanned('Materials/M_Master.uasset', 'material');
+  const insts = Array.from({ length: 300 }, (_, i) => scanned(`Materials/MI_Inst_${i}.uasset`, 'material'));
+  const edges: InventoryEdge[] = insts.map((m) => ({ from: m.relativePath, to: hub.relativePath, relation: 'uses-material', provenance: 'declared' }));
+
+  it('caps 300 inbound edges at 12 rows, shows a +N more node and lists the rest', () => {
+    const { container } = render(
+      <DependencyGraph asset={hub} allAssets={[hub, ...insts]} dependencies={edges} ueListed={true} />,
+    );
+    const svg = Array.from(container.querySelectorAll('svg')).find((s) => s.querySelector('line[marker-end]'))!;
+    expect(Number(svg.getAttribute('height'))).toBeLessThanOrEqual(12 * 34 + 20);
+    expect(svg.querySelectorAll('line[marker-end]').length).toBe(11);
+    expect(svg.querySelector('[data-testid="dependency-more"]')!.textContent).toContain('+289 more');
+    expect(container.querySelectorAll('[data-testid="dependency-overflow"] li').length).toBe(289);
+  });
+
+  it('[guard] a small fan-in draws every edge and no overflow', () => {
+    const { container } = render(
+      <DependencyGraph asset={hub} allAssets={[hub, ...insts]} dependencies={edges.slice(0, 5)} ueListed={true} />,
+    );
+    expect(container.querySelectorAll('line[marker-end]').length).toBe(5);
+    expect(container.querySelector('[data-testid="dependency-more"]')).toBeNull();
+    expect(container.querySelector('[data-testid="dependency-overflow"]')).toBeNull();
+  });
+});
