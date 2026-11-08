@@ -50,3 +50,10 @@ describe('/api/spatial-audio-generate body shape', () => {
     await expect400(await POST(req('/api/spatial-audio-generate', 'POST', raw)));
   });
 });
+
+describe('/api/audio-codegen body shape', () => {
+  it.each(['{"sceneId":', 'null'])('POST refuses malformed or non-object JSON %s', async (raw) => {
+    const { POST } = await import('@/app/api/audio-codegen/route');
+    await expect400(await POST(req('/api/audio-codegen', 'POST', raw)));
+  });
+});

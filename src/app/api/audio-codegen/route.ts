@@ -30,9 +30,20 @@ function resolveAssetBindings(): AudioAssetBindings {
 
 // POST: generate code from an audio scene document
 export async function POST(req: NextRequest) {
+  // A malformed or non-object body is a 400, not the catch-all 500 below.
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const { sceneId, moduleName, apiMacro } = body;
+    const parsed: unknown = await req.json();
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return apiError('Body must be a JSON object', 400);
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return apiError('Body must be valid JSON', 400);
+  }
+
+  try {
+    const { sceneId, moduleName, apiMacro } = body as { sceneId?: number; moduleName?: string; apiMacro?: string };
 
     if (!sceneId) return apiError('sceneId required', 400);
 
