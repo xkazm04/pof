@@ -74,7 +74,10 @@ export function SlotManagement() {
                 ].map(action => (
                   <button
                     key={action.label}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-sm border ${SAVE_TYPE.body} font-semibold transition-colors hover:bg-white/5`}
+                    type="button"
+                    disabled
+                    title={`${action.label} is not available: these slots are sample data`}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-sm border ${SAVE_TYPE.body} font-semibold opacity-60 cursor-not-allowed`}
                     style={{ borderColor: `${withOpacity(action.color, OPACITY_20)}`, color: action.color }}
                   >
                     <action.icon className="w-3 h-3" />
