@@ -249,3 +249,18 @@ describe('the Strings "Missing Translations" preset lists strings that lack a tr
     expect(document.body.textContent).not.toContain('"Quit"');
   });
 });
+
+describe('the sub-tab strip only points at panels that exist', () => {
+  it('every tab aria-controls resolves to an element in the document', () => {
+    seedView([BASE_STR], [entryFor('str-1', 'de')]);
+    render(<LocalizationPipelineView />);
+    const tabs = screen.getAllByRole('tab');
+    const dangling = tabs
+      .map((t) => t.getAttribute('aria-controls'))
+      .filter((id): id is string => !!id && !document.getElementById(id));
+    expect(dangling).toEqual([]);
+    // The selected tab still names its panel.
+    const selected = tabs.find((t) => t.getAttribute('aria-selected') === 'true');
+    expect(selected?.getAttribute('aria-controls')).toBe('loc-panel-overview');
+  });
+});
