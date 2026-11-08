@@ -57,3 +57,24 @@ describe('/api/audio-codegen body shape', () => {
     await expect400(await POST(req('/api/audio-codegen', 'POST', raw)));
   });
 });
+
+describe('/api/level-design body shape', () => {
+  it.each(['{"name":', 'null', '[]'])('POST refuses malformed or non-object JSON %s', async (raw) => {
+    const { POST } = await import('@/app/api/level-design/route');
+    await expect400(await POST(req('/api/level-design', 'POST', raw)));
+  });
+  it('POST refuses a non-string name', async () => {
+    const { POST } = await import('@/app/api/level-design/route');
+    await expect400(await POST(req('/api/level-design', 'POST', JSON.stringify({ name: 42 }))));
+  });
+  it.each(['{"id":1,', 'null'])('PUT refuses malformed or non-object JSON %s', async (raw) => {
+    const { PUT } = await import('@/app/api/level-design/route');
+    await expect400(await PUT(req('/api/level-design', 'PUT', raw)));
+  });
+  it.each(['rooms', 'connections', 'difficultyArc', 'syncReport'])('PUT refuses a non-array %s and names it', async (field) => {
+    const { PUT } = await import('@/app/api/level-design/route');
+    const res = await PUT(req('/api/level-design', 'PUT', JSON.stringify({ id: 1, [field]: { not: 'an array' } })));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain(field);
+  });
+});

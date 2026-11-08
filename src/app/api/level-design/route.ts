@@ -9,6 +9,7 @@ import {
   deleteDoc,
   getSummary,
 } from '@/lib/level-design-db';
+import type { CreateDocPayload, UpdateDocPayload } from '@/types/level-design';
 
 // GET /api/level-design
 // ?id=<number> → single doc
@@ -33,15 +34,34 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * Read a JSON object body: malformed or non-object JSON is the caller's fault (400), not
+ * the route's catch-all 500.
+ */
+async function readObjectBody(req: NextRequest): Promise<Record<string, unknown> | null> {
+  try {
+    const parsed: unknown = await req.json();
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The JSON-blob columns: a non-array stored here is read back as [] and the doc renamed broken. */
+const ARRAY_FIELDS = ['rooms', 'connections', 'difficultyArc', 'syncReport'] as const;
+
 // POST /api/level-design
 // Body: CreateDocPayload
 export async function POST(req: NextRequest) {
+  const body = await readObjectBody(req);
+  if (!body) return apiError('Body must be a JSON object', 400);
   try {
-    const body = await req.json();
-    if (!body.name) {
+    if (!body.name || typeof body.name !== 'string') {
       return apiError('name is required', 400);
     }
-    const doc = createDoc(body);
+    const doc = createDoc(body as unknown as CreateDocPayload);
     return apiSuccess({ doc }, 201);
   } catch (err) {
     logger.error('POST /api/level-design error:', err);
@@ -52,12 +72,18 @@ export async function POST(req: NextRequest) {
 // PUT /api/level-design
 // Body: UpdateDocPayload
 export async function PUT(req: NextRequest) {
+  const body = await readObjectBody(req);
+  if (!body) return apiError('Body must be a JSON object', 400);
   try {
-    const body = await req.json();
     if (!body.id) {
       return apiError('id is required', 400);
     }
-    const doc = updateDoc(body);
+    for (const field of ARRAY_FIELDS) {
+      if (field in body && !Array.isArray(body[field])) {
+        return apiError(`${field} must be an array`, 400);
+      }
+    }
+    const doc = updateDoc(body as unknown as UpdateDocPayload);
     if (!doc) return apiError('Not found', 404);
     return apiSuccess({ doc });
   } catch (err) {
