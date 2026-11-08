@@ -29,12 +29,18 @@ export function MetricsRow({ stats, version, nextVersion, onBump }: {
   stats: BuildStats; version: string; nextVersion: string;
   onBump: (type: 'major' | 'minor' | 'patch') => void;
 }) {
+  // The server rates success over DECIDED builds (success + failed); a cancelled build
+  // is in neither half. Every figure on this row uses that one denominator, and the
+  // cancelled count is stated rather than folded into "failed".
+  const decided = stats.decidedBuilds ?? stats.successCount + stats.failedCount;
+  const cancelled = stats.cancelledCount ?? 0;
+  const decidedSub = `${stats.successCount}/${decided}${cancelled > 0 ? ` · ${cancelled} cancelled` : ''}`;
   return (
     <div className="grid grid-cols-5 gap-2">
       <MetricCard
         label="Success Rate"
-        value={`${stats.successRate.toFixed(0)}%`}
-        sub={`${stats.successCount}/${stats.totalBuilds}`}
+        value={decided > 0 ? `${stats.successRate.toFixed(0)}%` : '-'}
+        sub={decidedSub}
         icon={<CheckCircle className="w-3 h-3" />}
         color={successRateColor(stats.successRate)}
       />
@@ -53,7 +59,7 @@ export function MetricsRow({ stats, version, nextVersion, onBump }: {
       <MetricCard
         label="Failed"
         value={stats.failedCount}
-        sub={stats.totalBuilds > 0 ? `${(100 - stats.successRate).toFixed(0)}%` : undefined}
+        sub={decided > 0 ? `${((stats.failedCount / decided) * 100).toFixed(0)}%` : undefined}
         icon={<AlertTriangle className="w-3 h-3" />}
         color={STATUS_ERROR}
       />
