@@ -104,13 +104,31 @@ export function emptyHistory(): GenHistory {
   return { batches: [], selectedId: null };
 }
 
+/**
+ * Keep only what the model's own walkers can read. Stored history is untrusted input (SQLite,
+ * the MCP submit path, headless drains), and one batch without `candidates` made every
+ * `allCandidates` / `batchOf` throw. A clean batch keeps its reference.
+ */
+function readableBatches(batches: unknown[]): GenBatch[] {
+  const out: GenBatch[] = [];
+  for (const raw of batches) {
+    const b = raw as Partial<GenBatch> | null;
+    if (!b || typeof b.id !== 'string' || !Array.isArray(b.candidates)) continue;
+    const candidates = b.candidates.filter((c) => !!c && typeof c.id === 'string');
+    out.push(candidates.length === b.candidates.length && typeof b.at === 'string'
+      ? (b as GenBatch)
+      : ({ ...b, at: typeof b.at === 'string' ? b.at : '', candidates } as GenBatch));
+  }
+  return out;
+}
+
 /** Read history from an artifact's `data`, tolerant of absent/legacy shapes. */
 export function readHistory(data: Record<string, unknown> | undefined): GenHistory {
   const raw = data?.[GEN_HISTORY_KEY];
   if (raw && typeof raw === 'object' && Array.isArray((raw as GenHistory).batches)) {
     const h = raw as GenHistory;
     return {
-      batches: h.batches,
+      batches: readableBatches(h.batches),
       selectedId: h.selectedId ?? null,
       // Carried through only when it was RECORDED — a legacy history stays `unrecorded`
       // rather than being back-filled with a claim nobody made.
