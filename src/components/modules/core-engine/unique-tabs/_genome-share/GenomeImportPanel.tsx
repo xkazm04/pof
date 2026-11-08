@@ -74,8 +74,15 @@ export function GenomeImportPanel<T>({
     let parsed: unknown;
     if (looksLikeBuildCode(text)) {
       setBusy(true);
-      const decoded = await decodeBuildCode(text);
-      setBusy(false);
+      let decoded: Awaited<ReturnType<typeof decodeBuildCode>>;
+      try {
+        decoded = await decodeBuildCode(text);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not decode that build code');
+        return;
+      } finally {
+        setBusy(false);
+      }
       if (!decoded.ok) {
         setError(decoded.error);
         return;
@@ -94,7 +101,13 @@ export function GenomeImportPanel<T>({
       }
     }
 
-    const result = sanitize(parsed);
+    let result: SanitizeResult<T>;
+    try {
+      result = sanitize(parsed);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not validate that genome');
+      return;
+    }
     if ('error' in result) {
       setError(result.error);
       return;
@@ -116,6 +129,7 @@ export function GenomeImportPanel<T>({
         void runPreview(ev.target.result);
       }
     };
+    reader.onerror = () => setError(`Could not read ${file.name}`);
     reader.readAsText(file);
     e.target.value = '';
   }, [runPreview]);
