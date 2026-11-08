@@ -203,7 +203,7 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
       <BlueprintPanel color={ACCENT} className="p-3">
         <div className="flex items-center justify-between mb-2">
           <SectionHeader label="Export to UE (apply to GA_MeleeAttack)" color={ACCENT} icon={Download} />
-          <button data-testid="combat-feel-export" onClick={copyFeel} className="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer">
+          <button type="button" data-testid="combat-feel-export" onClick={copyFeel} className={`flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer ${FOCUS_RING_CLASS}`} style={focusRingStyle(ACCENT)}>
             {copyState === 'copied' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}{copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy Python'}
           </button>
         </div>

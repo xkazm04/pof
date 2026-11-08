@@ -147,3 +147,20 @@ describe('Hits tab weapon picker', () => {
     expect(screen.queryAllByRole('combobox', { name: /weapon/i }).length).toBe(1);
   });
 });
+
+describe('every control in the context draws the shared focus ring', () => {
+  const hasRing = (el: Element) => /(^|\s)focus-ring(\s|$)/.test(el.getAttribute('class') ?? '');
+  it('Clear, Calculator toggle and Copy Python carry .focus-ring like their sibling buttons', () => {
+    const values = Object.fromEntries(FEEDBACK_PARAMS.map(p => [p.id, p.defaultValue]));
+    render(<ComboChainBuilder />);
+    render(<ExecutionBreakdownPanel />);
+    render(<FeedbackTab feedbackValues={values} juiceLevel={0.5} onPreset={() => {}} onParam={() => {}} />);
+    const sites = [
+      screen.getByRole('button', { name: /^Clear$/ }),
+      screen.getByTestId('calc-toggle'),
+      screen.getByTestId('combat-feel-export'),
+    ];
+    expect(sites.filter(el => !hasRing(el)).length).toBe(0);
+    for (const el of sites) expect(el.getAttribute('type')).toBe('button');
+  });
+});
