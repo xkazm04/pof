@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Download, Cable, ShieldCheck, Loader2 } from 'lucide-react';
-import { postArtifact, fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
+import { postArtifact, fetchArtifactsResult } from '@/components/layout-lab/labArtifactClient';
 import { runPython } from '@/lib/bridge/run-python';
 import { downloadBlob } from '@/lib/download';
 import { usePofBridge } from '@/hooks/usePofBridge';
@@ -50,10 +50,16 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
   // Hydrate lifecycle from the persisted pipeline artifacts (the pipeline truth).
   useEffect(() => {
     let alive = true;
-    fetchArtifacts(LOOT_FILTER_CATALOG_ID, ruleset.id).then((arts) => {
+    // A failed read is not an empty pipeline: say the state is unknown rather than Planned.
+    fetchArtifactsResult(LOOT_FILTER_CATALOG_ID, ruleset.id).then((r) => {
       if (!alive) return;
-      setLifecycle(deriveLifecycle(Array.isArray(arts) ? arts : []));
-      setNote(null);
+      if (r.ok) {
+        setLifecycle(deriveLifecycle(Array.isArray(r.data) ? r.data : []));
+        setNote(null);
+      } else {
+        setLifecycle('planned');
+        setNote(`Pipeline state unknown: ${r.error}`);
+      }
     });
     return () => { alive = false; };
   }, [ruleset.id]);

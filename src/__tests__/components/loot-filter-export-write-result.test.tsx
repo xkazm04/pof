@@ -38,6 +38,13 @@ describe('Loot filter ExportPanel generate step', () => {
     expect(wireButton(container).disabled).toBe(true);
   });
 
+  it('says the pipeline state is unknown when hydration fails, instead of reading it as Planned', async () => {
+    fetchArtifacts.mockResolvedValue([]);
+    fetchArtifactsResult.mockResolvedValue({ ok: false, error: 'db locked' });
+    const { container } = render(<ExportPanel ruleset={RULESET} accent="var(--text)" />);
+    await waitFor(() => expect(container.textContent).toContain('db locked'));
+  });
+
   it('advances to generated when the write is recorded', async () => {
     fetchArtifacts.mockResolvedValue([]);
     fetchArtifactsResult.mockResolvedValue({ ok: true, data: [] });
