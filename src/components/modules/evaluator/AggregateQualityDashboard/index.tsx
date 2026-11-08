@@ -53,13 +53,18 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
   // Scoped to the open project, like the roll-up beside it: CLI reviews now
   // snapshot under the project, so an unscoped read would plot legacy points only.
+  const historySeq = useRef(0);
   const fetchHistory = useCallback(async () => {
+    const seq = ++historySeq.current;
     setHistoryLoading(true);
     const res = await tryApiFetch<{ history: Record<string, ReviewSnapshot[]> }>(
       projectPath
         ? `/api/feature-matrix/history?projectId=${encodeURIComponent(projectPath)}`
         : '/api/feature-matrix/history',
     );
+    // Only the newest request may answer: a slower, older load (a refresh, or the
+    // previous project) would otherwise overwrite it.
+    if (seq !== historySeq.current) return;
     // A failed history load is reported, never swallowed into "no reviews yet" —
     // an empty history reads as a never-reviewed project.
     setHistoryError(res.ok ? null : res.error);
