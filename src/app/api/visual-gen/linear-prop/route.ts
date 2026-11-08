@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { generateLinearProp, toObj, type Vec3 } from '@/lib/visual-gen/generators/linear-prop';
 import { resolveLinearPropConfig } from '@/lib/visual-gen/linear-prop-routing';
@@ -36,6 +37,10 @@ const isVec3 = (v: unknown): v is Vec3 =>
 
 export async function POST(request: NextRequest) {
   try {
+    // `outDir` is a caller-chosen disk location, so a drive-by page must not reach this.
+    const denied = requireOperator(request);
+    if (denied) return denied;
+
     const raw = await readJsonObject(request);
     if (!raw) return apiError(MALFORMED_BODY_ERROR, 400);
     const body = raw as {
