@@ -13,15 +13,16 @@ export function safeDur(d: number): number {
 
 /** Enforce cross-field invariants after any individual param change.
  *  Prevents i-frames extending past movement, negative-width cancel windows,
- *  and cancel phases rendering past dodge duration. */
+ *  and cancel phases rendering past dodge duration. The duration itself goes
+ *  through safeDur, so NaN / zero / negative input cannot leak into the windows. */
 export function clampDodgeParams(p: DodgeParams): DodgeParams {
-  const dur = p.dodgeDuration;
+  const dur = safeDur(p.dodgeDuration);
   const iFrameStart = Math.min(Math.max(p.iFrameStart, 0), dur);
   const iFrameDuration = Math.min(Math.max(p.iFrameDuration, 0), dur - iFrameStart);
   const cancelWindowStart = Math.min(Math.max(p.cancelWindowStart, 0), dur);
   const cancelWindowEnd = Math.max(cancelWindowStart, Math.min(Math.max(p.cancelWindowEnd, 0), dur));
 
-  return { ...p, iFrameStart, iFrameDuration, cancelWindowStart, cancelWindowEnd };
+  return { ...p, dodgeDuration: dur, iFrameStart, iFrameDuration, cancelWindowStart, cancelWindowEnd };
 }
 
 /* ── Derived phase computation ────────────────────────────────────────────── */
