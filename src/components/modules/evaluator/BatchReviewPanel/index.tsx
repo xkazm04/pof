@@ -7,7 +7,7 @@ import {
   Play, Square, Loader2, RotateCcw, Zap, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { useBatchReview } from '@/hooks/useBatchReview';
-import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, statusBg, statusBorder, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, statusBg, statusBorder, OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_20, OPACITY_30, withOpacity } from '@/lib/chart-colors';
 import { formatDurationBetween } from '@/lib/format';
 import { ACCENT } from './constants';
 import { ModuleRow } from './ModuleRow';
@@ -187,7 +187,7 @@ export function BatchReviewPanel() {
       {/* Empty state */}
       {!batch && !error && (
         <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${ACCENT}10` }}>
+          <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: withOpacity(ACCENT, OPACITY_5) }}>
             <Zap className="w-6 h-6" style={{ color: ACCENT }} />
           </div>
           <h3 className="text-sm font-semibold text-text mb-1">Batch Feature Review</h3>
@@ -198,7 +198,7 @@ export function BatchReviewPanel() {
             onClick={startBatch}
             disabled={isStarting}
             className="flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
-            style={{ backgroundColor: `${ACCENT}14`, color: ACCENT, border: `1px solid ${ACCENT}38` }}
+            style={{ backgroundColor: withOpacity(ACCENT, OPACITY_8), color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
           >
             {isStarting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
             Run First Review
