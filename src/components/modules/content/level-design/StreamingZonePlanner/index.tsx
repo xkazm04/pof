@@ -113,7 +113,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
 
           {/* Summary & Generate */}
           <div className="bg-[#03030a] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4">
-            <div className="flex items-center justify-between mb-3 text-[11px] font-mono tracking-widest uppercase text-violet-300">
+            <div className="flex items-center justify-between mb-3 text-xs font-mono tracking-widest uppercase text-violet-300">
               <span>{stats.total} ZONES</span>
               <span className="text-violet-800">|</span>
               <span>{stats.alwaysLoaded} PERSISTENT</span>
@@ -123,7 +123,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating, store }: Stream
             <button
               onClick={() => onGenerate(config)}
               disabled={isGenerating || zones.length === 0 || preflight.blocksGenerate}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 shadow-lg"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 shadow-lg"
               style={{
                 backgroundColor: `${MODULE_COLORS.content}20`,
                 color: MODULE_COLORS.content,

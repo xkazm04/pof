@@ -43,9 +43,9 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
             {ln.condition && (
               <g transform={`translate(${(ln.x1 + ln.x2) / 2}, ${(ln.y1 + ln.y2) / 2 - 12})`}>
                 <rect
-                  x={-conditionLabel.length * 3 - 6}
+                  x={-conditionLabel.length * 3.6 - 6}
                   y={-8}
-                  width={conditionLabel.length * 6 + 12}
+                  width={conditionLabel.length * 7.2 + 12}
                   height={16}
                   rx={4}
                   fill="rgba(5,5,16,0.9)"
@@ -55,7 +55,7 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
                 />
                 <text
                   x={0} y={3}
-                  style={{ fontSize: 11 }}
+                  style={{ fontSize: 12 }}
                   fill={STATUS_WARNING}
                   textAnchor="middle"
                   fontFamily="monospace"

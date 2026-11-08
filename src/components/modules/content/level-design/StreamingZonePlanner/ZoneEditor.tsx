@@ -50,7 +50,7 @@ export function ZoneEditor({
 
         {/* Type */}
         <div className="space-y-1">
-          <label htmlFor={`${id}-type`} className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
+          <label htmlFor={`${id}-type`} className="text-xs uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
           <div className="relative">
             <select
               id={`${id}-type`}
@@ -68,7 +68,7 @@ export function ZoneEditor({
 
         {/* Load priority */}
         <div className="space-y-1 col-span-2 mt-2">
-          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">LOAD PRIORITY</label>
+          <label className="text-xs uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">LOAD PRIORITY</label>
           <div className="flex gap-2">
             {(['low', 'normal', 'high', 'always'] as LoadPriority[]).map((p) => {
               const active = zone.loadPriority === p;
@@ -96,7 +96,7 @@ export function ZoneEditor({
 
         {/* Preload radius */}
         <div className="space-y-1 col-span-2 pt-2 border-t border-violet-900/30">
-          <label htmlFor={`${id}-radius`} className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD RADIUS (CELLS)</label>
+          <label htmlFor={`${id}-radius`} className="text-xs uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD RADIUS (CELLS)</label>
           <div className="flex items-center gap-3">
             <input
               id={`${id}-radius`}

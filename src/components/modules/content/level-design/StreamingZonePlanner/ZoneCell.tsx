@@ -27,6 +27,7 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
       onClick={() => handleCellClick(zone.gridX, zone.gridY)}
       style={{ cursor: paintType ? 'crosshair' : linkingFrom ? 'crosshair' : 'pointer' }}
     >
+      <title>{zone.name}</title>
       {/* Preload radius indicator (animated radar ring) */}
       {isSelected && zone.preloadRadius > 0 && (
         <g>
@@ -145,15 +146,14 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
       <text
         x={cx + CELL_SIZE / 2}
         y={cy + CELL_SIZE / 2 + 14}
-        style={{ fontSize: 11 }}
+        style={{ fontSize: 12 }}
         fill="var(--text)"
         textAnchor="middle"
         fontFamily="monospace"
         fontWeight={600}
-        letterSpacing={0.5}
         className="uppercase pointer-events-none"
       >
-        {zone.name.length > 10 ? zone.name.slice(0, 8) + '…' : zone.name}
+        {zone.name.length > 9 ? zone.name.slice(0, 8) + '…' : zone.name}
       </text>
 
       {/* Priority dot / scanline */}
@@ -179,7 +179,7 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
       <text
         x={cx + 8}
         y={cy + CELL_SIZE - 10}
-        style={{ fontSize: 11 }}
+        style={{ fontSize: 12 }}
         fill="var(--text-muted)"
         fontFamily="monospace"
         fontWeight={600}
