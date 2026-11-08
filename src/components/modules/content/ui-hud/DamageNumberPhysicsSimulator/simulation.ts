@@ -167,6 +167,57 @@ export function updateParticle(p: DmgParticle, dt: number, physics: PhysicsConfi
   return { ...p, x, y, vx, vy, elapsed, opacity: Math.max(0, opacity), scale, trail, offX, offY };
 }
 
+/** Approximate rendered text box (monospace bold ~0.6em per glyph), scaled like the canvas does. */
+function textBox(p: DmgParticle): { w: number; h: number } {
+  return { w: p.displayText.length * p.fontSize * 0.6 * p.scale, h: p.fontSize * p.scale };
+}
+
+export function textBoxesOverlap(a: DmgParticle, b: DmgParticle): boolean {
+  const ba = textBox(a);
+  const bb = textBox(b);
+  return Math.abs(a.x - b.x) < (ba.w + bb.w) / 2 && Math.abs(a.y - b.y) < (ba.h + bb.h) / 2;
+}
+
+/** Frames the windowed mean covers (about one second at 60fps). */
+export const READABILITY_WINDOW = 60;
+
+export interface ReadabilityRun {
+  /** Highest simultaneous count seen since the run started. */
+  peak: number;
+  /** Per-frame samples, newest last, capped at READABILITY_WINDOW. */
+  recent: { overlaps: number; simultaneous: number }[];
+}
+
+export function createReadabilityRun(): ReadabilityRun {
+  return { peak: 0, recent: [] };
+}
+
+/**
+ * Fold one frame's readability (from computeReadability, where avgOverlaps and
+ * maxSimultaneous are that frame's pair count and visible count) into a run: the
+ * returned metrics report the run peak and the windowed means, so the tiles stop
+ * flickering with the current frame.
+ */
+export function foldReadability(
+  run: ReadabilityRun,
+  frame: ReadabilityMetrics,
+): { run: ReadabilityRun; metrics: ReadabilityMetrics } {
+  const recent = [...run.recent, { overlaps: frame.avgOverlaps, simultaneous: frame.maxSimultaneous }]
+    .slice(-READABILITY_WINDOW);
+  const mean = (pick: (s: { overlaps: number; simultaneous: number }) => number) =>
+    Math.round((recent.reduce((t, s) => t + pick(s), 0) / recent.length) * 10) / 10;
+  const peak = Math.max(run.peak, frame.maxSimultaneous);
+  return {
+    run: { peak, recent },
+    metrics: {
+      ...frame,
+      maxSimultaneous: peak,
+      avgOverlaps: mean(s => s.overlaps),
+      avgSimultaneous: mean(s => s.simultaneous),
+    },
+  };
+}
+
 export function computeReadability(particles: DmgParticle[], physics: PhysicsConfig): ReadabilityMetrics {
   const visible = particles.filter(p => p.opacity > 0.3);
   if (visible.length === 0) return { avgOverlaps: 0, maxSimultaneous: 0, avgReadTime: 0, clutterScore: 0 };
@@ -175,10 +226,7 @@ export function computeReadability(particles: DmgParticle[], physics: PhysicsCon
   let overlaps = 0;
   for (let i = 0; i < visible.length; i++) {
     for (let j = i + 1; j < visible.length; j++) {
-      const dx = visible[i].x - visible[j].x;
-      const dy = visible[i].y - visible[j].y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 25) overlaps++;
+      if (textBoxesOverlap(visible[i], visible[j])) overlaps++;
     }
   }
 

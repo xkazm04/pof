@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { DEFAULT_PHYSICS, DEFAULT_COMBAT, PRESETS } from './constants';
-import { spawnParticle, updateParticle, computeReadability } from './simulation';
+import { spawnParticle, updateParticle, computeReadability, createReadabilityRun, foldReadability } from './simulation';
 import type { PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics } from './types';
 
 const DEFAULT_CANVAS_W = 520;
@@ -23,6 +23,7 @@ export function useDamageNumberPhysicsSimulator() {
   const lastTimeRef = useRef<number>(0);
   const spawnAccRef = useRef<number>(0);
   const particlesRef = useRef<DmgParticle[]>([]);
+  const readabilityRunRef = useRef(createReadabilityRun());
 
   // Keep ref in sync
   particlesRef.current = particles;
@@ -52,6 +53,7 @@ export function useDamageNumberPhysicsSimulator() {
     setTotalSpawned(0);
     setMetrics({ avgOverlaps: 0, maxSimultaneous: 0, avgReadTime: 0, clutterScore: 0 });
     spawnAccRef.current = 0;
+    readabilityRunRef.current = createReadabilityRun();
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
   }, []);
 
@@ -113,7 +115,9 @@ export function useDamageNumberPhysicsSimulator() {
 
     particlesRef.current = updated;
     setParticles(updated);
-    setMetrics(computeReadability(updated, physics));
+    const folded = foldReadability(readabilityRunRef.current, computeReadability(updated, physics));
+    readabilityRunRef.current = folded.run;
+    setMetrics(folded.metrics);
 
     // Schedule through the ref, not this closure: a slider moved mid-run must
     // reach the next frame (the closure froze the config captured at Play).

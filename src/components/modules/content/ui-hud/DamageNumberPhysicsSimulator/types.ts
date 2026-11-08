@@ -64,7 +64,8 @@ export interface DmgParticle {
 
 export interface ReadabilityMetrics {
   avgOverlaps: number;
-  maxSimultaneous: number;
+  maxSimultaneous: number;   // run peak once folded by foldReadability (a single frame's count from computeReadability)
+  avgSimultaneous?: number;  // windowed mean of the visible count
   avgReadTime: number; // how long a number is readable (opacity > 0.5)
   clutterScore: number; // 0-100, higher = worse
 }
