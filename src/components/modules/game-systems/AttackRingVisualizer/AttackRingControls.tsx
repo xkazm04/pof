@@ -41,7 +41,7 @@ export function AttackRingControls({ numPoints, setNumPoints, attackDist, setAtt
           data-testid="attack-ring-num-points"
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{
-            background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((numPoints - MIN_POINTS) / (MAX_POINTS - MIN_POINTS)) * 100}%, rgba(255,255,255,0.1) ${((numPoints - MIN_POINTS) / (MAX_POINTS - MIN_POINTS)) * 100}%, rgba(255,255,255,0.1) 100%)`,
+            background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((numPoints - MIN_POINTS) / (MAX_POINTS - MIN_POINTS)) * 100}%, var(--border) ${((numPoints - MIN_POINTS) / (MAX_POINTS - MIN_POINTS)) * 100}%, var(--border) 100%)`,
           }}
         />
         <div className="flex justify-between text-[11px] font-mono text-text-muted mt-0.5">
@@ -69,7 +69,7 @@ export function AttackRingControls({ numPoints, setNumPoints, attackDist, setAtt
           data-testid="attack-ring-distance"
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{
-            background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((attackDist - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) ${((attackDist - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) 100%)`,
+            background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((attackDist - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)) * 100}%, var(--border) ${((attackDist - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)) * 100}%, var(--border) 100%)`,
           }}
         />
         <div className="flex justify-between text-[11px] font-mono text-text-muted mt-0.5">
