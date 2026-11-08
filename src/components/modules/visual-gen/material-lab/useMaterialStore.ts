@@ -24,6 +24,18 @@ export interface DeriveMapsOutcome {
 
 const TEXTURE_MAPS_ENDPOINT = '/api/texture-maps';
 
+/**
+ * An uploaded map is a `blob:` URL from `URL.createObjectURL`; the browser keeps
+ * its bytes alive until it is revoked. Release one the moment the store stops
+ * holding it (replace, clear, reset), as the asset viewer's store already does.
+ * Served URLs are never touched.
+ */
+function releaseBlobUrl(url: string | null | undefined): void {
+  if (url && url.startsWith('blob:') && typeof URL.revokeObjectURL === 'function') {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export interface SendToBlenderResult {
   name: string;
   plan: MaterialTransferPlan;
@@ -186,7 +198,9 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   setPreviewMesh: (mesh) => set({ previewMesh: mesh }),
 
   setTexture: (channel, url, provenance) => {
-    const key = `${channel}Texture` as keyof MaterialState;
+    const key = `${channel}Texture` as const;
+    const previous = get()[key];
+    if (previous !== url) releaseBlobUrl(previous);
     set((s) => ({
       [key]: url,
       textureHighlightTick: {
@@ -291,7 +305,11 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     return ok(true as const);
   },
 
-  reset: () =>
+  reset: () => {
+    const s = get();
+    for (const url of [s.albedoTexture, s.normalTexture, s.metallicTexture, s.roughnessTexture, s.aoTexture]) {
+      releaseBlobUrl(url);
+    }
     set({
       params: { ...DEFAULT_PARAMS },
       activePresetId: null,
@@ -302,7 +320,8 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       aoTexture: null,
       textureHighlightTick: { albedo: 0, normal: 0, metallic: 0, roughness: 0, ao: 0 },
       textureProvenance: {},
-    }),
+    });
+  },
 
   sendToBlender: async (materialName?: string) => {
     const state = get();
