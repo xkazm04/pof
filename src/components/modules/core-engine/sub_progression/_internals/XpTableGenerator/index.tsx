@@ -132,6 +132,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <button
             key={tab.id}
             onClick={() => setXpTableTab(tab.id)}
+            aria-pressed={xpTableTab === tab.id}
             className="px-2.5 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all border"
             style={{
               backgroundColor: xpTableTab === tab.id ? `${ACCENT}${OPACITY_15}` : 'transparent',

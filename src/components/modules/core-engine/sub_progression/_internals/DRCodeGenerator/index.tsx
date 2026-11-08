@@ -121,6 +121,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
           <button
             key={tab.id}
             onClick={() => setCodeGenTab(tab.id)}
+            aria-pressed={codeGenTab === tab.id}
             className="px-2.5 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all border"
             style={{
               backgroundColor: codeGenTab === tab.id ? `${ACCENT}${OPACITY_15}` : 'transparent',

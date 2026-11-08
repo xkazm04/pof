@@ -73,6 +73,7 @@ export function EncounterTTKSimulator() {
                 <button
                   key={b.name}
                   onClick={() => setEncBuildIdx(idx)}
+                  aria-pressed={encBuildIdx === idx}
                   className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-xs font-bold transition-all border"
                   style={{
                     backgroundColor: encBuildIdx === idx ? `${b.color}${OPACITY_15}` : 'transparent',
@@ -96,6 +97,7 @@ export function EncounterTTKSimulator() {
               <button
                 key={et.name}
                 onClick={() => setEncEnemyIdx(idx)}
+                aria-pressed={encEnemyIdx === idx}
                 className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-all border"
                 style={{
                   backgroundColor: encEnemyIdx === idx ? `${et.color}${OPACITY_15}` : 'transparent',
