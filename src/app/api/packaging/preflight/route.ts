@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getEnginePath } from '@/lib/prompt-context';
 import {
   parseUbtResult,
@@ -86,6 +87,9 @@ function runAssetValidation(
 }
 
 export async function POST(req: Request): Promise<Response> {
+  // Starts a process (or retargets one) — operator-guarded like every spawn route.
+  const denied = requireOperator(req);
+  if (denied) return denied;
   let body: unknown;
   try { body = await req.json(); } catch {
     return apiError('invalid JSON body', 400);

@@ -1,4 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   getSchedule, setSchedule, getScheduleState, isRunning,
 } from '@/lib/packaging/build-schedule-store';
@@ -63,6 +64,9 @@ function sanitizeSchedulePatch(body: Record<string, unknown>): Partial<BuildSche
 }
 
 export async function POST(request: Request) {
+  // Starts a process (or retargets one) — operator-guarded like every spawn route.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   let body: Record<string, unknown>;
   try {
     body = await request.json();

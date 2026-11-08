@@ -1,4 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { runSmokeTest, deriveGameImage, smokeResultNote } from '@/lib/packaging/smoke-test';
 import { getBuild, attachSmokeResultToBuild } from '@/lib/packaging/build-history-store';
 
@@ -38,6 +39,9 @@ function projectNameFromExe(outputPath: string): string | null {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  // Starts a process (or retargets one) — operator-guarded like every spawn route.
+  const denied = requireOperator(req);
+  if (denied) return denied;
   let body: unknown;
   try { body = await req.json(); } catch {
     return apiError('invalid JSON body', 400);
