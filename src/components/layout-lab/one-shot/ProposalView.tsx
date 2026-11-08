@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from 'react';
 import type { LabTheme } from '../theme';
-import { useOneShotJobStore, type OneShotProposal } from '@/stores/oneShotJobStore';
+import { REFINEMENT_TURN_CAP, useOneShotJobStore, type OneShotProposal } from '@/stores/oneShotJobStore';
 import { planRun, stepRefsFor } from '@/lib/one-shot/runPlan';
 import { describeDispatchPlan, ONE_SHOT_STEP_TASK_TYPE } from '@/lib/cli-spend/dispatchPlan';
 import { useDispatchPlan } from '../steps/shared/useDispatchPlan';
@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * Proposal name + rationale + where it lands + JSON data + refine textarea + run plan + Run
- * pipeline button. Textarea is disabled when refinementTurns >= 3 and !forceMore. The landing
+ * pipeline button. Textarea is disabled when refinementTurns reaches the store's REFINEMENT_TURN_CAP and !forceMore. The landing
  * (`proposalLanding`) places the proposal on the analyzed distribution and judges it against the
  * target; off target offers a one-click corrective refine and marks the Run button — never blocks.
  * The run plan (`planRun`) names every step's author; the button carries the model-dispatch count.
@@ -47,7 +47,8 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
   const refineId = useId();
   const [refineInput, setRefineInput] = useState('');
   const [forceMore, setForceMore] = useState(false);
-  const atCap = refinementTurns >= 3;
+  // The store's own cap (`incRefinementTurn` refuses past it), never a re-typed number.
+  const atCap = refinementTurns >= REFINEMENT_TURN_CAP;
   const refineDisabled = atCap && !forceMore;
 
   const handleRefine = () => {
@@ -110,7 +111,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
       {/* refine textarea */}
       <div style={{ marginBottom: 8 }}>
         <label htmlFor={refineId} className={t.fontMono} style={{ display: 'block', fontSize: 12, color: t.muted, marginBottom: 4 }}>
-          Refine direction {refinementTurns > 0 && `(${refinementTurns}/3 used)`}
+          Refine direction {refinementTurns > 0 && `(${refinementTurns}/${REFINEMENT_TURN_CAP} used)`}
         </label>
         <textarea
           id={refineId}
