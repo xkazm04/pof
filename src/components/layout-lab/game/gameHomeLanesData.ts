@@ -25,7 +25,8 @@ export function isLanesBoard(v: unknown): v is LanesBoard {
 }
 
 export function useLanesBoard(gameId: string): { read: LanesRead; reread: () => void } {
-  const [read, setRead] = useState<LanesRead>({ kind: 'loading' });
+  const key = gameId;
+  const [state, setState] = useState<{ key: string; read: LanesRead }>({ key, read: { kind: 'loading' } });
   const [attempt, setAttempt] = useState(0);
 
   useSuspendableEffect(() => {
@@ -33,16 +34,16 @@ export function useLanesBoard(gameId: string): { read: LanesRead; reread: () => 
     const load = () => {
       void tryApiFetch<unknown>(lanesUrl(gameId)).then((r) => {
         if (cancelled) return;
-        if (r.ok && isLanesBoard(r.data)) { setRead({ kind: 'ok', data: r.data }); return; }
+        if (r.ok && isLanesBoard(r.data)) { const data = r.data; setState({ key, read: { kind: 'ok', data } }); return; }
         const message = r.ok ? 'unexpected response shape' : r.error;
-        setRead((prev) => (prev.kind === 'ok' ? { kind: 'ok', data: prev.data, staleError: message } : { kind: 'error', message }));
+        setState((prev) => ({ key, read: prev.key === key && prev.read.kind === 'ok' ? { kind: 'ok', data: prev.read.data, staleError: message } : { kind: 'error', message } }));
       });
     };
     load();
     const timer = setInterval(load, UI_TIMEOUTS.lanesPoll);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [gameId, attempt]);
+  }, [key, gameId, attempt]);
 
   const reread = useCallback(() => setAttempt((n) => n + 1), []);
-  return { read, reread };
+  return { read: state.key === key ? state.read : { kind: 'loading' }, reread };
 }

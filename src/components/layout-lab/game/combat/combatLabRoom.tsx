@@ -23,7 +23,7 @@ const H = { margin: 0, fontSize: 'var(--lab-fs-sm)' } as const;
 
 export function CombatLabRoom({ t, gameId }: { t: LabTheme; gameId: string }) {
   const [source, setSource] = useState('auto');
-  const { read, reread } = useCombatLab(gameId, source);
+  const { read, reread, sources } = useCombatLab(gameId, source);
   const d = read.kind === 'ok' ? read.data : null;
   return (
     <section data-testid="combat-lab" aria-labelledby="combat-lab-title"
@@ -33,12 +33,12 @@ export function CombatLabRoom({ t, gameId }: { t: LabTheme; gameId: string }) {
           style={{ justifySelf: 'start', background: 'transparent', border: 'none', padding: 0, color: t.muted, cursor: 'pointer', fontSize: 'var(--lab-fs-xs)' }}>← Game home</button>
         <MicroLabel mono uppercase tone="muted">GTAI · Combat lab</MicroLabel>
         <h2 id="combat-lab-title" style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xl)', color: t.inkDeep, margin: 0 }}>Combat lab</h2>
-        {d && d.configured && (
+        {(d ? d.configured : sources !== null) && (
           <label style={{ display: 'flex', gap: 'var(--lab-s2)', alignItems: 'center', flexWrap: 'wrap', fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
             Read from
             <select data-testid="combat-source" value={source} onChange={(e) => setSource(e.target.value)} className="focus-ring"
               style={{ fontSize: 'var(--lab-fs-xs)', color: t.text, background: t.panel, border: `1px solid ${t.line}`, padding: '2px 6px', maxWidth: '100%' }}>
-              {d.sources.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              {(d?.sources ?? sources ?? []).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
           </label>
         )}
