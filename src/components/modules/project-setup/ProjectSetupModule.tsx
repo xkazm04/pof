@@ -75,8 +75,13 @@ export function ProjectSetupModule() {
 
   const [manifestJson, setManifestJson] = useState<string | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
+  const installPlanInFlight = useRef(false);
 
   const handleFixAllMissing = useCallback(async () => {
+    // isRunning only flips after the prompt is sent, so the three install buttons
+    // need their own guard for the fetch window (each extra pass is a winget run).
+    if (installPlanInFlight.current) return;
+    installPlanInFlight.current = true;
     setInstallError(null);
     try {
       const data = await apiFetch<{ allInstalled: boolean; prompt: string }>('/api/filesystem/browse', {
@@ -92,6 +97,8 @@ export function ProjectSetupModule() {
       bootstrapCLI.sendPrompt(data.prompt);
     } catch (e) {
       setInstallError(e instanceof Error ? e.message : 'The install plan could not be built');
+    } finally {
+      installPlanInFlight.current = false;
     }
   }, [bootstrapCLI, scan]);
 

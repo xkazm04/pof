@@ -198,6 +198,26 @@ describe('ProjectSetupModule next-step banner', () => {
     expect(sendPromptMock).not.toHaveBeenCalled();
   });
 
+  it('dispatches one install run for a double click while the plan is being fetched', async () => {
+    let release: (v: unknown) => void = () => {};
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise((r) => { release = r; })) as unknown as typeof fetch;
+    setScan({ missingToolCount: 2, hasProject: false });
+    render(<ProjectSetupModule />);
+
+    const cta = screen.getByTestId('pof-setup-next-step-cta');
+    fireEvent.click(cta);
+    fireEvent.click(cta);
+    release({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { allInstalled: false, prompt: 'install' } }),
+      text: () => Promise.resolve(''),
+    });
+    await waitFor(() => expect(sendPromptMock).toHaveBeenCalled());
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(sendPromptMock).toHaveBeenCalledTimes(1);
+  });
+
   it('triggers a tooling fetch when the Install Tools CTA is clicked', async () => {
     const fetchMock = mockFetch({ body: { success: true, data: { allInstalled: false, prompt: 'install winget pkgs' } } });
     setScan({ missingToolCount: 2, hasProject: false });
