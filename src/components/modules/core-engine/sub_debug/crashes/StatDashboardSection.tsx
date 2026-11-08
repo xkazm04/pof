@@ -30,7 +30,7 @@ export function StatDashboardSection({ stats }: { stats: StatGroup[] }) {
           const isCollapsed = collapsedGroups.has(sg.group);
           return (
             <BlueprintPanel key={sg.group} color={ACCENT} className="overflow-hidden">
-              <button onClick={() => toggleGroup(sg.group)}
+              <button onClick={() => toggleGroup(sg.group)} aria-expanded={!isCollapsed}
                 className="w-full flex items-center gap-1.5 px-3 py-2 hover:bg-surface-deep/50 transition-colors">
                 <motion.div animate={{ rotate: isCollapsed ? 0 : 90 }} transition={{ duration: 0.15 }}>
                   <ChevronRight className="w-3 h-3" style={{ color: `${withOpacity(ACCENT, OPACITY_37)}` }} />
