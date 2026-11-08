@@ -79,6 +79,28 @@ describe('NightlyBuildScheduler', () => {
     expect(screen.getByLabelText('Build profile')).toBe(screen.getByTestId('pof-nightly-profile'));
   });
 
+  it('a failed status read says so instead of "Scheduled builds off"', async () => {
+    mockFetchRoutes([{ match: '/api/packaging/schedule', response: { status: 500, body: { success: false, error: 'db locked' } } }]);
+    render(<NightlyBuildScheduler profiles={[profile]} />);
+    const err = await screen.findByTestId('pof-nightly-error');
+    expect(err.textContent).toContain('db locked');
+    expect(screen.queryByText('Scheduled builds off')).toBeNull();
+  });
+
+  it('a refused save says so instead of silently snapping back', async () => {
+    const ok = statusBody();
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      const refused = init?.method === 'POST';
+      const body = refused ? { success: false, error: 'invalid time' } : ok;
+      return Promise.resolve({ ok: !refused, status: refused ? 400 : 200, json: () => Promise.resolve(body), text: () => Promise.resolve(JSON.stringify(body)) });
+    }) as unknown as typeof fetch;
+    render(<NightlyBuildScheduler profiles={[profile]} />);
+    await screen.findByText('abc12345');
+    fireEvent.click(screen.getByTestId('pof-nightly-enabled'));
+    const err = await screen.findByTestId('pof-nightly-error');
+    expect(err.textContent).toContain('invalid time');
+  });
+
   describe('weekday toggles', () => {
     /** The `days` array of every save POST, in order. */
     function savedDays(fetchMock: ReturnType<typeof mockFetchRoutes>): number[][] {

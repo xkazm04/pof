@@ -65,12 +65,20 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
 
   const [status, setStatus] = useState<ScheduleStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  // A failed read and a refused write each SAY so - never a silent snap-back to
+  // the last-known (or default 'off') schedule.
+  const [readError, setReadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const qs = projectPath ? `?projectPath=${encodeURIComponent(projectPath)}` : '';
       setStatus(await apiFetch<ScheduleStatus>(`/api/packaging/schedule${qs}`));
-    } catch { /* keep last-known status */ }
+      setReadError(null);
+    } catch (e) {
+      // Keep the last-known status on screen, but say it could not be refreshed.
+      setReadError(errorText(e));
+    }
   }, [projectPath]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -85,6 +93,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
 
   const save = useCallback(async (patch: Partial<BuildSchedule>) => {
     setBusy(true);
+    setActionError(null);
     try {
       await apiFetch('/api/packaging/schedule', {
         method: 'POST',
@@ -92,13 +101,16 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
         body: JSON.stringify({ action: 'save', projectPath, projectName, ueVersion, ...patch }),
       });
       await refresh();
-    } catch { /* surfaced via stale status */ } finally {
+    } catch (e) {
+      setActionError(`Save failed: ${errorText(e)}`);
+    } finally {
       setBusy(false);
     }
   }, [projectPath, projectName, ueVersion, refresh]);
 
   const runNow = useCallback(async () => {
     setBusy(true);
+    setActionError(null);
     try {
       await apiFetch('/api/packaging/schedule', {
         method: 'POST',
@@ -106,7 +118,9 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
         body: JSON.stringify({ action: 'run-now', projectPath, projectName, ueVersion }),
       });
       await refresh();
-    } catch { /* ignore */ } finally {
+    } catch (e) {
+      setActionError(`Run now failed: ${errorText(e)}`);
+    } finally {
       setBusy(false);
     }
   }, [projectPath, projectName, ueVersion, refresh]);
@@ -215,7 +229,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
       {/* Status row */}
       <div className="flex items-center justify-between gap-3 text-2xs text-text-muted flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          <span>{status?.describe ?? describePending()}</span>
+          <span>{status?.describe ?? (readError ? 'Schedule unknown' : describePending())}</span>
           {schedule.enabled && <span>Next: <span className="text-text font-mono">{fmtTime(status?.nextRunAt ?? null)}</span></span>}
           <span className="flex items-center gap-1">
             <GitCommitHorizontal className="w-3 h-3" />
@@ -240,11 +254,21 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
         </button>
       </div>
 
+      {(readError || actionError) && (
+        <div className="text-2xs" style={{ color: STATUS_ERROR }} role="alert" data-testid="pof-nightly-error">
+          {actionError ?? `Could not load the schedule: ${readError}`}
+        </div>
+      )}
+
       {outcome && status?.state.lastReason && (
         <div className="text-2xs text-text-muted border-t border-border pt-2">{status.state.lastReason}</div>
       )}
     </div>
   );
+}
+
+function errorText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }
 
 function describePending(): string {
