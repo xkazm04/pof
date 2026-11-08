@@ -7,6 +7,7 @@ import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
+import { clutterBand } from './ClutterBadge';
 import type { PhysicsConfig, DmgParticle, ReadabilityMetrics } from './types';
 
 export function SimulationCanvas({
@@ -146,7 +147,7 @@ export function SimulationCanvas({
           { label: 'Overlaps', value: metrics.avgOverlaps, color: metrics.avgOverlaps > 3 ? STATUS_ERROR : STATUS_SUCCESS },
           { label: 'Simultaneous', value: metrics.maxSimultaneous, color: metrics.maxSimultaneous > 6 ? STATUS_WARNING : STATUS_SUCCESS },
           { label: 'Read Time', value: `${metrics.avgReadTime}s`, color: metrics.avgReadTime < 0.3 ? STATUS_ERROR : STATUS_SUCCESS },
-          { label: 'Clutter', value: metrics.clutterScore, color: metrics.clutterScore > 50 ? STATUS_ERROR : metrics.clutterScore > 25 ? STATUS_WARNING : STATUS_SUCCESS },
+          { label: 'Clutter', value: metrics.clutterScore, color: clutterBand(metrics.clutterScore).color },
         ].map((m) => (
           <div key={m.label} className="rounded-md border border-border/30 bg-surface-deep/50 px-2 py-1.5 text-center">
             <div className="text-xs font-bold font-mono" style={{ color: m.color }}>{m.value}</div>
