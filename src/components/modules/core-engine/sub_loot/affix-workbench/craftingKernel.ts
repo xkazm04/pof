@@ -135,7 +135,8 @@ function refusal(id: CraftingActionId, affixes: CraftedAffix[], ctx: CraftCtx, p
   const unlocked = affixes.filter((a) => !a.locked);
   const used = new Set(affixes.map((a) => a.tag));
   switch (id) {
-    case 'reforge': return null; // reforge keeps the locked affixes and fills the rest
+    case 'reforge': // keeps the locked affixes and fills the rest — so it needs a slot to fill
+      return affixes.length - unlocked.length >= RARITY_AFFIX_COUNTS[ctx.rarity].max ? 'no unlocked slot to reforge' : null;
     case 'augment':
       if (affixes.length >= RARITY_AFFIX_COUNTS[ctx.rarity].max) return 'no open slot';
       return eligiblePool(pool, ctx.rarity).some((a) => !used.has(a.tag)) ? null : 'no eligible affix left';
