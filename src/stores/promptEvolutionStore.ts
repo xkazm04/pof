@@ -445,7 +445,12 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
           v.moduleId === restored.moduleId && v.checklistItemId === restored.checklistItemId
             ? { ...v, active: v.id === restored.id }
             : v);
-        if (!s.versionHistory || s.versionHistory.checklistItemId !== restored.checklistItemId) {
+        // Same key as the variants map above: item ids are per-module.
+        if (
+          !s.versionHistory ||
+          s.versionHistory.moduleId !== restored.moduleId ||
+          s.versionHistory.checklistItemId !== restored.checklistItemId
+        ) {
           return { isRestoring: false, variants };
         }
         const versions = s.versionHistory.versions.map((v) => ({
