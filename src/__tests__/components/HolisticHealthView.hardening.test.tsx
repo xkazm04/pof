@@ -17,6 +17,8 @@ import { HolisticHealthView } from '@/components/modules/evaluator/HolisticHealt
 import { useProjectHealthStore } from '@/stores/projectHealthStore';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import { useCrashAnalyzerStore } from '@/stores/crashAnalyzerStore';
+import { useModuleStore } from '@/stores/moduleStore';
+import { SuspendContext } from '@/hooks/useSuspend';
 import type { ProjectHealthSummary, SubsystemSignal } from '@/types/project-health';
 
 const SIGNALS: SubsystemSignal[] = [
@@ -82,5 +84,26 @@ describe('HolisticHealthView — hardening', () => {
     const { container } = render(<HolisticHealthView />);
     await settle();
     expect(container.querySelector('[data-testid="holistic-crash-read-error"]')).toBeNull();
+  });
+
+  it('does not POST health while the module is suspended; refetches once on resume', async () => {
+    const tree = (suspended: boolean) => (
+      <SuspendContext.Provider value={suspended}>
+        <HolisticHealthView />
+      </SuspendContext.Provider>
+    );
+    const { rerender } = render(tree(true));
+    await settle();
+    act(() => {
+      useModuleStore.setState((st) => ({
+        checklistProgress: { ...st.checklistProgress, 'arpg-combat': { 'suspend-probe': true } },
+      }));
+    });
+    await settle();
+    expect(fetchHealth).toHaveBeenCalledTimes(0);
+
+    rerender(tree(false));
+    await settle();
+    expect(fetchHealth).toHaveBeenCalledTimes(1);
   });
 });
