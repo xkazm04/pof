@@ -139,17 +139,35 @@ export function gradeGallerySelection(
     };
   }
 
+  return gradeSelectedCandidate(data, label, { idx, field });
+}
+
+/**
+ * The selected-candidate rule shared by the gallery steps and the bespoke Items generative steps:
+ * no history defers at L4, an unresolved selection fails at L1, a real asset passes at L1, a swatch
+ * defers at L4. `where` (a gallery step's index field + value) adds the index-projection check and the
+ * index wording; a bespoke step, which has no index field, omits it. One body, so a wording fix lands once.
+ */
+export function gradeSelectedCandidate(
+  data: Record<string, unknown>,
+  label: string,
+  where?: { idx: number; field: string },
+): AcceptanceResult {
   const history = readHistory(data);
+  const at = where ? `candidate ${where.idx} · ` : '';
   if (history.batches.length === 0) {
     return {
       label,
       tier: L4,
       status: 'deferred',
-      detail: `candidate ${idx} · no generation history`,
-      reason:
-        `"${field}" records candidate ${idx}, but the artifact holds no generation history — ` +
-        'nothing proves any candidate was ever generated for this step. Run the gallery\'s Produce ' +
-        'so the batch (and its candidates) are recorded, then re-grade.',
+      detail: where ? `candidate ${where.idx} · no generation history` : 'no generation history',
+      reason: where
+        ? `"${where.field}" records candidate ${where.idx}, but the artifact holds no generation history — ` +
+          'nothing proves any candidate was ever generated for this step. Run the gallery\'s Produce ' +
+          'so the batch (and its candidates) are recorded, then re-grade.'
+        : 'the artifact holds no generation history — nothing proves any candidate was ever ' +
+          'generated for this step, so the values it grades are the produce stub\'s constants. ' +
+          'Run the gallery\'s Produce so the batch (and its candidates) are recorded, then re-grade.',
     };
   }
 
@@ -167,8 +185,9 @@ export function gradeGallerySelection(
     };
   }
 
-  const projected = (cand.payload ?? {})[field];
-  if (typeof projected === 'number' && projected !== idx) {
+  const projected = where ? (cand.payload ?? {})[where.field] : undefined;
+  if (where && typeof projected === 'number' && projected !== where.idx) {
+    const { idx, field } = where;
     return {
       label,
       tier: L1,
@@ -187,7 +206,7 @@ export function gradeGallerySelection(
       label,
       tier: L1,
       status: 'pass',
-      detail: `candidate ${idx} · ${named} → ${asset}`,
+      detail: `${at}${named} → ${asset}`,
     };
   }
 
@@ -195,7 +214,7 @@ export function gradeGallerySelection(
     label,
     tier: L4,
     status: 'deferred',
-    detail: `candidate ${idx} · ${named} — swatch placeholder`,
+    detail: `${at}${named} — swatch placeholder`,
     reason:
       `the selected candidate (${named}) is a deterministic swatch preview, not a generated asset — no image ` +
       'or mesh was produced for this step, so the selection cannot be visually verified. Run the generator ' +
