@@ -9,6 +9,7 @@ import { FEEDBACK_PARAMS } from '@/components/modules/core-engine/sub_combat/_sh
 import { ComboChainBuilder } from '@/components/modules/core-engine/sub_combat/combos';
 import { PRESET_COMBOS } from '@/components/modules/core-engine/sub_ability/_shared/data';
 import { UE_EXECUTION_STEPS } from '@/lib/combat/ue-damage-execution';
+import { HitsTab } from '@/components/modules/core-engine/sub_combat/hits/HitsTab';
 import { DIRECT_PIPELINE } from '@/components/modules/core-engine/sub_combat/damage-pipeline/pipeline-data';
 
 // scan-sweep night 2026-11-08, combat-damage-pipeline: one block per landed finding.
@@ -137,5 +138,12 @@ describe('Execution breakdown code toggles announce what they open', () => {
     expect(first.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(first);
     expect(first.getAttribute('aria-expanded')).toBe('true');
+  });
+});
+
+describe('Hits tab weapon picker', () => {
+  it('has an accessible name beyond its placeholder option', () => {
+    render(<HitsTab />);
+    expect(screen.queryAllByRole('combobox', { name: /weapon/i }).length).toBe(1);
   });
 });

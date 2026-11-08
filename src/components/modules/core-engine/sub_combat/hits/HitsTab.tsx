@@ -55,6 +55,7 @@ export function HitsTab() {
         <SectionHeader label="Per-Weapon Hit Analysis" color={ACCENT} icon={Crosshair} />
         <div className="mt-2 mb-3">
           <select
+            aria-label="Weapon for hit analysis"
             value={selectedWeaponId ?? ''}
             onChange={(e) => setSelectedWeaponId(e.target.value || null)}
             className="w-full max-w-xs bg-surface-deep border border-border/30 rounded px-2 py-1.5 text-xs font-mono text-text focus:outline-none focus:border-border/60"
