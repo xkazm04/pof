@@ -10,6 +10,9 @@ import { ComboChainBuilder } from '@/components/modules/core-engine/sub_combat/c
 import { PRESET_COMBOS } from '@/components/modules/core-engine/sub_ability/_shared/data';
 import { UE_EXECUTION_STEPS } from '@/lib/combat/ue-damage-execution';
 import { HitsTab } from '@/components/modules/core-engine/sub_combat/hits/HitsTab';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { WEAPON_CATEGORIES } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 import { DIRECT_PIPELINE } from '@/components/modules/core-engine/sub_combat/damage-pipeline/pipeline-data';
 
 // scan-sweep night 2026-11-08, combat-damage-pipeline: one block per landed finding.
@@ -162,5 +165,21 @@ describe('every control in the context draws the shared focus ring', () => {
     ];
     expect(sites.filter(el => !hasRing(el)).length).toBe(0);
     for (const el of sites) expect(el.getAttribute('type')).toBe('button');
+  });
+});
+
+describe('Hits tab groups weapons by the one shared category order', () => {
+  it('keeps no private copy of the category list', () => {
+    const src = readFileSync(join(process.cwd(), 'src/components/modules/core-engine/sub_combat/hits/HitsTab.tsx'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const literalCopies = WEAPON_CATEGORIES.filter(c => src.includes(`'${c}'`)).length;
+    expect(literalCopies).toBe(0);
+    expect(src).toMatch(/WEAPON_CATEGORIES/);
+  });
+
+  it('renders one optgroup per shared category, in that order', () => {
+    const { container } = render(<HitsTab />);
+    const groups = [...container.querySelectorAll('optgroup')].map(g => g.getAttribute('label'));
+    expect(groups).toEqual([...WEAPON_CATEGORIES]);
   });
 });

@@ -13,10 +13,9 @@ import {
   DMG_TYPES, ARMOR_TYPES, EFFECTIVENESS_DATA,
   PROJECTILE_PATHS,
 } from '../_shared/data';
-import { WEAPONS } from '../_shared/data-metrics';
-import type { Weapon, WeaponCategory } from '../_shared/data-metrics';
+import { WEAPONS, WEAPON_CATEGORIES } from '../_shared/data-metrics';
+import type { Weapon } from '../_shared/data-metrics';
 
-const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const WEAPONS_BY_CAT = WEAPON_CATEGORIES.map(cat => ({
   category: cat,
   weapons: WEAPONS.filter(w => w.category === cat),
