@@ -1,0 +1,76 @@
+{
+ "schema": "conform-run/1",
+ "worker": "e6a3efbc-15a2-460c-bc7f-bd800ac1055d",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-11-08T05:26:50.230107+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "gdd-compliance",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/GDDComplianceView/MappingStrip.tsx:15 The declared checklist-to-feature mapping and this Checklist-mapping strip landed in 20b13ad7 (2026-08-18, 11 files) with no doc change, and a search of docs/ and .claude/rules for mappingSentence, ChecklistMappingStats, CHECKLIST_FEATURE_MAP and danglingMappings finds nothing, so a new compliance mechanism escaped the change boundary with no gate to catch it, even though the view itself, as a drift detector, follows most of the subject's reporting rules.",
+   "techniques": [
+    {
+     "technique": "same-change-enforcement",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/MappingStrip.tsx:15 The mapping mechanism and its UI shipped in 20b13ad7 with docs:0. Later GDD-view commits (a442c5fa coverage x conformance, 2ea1b060 evidence timestamps, e7d376ae durable triage, e395070d UNMEASURED) also touched no docs/."
+    },
+    {
+     "technique": "source-doc-mapping",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/MappingStrip.tsx:18 Inside the product, GDD-to-code coupling is gated on its coverage, not only on membership: unmapped, heuristic and dangling counts are printed beside the gap list."
+    },
+    {
+     "technique": "doc-rot-detection",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/ModuleCard.tsx:40 A module with no verdict shows UNMEASURED and never a neutral or clean score, so an unverifiable module does not read as clean."
+    },
+    {
+     "technique": "checked-vs-skipped-denominators",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/EvidenceStrip.tsx:10 The headline is a fraction that names its denominator."
+    },
+    {
+     "technique": "earned-verification-state",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/EvidenceStrip.tsx:45 Evidence age is measured against the audit that reported it, with a stated staleness threshold. A fresh audit does not launder old evidence."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "project-setup-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "ue5-filesystem",
+   "reason": "evidence leans on .pof/blender-mcp-ledger.json, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:26:50.230107+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "checked-vs-skipped-denominators",
+    "doc-rot-detection",
+    "earned-verification-state",
+    "same-change-enforcement",
+    "source-doc-mapping"
+   ],
+   "deviations": 1,
+   "context": "gdd-compliance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
