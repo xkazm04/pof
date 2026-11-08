@@ -72,7 +72,7 @@ export function WBPStarterPanel({ moduleId }: { moduleId: SubModuleId }) {
           list="wbp-class-suggestions"
           placeholder="UARPGHUDWidget"
           spellCheck={false}
-          className="px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text outline-none"
+          className="focus-ring px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text outline-none"
           style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
         />
         <datalist id="wbp-class-suggestions">
@@ -93,7 +93,8 @@ export function WBPStarterPanel({ moduleId }: { moduleId: SubModuleId }) {
             key={c}
             type="button"
             onClick={() => setTargetClass(c)}
-            className="px-2 py-0.5 rounded text-xs font-mono cursor-pointer transition-all hover:brightness-110"
+            aria-pressed={targetClass === c}
+            className="focus-ring px-2 py-0.5 rounded text-xs font-mono cursor-pointer transition-all hover:brightness-110"
             style={{
               backgroundColor: withOpacity(ACCENT, targetClass === c ? OPACITY_20 : OPACITY_8),
               color: withOpacity(ACCENT, OPACITY_50),
