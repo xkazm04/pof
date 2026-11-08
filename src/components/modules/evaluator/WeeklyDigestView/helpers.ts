@@ -247,6 +247,7 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest,
       const text = `${a.icon} ${a.title}`;
       ctx.font = '12px system-ui, -apple-system, sans-serif';
       const tw = ctx.measureText(text).width + 20;
+      if (ax + tw > W - 40) { ax = 40; y += 30; }
 
       ctx.fillStyle = `${OVERLAY_WHITE}${OPACITY_5}`;
       roundRect(ctx, ax, y - 2, tw, 24, 12);
@@ -256,7 +257,6 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest,
       ctx.fillText(text, ax + 10, y + 13);
 
       ax += tw + 8;
-      if (ax > W - 100) { ax = 40; y += 30; }
     }
     y += 30;
   }
