@@ -24,6 +24,8 @@ export function PropertyColumn({
     <div>
       <button
         onClick={() => onToggleCollapse(category)}
+        type="button"
+        aria-expanded={!isCollapsed}
         className="flex items-center gap-2 mb-2 pb-1.5 border-b w-full text-left cursor-pointer group transition-colors"
         style={{ borderColor: withOpacity(catColor, OPACITY_12) }}
       >

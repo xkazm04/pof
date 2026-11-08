@@ -14,6 +14,8 @@ vi.mock('@/hooks/useModuleCLI', () => ({
 import { CameraProfileComparison } from '@/components/modules/core-engine/sub_character/overview/CameraProfileComparison';
 import { HitboxWireframeViewer } from '@/components/modules/core-engine/sub_character/overview/HitboxWireframeViewer';
 import { InputTab } from '@/components/modules/core-engine/sub_character/input/InputTab';
+import { ClassHierarchy } from '@/components/modules/core-engine/sub_character/overview/ClassHierarchy';
+import { PropertyInspector } from '@/components/modules/core-engine/sub_character/overview/PropertyInspector';
 import type { SubModuleId } from '@/types/modules';
 import { buildBindingsApplyPrompt } from '@/components/modules/core-engine/sub_character/input/build-bindings-apply-prompt';
 
@@ -90,5 +92,34 @@ describe('toggle buttons expose their on/off state, not only a tint', () => {
   it('ability sort keys: exactly the active key is pressed', () => {
     const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
     expect(pressed(container)).toEqual(['true', 'false', 'false']);
+  }, 15000);
+});
+
+describe('disclosure toggles announce what they expand and whether it is open', () => {
+  const expanded = (root: HTMLElement) =>
+    [...root.querySelectorAll('button[aria-expanded]')].map((b) => b.getAttribute('aria-expanded'));
+
+  it('class tree chevrons are named and expanded (2 parent nodes)', () => {
+    const { container } = render(<ClassHierarchy />);
+    const toggles = [...container.querySelectorAll('button[aria-expanded]')];
+    expect(toggles.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Collapse ACharacter', 'Collapse AARPGCharacterBase',
+    ]);
+    fireEvent.click(toggles[0]);
+    expect(toggles[0].getAttribute('aria-expanded')).toBe('false');
+    expect(toggles[0].getAttribute('aria-label')).toBe('Expand ACharacter');
+  });
+
+  it('property columns (3) report their collapse state', () => {
+    useCharacterBlueprintStore.setState({ baseFeelPresetId: FEEL_PRESETS[0].id, feelLayers: [] });
+    const { container } = render(<PropertyInspector />);
+    expect(expanded(container)).toEqual(['true', 'true', 'true']);
+    fireEvent.click(container.querySelectorAll('button[aria-expanded]')[0]);
+    expect(expanded(container)).toEqual(['false', 'true', 'true']);
+  });
+
+  it('ability category groups (4 non-empty) report their collapse state', () => {
+    const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
+    expect(expanded(container)).toEqual(['true', 'true', 'true', 'true']);
   }, 15000);
 });

@@ -72,6 +72,9 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
         {/* Expand toggle */}
         {hasChildren ? (
           <button onClick={() => setExpanded(!expanded)}
+            type="button"
+            aria-expanded={expanded}
+            aria-label={`${expanded ? 'Collapse' : 'Expand'} ${node.name}`}
             className="p-0.5 rounded transition-colors hover:bg-surface/50 cursor-pointer"
             style={{ color: node.color }}>
             <motion.div animate={{ rotate: expanded ? 90 : 0 }} transition={MOTION_CONFIG.micro}>
