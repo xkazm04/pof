@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import { FetchError } from '@/components/modules/shared/FetchError';
-import { MODULE_COLORS, qualityColor } from '@/lib/chart-colors';
+import { MODULE_COLORS, scoreBandToken } from '@/lib/chart-colors';
 import { VERDICT_STANDING_CHIP } from '@/lib/judge/verdictStanding';
 import { rollupVerdictsByCatalog, verdictTotals, countsAsCurrent, type CatalogVerdictGroup, type ViewVerdict } from './verdictRollup';
 import { VerdictDetailModal } from './VerdictDetailModal';
@@ -87,7 +87,7 @@ export function JudgeVerdictsView() {
             <Gavel className="w-4 h-4" style={{ color: ACCENT }} />
             <span className="text-text font-medium">{totals.standing} standing verdicts</span>
             <span className="text-text-muted">·</span>
-            <span style={{ color: qualityColor(totals.passCount / Math.max(1, totals.standing) * 100) }}>{totals.passCount} pass</span>
+            <span style={{ color: scoreBandToken(totals.passCount / Math.max(1, totals.standing) * 100).color }}>{totals.passCount} pass</span>
             {totals.failCount > 0 && (
               <>
                 <span className="text-text-muted">·</span>
@@ -95,7 +95,7 @@ export function JudgeVerdictsView() {
               </>
             )}
             <span className="text-text-muted">·</span>
-            <span className="text-text-muted">avg <span className="tabular-nums" style={totals.avgScore === null ? undefined : { color: qualityColor(totals.avgScore) }}>{totals.avgScore ?? '—'}</span></span>
+            <span className="text-text-muted">avg <span className="tabular-nums" style={totals.avgScore === null ? undefined : { color: scoreBandToken(totals.avgScore).color }}>{totals.avgScore ?? '—'}</span></span>
           </div>
           {totals.standing < totals.total && (
             <p data-testid="verdict-not-counted">
@@ -125,7 +125,7 @@ function CatalogGroup({ group, onSelect }: { group: CatalogVerdictGroup; onSelec
         <div className="flex items-center gap-2 text-2xs text-text-muted">
           <span>{group.standing} standing{group.standing < group.total ? ` of ${group.total}` : ''}</span>
           {group.failCount > 0 && <StatusTag level="bad" word={`${group.failCount} FAIL`} iconClassName="w-2.5 h-2.5" />}
-          <span className="tabular-nums" style={group.avgScore === null ? undefined : { color: qualityColor(group.avgScore) }}>avg {group.avgScore ?? '—'}</span>
+          <span className="tabular-nums" style={group.avgScore === null ? undefined : { color: scoreBandToken(group.avgScore).color }}>avg {group.avgScore ?? '—'}</span>
         </div>
       </header>
       <ul className="divide-y divide-border">
@@ -157,7 +157,7 @@ function VerdictRow({ verdict: v, onSelect }: { verdict: ViewVerdict; onSelect: 
       className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-surface-hover transition-colors focus-ring${standing ? '' : ' bg-surface-hover/40'}`}
     >
       <StatusTag level={v.verdict === 'pass' ? 'ok' : 'bad'} word={v.verdict === 'pass' ? 'PASS' : 'FAIL'} iconClassName="w-2.5 h-2.5" />
-      <span className="text-sm font-semibold tabular-nums w-9 shrink-0" style={{ color: qualityColor(v.score) }}>{v.score}</span>
+      <span className="text-sm font-semibold tabular-nums w-9 shrink-0" style={{ color: scoreBandToken(v.score).color }}>{v.score}</span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm text-text truncate">{v.step}</span>
         <span className="block truncate">

@@ -6,7 +6,7 @@ import { MeterBar } from '@/components/ui/MeterBar';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import { DimensionScoreBars } from '@/components/ui/DimensionScoreBars';
-import { qualityColor } from '@/lib/chart-colors';
+import { scoreBandToken } from '@/lib/chart-colors';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 import { VERDICT_STANDING_CHIP, VERDICT_STANDING_NOTE, rubricStanding } from '@/lib/judge/verdictStanding';
 import { VerdictScoreTrend } from './VerdictScoreTrend';
@@ -44,7 +44,7 @@ export function VerdictDetailModal({ verdict, onClose }: { verdict: ViewVerdict;
 
         <div className="flex flex-wrap items-center gap-2">
           <StatusTag level={level} word={verdict.verdict === 'pass' ? 'PASS' : 'FAIL'} />
-          <span className="text-lg font-semibold tabular-nums" style={{ color: qualityColor(verdict.score) }}>
+          <span className="text-lg font-semibold tabular-nums" style={{ color: scoreBandToken(verdict.score).color }}>
             {verdict.score}<span className="text-xs text-text-muted font-normal">/100</span>
           </span>
           <span className="text-2xs uppercase tracking-wider text-text-muted px-1.5 py-0.5 rounded bg-surface-hover">
@@ -53,7 +53,7 @@ export function VerdictDetailModal({ verdict, onClose }: { verdict: ViewVerdict;
           {chip && <StatusTag level={chip.level === 'ok' ? 'ok' : 'warn'} word={chip.word} />}
         </div>
 
-        <MeterBar value={verdict.score} color={qualityColor} height={8} ariaLabel={`Score ${verdict.score} of 100`} valueText={`${verdict.score} of 100`} />
+        <MeterBar value={verdict.score} color={(pct) => scoreBandToken(pct).color} height={8} ariaLabel={`Score ${verdict.score} of 100`} valueText={`${verdict.score} of 100`} />
 
         <p className="text-2xs text-text-muted font-mono">
           {verdict.model}{verdict.effort ? ` · effort ${verdict.effort}` : ''}
