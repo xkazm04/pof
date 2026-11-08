@@ -28,7 +28,15 @@ const STALE_PLUGIN_ALLOWLIST = [
 /** Catalogs with a plugin but an empty code seed — unmeasurable (0 of 0). Shrink only. */
 const EMPTY_SEED_ALLOWLIST = ['animation-assets', 'audio'].sort();
 
-const withPlugin = CATALOG_SECTIONS.map((s) => s.catalogId).filter((id) => pluginFor(id));
+/**
+ * Sectioned catalogs with NO plugin (2026-11-08). They fall back to `inferDimensions`, and
+ * the two lists above filter them out, so without this pin a new section could ship with no
+ * plugin and no ratchet would see it (absence is never exemption). Shrink only.
+ */
+const NO_PLUGIN_ALLOWLIST = ['affixes', 'character-pipeline', 'contracts', 'player-movement', 'story-arcs'].sort();
+
+const sectioned = CATALOG_SECTIONS.map((s) => s.catalogId);
+const withPlugin = sectioned.filter((id) => pluginFor(id));
 
 describe('gap-analysis coverage ratchet', () => {
   it('the set of catalogs with a stale plugin equals the enumerated allowlist', () => {
@@ -42,6 +50,10 @@ describe('gap-analysis coverage ratchet', () => {
   it('the set of plugin catalogs with an empty code seed equals the enumerated allowlist', () => {
     const empty = withPlugin.filter((id) => codeSeededEntities(id).length === 0).sort();
     expect(empty).toEqual(EMPTY_SEED_ALLOWLIST);
+  });
+
+  it('the set of sectioned catalogs with no plugin equals the enumerated allowlist', () => {
+    expect(sectioned.filter((id) => !pluginFor(id)).sort()).toEqual(NO_PLUGIN_ALLOWLIST);
   });
 
   it('a plugin whose dimensions read its seed reports nothing unmeasured', () => {
