@@ -124,11 +124,15 @@ export function readLedger(path: string, today: string): Ledger {
     throw e;
   }
   const parsed = JSON.parse(raw) as Partial<Ledger> | null;
-  if (!parsed || typeof parsed.date !== 'string' || typeof parsed.count !== 'number' || !Array.isArray(parsed.runs)) {
+  if (
+    !parsed || typeof parsed.date !== 'string' || !Array.isArray(parsed.runs)
+    || typeof parsed.count !== 'number' || !Number.isInteger(parsed.count) || parsed.count < 0
+  ) {
     throw new Error(`ledger ${path} is not a review-runner ledger`);
   }
   if (parsed.date !== today) return { date: today, count: 0, runs: [] };
-  return { date: parsed.date, count: parsed.count, runs: parsed.runs };
+  // Spend fails closed: never read as less than the runs the same file records.
+  return { date: parsed.date, count: Math.max(parsed.count, parsed.runs.length), runs: parsed.runs };
 }
 
 /** Count one started review: re-reads the file, count = previous + 1 (1 on a new day), writes it back. */
