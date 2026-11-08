@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { useProjectStore } from '@/stores/projectStore';
-import { DEFAULT_SCHEDULE, type BuildSchedule } from '@/lib/packaging/build-scheduler';
+import { DEFAULT_SCHEDULE, parseTimeOfDay, type BuildSchedule } from '@/lib/packaging/build-scheduler';
 import type { BuildProfile } from '@/lib/packaging/build-profiles';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO } from '@/lib/chart-colors';
 
@@ -69,6 +69,8 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
   // the last-known (or default 'off') schedule.
   const [readError, setReadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // The time being typed; committed once on blur / Enter, and only when valid.
+  const [timeDraft, setTimeDraft] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -125,6 +127,13 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
     }
   }, [projectPath, projectName, ueVersion, refresh]);
 
+  const commitTime = () => {
+    if (timeDraft === null || busy) return;
+    const next = timeDraft;
+    if (!parseTimeOfDay(next) || next === schedule.time) { setTimeDraft(null); return; }
+    void save({ time: next }).then(() => setTimeDraft(null));
+  };
+
   const toggleDay = (day: number) => {
     const days = nextScheduleDays(schedule.days, day);
     if (days) save({ days });
@@ -166,9 +175,11 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
           <input
             type="time"
             aria-label="Build time"
-            value={schedule.time}
+            value={timeDraft ?? schedule.time}
             disabled={busy}
-            onChange={(e) => save({ time: e.target.value })}
+            onChange={(e) => setTimeDraft(e.target.value)}
+            onBlur={commitTime}
+            onKeyDown={(e) => { if (e.key === 'Enter') commitTime(); }}
             className="bg-background border border-border-bright rounded px-2 py-1 text-xs text-text font-mono outline-none focus-ring"
             data-testid="pof-nightly-time"
           />
