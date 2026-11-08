@@ -33,25 +33,25 @@ export function useCanvasTransform(initial?: Partial<CanvasTransform>): UseCanva
 
   const isPanningRef = useRef(false);
   const [isPanning, setIsPanning] = useState(false);
-  const panStart = useRef({ x: 0, y: 0 });
-  const panOrigin = useRef({ x: 0, y: 0 });
+  /** Last pointer position of the drag: pan moves by the delta since it, so a wheel zoom mid-drag is kept. */
+  const lastPointer = useRef({ x: 0, y: 0 });
 
   const startPan = useCallback((e: PointerEvent) => {
     isPanningRef.current = true;
     setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY };
-    panOrigin.current = { x: transform.panX, y: transform.panY };
+    lastPointer.current = { x: e.clientX, y: e.clientY };
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-  }, [transform.panX, transform.panY]);
+  }, []);
 
   const onPointerMove = useCallback((e: PointerEvent) => {
     if (!isPanningRef.current) return;
-    const dx = e.clientX - panStart.current.x;
-    const dy = e.clientY - panStart.current.y;
+    const dx = e.clientX - lastPointer.current.x;
+    const dy = e.clientY - lastPointer.current.y;
+    lastPointer.current = { x: e.clientX, y: e.clientY };
     setTransform((prev) => ({
       ...prev,
-      panX: panOrigin.current.x + dx,
-      panY: panOrigin.current.y + dy,
+      panX: prev.panX + dx,
+      panY: prev.panY + dy,
     }));
   }, []);
 
