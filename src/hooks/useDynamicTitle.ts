@@ -26,14 +26,19 @@ const TONE_COLOR: Record<TabTone, string | null> = {
 
 // Cache original favicon href so we can restore it
 let originalFaviconHref: string | null = null;
+// The link this hook created when the page had none: restoring removes it again.
+let createdFavicon: HTMLLinkElement | null = null;
 
 function setFavicon(color: string | null) {
+  const existing = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  if (!color && !existing) return;
   const link: HTMLLinkElement =
-    document.querySelector('link[rel="icon"]') ??
+    existing ??
     (() => {
       const el = document.createElement('link');
       el.rel = 'icon';
       document.head.appendChild(el);
+      createdFavicon = el;
       return el;
     })();
 
@@ -43,7 +48,13 @@ function setFavicon(color: string | null) {
   }
 
   if (!color) {
-    link.href = originalFaviconHref;
+    if (link === createdFavicon) {
+      link.remove();
+      createdFavicon = null;
+    } else {
+      link.href = originalFaviconHref;
+    }
+    originalFaviconHref = null;
     return;
   }
 

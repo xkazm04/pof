@@ -141,3 +141,17 @@ describe('useDynamicTitle — lab shell (ActivitySummary)', () => {
     expect(document.title).toBe('(Needs you) Original');
   });
 });
+
+describe('useDynamicTitle - favicon restore', () => {
+  it('no icon link at first paint: the link the hook created is removed when it finishes', () => {
+    document.head.querySelectorAll('link[rel="icon"]').forEach((l) => l.remove());
+    const ctx = { fillStyle: '', shadowColor: '', shadowBlur: 0, beginPath() {}, arc() {}, fill() {} };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,AAAA');
+    const { unmount } = render(<Legacy />);
+    startRun('a');
+    expect(document.head.querySelectorAll('link[rel="icon"]').length).toBe(1);
+    unmount();
+    expect(document.head.querySelectorAll('link[rel="icon"]').length).toBe(0);
+  });
+});
