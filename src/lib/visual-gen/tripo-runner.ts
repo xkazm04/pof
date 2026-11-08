@@ -472,6 +472,8 @@ function terr(message: string, start: number, now: () => number, taskId?: string
 
 const MISSING_KEY = 'TRIPO_API_KEY not set (get a free key at https://platform.tripo3d.ai)';
 
+const reasonOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
 interface PollCtx {
   http: TripoHttp;
   auth: Record<string, string>;
@@ -522,14 +524,23 @@ async function pollTripoTask(taskId: string, outputPath: string, opts: TripoPoll
   let unreadable = 0;
   let lastUnreadable: string | undefined;
   for (let i = 0; i < maxPolls; i++) {
-    const s = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth);
-    const ps = parseTaskStatus(s.json);
+    // A rejected request (dropped socket, DNS blip) is an unreadable poll like any other:
+    // the task is unaffected and paid for, so it must not escape as a job-ending throw.
+    const ps: ParsedStatus = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth).then(
+      (s) => parseTaskStatus(s.json),
+      (e: unknown): ParsedStatus => ({ state: 'transient', error: `poll request failed: ${reasonOf(e)}` }),
+    );
     ctx.onStatus?.(ps.state === 'transient' ? 'unreadable' : (ps.status ?? ps.state), ps.progress);
     if (ps.state === 'success') {
       if (!ps.modelUrl) return terr('task succeeded but no model URL in output', start, now, taskId, false);
-      const ok = await http.download(ps.modelUrl, outputPath);
       // The task finished and is paid for: a fresh poll re-issues the model URL, so a
-      // failed download is recoverable for free.
+      // failed download is recoverable for free, however it failed.
+      let thrown: string | undefined;
+      const ok = await http.download(ps.modelUrl, outputPath).catch((e: unknown) => {
+        thrown = reasonOf(e);
+        return false;
+      });
+      if (thrown) return terr(`model download failed: ${thrown}`, start, now, taskId, true);
       if (!ok || !fileExists(outputPath)) return terr('model download failed', start, now, taskId, true);
       return {
         ok: true,
