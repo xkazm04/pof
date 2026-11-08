@@ -39,6 +39,8 @@ export function SelectedModuleDetail({
           </span>
         </div>
         <button
+          type="button"
+          aria-label={`Close ${selectedDetail.label} detail`}
           onClick={() => setSelectedModule(null)}
           className="p-1 rounded-md hover:bg-border transition-colors"
         >

@@ -33,6 +33,8 @@ export function RegressionAlerts({
             Regression
           </span>
           <button
+            type="button"
+            aria-label={`Dismiss alert: ${alert.message}`}
             onClick={() => dismissAlert(alert.id)}
             className="p-0.5 rounded hover:bg-white/10 transition-colors"
           >

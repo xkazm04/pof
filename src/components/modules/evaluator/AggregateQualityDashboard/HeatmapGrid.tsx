@@ -79,6 +79,7 @@ export function HeatmapGrid({
             onClick={fetchData}
             className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
             title="Refresh data"
+            aria-label="Refresh data"
           >
             <RefreshCw className="w-3 h-3" />
           </button>
