@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       case 'heartbeat': {
         const record = taskRegistry.get(taskId);
         if (record && record.status === 'running') { record.startedAt = Date.now(); return apiSuccess({ record }); }
-        return apiError('Task not found or not running');
+        return apiError('Task not found or not running', 404);
       }
       case 'clear': {
         if (!sessionId) return apiError('sessionId is required for clear', 400);
