@@ -116,7 +116,7 @@ export function parseViewCritiqueReply(raw: string): ViewCritiqueReply {
     return { ok: false, error: `SEVERITY ${severityRaw} is below the 0-${SEVERITY_MAX} scale` };
   }
   const body = defectsMatch[1].trim();
-  const defects = /^none$/i.test(body)
+  const defects = /^none[.!]?$/i.test(body)
     ? []
     : body.split(',').map((d) => d.trim()).filter(Boolean);
   return { ok: true, defects, severity: Math.max(0, Math.min(SEVERITY_MAX, Math.round(severityRaw))) };
