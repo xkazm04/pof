@@ -101,7 +101,9 @@ class EventBus {
 
     return () => {
       channelHandlers!.delete(handler as EventHandler<never>);
-      if (channelHandlers!.size === 0) {
+      // Only the set this handle subscribed to: a repeated unsubscribe must not
+      // drop a newer set holding other subscribers on the same channel.
+      if (channelHandlers!.size === 0 && this.handlers.get(channel) === channelHandlers) {
         this.handlers.delete(channel);
       }
     };
