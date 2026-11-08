@@ -155,6 +155,9 @@ export function LayoutLab() {
         {/* Lab-level cross-catalog coach — only over the composition (Baseline) view;
             the Matrix and Canon carry their own catalog-wide summaries. */}
         {view === 'catalogs' && groups.length > 0 && <><GlobalCoach t={theme} /><WorkQueueStrip q={workQueue} /></>}
+        {/* The view lives in shell state, not a route change, so no framework announcer fires:
+            name the active view in a polite live region (focus stays on the header row). */}
+        <div role="status" aria-live="polite" className="sr-only" data-testid="lab-view-announcer">{VIEW_NAME[view]} view</div>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={view} id="lab-view" tabIndex={-1}
             initial={reduce ? false : { opacity: 0, y: 6 }}
@@ -189,6 +192,8 @@ export function LayoutLab() {
     </div>
   );
 }
+
+const VIEW_NAME = { catalogs: 'Catalogs', matrix: 'Matrix', canon: 'Canon', game: 'Game' } as const;
 
 /** The Catalogs/Matrix surface for a game with no pipelines in its manifest yet. */
 function EmptyGameBoard({ title, onOpenGame }: { title: string; onOpenGame: () => void }) {

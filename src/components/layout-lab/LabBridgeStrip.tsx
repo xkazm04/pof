@@ -13,12 +13,12 @@
  * connection turns into a guided fix instead of an opaque error string.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { BridgeStatusIndicator, type ConnectionStatus } from '@/components/ui/BridgeStatusIndicator';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { BridgeDoctor } from '@/components/bridge-doctor/BridgeDoctor';
 import { Z_INDEX } from '@/lib/constants';
 import { Button } from './ui/Button';
+import { useHeaderPopover } from './hooks/useHeaderPopover';
 import type { LabTheme } from './theme';
 
 interface LabBridgeStripProps {
@@ -54,26 +54,7 @@ export function LabBridgeStrip({ t }: LabBridgeStripProps) {
   const connectionStatus = usePofBridgeStore((s) => s.connectionStatus);
   const pluginInfo = usePofBridgeStore((s) => s.pluginInfo);
   const detail = buildDetail(connectionStatus, pluginInfo);
-  const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLSpanElement | null>(null);
-
-  // Close on outside click / Escape.
-  useEffect(() => {
-    if (!open) return;
-    const handleDown = (e: MouseEvent) => {
-      if (!wrapperRef.current) return;
-      if (!wrapperRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', handleDown);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleDown);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [open]);
-
-  const toggle = useCallback(() => setOpen((v) => !v), []);
+  const { open, toggle, panelRef, wrapperProps } = useHeaderPopover();
 
   const labPalette: Partial<Record<ConnectionStatus, string>> = {
     connected: t.ok,
@@ -84,7 +65,7 @@ export function LabBridgeStrip({ t }: LabBridgeStripProps) {
   };
 
   return (
-    <span ref={wrapperRef} style={{ marginLeft: 'auto', position: 'relative' }}>
+    <span {...wrapperProps} style={{ marginLeft: 'auto', position: 'relative' }}>
       <Button
         onClick={toggle}
         aria-haspopup="dialog"
@@ -109,6 +90,8 @@ export function LabBridgeStrip({ t }: LabBridgeStripProps) {
 
       {open && (
         <div
+          ref={panelRef}
+          tabIndex={-1}
           role="dialog"
           aria-label="Bridge Doctor"
           style={{

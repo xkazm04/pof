@@ -188,9 +188,17 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
  */
 export function useLabSearchShortcut(): [boolean, (v: boolean) => void] {
   const [open, setOpen] = useState(false);
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; }, [open]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
+      // One modal at a time: while another aria-modal dialog (the narrow-shell drawer, a
+      // ConfirmDialog) is up, opening search would stack a second focus trap over it.
+      if (!openRef.current && document.querySelector('[aria-modal="true"]')) {
+        if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) e.preventDefault();
+        return;
+      }
       const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
       if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();

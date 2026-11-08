@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { Z_INDEX } from '@/lib/constants';
 import { useDynamicTitle } from '@/hooks/useDynamicTitle';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { LANE_GLYPH, LANE_WORD, drainSubject, type ActivityLane, type LaneState } from './activityModel';
 import { useLabRunnerStore, type DrainRun } from './labRunnerStore';
 import { useLabActivity } from './hooks/useLabActivity';
+import { useHeaderPopover } from './hooks/useHeaderPopover';
 import { Button } from './ui/Button';
 import { labPanelStyle, type LabTheme } from './theme';
 
@@ -36,32 +37,15 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
   // The lab shell's tab title: this chip is always mounted in the header and already holds
   // the summary, so the tab reports outcomes (failed / needs you / done) from the same read.
   useDynamicTitle(summary);
-  const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLSpanElement | null>(null);
+  const { open, close, toggle, panelRef, wrapperProps } = useHeaderPopover();
   const setPanelOpen = useOneShotLabStore((s) => s.setPanelOpen);
   const runMap = useLabRunnerStore((s) => s.runs);
   const drainRun = useMemo(() => drainSubject(Object.values(runMap)), [runMap]);
 
-  // Close on outside click / Escape (mirrors LabBridgeStrip's popover behaviour).
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  const toggle = useCallback(() => setOpen((v) => !v), []);
   const tone = toneOf(summary.state, t);
 
   return (
-    <span ref={wrapperRef} style={{ position: 'relative', display: 'inline-flex' }}>
+    <span {...wrapperProps} style={{ position: 'relative', display: 'inline-flex' }}>
       <Button
         onClick={toggle}
         mono
@@ -80,6 +64,8 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
 
       {open && (
         <div
+          ref={panelRef}
+          tabIndex={-1}
           role="dialog"
           aria-label="What is running right now"
           data-testid="lab-activity-panel"
@@ -98,8 +84,8 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
               t={t}
               actions={
                 lane.id === 'one-shot' && lane.state !== 'idle'
-                  ? [{ label: 'Open panel', onClick: () => { setPanelOpen(true); setOpen(false); }, aria: 'open one-shot panel' }]
-                  : lane.id === 'drain' ? drainActions(drainRun, onOpenDrain, () => setOpen(false)) : []
+                  ? [{ label: 'Open panel', onClick: () => { setPanelOpen(true); close(); }, aria: 'open one-shot panel' }]
+                  : lane.id === 'drain' ? drainActions(drainRun, onOpenDrain, close) : []
               }
             />
           ))}
