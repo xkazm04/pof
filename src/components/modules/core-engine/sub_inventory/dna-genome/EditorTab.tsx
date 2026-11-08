@@ -48,7 +48,8 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
       <BlueprintPanel color={selected.color} className="space-y-3 p-3">
         <div className="flex items-center justify-between">
           <SectionHeader label="DNA Strand" color={selected.color} icon={Dna} />
-          {genomeCount > 1 && (
+          {/* Presets are sticky (the store refuses to delete them), so no Delete for one. */}
+          {genomeCount > 1 && !selected.isPreset && (
             <button
               type="button"
               onClick={() => deleteGenome(selected.id)}
