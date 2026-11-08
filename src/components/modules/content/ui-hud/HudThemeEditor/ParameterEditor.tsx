@@ -1,6 +1,7 @@
 'use client';
 
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { handleRovingTabKeyDown } from '@/components/ui/rovingTab';
 import { OPACITY_10 } from '@/lib/chart-colors';
 import { ColorPickerField, SliderField } from './Fields';
 import { FadeTimeline } from './FadeTimeline';
@@ -17,23 +18,6 @@ interface Section {
 
 const tabId = (s: SectionId) => `hud-theme-tab-${s}`;
 const panelId = (s: SectionId) => `hud-theme-panel-${s}`;
-
-// Arrow/Home/End roving focus over the tab strip (WAI-ARIA tabs pattern,
-// automatic activation).
-function handleTabKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-  if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
-  const tabs = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-  const current = tabs.findIndex(t => t === document.activeElement);
-  if (current === -1) return;
-  e.preventDefault();
-  const next =
-    e.key === 'Home' ? 0
-      : e.key === 'End' ? tabs.length - 1
-        : e.key === 'ArrowRight' ? (current + 1) % tabs.length
-          : (current - 1 + tabs.length) % tabs.length;
-  tabs[next].focus();
-  tabs[next].click();
-}
 
 // One panel per section, rendered from the parameter table: colour rows first,
 // then sliders, in table order. Each UPROPERTY has exactly one control.
@@ -92,7 +76,7 @@ export function ParameterEditor({
       <div
         role="tablist"
         aria-label="HUD theme parameter sections"
-        onKeyDown={handleTabKeyDown}
+        onKeyDown={handleRovingTabKeyDown}
         className="flex gap-1"
       >
         {sections.map(s => (

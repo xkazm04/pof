@@ -1,5 +1,6 @@
 import { Grid3x3, Shield, Package, MousePointer2 } from 'lucide-react';
 import { SectionTab } from './SectionTab';
+import { handleRovingTabKeyDown } from '@/components/ui/rovingTab';
 
 type Section = 'grid' | 'slots' | 'equip' | 'interact';
 
@@ -21,24 +22,6 @@ export function DesignerHeader({
   activeSection: Section;
   setActiveSection: (s: Section) => void;
 }) {
-  // Arrow/Home/End roving focus over the tab strip (WAI-ARIA tabs pattern,
-  // automatic activation). Reads the rendered tabs so the strip stays the
-  // single source of tab order.
-  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
-    const tabs = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
-    const current = tabs.findIndex((t) => t === document.activeElement);
-    if (current === -1) return;
-    e.preventDefault();
-    const next =
-      e.key === 'Home' ? 0
-        : e.key === 'End' ? tabs.length - 1
-          : e.key === 'ArrowRight' ? (current + 1) % tabs.length
-            : (current - 1 + tabs.length) % tabs.length;
-    tabs[next].focus();
-    tabs[next].click();
-  };
-
   return (
     <div className="relative z-10 w-full">
       {/* Header */}
@@ -58,7 +41,7 @@ export function DesignerHeader({
       <div
         role="tablist"
         aria-label="Inventory designer sections"
-        onKeyDown={handleTabKeyDown}
+        onKeyDown={handleRovingTabKeyDown}
         className="flex items-center border-b border-violet-900/40 pb-0"
       >
         {SECTIONS.map((s) => (

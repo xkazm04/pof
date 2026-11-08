@@ -17,10 +17,12 @@ export function SummaryBar({
   onGenerate: (config: InventoryConfig) => void;
   isGenerating: boolean;
 }) {
+  const noTypes = enabledSlots.length === 0;
+  const blocked = isGenerating || noTypes;
   return (
     <div className="relative z-10 pt-6 mt-6 border-t border-violet-900/40">
       <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-        <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono uppercase text-violet-400/80">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-mono uppercase text-violet-400/80">
           <span className="bg-violet-950/40 px-2 py-1 rounded border border-violet-900/30">GRID: <span className="text-violet-200 font-bold">{config.gridCols}×{config.gridRows} ({totalSlots})</span></span>
           <span className="bg-violet-950/40 px-2 py-1 rounded border border-violet-900/30">TYPES: <span className="text-violet-200 font-bold">{enabledSlots.length}</span></span>
           <span className="bg-violet-950/40 px-2 py-1 rounded border border-violet-900/30">EQUIP: <span className="text-violet-200 font-bold">{enabledEquip.length}</span></span>
@@ -29,7 +31,8 @@ export function SummaryBar({
       </div>
       <button
         onClick={() => onGenerate(config)}
-        disabled={isGenerating}
+        disabled={blocked}
+        aria-describedby={noTypes ? 'inventory-generate-reason' : undefined}
         className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
         style={{
           backgroundColor: 'rgba(167,139,250,0.15)',
@@ -53,6 +56,11 @@ export function SummaryBar({
           </>
         )}
       </button>
+      {noTypes && (
+        <p id="inventory-generate-reason" className="mt-2 text-xs text-text-muted">
+          Enable at least one item type to generate.
+        </p>
+      )}
     </div>
   );
 }
