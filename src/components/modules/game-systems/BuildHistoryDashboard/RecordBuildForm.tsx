@@ -3,7 +3,19 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { PLATFORM_IDS, platformLabel } from '@/lib/packaging/build-profiles';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_ERROR } from '@/lib/chart-colors';
+
+/**
+ * Blank -> undefined (not recorded); otherwise a finite, non-negative number or an
+ * error. `parseFloat` read 'abc' as NaN (sent as null, stored as "unknown" silently),
+ * '1..5' as 1, and let '-2' through as a negative size.
+ */
+function parseAmount(text: string): { value?: number; ok: boolean } {
+  const t = text.trim();
+  if (t === '') return { ok: true };
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? { value: n, ok: true } : { ok: false };
+}
 
 // `nextVersion` is what the route will assign a green record (current + patch, or a
 // pending bump) — the CURRENT version used to sit under this 'Next:' label.
@@ -13,10 +25,20 @@ export function RecordBuildForm({ onSubmit, nextVersion }: { onSubmit: (data: Re
   const [status, setStatus] = useState<'success' | 'failed'>('success');
   const [sizeGb, setSizeGb] = useState('');
   const [durationMin, setDurationMin] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = () => {
-    const sizeBytes = sizeGb ? Math.round(parseFloat(sizeGb) * 1024 * 1024 * 1024) : undefined;
-    const durationMs = durationMin ? Math.round(parseFloat(durationMin) * 60000) : undefined;
+    const size = parseAmount(sizeGb);
+    const dur = parseAmount(durationMin);
+    if (!size.ok || !dur.ok) {
+      setError(!size.ok
+        ? `Size "${sizeGb}" is not a non-negative number of GB.`
+        : `Duration "${durationMin}" is not a non-negative number of minutes.`);
+      return;
+    }
+    setError(null);
+    const sizeBytes = size.value != null ? Math.round(size.value * 1024 * 1024 * 1024) : undefined;
+    const durationMs = dur.value != null ? Math.round(dur.value * 60000) : undefined;
     onSubmit({ platform, config, status, sizeBytes, durationMs });
     setSizeGb('');
     setDurationMin('');
@@ -72,6 +94,9 @@ export function RecordBuildForm({ onSubmit, nextVersion }: { onSubmit: (data: Re
       >
         Record Build
       </button>
+      {error && (
+        <div role="alert" className="mt-1.5 text-2xs" style={{ color: STATUS_ERROR }}>{error}</div>
+      )}
     </div>
   );
 }
