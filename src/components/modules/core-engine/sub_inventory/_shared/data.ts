@@ -330,28 +330,6 @@ export interface ItemSet {
 
 export const ITEM_SETS: ItemSet[] = [
   {
-    name: "Warrior's Resolve",
-    color: STATUS_ERROR,
-    pieces: [
-      { slot: 'Chest', name: 'Resolve Chestplate', owned: true },
-      { slot: 'Head', name: 'Resolve Helm', owned: true },
-      { slot: 'Legs', name: 'Resolve Greaves', owned: false },
-    ],
-    bonuses: [
-      { pieces: 2, description: '+10% Armor' },
-      { pieces: 3, description: '+25% Max HP' },
-    ],
-  },
-  {
-    name: 'Arcane Scholar',
-    color: ACCENT_PURPLE,
-    pieces: [
-      { slot: 'MainHand', name: 'Scholar Staff', owned: true },
-      { slot: 'Amulet', name: 'Scholar Amulet', owned: true },
-    ],
-    bonuses: [{ pieces: 2, description: '+20% Mana' }],
-  },
-  {
     name: 'Mandalorian Arsenal',
     color: STATUS_ERROR,
     pieces: [

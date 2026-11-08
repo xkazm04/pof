@@ -133,16 +133,6 @@ Measured: UNMEASURED - no economy simulation run was passed to the advisor. Trea
 ## Set Bonuses
 [
   {
-    "name": "Warrior's Resolve",
-    "pieces": 3,
-    "bonuses": "2pc: +10% Armor, 3pc: +25% Max HP"
-  },
-  {
-    "name": "Arcane Scholar",
-    "pieces": 2,
-    "bonuses": "2pc: +20% Mana"
-  },
-  {
     "name": "Mandalorian Arsenal",
     "pieces": 4,
     "bonuses": "2pc: +10% Armor Penetration, 3pc: +15% Physical Damage, 4pc: Beskar Resilience: -25% incoming damage"
