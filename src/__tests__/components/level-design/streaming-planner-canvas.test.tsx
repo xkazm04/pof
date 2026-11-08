@@ -104,3 +104,10 @@ describe('reduced motion', () => {
     expect(render(lines).container.querySelectorAll('animate').length).toBe(0);
   });
 });
+
+describe('transition line affordance', () => {
+  it('its hit area says what it links and how to remove it', () => {
+    const { container } = render(<svg><TransitionLines lines={[LINE]} deleteTransition={() => {}} /></svg>);
+    expect(container.querySelector('title')!.textContent).toMatch(/Town to Forest.*right-click to remove/i);
+  });
+});

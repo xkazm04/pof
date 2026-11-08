@@ -71,7 +71,9 @@ export function TransitionLines({ lines, deleteTransition }: TransitionLinesProp
               stroke="transparent" strokeWidth={12}
               style={{ cursor: 'pointer' }}
               onContextMenu={(e) => { e.preventDefault(); deleteTransition(ln.id); }}
-            />
+            >
+              <title>{`${ln.fromName} to ${ln.toName}. Right-click to remove.`}</title>
+            </line>
           </g>
         );
       })}
