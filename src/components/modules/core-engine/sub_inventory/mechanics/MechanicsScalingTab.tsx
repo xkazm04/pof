@@ -33,6 +33,12 @@ function groupByType(all: ItemData[]): Record<string, ItemData[]> {
     return acc;
   }, {});
 }
+/** The level span the scaling curves cover, read from the data (the advisor prompt quotes the same). */
+const SCALING_PTS = SCALING_LINES[0]?.points ?? [];
+const SCALING_RANGE = SCALING_PTS.length
+  ? `${SCALING_PTS[0].level}-${SCALING_PTS[SCALING_PTS.length - 1].level}`
+  : 'n/a';
+
 /* ── MechanicsScalingTab ───────────────────────────────────────────────── */
 
 interface MechanicsScalingTabProps {
@@ -165,7 +171,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
       {/* Item Level Scaling */}
       <BlueprintPanel color={ACCENT} className="p-4">
         <SectionHeader icon={TrendingUp} label="Item Level Scaling Preview" color={ACCENT} />
-        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Stat values across item levels 1-50 with min-max bands.</p>
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Stat values across item levels {SCALING_RANGE} with min-max bands.</p>
         <div className="flex justify-center">
           <ItemScalingChart lines={SCALING_LINES} width={280} height={110} />
         </div>
