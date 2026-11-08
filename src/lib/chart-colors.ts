@@ -628,7 +628,8 @@ export function statusToColor(status: string): { bg: string; text: string; borde
     warn: { color: STATUS_WARNING, label: 'WARN' },
     error: { color: STATUS_ERROR, label: 'FAIL' },
   };
-  const { color, label } = map[status] ?? { color: STATUS_ERROR, label: 'FAIL' };
+  // A status outside ok/warn/error was never measured: render it as unknown, not as a failure.
+  const { color, label } = map[status] ?? { color: STATUS_MUTED, label: 'UNKNOWN' };
   return { bg: statusBg(color), text: color, border: statusBorder(color), label };
 }
 
