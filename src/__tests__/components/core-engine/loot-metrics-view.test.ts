@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lootMetricsView } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
+import { lootMetricsView, LOOT_PIPELINE_STAGES } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
 import { initialTunerState, tunerReducer, exactEV, type TunerState } from '@/components/modules/core-engine/sub_loot/_shared/bindingTuner';
 import { DEFAULT_ENEMY_LOOT_BINDINGS, DEFAULT_RARITY_GOLD } from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
 import { findPercentileKill } from '@/components/modules/core-engine/sub_loot/_shared/math';
@@ -56,6 +56,13 @@ describe('lootMetricsView', () => {
     expect(impact.value).toBeCloseTo(expected, 9);
     expect(impact.value).toBeGreaterThan(0);
     expect(impact.label).not.toBe('untuned');
+  });
+
+  it('pipeline is the stage count with the stage flow as its detail (the glyph prints it)', () => {
+    const v = lootMetricsView({ tuning: untuned(), pityThreshold: 20 });
+    expect(v.pipeline).toMatchObject({ value: LOOT_PIPELINE_STAGES.length, unit: 'stages', basis: 'fixture' });
+    expect(LOOT_PIPELINE_STAGES).toHaveLength(5);
+    expect(v.pipeline.detail).toBe(LOOT_PIPELINE_STAGES.join(' → '));
   });
 
   it('has exactly one reading per arpg-loot Feature Map section', () => {

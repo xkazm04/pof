@@ -17,16 +17,16 @@ import { isLootSectionId, lootMetricsView, type LootSectionId, type MetricReadin
 
 /** One glyph per arpg-loot section; each receives its reading from the one view. */
 const GLYPHS = {
-  pipeline: () => <PipelineMetric />,
+  pipeline: (r) => <PipelineMetric reading={r} />,
   weights: () => <WeightsMetric />,
-  'world-items': () => <WorldItemsMetric />,
+  'world-items': (r) => <WorldItemsMetric reading={r} />,
   treemap: () => <TreemapMetric />,
-  histogram: () => <HistogramMetric />,
-  simulator: () => <SimulatorMetric />,
+  histogram: (r) => <HistogramMetric reading={r} />,
+  simulator: (r) => <SimulatorMetric reading={r} />,
   'co-occurrence': (r) => <CoOccurrenceMetric reading={r} />,
   timer: (r) => <TimerMetric reading={r} />,
   drought: (r) => <DroughtMetric reading={r} />,
-  beacon: () => <BeaconMetric />,
+  beacon: (r) => <BeaconMetric reading={r} />,
   impact: (r) => <ImpactMetric reading={r} />,
 } satisfies Record<LootSectionId, (reading: MetricReading) => ReactNode>;
 

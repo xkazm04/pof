@@ -2,10 +2,11 @@
 
 import { BEACON_CONFIGS, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
+import type { MetricReading } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
 
-const beaconCount = BEACON_CONFIGS.length;
-
-export function BeaconMetric() {
+/** One bar per beacon config; the printed count is the view's reading. */
+export function BeaconMetric({ reading }: { reading: MetricReading }) {
   return (
     <div className="flex items-center gap-1.5">
       <div className="flex gap-0.5 items-end">
@@ -22,9 +23,9 @@ export function BeaconMetric() {
           />
         ))}
       </div>
-      <div className="text-[10px] font-mono leading-tight">
-        <span className="font-bold" style={{ color: ACCENT }}>{beaconCount}</span>
-        <span style={{ color: withOpacity(ACCENT, OPACITY_50) }}> beacons</span>
+      <div className={`${TEXT_SCALE.meta} font-mono leading-tight`}>
+        <span className="font-bold" style={{ color: ACCENT }}>{reading.value ?? '?'}</span>
+        <span style={{ color: withOpacity(ACCENT, OPACITY_50) }}> {reading.unit}</span>
       </div>
     </div>
   );
