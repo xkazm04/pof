@@ -13,6 +13,9 @@ import type {
 const ENDPOINT = '/api/feature-matrix/batch-review';
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+/** Consecutive failed polls before the hook says the server is not answering (as useBuildRun's lost state). */
+export const MAX_MISSED_BATCH_POLLS = 20;
+
 export interface UseBatchReviewResult {
   /** The ONE server-side batch (running or last finished), or null. */
   batch: BatchReviewState | null;
@@ -40,9 +43,11 @@ export function useBatchReview(options: { onSettled?: () => void } = {}): UseBat
   const [batch, setBatch] = useState<BatchReviewState | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStale, setIsStale] = useState(false);
   // Monotonic poll token: under a slow server an earlier poll can resolve after
   // a later one — only the newest issued poll may commit its snapshot.
   const pollTokenRef = useRef(0);
+  const missedPollsRef = useRef(0);
   const onSettledRef = useRef(options.onSettled);
   onSettledRef.current = options.onSettled;
 
@@ -52,7 +57,14 @@ export function useBatchReview(options: { onSettled?: () => void } = {}): UseBat
       const data = await apiFetch<{ batch: BatchReviewState | null }>(ENDPOINT);
       if (token !== pollTokenRef.current) return; // a newer poll already resolved
       setBatch(data.batch);
-    } catch { /* silent — the next poll retries */ }
+      missedPollsRef.current = 0;
+      setIsStale(false);
+    } catch {
+      // The next poll retries; a long unbroken run of misses is surfaced as `error`.
+      if (token !== pollTokenRef.current) return;
+      missedPollsRef.current += 1;
+      if (missedPollsRef.current >= MAX_MISSED_BATCH_POLLS) setIsStale(true);
+    }
   }, []);
 
   const status = batch?.status ?? null;
@@ -118,5 +130,6 @@ export function useBatchReview(options: { onSettled?: () => void } = {}): UseBat
     }
   }, []);
 
-  return { batch, isRunning, isStarting, error, start, abort, clear };
+  const staleError = isStale ? `The batch status is not answering (${MAX_MISSED_BATCH_POLLS} polls failed); the server may be down.` : null;
+  return { batch, isRunning, isStarting, error: error ?? staleError, start, abort, clear };
 }
