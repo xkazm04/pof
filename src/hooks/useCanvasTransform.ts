@@ -62,6 +62,8 @@ export function useCanvasTransform(initial?: Partial<CanvasTransform>): UseCanva
 
   const onWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
+    // A sideways swipe reports deltaY 0: it says nothing about zoom.
+    if (e.deltaY === 0) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
