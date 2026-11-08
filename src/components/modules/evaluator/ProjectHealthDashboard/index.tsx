@@ -172,6 +172,7 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
       <HealthHeader
         lastScan={lastScan}
         isLoading={feed.loading}
+        loadFailed={feed.error !== null}
         scanHistory={scanHistory}
         showHistoryOverlay={showHistoryOverlay}
         setShowHistoryOverlay={setShowHistoryOverlay}
