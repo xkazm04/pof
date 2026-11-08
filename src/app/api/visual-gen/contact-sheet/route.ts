@@ -67,7 +67,7 @@ const sharpImageOps: SheetImageOps = {
     const m = await sharp(path).metadata();
     return { width: m.width ?? 0, height: m.height ?? 0 };
   },
-  async stats(path, cells, seamXs) {
+  async stats(path, cells, seamXs, seamYs) {
     const cellStdev: number[] = [];
     for (const c of cells) {
       // `.stats()` reads the INPUT image, not the pipeline built in front of it: an
@@ -89,13 +89,32 @@ const sharpImageOps: SheetImageOps = {
       }
       return sum / info.height;
     };
-    const seamSet = new Set(seamXs);
-    const seams = seamXs.filter((x) => x > 0).map((x) => +colGrad(x).toFixed(3));
+    const rowGrad = (y: number) => {
+      let sum = 0;
+      for (let x = 0; x < info.width; x++) {
+        sum += Math.abs(data[y * info.width + x] - data[(y - 1) * info.width + x]);
+      }
+      return sum / info.width;
+    };
+    // Both axes: a drawn row line is as much a seam defect as a drawn column line. The
+    // interior baseline pools the non-cut columns AND rows so the ratio compares like with like.
+    const colSeams = new Set(seamXs);
+    const rowSeams = new Set(seamYs);
+    const seams = [
+      ...seamXs.filter((x) => x > 0).map((x) => +colGrad(x).toFixed(3)),
+      ...seamYs.filter((y) => y > 0).map((y) => +rowGrad(y).toFixed(3)),
+    ];
     let interior = 0;
     let n = 0;
     for (let x = 1; x < info.width; x++) {
-      if (!seamSet.has(x)) {
+      if (!colSeams.has(x)) {
         interior += colGrad(x);
+        n++;
+      }
+    }
+    for (let y = 1; y < info.height; y++) {
+      if (!rowSeams.has(y)) {
+        interior += rowGrad(y);
         n++;
       }
     }
