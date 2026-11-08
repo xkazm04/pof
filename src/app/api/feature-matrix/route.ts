@@ -82,6 +82,11 @@ export const POST = withRoute(async (request: NextRequest) => {
         400,
       );
     }
+    // A closed enum, as on PATCH. The DB layer would coerce an unrecognized status to
+    // 'unknown', so a typo silently overwrote a real verdict with "never evaluated".
+    if (!(FEATURE_STATUSES as readonly unknown[]).includes(f.status)) {
+      return apiError(`Invalid status for "${f.featureName}": ${String(f.status)}`, 400);
+    }
   }
 
   const seedOnly = body.seedOnly === true;

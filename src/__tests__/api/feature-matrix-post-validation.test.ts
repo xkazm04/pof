@@ -49,3 +49,21 @@ describe('POST /api/feature-matrix — filePaths elements', () => {
     expect(getFeaturesByModule(MODULE)[0].filePaths).toEqual(['Source/Combat.cpp']);
   });
 });
+
+describe('POST /api/feature-matrix — row status is a closed enum', () => {
+  // PATCH refuses an unknown status (400); POST used to coerce it to 'unknown'
+  // (validateStatus), so a typo overwrote a real verdict with "never evaluated".
+  it('refuses a row whose status is outside FEATURE_STATUSES and keeps the stored verdict', async () => {
+    expect((await send('POST', { moduleId: MODULE, features: [row()] })).status).toBe(200);
+    const res = await send('POST', { moduleId: MODULE, features: [row({ status: 'Implemented' })] });
+    expect(res.status).toBe(400);
+    expect(getFeaturesByModule(MODULE)[0].status).toBe('implemented');
+  });
+
+  it('refuses a row with no status', async () => {
+    const { status: _omit, ...noStatus } = row();
+    void _omit;
+    const res = await send('POST', { moduleId: MODULE, features: [noStatus] });
+    expect(res.status).toBe(400);
+  });
+});
