@@ -51,6 +51,7 @@ export function CrossModuleOverlapPanel() {
   const [expandedPairs, setExpandedPairs] = useState<Set<string>>(new Set());
   const [filterReason, setFilterReason] = useState<FilterReason>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState<{ overlap: OverlapPair; message: string } | null>(null);
   const [reviewError, setReviewError] = useState<{ key: string; message: string } | null>(null);
   const reviewing = useRef<string | null>(null);
   const statuses = useFeatureStatuses();
@@ -133,7 +134,15 @@ export function CrossModuleOverlapPanel() {
       `Reason: ${REASON_CONFIG[overlap.reason].label}`,
       `Suggested owner: ${moduleLabel(overlap.suggestedOwner)} — ${overlap.ownershipReason}`,
     ].join('\n');
-    await navigator.clipboard.writeText(text);
+    // The Clipboard API rejects in an insecure context or an unfocused document:
+    // say so, never an unhandled rejection behind a silent button.
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      setCopyError({ overlap, message: `Could not copy overlap details: ${err instanceof Error ? err.message : String(err)}` });
+      return;
+    }
+    setCopyError(null);
     const id = `${overlap.moduleA}:${overlap.featureA}:${overlap.moduleB}:${overlap.featureB}`;
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), UI_TIMEOUTS.copyFeedback);
@@ -191,6 +200,13 @@ export function CrossModuleOverlapPanel() {
 
       {statuses.failed && (
         <InlineErrorRetry message={`Twin statuses unavailable: ${statuses.error ?? 'status read failed'}`} onRetry={statuses.refresh} />
+      )}
+      {copyError && (
+        <InlineErrorRetry
+          message={copyError.message}
+          onRetry={() => void handleCopy(copyError.overlap)}
+          onDismiss={() => setCopyError(null)}
+        />
       )}
       {reviewError && (
         <InlineErrorRetry
