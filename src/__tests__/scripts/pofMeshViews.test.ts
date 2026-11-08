@@ -21,6 +21,26 @@ describe.skipIf(!pythonAvailable)('pof_mesh_views.py', () => {
     expect(r.stdout).toContain('True True');
   });
 
+  it('the palette reads pixels in bulk and keeps its colours', () => {
+    const r = driver([
+      'vals = [0.5, 0.2, 0.1, 1.0] * 6 + [0.9, 0.9, 0.0, 1.0] * 3 + [0.0, 0.0, 0.0, 0.0] * 7',
+      'used = []',
+      'class P:',
+      '    def __len__(self): return len(vals)',
+      '    def __getitem__(self, i):',
+      '        used.append("slice")',
+      '        return vals[i]',
+      '    def foreach_get(self, buf):',
+      '        used.append("bulk")',
+      '        buf[:] = vals',
+      'img = m.MagicMock(); img.pixels = P()',
+      'bpy.data.images.load.return_value = img',
+      'print(",".join(ns["palette_of"]("x.png")), used)',
+    ].join('\n'));
+    expect(r.stderr).toBe('');
+    expect(r.stdout).toContain("#b77858,#f7f708 ['bulk']"); // colours pinned from the pre-change output
+  });
+
   it('the render camera actually uses that range', () => {
     expect(readFileSync(SCRIPT, 'utf8')).toContain('cam_data.clip_start, cam_data.clip_end = camera_clip(size, dist)');
   });
