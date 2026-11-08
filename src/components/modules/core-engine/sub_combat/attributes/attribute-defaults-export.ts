@@ -40,9 +40,10 @@ export function buildAttributeDefaultsPython(rows: AttributeRow[]): string {
   L.push('factory.struct = row_struct');
   L.push('dt = tools.create_asset(ASSET_NAME, PACKAGE_PATH, unreal.DataTable, factory)');
   L.push('');
-  for (const row of rows) {
-    L.push(`# ── ${row.rowName} ──`);
-    L.push(`${rowVar(row)} = unreal.ARPGAttributeInitRow()`);
+  for (const [index, row] of rows.entries()) {
+    const v = rowVar(row, index);
+    L.push(`# ── ${JSON.stringify(row.rowName).slice(1, -1)} ──`);
+    L.push(`${v} = unreal.ARPGAttributeInitRow()`);
     for (const [field, value] of Object.entries(row.values)) {
       // NaN / Infinity (e.g. a typed "1e999") would emit a bare name Python
       // cannot resolve and abort the whole script; keep the struct default.
@@ -51,9 +52,9 @@ export function buildAttributeDefaultsPython(rows: AttributeRow[]): string {
         continue;
       }
       // set_editor_property uses snake_case; field names here are plain (no bool b-prefix)
-      L.push(`${rowVar(row)}.set_editor_property("${toSnake(field)}", ${value})`);
+      L.push(`${v}.set_editor_property("${toSnake(field)}", ${value})`);
     }
-    L.push(`unreal.DataTableFunctionLibrary.add_data_table_row(dt, "${row.rowName}", ${rowVar(row)})`);
+    L.push(`unreal.DataTableFunctionLibrary.add_data_table_row(dt, ${JSON.stringify(row.rowName)}, ${v})`);
     L.push('');
   }
   L.push('unreal.EditorAssetLibrary.save_loaded_asset(dt)');
@@ -61,8 +62,9 @@ export function buildAttributeDefaultsPython(rows: AttributeRow[]): string {
   return L.join('\n');
 }
 
-function rowVar(row: AttributeRow): string {
-  return `row_${row.rowName.toLowerCase()}`;
+/** Valid, distinct Python identifier: sanitised to [a-z0-9_] with the row index as suffix. */
+function rowVar(row: AttributeRow, index: number): string {
+  return `row_${row.rowName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_${index}`;
 }
 
 function toSnake(field: string): string {

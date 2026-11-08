@@ -77,6 +77,18 @@ export function UnifiedTimeline({
     onScrub(Math.max(0, Math.min(duration, contentX / pxPerSec)));
   }, [duration, pxPerSec, onScrub]);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const step = e.key === 'PageUp' || e.key === 'PageDown' ? 5 : 0.5;
+    const next: Record<string, number> = {
+      ArrowRight: scrubTime + step, ArrowUp: scrubTime + step, PageUp: scrubTime + step,
+      ArrowLeft: scrubTime - step, ArrowDown: scrubTime - step, PageDown: scrubTime - step,
+      Home: 0, End: duration,
+    };
+    if (!(e.key in next)) return;
+    e.preventDefault();
+    onScrub(Math.max(0, Math.min(duration, next[e.key])));
+  }, [scrubTime, duration, onScrub]);
+
   const scrubX = scrubTime * pxPerSec;
   const hoverX = hover ? hover.time * pxPerSec : null;
 
@@ -98,7 +110,10 @@ export function UnifiedTimeline({
         </div>
 
         {/* Scrollable tracks */}
-        <div ref={scrollRef} className="flex-1 overflow-x-auto custom-scrollbar cursor-crosshair"
+        <div ref={scrollRef} className="flex-1 overflow-x-auto custom-scrollbar cursor-crosshair focus-ring"
+          role="slider" tabIndex={0} aria-label="Combat timeline playhead" aria-orientation="horizontal"
+          aria-valuemin={0} aria-valuemax={duration} aria-valuenow={scrubTime} aria-valuetext={`${scrubTime.toFixed(1)} seconds`}
+          onKeyDown={handleKeyDown}
           onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave} onClick={handleClick}>
           <div className="relative flex flex-col" style={{ width: totalWidth, gap: LANE_GAP }}>
             <TimelineLanes
