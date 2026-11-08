@@ -40,7 +40,15 @@ export function NodeDeepDivePanel({
   sessions: RetryableSource<readonly SessionRecord[]>;
   onClose: () => void;
 }) {
-  const [expandedSection, setExpandedSection] = useState<string | null>('checklist');
+  // Open the first section that is actually present, in render order, so the panel
+  // never lands fully collapsed on an id no section uses. null = nothing to open.
+  const [expandedSection, setExpandedSection] = useState<string | null>(() => {
+    if (patterns.length > 0) return 'patterns';
+    if (recommendations.length > 0) return 'recs';
+    if (sessions.state === 'ready' && sessions.data.length > 0) return 'sessions';
+    if (node.genreItemCount > 0) return 'genre';
+    return null;
+  });
 
   // null = never deep-evaluated: no health shown (not a 0 score).
   const healthColor = node.healthScore === null ? undefined : scoreStatusToken(node.healthScore).color;
