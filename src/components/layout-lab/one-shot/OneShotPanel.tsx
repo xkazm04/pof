@@ -133,7 +133,7 @@ export function OneShotPanel({ t }: Props) {
           padding: '14px 16px', borderBottom: `1px solid ${t.line}`, flexShrink: 0,
         }}
       >
-        <span className={t.fontMono} style={{ fontSize: 13, color: t.ink, fontWeight: 700 }}>
+        <span className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.ink, fontWeight: 700 }}>
           One-shot · {phase}
         </span>
         <button
@@ -150,7 +150,7 @@ export function OneShotPanel({ t }: Props) {
         {error && (
           <div
             className={t.fontMono}
-            style={{ fontSize: 12, color: t.bad, border: `1px solid ${t.bad}`, padding: '8px 12px', marginBottom: 12 }}
+            style={{ fontSize: 'var(--lab-fs-xs)', color: t.bad, border: `1px solid ${t.bad}`, padding: '8px 12px', marginBottom: 12 }}
           >
             {error}
           </div>
@@ -179,7 +179,7 @@ export function OneShotPanel({ t }: Props) {
         {isAnalyzing && (
           <div>
             {phase === 'analyzing' && (
-              <div className={t.fontMono} style={{ fontSize: 13, color: t.muted, marginBottom: 16 }}>
+              <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, marginBottom: 16 }}>
                 Scanning {catalogId}…
               </div>
             )}
@@ -202,7 +202,7 @@ export function OneShotPanel({ t }: Props) {
             )}
 
             {!proposal && phase !== 'analyzing' && (
-              <div className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>
+              <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
                 Generating proposal…
               </div>
             )}

@@ -32,7 +32,7 @@ export function DistributionView({ t, buckets, total, attribute, onPick }: Props
     <>
       <div
         className={t.fontMono}
-        style={{ width: 120, fontSize: 12, color: b.underRep ? t.warn : t.muted, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}
+        style={{ width: 120, fontSize: 'var(--lab-fs-xs)', color: b.underRep ? t.warn : t.muted, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}
       >
         {b.label}
       </div>
@@ -45,7 +45,7 @@ export function DistributionView({ t, buckets, total, attribute, onPick }: Props
           transition: 'width 0.2s',
         }}
       />
-      <span className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
+      <span className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
         {b.count}{b.expected !== undefined ? `/~${b.expected}` : ''}
       </span>
     </>
@@ -57,7 +57,7 @@ export function DistributionView({ t, buckets, total, attribute, onPick }: Props
     <div>
       <div
         className={t.fontMono}
-        style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.muted, marginBottom: 8 }}
+        style={{ fontSize: 'var(--lab-fs-xs)', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.muted, marginBottom: 8 }}
       >
         {attribute ? `by ${attribute}` : 'Distribution'} · {total} entities
       </div>
@@ -89,7 +89,7 @@ export function DistributionView({ t, buckets, total, attribute, onPick }: Props
             background: 'transparent',
           }}
         >
-          <span className={t.fontMono} style={{ fontSize: 12, color: t.warn }}>
+          <span className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.warn }}>
             Under-represented: {underRep.map((b) => b.label).join(', ')}
             {onPick ? ' — click a highlighted bar to propose for it' : ''}
           </span>
