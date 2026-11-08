@@ -20,6 +20,7 @@ import { renderBestiaryMetric } from './metrics';
 import { NarrativeBreadcrumb } from './NarrativeBreadcrumb';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import { brainSubject } from '@/lib/bestiary/sense-profile';
+import { toggleModifier } from '@/lib/bestiary/modifier-exclusion';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -61,7 +62,7 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
     });
   }, []);
 
-  /* Radar overlay toggles — only player enabled by default; compared enemies auto-added */
+  /* Radar overlay toggles — only player enabled by default; toggled independently of the comparison selection */
   const [radarOverlays, setRadarOverlays] = useState<Record<string, boolean>>({ player: true });
 
   /* Elite modifier system */
@@ -74,16 +75,10 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
   }, []);
 
   const toggleCardModifier = useCallback((archetypeId: string, modId: string) => {
-    setCardModifiers(prev => {
-      const current = prev[archetypeId] ?? [];
-      const mod = ELITE_MODIFIERS.find(m => m.id === modId);
-      if (current.includes(modId)) {
-        return { ...prev, [archetypeId]: current.filter(id => id !== modId) };
-      }
-      const excluded = mod?.excludes ?? [];
-      const filtered = current.filter(id => !excluded.includes(id));
-      return { ...prev, [archetypeId]: [...filtered, modId] };
-    });
+    setCardModifiers(prev => ({
+      ...prev,
+      [archetypeId]: toggleModifier(prev[archetypeId] ?? [], modId, ELITE_MODIFIERS),
+    }));
   }, []);
 
   const toggleOverlay = useCallback((key: string) => {

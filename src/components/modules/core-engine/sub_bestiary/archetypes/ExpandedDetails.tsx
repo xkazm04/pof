@@ -8,6 +8,7 @@ import type { FeatureRow } from '@/types/feature-matrix';
 import type { ArchetypeConfig, EliteModifier } from '../_shared/data';
 import { ELITE_MODIFIERS } from '../_shared/data';
 import { inertStatMods } from '@/lib/bestiary/elite-stat-axes';
+import { isModifierExcluded } from '@/lib/bestiary/modifier-exclusion';
 
 interface ExpandedDetailsProps {
   archetype: ArchetypeConfig;
@@ -57,7 +58,7 @@ export function ExpandedDetails({
         <div className="flex flex-wrap gap-1.5">
           {ELITE_MODIFIERS.map(mod => {
             const isActive = activeModifiers.includes(mod.id);
-            const isExcluded = !isActive && mod.excludes?.some(ex => activeModifiers.includes(ex));
+            const isExcluded = isModifierExcluded(mod.id, activeModifiers, ELITE_MODIFIERS);
             return (
               <button key={mod.id}
                 onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleModifier(mod.id); }}

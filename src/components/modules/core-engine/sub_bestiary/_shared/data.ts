@@ -313,7 +313,7 @@ export const ELITE_MODIFIERS: EliteModifier[] = [
       { stat: 'Speed', mult: 1.2, label: '+20% Speed' },
       { stat: 'HP', mult: 0.8, label: '-20% HP' },
     ],
-    geClass: 'GE_Elite_Enraged', excludes: ['pacified'],
+    geClass: 'GE_Elite_Enraged', excludes: ['bolstered'],
   },
   {
     id: 'shielded', name: 'Shielded', color: ACCENT_CYAN, icon: '\u{1F6E1}\u{FE0F}',
@@ -340,7 +340,7 @@ export const ELITE_MODIFIERS: EliteModifier[] = [
       { stat: 'HP', mult: 1.4, label: '+40% HP' },
       { stat: 'Speed', mult: 0.85, label: '-15% Speed' },
     ],
-    geClass: 'GE_Elite_Bolstered',
+    geClass: 'GE_Elite_Bolstered', excludes: ['enraged'],
   },
   {
     id: 'arcane', name: 'Arcane', color: STATUS_INFO, icon: '\u{2728}',

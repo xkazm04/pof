@@ -15,6 +15,11 @@ interface BTFlowchartProps {
   accent?: string;
 }
 
+/** child id -> parent id, derived once from the tree. */
+const PARENT_OF = new Map<string, string>(
+  BT_TREE.flatMap(n => n.children.map((c): [string, string] => [c, n.id])),
+);
+
 export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCESS }: BTFlowchartProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [search, setSearch] = useState('');
@@ -121,19 +126,40 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
           rowElsRef.current.get(prevId)?.focus();
         }
         break;
+      case 'Home':
+        e.preventDefault();
+        rowElsRef.current.get(visibleRows[0].node.id)?.focus();
+        break;
+      case 'End':
+        e.preventDefault();
+        rowElsRef.current.get(visibleRows[visibleRows.length - 1].node.id)?.focus();
+        break;
       case 'ArrowRight': {
+        /* WAI tree: collapsed -> expand; expanded -> first child. */
         const row = visibleRows[idx];
-        if (row.hasChildren && effectiveCollapsed.has(row.node.id)) {
-          e.preventDefault();
+        if (!row.hasChildren) break;
+        e.preventDefault();
+        if (effectiveCollapsed.has(row.node.id)) {
           toggleCollapse(row.node.id);
+        } else {
+          const first = visibleRows[idx + 1];
+          if (first && PARENT_OF.get(first.node.id) === row.node.id) rowElsRef.current.get(first.node.id)?.focus();
         }
         break;
       }
       case 'ArrowLeft': {
+        /* WAI tree: expanded -> collapse; collapsed or leaf -> parent. */
         const row = visibleRows[idx];
         if (row.hasChildren && !effectiveCollapsed.has(row.node.id)) {
           e.preventDefault();
           toggleCollapse(row.node.id);
+        } else {
+          const parentId = PARENT_OF.get(row.node.id);
+          const parentEl = parentId ? rowElsRef.current.get(parentId) : undefined;
+          if (parentEl) {
+            e.preventDefault();
+            parentEl.focus();
+          }
         }
         break;
       }
