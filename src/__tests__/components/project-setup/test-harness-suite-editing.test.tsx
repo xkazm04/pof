@@ -3,8 +3,10 @@
  * and snapshot hooks are mocked, so nothing reaches a UE editor.
  */
 
+import { useState } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { cleanup, renderHook, act } from '@testing-library/react';
+import { cleanup, render, renderHook, act, screen, fireEvent } from '@testing-library/react';
+import type { PofTestSpec } from '@/types/pof-bridge';
 
 vi.mock('@/hooks/useTestRunner', () => ({
   useTestRunner: () => ({ runTest: vi.fn(), results: [], isRunning: false, error: null, clearResults: vi.fn() }),
@@ -19,6 +21,8 @@ vi.mock('@/hooks/useSnapshots', () => ({
 import { useTestHarnessPanel } from '@/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel';
 import { parseScenariosDraft } from '@/components/modules/project-setup/TestHarnessPanel/helpers';
 import { TEMPLATE_SCENARIO } from '@/components/modules/project-setup/TestHarnessPanel/constants';
+import { SuitesTab } from '@/components/modules/project-setup/TestHarnessPanel/SuitesTab';
+import type { TestSuite } from '@/components/modules/project-setup/TestHarnessPanel/types';
 
 afterEach(() => cleanup());
 
@@ -56,6 +60,34 @@ describe('switching suites', () => {
     act(() => hook.current.createSuite());
     expect(hook.current.jsonEditorOpen).toBe(false);
     expect(hook.current.editingScenarioIdx).toBeNull();
+  });
+});
+
+/** The Suites tab over live scenario state, its first scenario expanded. */
+function EditableSuite() {
+  const [scenarios, setScenarios] = useState<PofTestSpec[]>([TEMPLATE_SCENARIO]);
+  const suite: TestSuite = { id: 's', name: 'S', description: '', scenarios, snapshotPresets: [], createdAt: 0 };
+  const noop = () => {};
+  return (
+    <SuitesTab
+      suites={[suite]} activeSuiteId="s" activeSuite={suite} isRunning={false} editingScenarioIdx={0}
+      jsonEditorOpen={false} jsonDraft=""
+      onSelectSuite={noop} onCreateSuite={noop} onDeleteSuite={noop} onDuplicateSuite={noop}
+      onUpdateField={noop} onAddScenario={noop} onRemoveScenario={noop}
+      onUpdateScenario={(i, s) => setScenarios((prev) => prev.map((x, j) => (j === i ? s : x)))}
+      onSetEditingIdx={noop} onOpenJsonEditor={noop} onSetJsonDraft={noop} onApplyJsonDraft={noop}
+      onCloseJsonEditor={noop} onRunSuite={noop} onAbort={noop}
+    />
+  );
+}
+
+describe('editing a scenario in place', () => {
+  it('typing in Test ID keeps the same input mounted (focus survives the keystroke)', () => {
+    render(<EditableSuite />);
+    const input = screen.getByLabelText('Test ID') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'renamed' } });
+    expect(input.isConnected).toBe(true);
+    expect(input.value).toBe('renamed');
   });
 });
 

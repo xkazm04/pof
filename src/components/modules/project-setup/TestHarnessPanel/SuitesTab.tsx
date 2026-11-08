@@ -204,7 +204,7 @@ export function SuitesTab({
             <div className="space-y-2">
               {activeSuite.scenarios.map((scenario, idx) => (
                 <ScenarioCard
-                  key={scenario.testId}
+                  key={idx}
                   scenario={scenario}
                   index={idx}
                   isExpanded={editingScenarioIdx === idx}
