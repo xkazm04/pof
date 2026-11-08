@@ -29,3 +29,16 @@ describe('EQSComponentInventory — disclosure parity with EQSPipelineDiagram/St
     expect(panel?.hasAttribute('hidden')).toBe(false);
   });
 });
+
+describe('SquadChoreographyEditor/FormationView — SVG ids are unique per mount', () => {
+  it('two mounted editors get distinct arrow markers, each line pointing at its own', async () => {
+    const { SquadChoreographyEditor } = await import('@/components/modules/game-systems/SquadChoreographyEditor');
+    const { container } = render(<><SquadChoreographyEditor /><SquadChoreographyEditor /></>);
+    const markers = Array.from(container.querySelectorAll('marker')).map((m) => m.id);
+    expect(markers.length).toBe(2);
+    expect(new Set(markers).size).toBe(2);
+    const refs = Array.from(container.querySelectorAll('line[marker-end]'))
+      .map((l) => l.getAttribute('marker-end'));
+    expect(refs.sort()).toEqual(markers.map((id) => `url(#${id})`).sort());
+  });
+});

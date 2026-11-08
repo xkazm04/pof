@@ -50,6 +50,10 @@ export function FormationView({
   // Generated (not hardcoded) so two mounted editors can't collide on the id —
   // same approach as PipelineView's region heading.
   const membersHeadingId = useId();
+  // The forward-arrow marker is referenced by `url(#…)`; a fixed id would make a
+  // second mounted editor's arrow resolve to the first one's marker. React's id
+  // punctuation is stripped so the `url()` reference stays a plain identifier.
+  const arrowMarkerId = `squad-fwd-arrow-${useId().replace(/[^\w-]/g, '')}`;
   // Stable identity so the memoized leaves don't re-render just because the
   // setter prop changed each render.
   const handleEnter = useCallback((id: string) => setHoveredMember(id), []);
@@ -185,11 +189,11 @@ export function FormationView({
             stroke={ACCENT_CYAN}
             strokeWidth={2}
             opacity={0.8}
-            markerEnd="url(#squad-fwd-arrow)"
+            markerEnd={`url(#${arrowMarkerId})`}
           />
           <defs>
             <marker
-              id="squad-fwd-arrow"
+              id={arrowMarkerId}
               markerWidth="8" markerHeight="6"
               refX="8" refY="3"
               orient="auto"
