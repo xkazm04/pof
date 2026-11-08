@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ChipButton } from '@/components/ui/ChipButton';
 import {
@@ -48,7 +48,7 @@ export function ComponentCard({ comp }: { comp: EQSComponentDef }) {
   const toggle = useCallback(() => setExpanded((v) => !v), []);
   // Same disclosure contract as EQSPipelineDiagram/StepCard: the panel is always
   // mounted (so `aria-controls` always resolves) and `hidden` handles visibility.
-  const detailId = `eqs-component-${comp.id}-detail`;
+  const detailId = `eqs-component-${comp.id}-detail-${useId()}`;
 
   return (
     <div

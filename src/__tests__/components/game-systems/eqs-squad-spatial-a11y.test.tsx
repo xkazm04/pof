@@ -42,3 +42,21 @@ describe('SquadChoreographyEditor/FormationView — SVG ids are unique per mount
     expect(refs.sort()).toEqual(markers.map((id) => `url(#${id})`).sort());
   });
 });
+
+describe('EQS reference views — DOM ids are unique per mount', () => {
+  it('two mounts of the pipeline diagram and inventory share no id', async () => {
+    const { EQSPipelineDiagram } = await import('@/components/modules/game-systems/EQSPipelineDiagram');
+    const { container } = render(
+      <><EQSPipelineDiagram /><EQSPipelineDiagram /><EQSComponentInventory /><EQSComponentInventory /></>,
+    );
+    const ids = Array.from(container.querySelectorAll('[id]')).map((el) => el.id);
+    expect(ids.length).toBeGreaterThan(0);
+    const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
+    expect(dupes).toEqual([]);
+    // Every reference still resolves after the ids became per-mount.
+    for (const el of Array.from(container.querySelectorAll('[aria-controls],[aria-labelledby]'))) {
+      const ref = el.getAttribute('aria-controls') ?? el.getAttribute('aria-labelledby');
+      expect(container.querySelector(`[id="${ref}"]`)).not.toBeNull();
+    }
+  });
+});
