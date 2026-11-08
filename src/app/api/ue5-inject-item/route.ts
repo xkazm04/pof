@@ -15,6 +15,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { ue5Connection } from '@/lib/ue5-bridge/connection-manager';
 import type { InjectItemRequest } from '@/types/ue5-bridge';
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
       Magnitude: a.magnitude,
       bIsPrefix: a.bIsPrefix,
     }));
+
+    logger.info('[ue5-inject-item]', 'inject', body.definitionAsset);
 
     // ── Step 1: Create the pre-rolled item instance via AffixRoller subsystem ──
     const createResult = await client.callFunction({

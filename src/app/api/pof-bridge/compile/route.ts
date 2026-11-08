@@ -1,5 +1,6 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { resolvePofPort } from '@/lib/pof-bridge/constants';
 import { proxyToPofBridge, pofProxyError } from '@/lib/pof-bridge/proxy';
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
     return apiError(`timeoutSeconds must be a number in (0, ${MAX_COMPILE_TIMEOUT_SECONDS}]`, 400);
   }
 
+  logger.info('[pof-bridge]', 'compile', `port ${port}`);
   // Allow longer timeout for compilation.
   const timeoutMs = (body.timeoutSeconds ?? 120) * 1000 + 5000;
   const result = await proxyToPofBridge<PofCompileResult>('compile/live', {
