@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Download, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { downloadBlob } from '@/lib/download';
 import { logger } from '@/lib/logger';
-import { generatePreview } from '@/lib/level-design/procgen-preview';
+import { generatePreview, DEFAULT_MAX_PREVIEW_SIZE } from '@/lib/level-design/procgen-preview';
 import {
   layoutAgreement, previewConfigFromSpec, PROCGEN_ENGINES, type ProcgenSpec,
 } from '@/lib/level-design/procgen-spec';
@@ -34,11 +34,15 @@ export function ProcgenGridReplayExport({ spec, disabled }: ProcgenGridReplayExp
   const [note, setNote] = useState<string | null>(null);
   const facts = PROCGEN_ENGINES['grid-replay'];
   const parity = useMemo(() => layoutAgreement('browser-preview', 'grid-replay'), []);
+  // Above the preview cap the live preview was drawn at a reduced size, so the
+  // exported grid is a different generation from the one on screen.
+  const previewCapped = Math.max(spec.gridWidth, spec.gridHeight) > DEFAULT_MAX_PREVIEW_SIZE;
 
   const handleExport = useCallback(() => {
     try {
-      // Regenerated at export size from the SAME spec — deterministic, so this
-      // is the identical grid the live preview showed at its own scale.
+      // Regenerated at export size from the SAME spec. At or below the preview
+      // cap that is the identical grid the live preview showed; above it the
+      // preview was drawn smaller, so this is a different (larger) generation.
       const preview = generatePreview(previewConfigFromSpec(spec, MAX_EXPORT_SIZE));
       const artifact = exportProcgenGrid(spec, preview);
       const filename = procgenGridExportFilename(spec);
@@ -72,13 +76,24 @@ export function ProcgenGridReplayExport({ spec, disabled }: ProcgenGridReplayExp
         </button>
       </div>
 
-      <p className="flex gap-1.5 text-xs text-emerald-300/80" data-testid="procgen-replay-proven">
-        <ShieldCheck className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
-        <span>
-          <strong className="text-emerald-200/90">Exact by construction.</strong> The replay consumes these cells
-          verbatim — it regenerates nothing, so it reads none of the spec&apos;s declared fields (v{PROCGEN_GRID_EXPORT_VERSION} artifact).
-        </span>
-      </p>
+      {previewCapped ? (
+        <p className="flex gap-1.5 text-xs text-amber-300/80" data-testid="procgen-replay-capped">
+          <TriangleAlert className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <span>
+            <strong className="text-amber-200/90">Not the grid on screen.</strong> The preview is drawn at most{' '}
+            {DEFAULT_MAX_PREVIEW_SIZE} cells per side; this export regenerates the spec at up to {MAX_EXPORT_SIZE}, so
+            rooms and connectivity can differ from the preview (v{PROCGEN_GRID_EXPORT_VERSION} artifact).
+          </span>
+        </p>
+      ) : (
+        <p className="flex gap-1.5 text-xs text-emerald-300/80" data-testid="procgen-replay-proven">
+          <ShieldCheck className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <span>
+            <strong className="text-emerald-200/90">Exact by construction.</strong> The replay consumes these cells
+            verbatim — it regenerates nothing, so it reads none of the spec&apos;s declared fields (v{PROCGEN_GRID_EXPORT_VERSION} artifact).
+          </span>
+        </p>
+      )}
 
       <p className="flex gap-1.5 text-xs text-amber-300/80" data-testid="procgen-replay-unverified">
         <TriangleAlert className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
