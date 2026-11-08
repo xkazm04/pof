@@ -14,7 +14,15 @@ const LEGENDARY_RATE = 0.02;
 describe('lootMetricsView', () => {
   it('timer reads the live pity threshold', () => {
     const v = lootMetricsView({ tuning: untuned(), pityThreshold: 35 });
-    expect(v.timer).toMatchObject({ value: 35, unit: 'pulls', basis: 'live' });
+    expect(v.timer).toMatchObject({ value: 35, unit: 'kills', basis: 'live' });
+  });
+
+  it('timer counts the pity threshold in the unit drought and the Pity tab use (kills, never pulls)', () => {
+    const v = lootMetricsView({ tuning: untuned(), pityThreshold: 35 });
+    // findPercentileKill caps the dry streak at the threshold, so it is a kill count.
+    expect(v.timer.unit).toBe(v.drought.unit);
+    expect(v.timer.detail).toMatch(/35 kills/);
+    expect(`${v.timer.unit} ${v.timer.detail}`).not.toMatch(/pull/i);
   });
 
   it('drought is the Legendary p95 with the live pity, and moves with it', () => {
