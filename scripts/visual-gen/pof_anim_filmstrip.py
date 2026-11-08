@@ -17,7 +17,15 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=GLB)
 
 # Combined bounds of all mesh objects -> center + size for camera framing.
+def fail(reason):
+    # A strip of nothing still reaches the critic as frames, so refuse before rendering.
+    print("POF_RENDER_ERROR=" + reason)
+    sys.exit(1)
+
+
 meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+if not meshes:
+    fail(f"no mesh in {GLB}")
 mins = Vector((1e9, 1e9, 1e9)); maxs = Vector((-1e9, -1e9, -1e9))
 for o in meshes:
     for corner in o.bound_box:
@@ -68,17 +76,18 @@ for act in bpy.data.actions:
     fstart = a if fstart is None else min(fstart, a)
     fend = b if fend is None else max(fend, b)
 if fstart is None:
-    fstart, fend = float(scene.frame_start), float(scene.frame_start) + 24
+    fail(f"no animation in {GLB}")
 fstart, fend = int(round(fstart)), int(round(fend))
 if fend <= fstart:
-    fend = fstart + 24
+    fail(f"animation range {fstart}-{fend} has no motion to sample")
 print(f"POF_RENDER_RANGE={fstart}-{fend}")
 
-# Sample NFRAMES evenly across the clip; skip the very last frame (often == first when looped).
+# Sample NFRAMES evenly across the clip, keeping both endpoints: the last pose is the
+# settle that follow-through is judged against.
 i = 0
 span = fend - fstart
 for k in range(NFRAMES):
-    f = fstart + int(round(span * k / max(1, NFRAMES)))
+    f = fstart + int(round(span * k / max(1, NFRAMES - 1)))
     scene.frame_set(f)
     scene.render.filepath = os.path.join(OUTDIR, f"frame_{i:02d}.png")
     bpy.ops.render.render(write_still=True)
