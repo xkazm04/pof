@@ -87,8 +87,8 @@ registerCatalogPipeline({
       label: 'Blend Space Grid',
       view: { kind: 'manifest', field: 'created' },
       produce: () => ({ data: { ...py('player_movement.build_blend_space') } }),
-      accept: pythonStepSuccess('11-sample 8-way strafe grid in BS_Locomotion', 11),
-      produceNote: 'Wires 11 retargeted clips into BS_Locomotion (X=direction, Y=speed).',
+      accept: pythonStepSuccess('11-sample 4-direction strafe grid from 9 clips in BS_Locomotion', 11),
+      produceNote: 'Wires 9 distinct retargeted clips into BS_Locomotion as 11 samples (X=direction, Y=speed).',
     },
 
     // ── 07. PoFEditor build ───────────────────────────────────────────────────
