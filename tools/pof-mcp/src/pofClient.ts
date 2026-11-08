@@ -31,13 +31,29 @@ export function originFromEnv(env: Record<string, string | undefined> = process.
   return DEFAULT_ORIGIN;
 }
 
-export function createPofClient(origin: string = originFromEnv()): PofClient {
+/**
+ * Request headers for every call. When `POF_OPERATOR_TOKEN` is set the backend's
+ * `requireOperator` guard answers 401 to a header-less call, so the same token is
+ * presented as `x-operator-token`. With no token configured nothing is added.
+ */
+export function headersFromEnv(env: Record<string, string | undefined> = process.env): Record<string, string> {
+  const token = env.POF_OPERATOR_TOKEN;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'x-operator-token': token } : {}),
+  };
+}
+
+export function createPofClient(
+  origin: string = originFromEnv(),
+  env: Record<string, string | undefined> = process.env,
+): PofClient {
   async function request<T>(path: string, init?: { method?: string; body?: string }): Promise<T> {
     let res: Response;
     try {
       res = await fetch(`${origin}${path}`, {
         method: init?.method ?? 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headersFromEnv(env),
         ...(init?.body ? { body: init.body } : {}),
       });
     } catch (e) {
