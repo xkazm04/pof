@@ -10,7 +10,8 @@ import type { TuningOverrides } from '@/types/combat-simulator';
  * encounter edit is a what-if, never persisted (same as useLootTuningStore).
  *
  * Every change goes through the pure `encounterReducer`. Draft edits push an
- * undo snapshot (capped); selection changes and pinning a baseline do not.
+ * undo snapshot (capped); selection changes, pinning a baseline and no-op
+ * edits (same value, unknown id, own cell) do not.
  */
 
 export interface EncounterDraft {
@@ -101,9 +102,14 @@ export function encounterReducer(s: EncounterState, a: EncounterAction): Encount
         }] }),
         nextSeq: s.nextSeq + 1,
       };
-    case 'moveEnemy':
+    case 'moveEnemy': {
+      const cur = s.enemies.find((e) => e.id === a.id);
+      if (!cur) return s;
+      const wave = a.wave ?? cur.waveIndex;
+      if (cur.gridX === a.x && cur.gridY === a.y && cur.waveIndex === wave) return s;
       return edit(s, { enemies: s.enemies.map((e) => e.id === a.id
-        ? { ...e, gridX: a.x, gridY: a.y, ...(a.wave !== undefined ? { waveIndex: a.wave } : {}) } : e) });
+        ? { ...e, gridX: a.x, gridY: a.y, waveIndex: wave } : e) });
+    }
     case 'removeEnemy':
       return s.enemies.some((e) => e.id === a.id) ? edit(s, { enemies: s.enemies.filter((e) => e.id !== a.id) }) : s;
     case 'addWave': {
@@ -118,14 +124,18 @@ export function encounterReducer(s: EncounterState, a: EncounterAction): Encount
       const shifted = s.selectedWave >= a.index && s.selectedWave > 0 ? s.selectedWave - 1 : s.selectedWave;
       return edit(s, { waves, enemies, selectedWave: Math.min(shifted, waves.length - 1) });
     }
-    case 'setWaveTime':
-      return edit(s, { waves: s.waves.map((w, i) => (i === a.index ? { ...w, spawnTimeSec: Math.max(0, a.time) } : w)) });
+    case 'setWaveTime': {
+      const time = Math.max(0, a.time);
+      if (!s.waves[a.index] || s.waves[a.index].spawnTimeSec === time) return s;
+      return edit(s, { waves: s.waves.map((w, i) => (i === a.index ? { ...w, spawnTimeSec: time } : w)) });
+    }
     case 'setTuning':
       return s.tuning[a.key] === a.value ? s : edit(s, { tuning: { ...s.tuning, [a.key]: a.value } });
     case 'resetTuning':
-      return edit(s, { tuning: { ...DEFAULT_TUNING } });
+      return (Object.keys(DEFAULT_TUNING) as (keyof TuningOverrides)[]).every((k) => s.tuning[k] === DEFAULT_TUNING[k])
+        ? s : edit(s, { tuning: { ...DEFAULT_TUNING } });
     case 'setPlayerLevel':
-      return edit(s, { playerLevel: a.level });
+      return s.playerLevel === a.level ? s : edit(s, { playerLevel: a.level });
     case 'selectWave':
       return { ...s, selectedWave: Math.max(0, Math.min(a.index, s.waves.length - 1)) };
     case 'selectArchetype':
