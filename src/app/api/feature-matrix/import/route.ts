@@ -9,7 +9,7 @@ import { FEATURE_STATUSES } from '@/types/feature-matrix';
 import type { CLIFeatureReport } from '@/types/feature-matrix';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
-import type { SubModuleId } from '@/types/modules';
+import { SUB_MODULE_IDS, type SubModuleId } from '@/types/modules';
 
 /**
  * `reviewedAt` becomes `last_reviewed_at` — the evidence date the GDD compliance
@@ -156,6 +156,11 @@ export const POST = withRoute(async (request: NextRequest) => {
 
   if (!rawModuleId || typeof rawModuleId !== 'string') {
     return apiError('moduleId is required', 400);
+  }
+  // A closed enum. Disk mode joins it into a path (`../../x` escaped .pof/matrix), and a
+  // module with no definitions skips the hallucinated-name check below.
+  if (!(SUB_MODULE_IDS as readonly string[]).includes(rawModuleId)) {
+    return apiError(`Unknown moduleId: ${rawModuleId}`, 400);
   }
 
   const moduleId = rawModuleId as SubModuleId;
