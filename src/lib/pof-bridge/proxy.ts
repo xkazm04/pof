@@ -134,6 +134,6 @@ export function pofProxyError(
     );
   }
   // A timed-out POST carries its "outcome unknown - check before retrying" in `detail`.
-  if (!result.reachable) return apiError(result.detail);
+  if (!result.reachable) return apiError(result.detail, 503);
   return apiError(result.detail ? `${label}: ${result.detail}` : label, result.status);
 }

@@ -9,6 +9,7 @@
 
 import { NextRequest } from 'next/server';
 import { ue5Connection } from '@/lib/ue5-bridge/connection-manager';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
           clearInterval(keepalive);
           unsubscribe();
         }
-      }, 30_000);
+      }, UI_TIMEOUTS.sseKeepalive);
 
       // Cleanup on client disconnect
       const teardown = () => {

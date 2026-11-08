@@ -140,6 +140,8 @@ export const UI_TIMEOUTS = {
   autoSubmitDelay: 50,
   /** UE5 Remote Control health check interval. */
   ue5HealthCheck: 30_000,
+  /** Keepalive comment interval on SSE streams, so proxies and browsers do not time them out. */
+  sseKeepalive: 30_000,
   /** Base delay for UE5 reconnection attempts. */
   ue5ReconnectBase: 2_000,
   /** Maximum delay between reconnection attempts. */

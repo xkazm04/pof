@@ -25,6 +25,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { ue5Connection } from '@/lib/ue5-bridge/connection-manager';
 import type { UE5FunctionCall } from '@/types/ue5-bridge';
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
         if (!objectPath || !propertyName || value === undefined) {
           return apiError('objectPath, propertyName, and value are required', 400);
         }
+        logger.info('[ue5-bridge]', 'setProperty', `${objectPath}.${propertyName}`);
         const result = await client.setProperty(objectPath, propertyName, value);
         if (!result.ok) return apiError(result.error, 502);
         return apiSuccess(result.data);
@@ -120,6 +122,7 @@ export async function POST(request: NextRequest) {
         if (params !== undefined && (typeof params !== 'object' || params === null || Array.isArray(params))) {
           return apiError('parameters must be an object', 400);
         }
+        logger.info('[ue5-bridge]', 'callFunction', `${call.objectPath}::${call.functionName}`);
         const result = await client.callFunction({
           objectPath: call.objectPath,
           functionName: call.functionName,
@@ -157,6 +160,8 @@ export async function POST(request: NextRequest) {
         if (typeof command !== 'string' || !command.trim()) {
           return apiError('command is required', 400);
         }
+        // The command text is an operator-typed value; the first word names it without echoing arguments.
+        logger.info('[ue5-bridge]', 'consoleCommand', command.trim().split(/\s+/)[0]);
         const result = await client.executeConsoleCommand(command.trim());
         if (!result.ok) return apiError(result.error, 502);
         return apiSuccess(result.data);

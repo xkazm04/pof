@@ -1,5 +1,6 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { resolvePofPort } from '@/lib/pof-bridge/constants';
 import { proxyToPofBridge, pofProxyError } from '@/lib/pof-bridge/proxy';
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
     return apiError('filePath must not contain traversal (..)', 400);
   }
 
+  logger.info('[pof-bridge]', 'hot-patch', body.filePath);
   // Hot-patch can take a while: file write + compile + verification.
   const result = await proxyToPofBridge<PofHotPatchResult>('compile/hot-patch', {
     port,

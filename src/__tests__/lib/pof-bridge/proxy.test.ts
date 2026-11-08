@@ -195,7 +195,7 @@ describe('pofProxyError', () => {
       },
       'Compile error',
     );
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(503);
     expect(await res.json()).toEqual({
       success: false,
       error: 'Failed to reach PoF Bridge plugin',
