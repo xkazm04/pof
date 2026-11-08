@@ -1,6 +1,12 @@
 import { BUILD_PRESETS, PLAYER_POWER, ENEMY_DIFFICULTY } from '../../_shared/data';
 import type { EnemyType, EncounterResult } from './types';
 
+/** The range the verdict is judged on: the inputs hold whatever is mid-typing. */
+export function normalizeHealthyRange(min: number, max: number): { min: number; max: number } {
+  const lo = Math.max(min, 1);
+  return { min: lo, max: Math.max(max, lo) };
+}
+
 export function computeEncounter(
   playerLevel: number,
   build: typeof BUILD_PRESETS[number],

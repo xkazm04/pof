@@ -13,7 +13,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../../../unique-tabs/_shared';
 import { BUILD_PRESETS } from '../../_shared/data';
 import { ENEMY_TYPES, DEFAULT_HEALTHY_RANGE, VERDICT_STYLES } from './constants';
-import { computeEncounter } from './helpers';
+import { computeEncounter, normalizeHealthyRange } from './helpers';
 
 export function EncounterTTKSimulator() {
   const [encLevel, setEncLevel] = useState(25);
@@ -22,9 +22,11 @@ export function EncounterTTKSimulator() {
   const [encHealthyMin, setEncHealthyMin] = useState(DEFAULT_HEALTHY_RANGE.min);
   const [encHealthyMax, setEncHealthyMax] = useState(DEFAULT_HEALTHY_RANGE.max);
 
+  const { min: healthyMin, max: healthyMax } = normalizeHealthyRange(encHealthyMin, encHealthyMax);
+
   const encounterResult = useMemo(
-    () => computeEncounter(encLevel, BUILD_PRESETS[encBuildIdx], ENEMY_TYPES[encEnemyIdx], { min: encHealthyMin, max: encHealthyMax }),
-    [encLevel, encBuildIdx, encEnemyIdx, encHealthyMin, encHealthyMax],
+    () => computeEncounter(encLevel, BUILD_PRESETS[encBuildIdx], ENEMY_TYPES[encEnemyIdx], { min: healthyMin, max: healthyMax }),
+    [encLevel, encBuildIdx, encEnemyIdx, healthyMin, healthyMax],
   );
 
   const verdict = VERDICT_STYLES[encounterResult.balanceVerdict];
@@ -206,10 +208,10 @@ export function EncounterTTKSimulator() {
             {(() => {
               const r = encounterResult.ttkRatio;
               const pct = r <= 1 ? Math.max(0, r / 1 * 15)
-                : r <= encHealthyMin ? 15 + ((r - 1) / (encHealthyMin - 1)) * 15
-                : r <= encHealthyMax ? 30 + ((r - encHealthyMin) / (encHealthyMax - encHealthyMin)) * 40
-                : r <= encHealthyMax * 1.5 ? 70 + ((r - encHealthyMax) / (encHealthyMax * 0.5)) * 15
-                : Math.min(100, 85 + ((r - encHealthyMax * 1.5) / (encHealthyMax * 0.5)) * 15);
+                : r <= healthyMin ? 15 + ((r - 1) / (healthyMin - 1)) * 15
+                : r <= healthyMax ? 30 + ((r - healthyMin) / (healthyMax - healthyMin)) * 40
+                : r <= healthyMax * 1.5 ? 70 + ((r - healthyMax) / (healthyMax * 0.5)) * 15
+                : Math.min(100, 85 + ((r - healthyMax * 1.5) / (healthyMax * 0.5)) * 15);
               return (
                 <motion.div
                   className="absolute top-0 bottom-0 w-1 rounded-full"
@@ -234,22 +236,22 @@ export function EncounterTTKSimulator() {
 
             {encounterResult.balanceVerdict !== 'balanced' && (
               <div className="mt-2 space-y-1">
-                {encounterResult.ttkRatio < encHealthyMin && (
+                {encounterResult.ttkRatio < healthyMin && (
                   <div className="text-xs font-mono px-2 py-1 rounded border" style={{
                     color: STATUS_ERROR,
                     borderColor: `${STATUS_ERROR}${OPACITY_20}`,
                     backgroundColor: `${STATUS_ERROR}${OPACITY_10}`,
                   }}>
-                    TTK ratio {encounterResult.ttkRatio.toFixed(2)}:1 below minimum {encHealthyMin}:1 — player dies too quickly
+                    TTK ratio {encounterResult.ttkRatio.toFixed(2)}:1 below minimum {healthyMin}:1 — player dies too quickly
                   </div>
                 )}
-                {encounterResult.ttkRatio > encHealthyMax && (
+                {encounterResult.ttkRatio > healthyMax && (
                   <div className="text-xs font-mono px-2 py-1 rounded border" style={{
                     color: ACCENT_CYAN,
                     borderColor: `${ACCENT_CYAN}${OPACITY_20}`,
                     backgroundColor: `${ACCENT_CYAN}${OPACITY_10}`,
                   }}>
-                    TTK ratio {encounterResult.ttkRatio.toFixed(2)}:1 above maximum {encHealthyMax}:1 — encounter too easy
+                    TTK ratio {encounterResult.ttkRatio.toFixed(2)}:1 above maximum {healthyMax}:1 — encounter too easy
                   </div>
                 )}
                 {encounterResult.hitsToKillEnemy <= 2 && (
@@ -275,7 +277,7 @@ export function EncounterTTKSimulator() {
           </div>
 
           <div className="mt-2 pt-2 border-t border-border/40 text-xs text-text-muted font-mono">
-            Healthy range: {encHealthyMin}:1 – {encHealthyMax}:1 | {BUILD_PRESETS[encBuildIdx].name} Lv{encLevel} vs {ENEMY_TYPES[encEnemyIdx].name}
+            Healthy range: {healthyMin}:1 – {healthyMax}:1 | {BUILD_PRESETS[encBuildIdx].name} Lv{encLevel} vs {ENEMY_TYPES[encEnemyIdx].name}
           </div>
         </div>
       </div>
