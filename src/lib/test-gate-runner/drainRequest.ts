@@ -49,8 +49,23 @@ const VISUAL_MODES: readonly string[] = ['hud', 'texture', 'lighting', 'characte
 function str(v: unknown): string | undefined {
   return typeof v === 'string' && v.length > 0 ? v : undefined;
 }
+/** A strictly positive integer, else undefined (a port / run limit of 0, -1 or 1.5 is meaningless). */
 function posNum(v: unknown): number | undefined {
-  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+  return typeof v === 'number' && Number.isInteger(v) && v > 0 ? v : undefined;
+}
+
+/** The numeric run options a request may carry. */
+const NUMERIC_RUN_KEYS = ['port', 'limit'] as const;
+
+/**
+ * Numeric run options the caller SENT but that are not a positive integer (`limit: -5`,
+ * `port: -1`, `limit: "2"`). `parseDrainRequest` drops them, so without this check a typo ran as
+ * an unlimited drain (or a default-port probe) under a 200; the route refuses naming the key,
+ * the same way it refuses an unparsed scope key. Pure.
+ */
+export function invalidRunOptions(raw: unknown): string[] {
+  const body = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
+  return NUMERIC_RUN_KEYS.filter((k) => body[k] !== undefined && body[k] !== null && posNum(body[k]) === undefined);
 }
 
 /**

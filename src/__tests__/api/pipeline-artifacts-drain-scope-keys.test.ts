@@ -99,3 +99,20 @@ describe('GET /api/pipeline-artifacts/drain — the preview refuses what POST re
     expect(collectDeferredMock).toHaveBeenLastCalledWith({});
   });
 });
+
+describe('POST /api/pipeline-artifacts/drain — a sent numeric option never silently disappears', () => {
+  it.each([
+    ['limit', { catalogId: 'items', limit: -5 }],
+    ['port', { catalogId: 'items', port: -1 }],
+  ])('refuses a non-positive %s with 400 instead of draining under a 200', async (key, body) => {
+    const res = await post(body);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain(key);
+    expect(drainAllMock).not.toHaveBeenCalled();
+  });
+
+  it('still honours a valid limit', async () => {
+    expect((await post({ catalogId: 'items', limit: 2 })).status).toBe(200);
+    expect((drainAllMock.mock.calls[0] as unknown[])[2]).toEqual({ limit: 2 });
+  });
+});
