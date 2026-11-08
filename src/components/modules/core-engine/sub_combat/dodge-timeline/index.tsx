@@ -6,7 +6,7 @@ import { ACCENT_CYAN } from '@/lib/chart-colors';
 import { useCharacterHeuristicStore } from '@/stores/heuristicTuningStore';
 import type { DodgeParams, HitMarker, DodgeChainEntry } from '../_shared/dodge-types';
 import { DEFAULT_PARAMS } from '../_shared/dodge-types';
-import { computePhases } from '../_shared/dodge-math';
+import { computePhases, getChainEndTime } from '../_shared/dodge-math';
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import type { HapticEffect } from './types';
 import { TimelineBar } from './TimelineBar';
@@ -40,6 +40,10 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
   const [chainPlayhead, setChainPlayhead] = useState(0);
   const animRef = useRef<number>(0);
   const lastFrameRef = useRef<number>(0);
+  const playheadRef = useRef<number>(0);
+  const chainPlayheadRef = useRef<number>(0);
+  useEffect(() => { playheadRef.current = playhead; }, [playhead]);
+  useEffect(() => { chainPlayheadRef.current = chainPlayhead; }, [chainPlayhead]);
 
   /* Haptic state */
   const [hapticEffect, setHapticEffect] = useState<HapticEffect>(null);
@@ -82,27 +86,24 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
   // unmount, so the worst case in a hidden pane is a fraction of a second of
   // frames. Gating it would mean moving the rAF chain out of this imperative
   // `play()` into an effect for no measurable saving.
+  // The loop reads the position from a ref (not a state updater) so it can tell,
+  // synchronously, that it reached the end and stop rescheduling — the `ended`
+  // state of the transport. A loop that keeps ticking after isPlaying=false
+  // stacks a second loop on the next Play.
   const play = useCallback(() => {
+    cancelAnimationFrame(animRef.current);
+    const total = chainMode ? getChainEndTime(chain) : phases.totalTimeline;
+    const posRef = chainMode ? chainPlayheadRef : playheadRef;
+    const setPos = chainMode ? setChainPlayhead : setPlayhead;
     setIsPlaying(true);
     lastFrameRef.current = performance.now();
     const animate = (now: number) => {
       const dt = (now - lastFrameRef.current) / 1000;
       lastFrameRef.current = now;
-      if (chainMode) {
-        setChainPlayhead((prev) => {
-          const total = chain.length > 0
-            ? chain[chain.length - 1].startTime + computePhases(chain[chain.length - 1].params).totalTimeline : 0;
-          const next = prev + dt;
-          if (next >= total) { setIsPlaying(false); return total; }
-          return next;
-        });
-      } else {
-        setPlayhead((prev) => {
-          const next = prev + dt;
-          if (next >= phases.totalTimeline) { setIsPlaying(false); return phases.totalTimeline; }
-          return next;
-        });
-      }
+      const next = Math.min(posRef.current + dt, total);
+      posRef.current = next;
+      setPos(next);
+      if (next >= total) { setIsPlaying(false); return; }
       animRef.current = requestAnimationFrame(animate);
     };
     animRef.current = requestAnimationFrame(animate);
