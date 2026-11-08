@@ -10,6 +10,7 @@ import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { EconomySummaryGrid } from './EconomySummaryGrid';
 import { EconomyFilters } from './EconomyFilters';
 import { EconomyImpactTable } from './EconomyImpactTable';
+import { profileScale } from '../simulation/lootSimEngine';
 
 const PAGE_SIZE = 15;
 /** Drop% denominator: the whole table. A filter narrows the rows shown, not the pool rolled from. */
@@ -31,6 +32,8 @@ export function EconomyImpact() {
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const pagedItems = filteredItems.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+
+  const scale = profileScale(economyProfile);
 
   // Summary stats
   const totalWeight = filteredItems.reduce((s, e) => s + e.weight, 0);
@@ -57,7 +60,7 @@ export function EconomyImpact() {
       <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Item Surplus / Deficit</div>
       <div className="space-y-1 mb-4">
         {ECONOMY_SURPLUS.map((item) => {
-          const multiplied = economyProfile === 'hardcore' ? item.delta * 3 : item.delta;
+          const multiplied = Math.round(item.delta * scale * 10) / 10;
           const isPositive = multiplied >= 0;
           return (
             <div key={item.type} className="flex items-center gap-2">

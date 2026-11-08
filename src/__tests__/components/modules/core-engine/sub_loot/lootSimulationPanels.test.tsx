@@ -21,6 +21,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
 }));
 
 import { EXPANDED_ENTRIES } from '@/components/modules/core-engine/sub_loot/_shared/data';
+import { ECONOMY_KILLS_PER_HOUR } from '@/components/modules/core-engine/sub_loot/simulation/lootSimEngine';
 import { EconomyImpact } from '@/components/modules/core-engine/sub_loot/economy/EconomyImpact';
 import { PityCohortChart } from '@/components/modules/core-engine/sub_loot/pity/PityCohortChart';
 import { PityTimerSection } from '@/components/modules/core-engine/sub_loot/pity/PityTimerSection';
@@ -152,5 +153,18 @@ describe('EconomyImpact Drop% is a share of the whole table', () => {
       const item = EXPANDED_ENTRIES.find((e) => e.name === cells[0])!;
       expect(cells[4]).toBe(`${((item.weight / all) * 100).toFixed(1)}%`);
     }
+  });
+});
+
+describe('Economy profile scale has one authority', () => {
+  it('the hardcore impact table and surplus scale by the engine kills/hour ratio the summary grid uses', () => {
+    const ratio = ECONOMY_KILLS_PER_HOUR.hardcore / ECONOMY_KILLS_PER_HOUR.casual;
+    const { container, getByText } = render(<EconomyImpact />);
+    const gold = () => [...container.querySelectorAll('tbody tr')].map((r) => Number(r.querySelectorAll('td')[5].textContent!.replace('g', '')));
+    const casual = gold();
+    fireEvent.click(getByText('Hardcore'));
+    expect(gold()).toEqual(casual.map((g) => Math.round(g * ratio)));
+    // Weapons surplus +5 per casual hour.
+    expect(container.textContent).toContain(`+${Math.round(5 * ratio * 10) / 10}`);
   });
 });

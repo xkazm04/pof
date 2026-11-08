@@ -6,6 +6,7 @@ import { ACCENT_EMERALD, STATUS_WARNING } from '@/lib/chart-colors';
 import { RARITY_TIERS } from '../_shared/data';
 import type { LootEditorEntryExpanded } from '../_shared/data';
 import { useLootTuningStore } from '../_shared/lootTuningStore';
+import { profileScale } from '../simulation/lootSimEngine';
 
 interface EconomyImpactTableProps {
   pagedItems: LootEditorEntryExpanded[];
@@ -21,6 +22,7 @@ export function EconomyImpactTable({
   safePage, totalPages, setPage,
 }: EconomyImpactTableProps) {
   const rarityGold = useLootTuningStore((s) => s.rarityGold);
+  const scale = profileScale(economyProfile);
   return (
     <>
       {/* Paginated impact table */}
@@ -41,7 +43,7 @@ export function EconomyImpactTable({
               const pct = totalWeight > 0 ? (item.weight / totalWeight) * 100 : 0;
               const tierColor = RARITY_TIERS.find(t => t.name === item.rarity)?.color ?? ACCENT_EMERALD;
               const goldBase = rarityGold[item.rarity] ?? 0;
-              const goldImpact = goldBase * (item.maxQuantity ?? 1) * (economyProfile === 'hardcore' ? 3 : 1);
+              const goldImpact = Math.round(goldBase * (item.maxQuantity ?? 1) * scale);
               return (
                 <tr key={item.id} className="border-t border-border/20 hover:bg-surface/30">
                   <td className="py-1 pr-2 text-text">{item.name}</td>

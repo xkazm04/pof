@@ -86,6 +86,11 @@ export const ECONOMY_KILLS_PER_HOUR: Record<EconomyProfile, number> = { casual: 
 export const ECONOMY_HOURS_PER_DAY: Record<EconomyProfile, number> = { casual: 0.5, hardcore: 4 };
 export const LEGENDARY_SET_PIECES = 5;
 
+/** A profile's per-hour scale against casual: the ONE multiplier every per-hour Economy figure uses. */
+export function profileScale(profile: EconomyProfile, killsPerHour: Record<EconomyProfile, number> = ECONOMY_KILLS_PER_HOUR): number {
+  return killsPerHour.casual > 0 ? killsPerHour[profile] / killsPerHour.casual : 1;
+}
+
 export interface DerivedEconomy {
   goldPerHour: number;
   itemsPerHour: number;
