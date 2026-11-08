@@ -50,6 +50,7 @@ function scanResult(assets = DOC_ASSETS, dependencies: AssetDependencyEdge[] = [
     assets,
     dependencies,
     totalSizeBytes: assets.reduce((s, a) => s + a.sizeBytes, 0),
+    truncated: false,
     scanDurationMs: 7,
   };
 }
