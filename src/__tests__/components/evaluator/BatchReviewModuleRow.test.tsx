@@ -26,3 +26,13 @@ describe('BatchReview ModuleRow status badge tint', () => {
     expect(style).not.toMatch(VAR_WITH_HEX_SUFFIX);
   });
 });
+
+describe('BatchReview ModuleRow error text colour comes from the token', () => {
+  it('uses STATUS_ERROR via style, not a hardcoded Tailwind hex class', () => {
+    const { container } = render(<ModuleRow mod={mod('error', 'CLI exited 1')} />);
+    const errorSpan = Array.from(container.querySelectorAll('span')).find((s) => s.textContent === 'CLI exited 1');
+    expect(errorSpan).toBeTruthy();
+    expect(errorSpan!.className).not.toMatch(/\[#[0-9a-f]{3,8}\]/i);
+    expect(errorSpan!.getAttribute('style') ?? '').toMatch(/color/);
+  });
+});
