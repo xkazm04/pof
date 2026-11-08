@@ -43,6 +43,8 @@ export function CellTuner({ config, enemies, cell, label, onApply, onClose }: {
 }) {
   const [lever, setLever] = useState<CombatLever>('enemyHealthMul');
   const [targetPct, setTargetPct] = useState(80);
+  /** What the field shows while typing: an empty field is a state, not a 0 (clamped at blur / Solve). */
+  const [targetDraft, setTargetDraft] = useState('80');
   const [state, setState] = useState<SolveState>(IDLE);
   const controllerRef = useRef<AbortController | null>(null);
   const title = `Lv.${cell.level} vs ${label}`;
@@ -56,13 +58,23 @@ export function CellTuner({ config, enemies, cell, label, onApply, onClose }: {
     setState(IDLE);
   };
 
+  /** Reconcile the typed draft at commit: clamp to 0-100; an empty or non-numeric draft keeps the last value. */
+  const commitTarget = (): number => {
+    const parsed = targetDraft.trim() === '' ? NaN : +targetDraft;
+    const pct = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : targetPct;
+    setTargetPct(pct);
+    setTargetDraft(String(pct));
+    return pct;
+  };
+
   const solve = () => {
+    const committedPct = commitTarget();
     controllerRef.current?.abort();
     const ac = new AbortController();
     controllerRef.current = ac;
     const isCurrent = () => controllerRef.current === ac;
     setState({ kind: 'solving', k: 0 });
-    solveCellTuning(config, enemies, cell, lever, targetPct / 100, {
+    solveCellTuning(config, enemies, cell, lever, committedPct / 100, {
       signal: ac.signal,
       onEval: (k) => { if (isCurrent()) setState({ kind: 'solving', k }); },
     }).then(
@@ -122,8 +134,9 @@ export function CellTuner({ config, enemies, cell, label, onApply, onClose }: {
         <label className="flex items-center gap-1 text-text-muted">
           target
           <input aria-label="Target survival %" type="number" min={0} max={100} step={1}
-            value={targetPct} className={`w-14 text-center ${control}`}
-            onChange={e => { stop(); setTargetPct(Math.min(100, Math.max(0, +e.target.value))); }} />
+            value={targetDraft} className={`w-14 text-center ${control}`}
+            onChange={e => { stop(); setTargetDraft(e.target.value); }}
+            onBlur={commitTarget} />
           %
         </label>
         {state.kind === 'solving' ? (
