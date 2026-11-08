@@ -169,6 +169,10 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       await fetchData();
     } else {
       console.error('useFeatureMatrix seed error:', result.error);
+      // Release the guard and say so: an empty matrix with no error reads as an
+      // unreviewed module, and a held guard meant Retry could never seed again.
+      seededModules.delete(`${projectPath}::${moduleId}`);
+      setError(`Could not initialize this module's features: ${result.error}`);
     }
   }, [moduleId, projectPath, fetchData]);
 
