@@ -104,24 +104,30 @@ export interface SizeSection {
   subsections?: { label: string; bytes: number }[];
 }
 
+function sizeSection(label: SaveFieldGroup, color: string, fields: [string, number][]): SizeSection {
+  const subsections = fields.map(([l, bytes]) => ({ label: l, bytes }));
+  return { label, color, bytes: subsections.reduce((t, x) => t + x.bytes, 0), subsections };
+}
+
+/**
+ * Sections are the SaveFieldGroups of UARPGSaveGame and subsections are its real
+ * fields. Byte figures are design-time ESTIMATES (no .sav reader exists yet); a
+ * section total is always the sum of its fields so the two cannot disagree.
+ */
 export const FILE_SIZE_SECTIONS: SizeSection[] = [
-  { label: 'InventoryItems', bytes: 131072, color: MODULE_COLORS.content, subsections: [
-    { label: 'ItemInstances', bytes: 98304 },
-    { label: 'EquippedSlots', bytes: 24576 },
-    { label: 'Stash', bytes: 8192 },
-  ]},
-  { label: 'PlayerProgression', bytes: 46080, color: ACCENT_CYAN, subsections: [
-    { label: 'Level/XP', bytes: 8192 },
-    { label: 'Attributes', bytes: 16384 },
-    { label: 'AbilityTree', bytes: 21504 },
-  ]},
-  { label: 'WorldState', bytes: 32768, color: MODULE_COLORS.systems, subsections: [
-    { label: 'VisitedZones', bytes: 16384 },
-    { label: 'Encounters', bytes: 12288 },
-    { label: 'NPCStates', bytes: 4096 },
-  ]},
-  { label: 'Settings', bytes: 8192, color: ACCENT_EMERALD },
-  { label: 'Metadata', bytes: 4096, color: STATUS_SUBDUED },
+  sizeSection('character', MODULE_COLORS.content, [
+    ['PlayerLevel', 4], ['PlayerAttributes', 40], ['PassivePoints', 4], ['PassiveAllocations', 2048],
+  ]),
+  sizeSection('inventory', ACCENT_CYAN, [
+    ['InventoryItems', 131072], ['WalletGold', 4], ['WalletOrbs', 512],
+  ]),
+  sizeSection('world', MODULE_COLORS.systems, [
+    ['DefeatedEnemyTags', 8192], ['CompletedQuestStages', 4096], ['UnlockedZoneIds', 1024],
+    ['CheckpointActorTag', 64], ['RepStandings', 512],
+  ]),
+  sizeSection('meta', STATUS_SUBDUED, [
+    ['ActiveSaveSlot', 4], ['SaveTimestamp', 8], [SAVE_VERSION_FIELD.ueName, 4],
+  ]),
 ];
 
 export const TOTAL_BYTES = FILE_SIZE_SECTIONS.reduce((s, sec) => s + sec.bytes, 0);
