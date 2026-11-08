@@ -35,6 +35,7 @@ export function useTestRunner(): UseTestRunnerResult {
   const isMounted = useIsMounted();
   // Use a ref to allow aborting ongoing polls on unmount
   const abortRef = useRef(false);
+  const lastPollErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     abortRef.current = false;
@@ -59,7 +60,11 @@ export function useTestRunner(): UseTestRunnerResult {
         `/api/pof-bridge/test?testId=${encodeURIComponent(testId)}`,
       );
 
-      if (!result.ok) continue; // Retry on transient errors
+      if (!result.ok) {
+        lastPollErrorRef.current = result.error; // Retry on transient errors; kept so a timeout can name it
+        continue;
+      }
+      lastPollErrorRef.current = null;
 
       if (result.data.status !== 'running') {
         return result.data;
@@ -77,6 +82,7 @@ export function useTestRunner(): UseTestRunnerResult {
     setIsRunning(true);
     setError(null);
     abortRef.current = false;
+    lastPollErrorRef.current = null;
 
     // Submit the test spec — the proxy reads `{ action, spec }` and forwards `body.spec`.
     const submitResult = await tryApiFetch<PofTestResult>('/api/pof-bridge/test', {
@@ -110,7 +116,8 @@ export function useTestRunner(): UseTestRunnerResult {
     if (finalResult) {
       setResults((prev) => [...prev, finalResult]);
     } else {
-      setError(`Test "${spec.testId}" timed out or was aborted`);
+      const reason = lastPollErrorRef.current;
+      setError(`Test "${spec.testId}" timed out or was aborted${reason ? ` (last poll failed: ${reason})` : ''}`);
     }
 
     setIsRunning(false);
