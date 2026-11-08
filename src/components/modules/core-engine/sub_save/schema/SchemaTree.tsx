@@ -119,11 +119,11 @@ export function SchemaTree({ expandedGroups, toggleGroup }: SchemaTreeProps) {
                     {isOpen && (
                       <motion.div role="group" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pl-6">
                         {group.fields.map((field) => (
-                          <div key={field.name} role="treeitem" tabIndex={-1} aria-label={`${field.name}, type ${field.type}`}
+                          <div key={field.name} role="treeitem" tabIndex={-1} aria-label={`${field.name}, type ${field.type}${field.details ? `, ${field.details}` : ''}`}
                             className="flex gap-4 py-0.5 hover:bg-white/5 pr-2 group transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 rounded">
                             <span className="w-[80px] shrink-0 font-medium" style={{ color: TYPE_COLORS[field.type] }}>{field.type}</span>
                             <span style={{ color: OVERLAY_WHITE }}>{field.name};</span>
-                            <span className="text-text-muted ml-auto hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity">{'// '}{field.details}</span>
+                            <span className="text-text-muted ml-auto hidden sm:block opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity">{'// '}{field.details}</span>
                           </div>
                         ))}
                       </motion.div>
