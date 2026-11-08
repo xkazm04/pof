@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { PLATFORM_IDS, platformLabel } from '@/lib/packaging/build-profiles';
 import { MODULE_COLORS, STATUS_ERROR } from '@/lib/chart-colors';
+import { CONFIG_OPTIONS } from '@/components/modules/game-systems/BuildConfigSelector/constants';
 
 /**
  * Blank -> undefined (not recorded); otherwise a finite, non-negative number or an
@@ -68,10 +69,9 @@ export function RecordBuildForm({ onSubmit, nextVersion }: { onSubmit: (data: Re
         <div>
           <label className="text-2xs text-text-muted uppercase tracking-wider" htmlFor={fid('config')}>Config</label>
           <select id={fid('config')} value={config} onChange={(e) => setConfig(e.target.value)} className={selectClass}>
-            <option>Development</option>
-            <option>DebugGame</option>
-            <option>Shipping</option>
-            <option>Test</option>
+            {CONFIG_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
           </select>
         </div>
         <div>
