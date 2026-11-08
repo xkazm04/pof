@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { rankCatalogGaps, gapTargetAction, asGapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
+import { planClosure } from '@/lib/catalog/gap-analysis/closurePlan';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 
 const itemsDist: CatalogDistribution = {
@@ -50,6 +51,23 @@ describe('rankCatalogGaps', () => {
     expect(r.targets.map((t) => `${t.catalogId}:${t.attribute}=${t.value}`)).toEqual([
       'alpha:tier=boss', 'zeta:role=healer', 'zeta:role=tank',
     ]);
+  });
+
+  it("near-tied gaps (raw 1.6 vs 2.4, both rounding to 2) rank in the closure plan's order", () => {
+    const shares = { role: { aaa: 0.08, zzz: 0.12, other: 0.8 } };
+    const near: CatalogDistribution = {
+      catalogId: 'near', total: 20, byAttribute: { role: { other: 20 } },
+      underrepresented: [
+        { attribute: 'role', value: 'aaa', count: 0, expected: 2 },
+        { attribute: 'role', value: 'zzz', count: 0, expected: 2 },
+      ],
+      sample: [], gapBasis: 'expected-share',
+    };
+    const r = rankCatalogGaps([near], () => shares);
+    const planned = planClosure(near, shares).entities[0].assignments.find((a) => a.kind === 'gap')!;
+    expect(r.targets[0].value).toBe(planned.value);
+    expect(r.targets.map((t) => t.value)).toEqual(['zzz', 'aaa']);
+    expect(r.targets.map((t) => t.deficit)).toEqual([2, 2]);
   });
 
   it('a catalog with no basis is listed as unmeasured — never ranked, never balanced', () => {

@@ -10,7 +10,7 @@
 import type { CatalogDistribution } from './index';
 import { gapBasisOf } from './coverage';
 import { pluginFor } from './plugins';
-import { planClosure, type ClosurePlan } from './closurePlan';
+import { gapDeficit, planClosure, type ClosurePlan } from './closurePlan';
 
 /** One under-represented bucket of one catalog, as a proposal target. */
 export interface GapTarget {
@@ -42,8 +42,13 @@ function cmp(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-function byStableIdentity(a: GapTarget, b: GapTarget): number {
-  return b.deficit - a.deficit
+interface RankedTarget { target: GapTarget; deficit: number }
+
+/** Order by the un-rounded deficit (`gapDeficit`, the closure plan's rule); ties fall to stable identity. */
+function byStableIdentity(x: RankedTarget, y: RankedTarget): number {
+  const a = x.target;
+  const b = y.target;
+  return y.deficit - x.deficit
     || cmp(a.catalogId, b.catalogId)
     || cmp(a.attribute, b.attribute)
     || cmp(a.value, b.value);
@@ -54,16 +59,23 @@ export function rankCatalogGaps(
   sharesOf: (catalogId: string) => Record<string, Record<string, number>> = (id) => pluginFor(id)?.expectedShare ?? {},
 ): CatalogGapRanking {
   const plans: Record<string, ClosurePlan> = {};
-  const targets: GapTarget[] = [];
+  const targets: RankedTarget[] = [];
   const unmeasured: string[] = [];
   const balanced: string[] = [];
   for (const d of distributions) {
     if (d.underrepresented.length) {
-      plans[d.catalogId] = planClosure(d, sharesOf(d.catalogId));
+      const shares = sharesOf(d.catalogId);
+      plans[d.catalogId] = planClosure(d, shares);
       for (const u of d.underrepresented) {
+        const share = shares[u.attribute]?.[u.value];
+        const total = Object.values(d.byAttribute[u.attribute] ?? {}).reduce((a, b) => a + b, 0);
         targets.push({
-          catalogId: d.catalogId, attribute: u.attribute, value: u.value,
-          count: u.count, expected: u.expected, deficit: u.expected - u.count,
+          target: {
+            catalogId: d.catalogId, attribute: u.attribute, value: u.value,
+            count: u.count, expected: u.expected, deficit: u.expected - u.count,
+          },
+          // No declared share to re-derive from: the rounded gap is all there is.
+          deficit: share === undefined ? u.expected - u.count : gapDeficit(u.count, share, total),
         });
       }
     } else if (gapBasisOf(d) === 'expected-share') {
@@ -73,7 +85,7 @@ export function rankCatalogGaps(
     }
   }
   return {
-    targets: targets.sort(byStableIdentity),
+    targets: targets.sort(byStableIdentity).map((r) => r.target),
     unmeasured: unmeasured.sort(cmp),
     balanced: balanced.sort(cmp),
     plans: Object.fromEntries(Object.keys(plans).sort(cmp).map((k) => [k, plans[k]])),
