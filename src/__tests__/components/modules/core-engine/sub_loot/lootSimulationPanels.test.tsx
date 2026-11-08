@@ -127,3 +127,14 @@ describe('EconomyImpact table controls are named', () => {
     expect(chevrons.map((b) => b.getAttribute('aria-label'))).toEqual(['Previous page', 'Next page']);
   });
 });
+
+describe('EconomyFilters expose the active toggle', () => {
+  it('tier and source buttons carry aria-pressed for the selected filter', () => {
+    const { getByText } = render(<EconomyImpact />);
+    expect(getByText('All Sources').getAttribute('aria-pressed')).toBe('true');
+    expect(getByText('chest').getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(getByText('Epic', { selector: 'button' }));
+    expect(getByText('Epic', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
+    expect(getByText('All', { selector: 'button' }).getAttribute('aria-pressed')).toBe('false');
+  });
+});
