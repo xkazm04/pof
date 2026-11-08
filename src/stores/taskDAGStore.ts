@@ -122,7 +122,7 @@ export const useTaskDAGStore = create<TaskDAGStoreState>()(
         const executionId = `exec-${Date.now()}`;
         const orchestrator = new TaskDAGOrchestrator(workflow, executionId);
 
-        // Subscribe to orchestrator events and sync to store
+        // Mirror the run into the store; WorkflowDispatcher derives what to launch from it.
         orchestrator.on((event) => {
           switch (event.type) {
             case 'workflow:progress':
@@ -135,32 +135,6 @@ export const useTaskDAGStore = create<TaskDAGStoreState>()(
                   e.id === execution.id ? execution : e
                 ),
               }));
-              break;
-            }
-            case 'node:ready': {
-              // Dispatch a custom event so the UI/hook layer can pick it up
-              // and create a CLI session for this node
-              window.dispatchEvent(
-                new CustomEvent('pof-dag-node-ready', {
-                  detail: {
-                    nodeId: event.nodeId,
-                    node: event.node,
-                    executionId,
-                  },
-                })
-              );
-              break;
-            }
-            case 'node:retry': {
-              window.dispatchEvent(
-                new CustomEvent('pof-dag-node-retry', {
-                  detail: {
-                    nodeId: event.nodeId,
-                    retryCount: event.retryCount,
-                    delayMs: event.delayMs,
-                  },
-                })
-              );
               break;
             }
             default:

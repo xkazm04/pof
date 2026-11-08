@@ -51,9 +51,17 @@ interface UseModuleCLIOptions {
   attributeToTaskModule?: boolean;
 }
 
+/** Lets a supervising host observe what execute() decided before anything launched. */
+export interface ExecuteControl {
+  /** Read after the async prepare; false drops the launch (the host cancelled meanwhile). */
+  shouldDispatch?: () => boolean;
+  /** The spend preflight was declined, so nothing launched and onComplete will not fire. */
+  onDeclined?: () => void;
+}
+
 export interface UseModuleCLIResult {
   sendPrompt: (prompt: string, meta?: DispatchMeta) => void;
-  execute: (task: CLITask) => Promise<void>;
+  execute: (task: CLITask, control?: ExecuteControl) => Promise<void>;
   isRunning: boolean;
 }
 
@@ -214,14 +222,17 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
    * create the task and then call execute(task) instead of building prompts.
    */
   const execute = useCallback(
-    async (task: CLITask) => {
+    async (task: CLITask, control?: ExecuteControl) => {
       // Pre-flight budget guardrail — for resource-intensive task types (live
       // editor runs, broad scans), check the spend guard before doing any work.
       // Only interrupts under genuine budget pressure; never blocks on an error.
       if (isExpensiveTaskType(task.type)) {
         const verdict = await fetchPreflightVerdict(task.type);
         const proceed = await requestPreflightConfirm(verdict);
-        if (!proceed) return;
+        if (!proceed) {
+          control?.onDeclined?.();
+          return;
+        }
       }
 
       // Scan project for dynamic context (uses cache if fresh)
@@ -242,6 +253,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // prompt it served as the item's baseline (v1), fire-and-forget, so the
       // A/B rail has an incumbent to challenge. Previews pass no options.
       const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx, { seed: true });
+      if (control?.shouldDispatch && !control.shouldDispatch()) return;
       sendPrompt(enriched, {
         taskType: task.type,
         label: task.label,

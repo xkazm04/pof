@@ -20,6 +20,7 @@ import { useShellRouteSync } from '@/hooks/useShellRouteSync';
 import { GlobalSearchPanel } from './GlobalSearchPanel';
 import { EventBusDevTools } from './EventBusDevTools';
 import { PreflightGuardDialog } from '@/components/cli/PreflightGuardDialog';
+import { WorkflowDispatcher } from '@/components/modules/evaluator/WorkflowOrchestratorView/WorkflowDispatcher';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 
 /**
@@ -100,6 +101,7 @@ export function AppShell() {
               <GlobalSearchPanel />
               <EventBusDevTools />
               <PreflightGuardDialog />
+              <WorkflowDispatcher />
             </div>
           ) : (
             <SetupWizard />
