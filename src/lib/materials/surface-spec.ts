@@ -30,8 +30,8 @@ export type ShadingModel =
 export interface SurfaceSpec {
   /** The surface line in the dispatched prompt. */
   promptLabel: string;
-  /** Slider defaults `selectSurface` (and the initial state) apply. */
-  defaults: { Roughness: number; Metallic: number };
+  /** Slider defaults `selectSurface` (and the initial state) apply; Opacity/IOR only where the surface has its own. */
+  defaults: { Roughness: number; Metallic: number; Opacity?: number; IOR?: number };
   /** Features switched on when the surface is picked. */
   defaultFeatures: RenderFeature[];
   /** Base cost before features: texture samplers, instruction count, which maps. */
@@ -62,11 +62,11 @@ export const SURFACE_SPEC: Record<SurfaceType, SurfaceSpec> = {
     base: { samplers: 5, instructions: 110, mapNotes: 'Albedo + Normal + ORM + SSS + Cavity' }, shading: { kind: 'forced', model: 'SubsurfaceProfile' },
   },
   glass: {
-    promptLabel: 'Glass (translucent, refractive)', defaults: { Roughness: 0.05, Metallic: 0 }, defaultFeatures: ['refraction'],
+    promptLabel: 'Glass (translucent, refractive)', defaults: { Roughness: 0.05, Metallic: 0, Opacity: 0.3, IOR: 1.5 }, defaultFeatures: ['refraction'],
     base: { samplers: 3, instructions: 90, mapNotes: 'Albedo + Normal + Refraction normal' }, shading: { kind: 'default', model: 'ThinTranslucent' },
   },
   water: {
-    promptLabel: 'Water (animated, depth-based)', defaults: { Roughness: 0.02, Metallic: 0 }, defaultFeatures: ['refraction', 'worldPositionOffset'],
+    promptLabel: 'Water (animated, depth-based)', defaults: { Roughness: 0.02, Metallic: 0, Opacity: 0.6, IOR: 1.33 }, defaultFeatures: ['refraction', 'worldPositionOffset'],
     base: { samplers: 4, instructions: 130, mapNotes: 'Normal A/B + Caustics + Mask' }, shading: { kind: 'default', model: 'ThinTranslucent' },
   },
   emissive: {

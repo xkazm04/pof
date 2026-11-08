@@ -31,10 +31,13 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
         {applicableParams.map((p) => {
           const val = paramValues[p.name] ?? p.defaultValue;
           const normalized = (val - p.min) / (p.max - p.min || 1);
-          const display = val.toFixed(readoutDecimals(p.step));
+          const isUnset = !!p.unset && paramValues[p.name] === undefined;
+          const display = isUnset ? 'not overridden' : val.toFixed(readoutDecimals(p.step));
           // Screen readers otherwise hear a bare number with no scale or unit —
           // mirror what the visible min/max captions say under the track.
-          const valueText = explainMode
+          const valueText = isUnset
+            ? 'not overridden'
+            : explainMode
             ? `${display} — ${p.plain.lowLabel} (${p.min}) to ${p.plain.highLabel} (${p.max})`
             : `${display} of ${p.min} to ${p.max}`;
           return (
