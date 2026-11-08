@@ -11,7 +11,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { ImplementationPattern } from '@/types/pattern-library';
 import type { Recommendation } from '@/types/evaluator';
 import type { SessionRecord } from '@/types/session-analytics';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_15, OPACITY_30, statusBg } from '@/lib/chart-colors';
 import { scoreStatusToken } from '@/lib/status-token';
 import { MOTION } from '@/lib/constants';
 import type { NexusNode } from './types';
@@ -152,7 +152,7 @@ export function NodeDeepDivePanel({
                         <span className="text-xs text-text">{rec.title}</span>
                         <p className="text-2xs text-text-muted mt-0.5 line-clamp-2">{rec.description}</p>
                       </div>
-                      <span className="text-2xs font-bold uppercase px-1 py-0.5 rounded" style={{ color: prioColor, backgroundColor: `${prioColor}15` }}>
+                      <span className="text-2xs font-bold uppercase px-1 py-0.5 rounded" style={{ color: prioColor, backgroundColor: statusBg(prioColor, 0.08) }}>
                         {rec.priority}
                       </span>
                     </div>
@@ -267,7 +267,7 @@ function CollapsibleSection({
         className="focus-ring-inset w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
       >
         <span className="text-xs font-semibold text-text">{title}</span>
-        <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ color, backgroundColor: `${color}15` }}>
+        <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ color, backgroundColor: statusBg(color, 0.08) }}>
           {count}
         </span>
         <span className="ml-auto text-text-muted" aria-hidden="true">
