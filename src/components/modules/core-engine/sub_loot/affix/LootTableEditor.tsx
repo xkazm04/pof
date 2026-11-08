@@ -207,6 +207,7 @@ export function LootTableEditor() {
         groupedEntries={groupedEntries}
         sourceFilter={sourceFilter}
         editorTotalWeight={editorTotalWeight}
+        nothingWeight={nothingWeight}
         filteredEntries={filteredEntries}
         onUpdateWeight={updateEditorWeight}
         onWeightCommit={commitEditorWeight}
