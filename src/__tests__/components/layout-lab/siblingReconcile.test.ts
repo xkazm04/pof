@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   SIBLING_CAP, contentText, keysIn, promptReach, reconcileDirection, reconcileSiblings, unnamedSiblings,
 } from '@/components/layout-lab/steps/ux/siblingReconcile';
+import * as siblingStepsModule from '@/lib/catalog/siblingSteps';
 import { siblingStepsBlock } from '@/lib/catalog/siblingSteps';
 import type { LabStepArtifact } from '@/components/layout-lab/labPipelineStore';
 
@@ -54,6 +55,15 @@ describe('promptReach', () => {
     // Alphabetical: Accessibility alone is over the cap, so it and everything after it is omitted.
     expect(r.carried.size).toBe(0);
     expect([...r.dropped]).toEqual(['Accessibility', 'Concept Brief', 'Lore Body', 'UE Packaging']);
+  });
+  it('parses the omission heading siblingSteps exports, so the writer and the reader share one string', () => {
+    const heading = (siblingStepsModule as Record<string, unknown>).SIBLING_OMITTED_HEADING;
+    expect(typeof heading).toBe('string');
+    const block = siblingStepsBlock(CATALOG, 'Localization', siblings);
+    expect(block).toContain(`## ${heading}
+- Accessibility`);
+    expect([...promptReach(`## ${heading}
+- Lore Body`).dropped]).toEqual(['Lore Body']);
   });
   it('treats a heading with a seeded/template suffix as the label', () => {
     const r = promptReach('# head\n\n## Lore Body (seeded from the reference — reproduce, do not contradict)\n{}');

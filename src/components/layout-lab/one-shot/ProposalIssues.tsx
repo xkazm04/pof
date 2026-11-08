@@ -19,25 +19,25 @@ export function ProposalIssues({ t, issues, refineDisabled, forceMore, onRefine 
   if (!direction) return null;
   return (
     <div data-testid="proposal-issues" style={{ border: `1px solid ${t.line}`, background: t.panel, padding: '12px 16px', marginBottom: 12 }}>
-      <div className={t.fontMono} style={{ fontSize: 12, color: t.warn, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
+      <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.warn, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
         Issues
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
         {issues.map((i, n) => (
           <div key={`${i.field}-${n}`} data-testid={`proposal-issue-${i.field}`} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-            <span className={t.fontMono} style={{ width: 88, flexShrink: 0, fontSize: 12, color: t.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span className={t.fontMono} style={{ width: 88, flexShrink: 0, fontSize: 'var(--lab-fs-xs)', color: t.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {i.field}
             </span>
-            <span style={{ fontSize: 13, color: t.text }}>{i.message}</span>
+            <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.text }}>{i.message}</span>
           </div>
         ))}
       </div>
-      <button
+      <button type="button"
         onClick={() => onRefine(direction, forceMore)}
         disabled={refineDisabled}
-        className={t.fontMono}
+        className={`focus-ring ${t.fontMono}`}
         style={{
-          fontSize: 12,
+          fontSize: 'var(--lab-fs-xs)',
           padding: '5px 12px',
           cursor: refineDisabled ? 'not-allowed' : 'pointer',
           background: 'transparent',

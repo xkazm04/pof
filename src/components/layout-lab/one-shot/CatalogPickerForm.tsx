@@ -40,7 +40,7 @@ function useRankedGaps(): GapsState {
  */
 export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, onPickGap }: Props) {
   const gaps = useRankedGaps();
-  const caption: React.CSSProperties = { display: 'block', fontSize: 12, color: t.muted, marginBottom: 6 };
+  const caption: React.CSSProperties = { display: 'block', fontSize: 'var(--lab-fs-xs)', color: t.muted, marginBottom: 6 };
 
   return (
     <div>
@@ -48,23 +48,23 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
         Ranked gaps · all catalogs
       </div>
       {gaps.status === 'loading' && (
-        <div className={t.fontMono} style={{ fontSize: 12, color: t.muted, marginBottom: 12 }}>Measuring every catalog…</div>
+        <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, marginBottom: 12 }}>Measuring every catalog…</div>
       )}
       {gaps.status === 'error' && (
-        <div className={t.fontMono} style={{ fontSize: 12, color: t.bad, marginBottom: 12 }}>
+        <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.bad, marginBottom: 12 }}>
           Could not rank gaps: {gaps.error}
         </div>
       )}
       {gaps.status === 'ready' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {gaps.ranking.targets.length === 0 && (
-            <div className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>No measured gap in any catalog.</div>
+            <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>No measured gap in any catalog.</div>
           )}
           {Object.keys(gaps.ranking.plans ?? {}).sort().map((id) => {
             const n = gaps.ranking.plans[id].entities.length;
             const m = gaps.ranking.targets.filter((g) => g.catalogId === id).length;
             return (
-              <div key={id} data-testid="one-shot-closure-plan" className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
+              <div key={id} data-testid="one-shot-closure-plan" className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
                 {id}: {n} {n === 1 ? 'entity closes' : 'entities close'} {m} {m === 1 ? 'gap' : 'gaps'}{gaps.ranking.plans[id].converged ? '' : ' (not converged)'}
               </div>
             );
@@ -75,9 +75,9 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
               type="button"
               data-testid="one-shot-gap-target"
               onClick={() => onPickGap(g)}
-              className={t.fontMono}
+              className={`focus-ring ${t.fontMono}`}
               style={{
-                textAlign: 'left', fontSize: 12, padding: '7px 10px', cursor: 'pointer',
+                textAlign: 'left', fontSize: 'var(--lab-fs-xs)', padding: '7px 10px', cursor: 'pointer',
                 background: 'transparent', color: t.text, border: `1px solid ${t.warn}`,
               }}
             >
@@ -86,7 +86,7 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
             </button>
           ))}
           {gaps.ranking.unmeasured.length > 0 && (
-            <div className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
+            <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
               Unmeasured (no expected share — not a finding of balance): {gaps.ranking.unmeasured.join(', ')}
             </div>
           )}
@@ -111,9 +111,9 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
           <option key={s.catalogId} value={s.catalogId}>{s.label}</option>
         ))}
       </select>
-      <button
+      <button type="button"
         onClick={onStart}
-        className={t.fontMono}
+        className={`focus-ring ${t.fontMono}`}
         style={{
           width: '100%', fontSize: 14, padding: '8px 16px', cursor: 'pointer',
           background: t.ink, color: t.onAccent, border: `1px solid ${t.ink}`, fontWeight: 600,

@@ -68,7 +68,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
     <div>
       {/* name + rationale */}
       <div style={panelStyle}>
-        <div className={t.fontMono} style={{ fontSize: 12, color: t.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+        <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
           Proposal
         </div>
         <div style={{ fontSize: 16, fontWeight: 700, color: t.inkDeep, marginBottom: 6 }}>{proposal.name}</div>
@@ -88,13 +88,13 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
 
       {/* JSON data */}
       <details style={{ marginBottom: 12 }}>
-        <summary className={t.fontMono} style={{ fontSize: 12, color: t.muted, cursor: 'pointer', userSelect: 'none' }}>
+        <summary className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, cursor: 'pointer', userSelect: 'none' }}>
           Raw data
         </summary>
         <pre
           className={t.fontMono}
           style={{
-            fontSize: 12,
+            fontSize: 'var(--lab-fs-xs)',
             color: t.text,
             background: t.panel,
             border: `1px solid ${t.line}`,
@@ -110,7 +110,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
 
       {/* refine textarea */}
       <div style={{ marginBottom: 8 }}>
-        <label htmlFor={refineId} className={t.fontMono} style={{ display: 'block', fontSize: 12, color: t.muted, marginBottom: 4 }}>
+        <label htmlFor={refineId} className={t.fontMono} style={{ display: 'block', fontSize: 'var(--lab-fs-xs)', color: t.muted, marginBottom: 4 }}>
           Refine direction {refinementTurns > 0 && `(${refinementTurns}/${REFINEMENT_TURN_CAP} used)`}
         </label>
         <textarea
@@ -124,7 +124,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
             width: '100%',
             minHeight: 72,
             resize: 'vertical',
-            fontSize: 13,
+            fontSize: 'var(--lab-fs-xs)',
             padding: '8px 10px',
             background: t.panel,
             color: refineDisabled ? t.muted : t.text,
@@ -137,7 +137,7 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
 
       {/* force-more checkbox at cap */}
       {atCap && (
-        <label className={t.fontMono} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.warn, marginBottom: 8, cursor: 'pointer' }}>
+        <label className={t.fontMono} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--lab-fs-xs)', color: t.warn, marginBottom: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={forceMore} onChange={(e) => setForceMore(e.target.checked)} />
           Force more refinements (beyond cap)
         </label>
@@ -146,12 +146,12 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
       <RunPlanView t={t} plan={plan} onSetMode={setStepMode} costCopy={costCopy} />
 
       <div style={{ display: 'flex', gap: 8 }}>
-        <button
+        <button type="button"
           onClick={handleRefine}
           disabled={refineDisabled || !refineInput.trim()}
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{
-            fontSize: 13,
+            fontSize: 'var(--lab-fs-xs)',
             padding: '7px 14px',
             cursor: refineDisabled || !refineInput.trim() ? 'not-allowed' : 'pointer',
             background: 'transparent',
@@ -162,11 +162,11 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
         >
           Refine
         </button>
-        <button
+        <button type="button"
           onClick={onApprove}
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{
-            fontSize: 13,
+            fontSize: 'var(--lab-fs-xs)',
             padding: '7px 16px',
             cursor: 'pointer',
             background: t.ink,

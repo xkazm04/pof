@@ -39,7 +39,7 @@ export function RunActions({ t, onAction }: Props) {
   return (
     <div style={{ marginTop: 16 }}>
       {phase === 'failed' && failureReason && (
-        <div className={t.fontMono} style={{ fontSize: 12, color: t.bad, marginBottom: 8 }}>
+        <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.bad, marginBottom: 8 }}>
           Stopped: {failureReason}
         </div>
       )}

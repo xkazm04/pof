@@ -112,3 +112,21 @@ describe('no hand-rolled dialog scrims outside src/components/ui/', () => {
     }
   });
 });
+
+describe('inline-spelled scrims (position: fixed + inset: 0) keep the dialog promise', () => {
+  // The class-based rule above is blind to `style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,..)' }}`.
+  // A slide-over that spells its scrim inline and declares aria-modal must carry Escape and Tab handling itself.
+  it('every inline black scrim outside ui/ sits in a file that handles Escape and Tab', () => {
+    const offenders = walk(COMPONENTS_ROOT)
+      .map((full) => ({ full, src: readFileSync(full, 'utf8') }))
+      .filter(({ src }) =>
+        /position:\s*'fixed'/.test(src) && /inset:\s*0/.test(src) && /rgba\(\s*0\s*,\s*0\s*,\s*0\s*,/.test(src),
+      )
+      .map(({ full, src }) => ({ rel: relative(COMPONENTS_ROOT, full).split(sep).join('/'), src }))
+      .filter(({ rel }) => !rel.startsWith('ui/'))
+      .filter(({ src }) => !(/'Escape'|"Escape"/.test(src) && /'Tab'|"Tab"/.test(src)))
+      .map(({ rel }) => rel);
+
+    expect(offenders).toEqual([]);
+  });
+});

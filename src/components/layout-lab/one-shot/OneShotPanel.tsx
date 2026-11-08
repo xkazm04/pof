@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { createOrchestrator } from '@/lib/one-shot/orchestrator';
@@ -12,6 +12,8 @@ import { CatalogPickerForm } from './CatalogPickerForm';
 import { RunActions } from './RunActions';
 import type { NextAction } from '@/lib/one-shot/next-actions';
 import type { GapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // One module-level orchestrator — shared across renders.
 const orchestrator = createOrchestrator();
@@ -42,7 +44,32 @@ export function OneShotPanel({ t }: Props) {
   const [catalogInput, setCatalogInput] = useState('items');
   const [error, setError] = useState<string | null>(null);
 
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // The drawer declares aria-modal, so it keeps that promise (as LabDrawer does): focus moves in
+  // on open and returns to whatever opened it on close or unmount.
+  useEffect(() => {
+    if (!panelOpen) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+    (first ?? panelRef.current)?.focus();
+    return () => { if (opener && opener.isConnected) opener.focus(); };
+  }, [panelOpen]);
+
   if (!panelOpen) return null;
+
+  const trapKeys = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === 'Escape') { e.stopPropagation(); setPanelOpen(false); return; }
+    if (e.key !== 'Tab' || !panelRef.current) return;
+    const items = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    const within = panelRef.current.contains(active);
+    if (e.shiftKey && (active === first || !within)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (active === last || !within)) { e.preventDefault(); first.focus(); }
+  };
 
   // Opaque surface (t.bg, not the translucent t.panel) + elevation, matching the
   // canonical LabDrawer treatment — otherwise the page bleeds through the panel and
@@ -99,20 +126,20 @@ export function OneShotPanel({ t }: Props) {
         onClick={() => setPanelOpen(false)}
         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 199 }}
       />
-      <div role="dialog" aria-modal="true" aria-label="one-shot panel" style={panelStyle}>
+      <div ref={panelRef} tabIndex={-1} onKeyDown={trapKeys} role="dialog" aria-modal="true" aria-label="one-shot panel" style={panelStyle}>
       <div
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '14px 16px', borderBottom: `1px solid ${t.line}`, flexShrink: 0,
         }}
       >
-        <span className={t.fontMono} style={{ fontSize: 13, color: t.ink, fontWeight: 700 }}>
+        <span className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.ink, fontWeight: 700 }}>
           One-shot · {phase}
         </span>
-        <button
+        <button type="button"
           onClick={() => setPanelOpen(false)}
           aria-label="close panel"
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{ fontSize: 16, background: 'transparent', border: 'none', color: t.muted, cursor: 'pointer', padding: '2px 6px' }}
         >
           ×
@@ -123,7 +150,7 @@ export function OneShotPanel({ t }: Props) {
         {error && (
           <div
             className={t.fontMono}
-            style={{ fontSize: 12, color: t.bad, border: `1px solid ${t.bad}`, padding: '8px 12px', marginBottom: 12 }}
+            style={{ fontSize: 'var(--lab-fs-xs)', color: t.bad, border: `1px solid ${t.bad}`, padding: '8px 12px', marginBottom: 12 }}
           >
             {error}
           </div>
@@ -152,7 +179,7 @@ export function OneShotPanel({ t }: Props) {
         {isAnalyzing && (
           <div>
             {phase === 'analyzing' && (
-              <div className={t.fontMono} style={{ fontSize: 13, color: t.muted, marginBottom: 16 }}>
+              <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, marginBottom: 16 }}>
                 Scanning {catalogId}…
               </div>
             )}
@@ -175,7 +202,7 @@ export function OneShotPanel({ t }: Props) {
             )}
 
             {!proposal && phase !== 'analyzing' && (
-              <div className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>
+              <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
                 Generating proposal…
               </div>
             )}

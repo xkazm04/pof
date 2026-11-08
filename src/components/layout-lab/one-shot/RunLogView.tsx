@@ -35,7 +35,7 @@ function outcomeLabel(outcome: StepOutcome): string {
 export function RunLogView({ t, steps, phase, summary }: Props) {
   return (
     <div>
-      <div className={t.fontMono} style={{ fontSize: 12, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.muted, marginBottom: 8 }}>
+      <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.muted, marginBottom: 8 }}>
         Run log · {phase}
       </div>
 
@@ -49,14 +49,14 @@ export function RunLogView({ t, steps, phase, summary }: Props) {
           ] as const).map(({ label, value, color }) => (
             <div key={label} style={{ textAlign: 'center' }}>
               <div className={t.fontMono} style={{ fontSize: 18, fontWeight: 700, color }}>{value}</div>
-              <div className={t.fontMono} style={{ fontSize: 11, color: t.muted }}>{label}</div>
+              <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>{label}</div>
             </div>
           ))}
         </div>
       )}
 
       {steps.length === 0 ? (
-        <div className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>No steps recorded yet.</div>
+        <div className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>No steps recorded yet.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {steps.map((r, i) => (
@@ -73,13 +73,13 @@ export function RunLogView({ t, steps, phase, summary }: Props) {
             >
               <span
                 className={t.fontMono}
-                style={{ fontSize: 11, fontWeight: 700, color: outcomeColor(r.outcome, t), minWidth: 40, flexShrink: 0 }}
+                style={{ fontSize: 'var(--lab-fs-xs)', fontWeight: 700, color: outcomeColor(r.outcome, t), minWidth: 40, flexShrink: 0 }}
               >
                 {outcomeLabel(r.outcome)}
               </span>
-              <span style={{ fontSize: 13, color: t.text, flex: 1 }}>{r.step}</span>
+              <span style={{ fontSize: 'var(--lab-fs-xs)', color: t.text, flex: 1 }}>{r.step}</span>
               {r.reason && (
-                <span className={t.fontMono} style={{ fontSize: 11, color: t.muted, flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
+                <span className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
                   {r.reason}
                 </span>
               )}
