@@ -39,6 +39,8 @@ interface Cache {
 }
 
 let cache: Cache = {};
+/** Bumped whenever the cache is dropped, so a read started before the drop never seats itself. */
+let generation = 0;
 const listeners = new Set<() => void>();
 
 function notify() {
@@ -51,6 +53,7 @@ function notify() {
  * against the deadline just set instead of the mount-time read.
  */
 export function invalidateMilestoneDeadlines() {
+  generation++;
   cache = {};
   notify();
   if (listeners.size > 0) void load();
@@ -62,7 +65,7 @@ export function invalidateMilestoneDeadlines() {
  */
 export async function readMilestoneDeadlines(): Promise<Result<MilestoneDeadlineMap, string>> {
   // An editor opening again is a retry: a cached failure must not stick to it.
-  if (cache.error) cache = {};
+  if (cache.error) { generation++; cache = {}; }
   for (let attempt = 0; attempt < 3; attempt++) {
     await load();
     if (cache.data) return ok(cache.data);
@@ -74,6 +77,7 @@ export async function readMilestoneDeadlines(): Promise<Result<MilestoneDeadline
 
 /** Exposed for tests — the cache is process-wide by design. */
 export function __resetMilestoneDeadlineCache() {
+  generation++;
   cache = {};
 }
 
@@ -81,8 +85,11 @@ function load(): Promise<void> {
   if (cache.inFlight) return cache.inFlight;
   if (cache.data || cache.error) return Promise.resolve();
 
+  const gen = generation;
   const inFlight = tryApiFetch<MilestoneDeadlineMap>('/api/milestone-deadlines')
     .then((result) => {
+      // The cache was dropped while this read was in flight: its answer predates the drop.
+      if (gen !== generation) return;
       cache = result.ok ? { data: result.data ?? {} } : { error: result.error };
       notify();
     });
@@ -102,6 +109,7 @@ export function useMilestoneDeadlines(): MilestoneDeadlinesResult {
   }, []);
 
   const retry = useCallback(() => {
+    generation++;
     cache = {};
     notify();
     void load();
