@@ -8,7 +8,6 @@ import {
   User, Gamepad2, Wind, SlidersHorizontal, Sparkles, FlaskConical, Wand2,
 } from 'lucide-react';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
-import type { EntityMetadata } from '@/types/game-metadata';
 
 export const ACCENT = MODULE_COLORS.core;
 
@@ -322,10 +321,6 @@ export const COMPARISON_STATS: CharacterStat[] = [
 
 /* ── Character Database ──────────────────────────────────────────────────── */
 
-const TIER_LEVELS: Record<string, [number, number]> = {
-  common: [1, 20], elite: [15, 35], boss: [30, 45], legendary: [40, 50],
-};
-
 interface CharDef {
   id: string; name: string; cat: string; sub: string;
   area: string; tier: string; tags: string[];
@@ -453,15 +448,6 @@ export const PROPERTY_CAT_COLORS: Record<string, string> = {
   Combat: STATUS_ERROR,
   Camera: ACCENT_ORANGE,
 };
-
-/* ── Entity Metadata ─────────────────────────────────────────────────────── */
-
-export const CHARACTER_METADATA: EntityMetadata[] = CHAR_DEFS.map(d => ({
-  id: d.id, name: d.name, category: d.cat, subcategory: d.sub,
-  tags: d.tags, area: d.area, tier: d.tier,
-  level: TIER_LEVELS[d.tier]?.[0] ?? 1,
-  levelMax: TIER_LEVELS[d.tier]?.[1] ?? 50,
-}));
 
 /* ── Ability Categorization (Phase 2 F3) ────────────────────────────────────
  *
