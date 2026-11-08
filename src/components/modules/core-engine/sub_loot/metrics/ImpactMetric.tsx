@@ -8,7 +8,11 @@ import type { MetricReading } from '@/components/modules/core-engine/sub_loot/me
 /** The Core-tab what-if: summed EV/kill of the tuned roster minus the shipped one. */
 export function ImpactMetric({ reading }: { reading: MetricReading }) {
   const v = reading.value ?? 0;
-  const text = v === 0 ? '±0' : `${v > 0 ? '+' : ''}${v.toFixed(1)}`;
+  const sign = v > 0 ? '+' : '-';
+  // A real delta that rounds to 0.0 keeps its sign as a bound ("+<0.1"), never a signed zero.
+  const text = v === 0 ? '±0'
+    : Number(v.toFixed(1)) === 0 ? `${sign}<0.1`
+    : `${v > 0 ? '+' : ''}${v.toFixed(1)}`;
   return (
     <div className={`${TEXT_SCALE.meta} font-mono leading-tight`} title={reading.detail}>
       <span className="font-bold" style={{ color: ACCENT }}>{text}</span>
