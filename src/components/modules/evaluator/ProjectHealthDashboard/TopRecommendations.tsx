@@ -39,7 +39,7 @@ export function TopRecommendations({
               >
                 <span
                   className="text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
-                  style={{ color: pc.text, backgroundColor: `${pc.text}15` }}
+                  style={{ color: pc.text, backgroundColor: pc.badge }}
                 >
                   {rec.priority}
                 </span>
