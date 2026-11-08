@@ -43,9 +43,10 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
             style={{ borderColor: selectedWave === i ? `${withOpacity(ACCENT_CYAN, OPACITY_37)}` : 'var(--border)', backgroundColor: selectedWave === i ? `${withOpacity(ACCENT_CYAN, OPACITY_8)}` : 'transparent' }}
             onClick={() => onSelect(i)}>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-mono font-bold truncate" style={{ color: selectedWave === i ? ACCENT_CYAN : 'var(--text)' }}>
+              <button type="button" aria-pressed={selectedWave === i} onClick={(e) => { e.stopPropagation(); onSelect(i); }}
+                className="focus-ring block max-w-full text-left text-xs font-mono font-bold truncate" style={{ color: selectedWave === i ? ACCENT_CYAN : 'var(--text)' }}>
                 {wave.label}
-              </div>
+              </button>
               <div className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 <Clock className="w-2.5 h-2.5" />
                 <input type="number" min={0} max={120} step={1} value={wave.spawnTimeSec}
