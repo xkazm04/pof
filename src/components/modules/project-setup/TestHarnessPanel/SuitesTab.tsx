@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { PofTestSpec } from '@/types/pof-bridge';
 import type { TestSuite } from './types';
 import { ScenarioCard } from './ScenarioCard';
+import { parseScenariosDraft } from './helpers';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Suites Tab
@@ -55,22 +56,16 @@ export function SuitesTab({
   const pendingDelete = suites.find((s) => s.id === pendingDeleteId) ?? null;
 
   /**
-   * The JSON draft is validated here so an unparseable edit reports *why* it
-   * cannot be applied — `applyJsonDraft` otherwise swallows the parse error and
-   * the Apply button appears to do nothing.
+   * The JSON draft is validated here so a bad edit reports *why* it cannot be
+   * applied — `applyJsonDraft` refuses on the same parser, silently.
    */
   const jsonValidation = useMemo<
     { status: 'valid'; count: number } | { status: 'error'; message: string }
   >(() => {
-    try {
-      const parsed = JSON.parse(jsonDraft);
-      if (!Array.isArray(parsed)) {
-        return { status: 'error', message: 'Scenarios must be a JSON array, e.g. [ { … } ]' };
-      }
-      return { status: 'valid', count: parsed.length };
-    } catch (e) {
-      return { status: 'error', message: e instanceof SyntaxError ? e.message : 'Invalid JSON' };
-    }
+    const parsed = parseScenariosDraft(jsonDraft);
+    return parsed.ok
+      ? { status: 'valid', count: parsed.data.length }
+      : { status: 'error', message: parsed.error };
   }, [jsonDraft]);
 
   return (

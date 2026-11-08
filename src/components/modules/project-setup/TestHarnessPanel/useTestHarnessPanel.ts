@@ -6,7 +6,7 @@ import type {
 } from '@/types/pof-bridge';
 import type { TestSuite, SuiteRunResult, HarnessTab } from './types';
 import { TEMPLATE_SCENARIO } from './constants';
-import { deriveSuiteStatus, generateId } from './helpers';
+import { deriveSuiteStatus, generateId, parseScenariosDraft } from './helpers';
 
 /** Per-pixel diff threshold (%) every harness capture compares at. */
 const SNAPSHOT_DIFF_THRESHOLD = 0.5;
@@ -147,14 +147,10 @@ export function useTestHarnessPanel() {
 
   const applyJsonDraft = useCallback(() => {
     if (!activeSuiteId || !jsonEditorOpen) return;
-    try {
-      const parsed = JSON.parse(jsonDraft) as PofTestSpec[];
-      if (!Array.isArray(parsed)) return;
-      updateSuiteField(activeSuiteId, 'scenarios', parsed);
-      setJsonEditorOpen(false);
-    } catch {
-      // invalid JSON — don't apply
-    }
+    const parsed = parseScenariosDraft(jsonDraft);
+    if (!parsed.ok) return; // SuitesTab shows the same reason and keeps Apply disabled
+    updateSuiteField(activeSuiteId, 'scenarios', parsed.data);
+    setJsonEditorOpen(false);
   }, [activeSuiteId, jsonEditorOpen, jsonDraft, updateSuiteField]);
 
   // ── Run suite ──

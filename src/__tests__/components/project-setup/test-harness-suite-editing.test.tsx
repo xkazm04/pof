@@ -17,6 +17,8 @@ vi.mock('@/hooks/useSnapshots', () => ({
 }));
 
 import { useTestHarnessPanel } from '@/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel';
+import { parseScenariosDraft } from '@/components/modules/project-setup/TestHarnessPanel/helpers';
+import { TEMPLATE_SCENARIO } from '@/components/modules/project-setup/TestHarnessPanel/constants';
 
 afterEach(() => cleanup());
 
@@ -54,5 +56,35 @@ describe('switching suites', () => {
     act(() => hook.current.createSuite());
     expect(hook.current.jsonEditorOpen).toBe(false);
     expect(hook.current.editingScenarioIdx).toBeNull();
+  });
+});
+
+describe('the scenarios JSON draft', () => {
+  it('accepts the template scenario', () => {
+    const r = parseScenariosDraft(JSON.stringify([TEMPLATE_SCENARIO]));
+    expect(r.ok).toBe(true);
+  });
+
+  it.each([
+    ['not an array', '{}', /array/i],
+    ['a non-object element', '[1]', /#1/],
+    ['an empty object', '[{}]', /#1.*testId/],
+    ['a spawn without a location', JSON.stringify([{ ...TEMPLATE_SCENARIO, setup: [{ spawn: 'x', tag: 't' }] }]), /#1.*setup/],
+    ['an unknown action type', JSON.stringify([{ ...TEMPLATE_SCENARIO, actions: [{ type: 'jump' }] }]), /#1.*actions/],
+    ['a repeated testId', JSON.stringify([TEMPLATE_SCENARIO, TEMPLATE_SCENARIO]), /duplicate.*test-basic-spawn/i],
+    ['unparseable text', '[', /.+/],
+  ])('refuses %s and says why', (_name, draft, message) => {
+    const r = parseScenariosDraft(draft);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(message);
+  });
+
+  it('applyJsonDraft keeps the scenarios and the editor when the shape is wrong', () => {
+    const { hook } = twoSuitesEditingA();
+    const before = hook.current.activeSuite?.scenarios;
+    act(() => hook.current.setJsonDraft('[{}]'));
+    act(() => hook.current.applyJsonDraft());
+    expect(hook.current.activeSuite?.scenarios).toBe(before);
+    expect(hook.current.jsonEditorOpen).toBe(true);
   });
 });
