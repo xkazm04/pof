@@ -95,6 +95,9 @@ const STEM_SYNONYMS: Record<string, string> = {
   ankle: 'foot',
 };
 
+/** Finger names, the only words a leading `hand` may be dropped in front of. */
+const FINGER_WORDS = new Set(['thumb', 'index', 'middle', 'ring', 'pinky']);
+
 /** Split a name into lowercase tokens, dropping the vendor prefix. */
 function tokens(name: string): string[] {
   return name
@@ -137,6 +140,10 @@ export function canonicalize(name: string): CanonicalBone {
     words.push(part);
   }
 
+  // Mixamo prefixes finger bones with their parent (`LeftHandThumb1`); UE5 and Tripo do not
+  // (`thumb_01_l`). Drop the `hand` word ahead of a finger name so both land on one stem. A
+  // lone `hand` is the wrist and is left alone.
+  if (words.length === 2 && words[0] === 'hand' && FINGER_WORDS.has(words[1])) words.shift();
   const joined = words.join('');
   const stem = STEM_SYNONYMS[joined] ?? joined;
   return {

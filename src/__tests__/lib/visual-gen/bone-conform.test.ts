@@ -134,3 +134,45 @@ describe('planConform — the hard limit', () => {
     expect(planConform(MIXAMO, []).blockers.length).toBeGreaterThan(0);
   });
 });
+
+describe('planConform — finger bones', () => {
+  const FINGERS = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
+  const UE5_FINGER = ['thumb', 'index', 'middle', 'ring', 'pinky'];
+  const mixamo = (side: string) => FINGERS.map((f) => `mixamorig:${side}Hand${f}1`);
+  const ue5 = (sfx: string) => UE5_FINGER.map((f) => `${f}_01_${sfx}`);
+
+  it('maps the first knuckle of all 5 Mixamo fingers onto the UE5 names, each pair pinned', () => {
+    const plan = planConform(mixamo('Left'), ue5('l'));
+    expect(plan.coverage).toBe(1);
+    const got = new Map(plan.renames.map((r) => [r.from, r.to]));
+    FINGERS.forEach((f, i) => {
+      expect(got.get(`mixamorig:LeftHand${f}1`)).toBe(`${UE5_FINGER[i]}_01_l`);
+    });
+  });
+
+  it('keeps the sides apart', () => {
+    const plan = planConform([...mixamo('Left'), ...mixamo('Right')], [...ue5('l'), ...ue5('r')]);
+    expect(plan.coverage).toBe(1);
+    for (const r of plan.renames) {
+      expect(r.from.includes('Left')).toBe(r.to.endsWith('_l'));
+    }
+  });
+
+  it('pairs a whole Mixamo chain (1-4) onto UE5 (01-03) in order', () => {
+    const rig = [1, 2, 3, 4].map((n) => `mixamorig:LeftHandIndex${n}`);
+    const clip = [1, 2, 3].map((n) => `index_0${n}_l`);
+    const plan = planConform(rig, clip);
+    expect(plan.coverage).toBe(1);
+    expect(plan.renames.map((r) => [r.from, r.to])).toEqual([
+      ['mixamorig:LeftHandIndex1', 'index_01_l'],
+      ['mixamorig:LeftHandIndex2', 'index_02_l'],
+      ['mixamorig:LeftHandIndex3', 'index_03_l'],
+    ]);
+  });
+
+  it('does not let the hand-prefix rule swallow the hand itself', () => {
+    expect(canonicalize('mixamorig:LeftHand').stem).toBe('hand');
+    expect(canonicalize('hand_l').stem).toBe('hand');
+    expect(canonicalize('mixamorig:LeftHandThumb1').stem).toBe('thumb');
+  });
+});
