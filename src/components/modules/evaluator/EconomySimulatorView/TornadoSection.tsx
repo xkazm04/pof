@@ -44,7 +44,10 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
     return { min: min - pad, max: max + pad };
   }, [sweep]);
   const pct = (v: number) => (bounds ? ((v - bounds.min) / (bounds.max - bounds.min)) * 100 : 0);
-  const fmt = (v: number) => (output === 'gini' ? v.toFixed(3) : output === 'criticalAlerts' ? String(Math.round(v)) : formatGold(v));
+  // Format by the output the drawn sweep was RUN for (applied), not the toggle
+  // (entered): moving the toggle after a sweep must not reformat a Gini as gold.
+  const shownOutput = sweep?.output ?? output;
+  const fmt = (v: number) => (shownOutput === 'gini' ? v.toFixed(3) : shownOutput === 'criticalAlerts' ? String(Math.round(v)) : formatGold(v));
 
   return (
     <SurfaceCard className="p-4">
