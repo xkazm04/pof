@@ -120,7 +120,10 @@ export function useActiveGameUrlSync(): void {
     // Back/Forward onto an entry written under another game re-adopts that entry's game.
     const onPop = () => {
       const g = parseGameParam(window.location.search);
-      if (g && g !== useActiveGameStore.getState().gameId) useActiveGameStore.getState().setGame(g);
+      const current = useActiveGameStore.getState().gameId;
+      if (g && g !== current) useActiveGameStore.getState().setGame(g);
+      // An entry with no (or an unregistered) g keeps the current game: rewrite the address to name it.
+      else if (!g) writeGame(current);
     };
     window.addEventListener('popstate', onPop);
     return () => { unsubscribe(); window.removeEventListener('popstate', onPop); };
