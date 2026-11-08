@@ -3,6 +3,7 @@
 import {
   ImagePlus, Wand2, Upload, X, RefreshCw, SplitSquareHorizontal, AlertCircle,
 } from 'lucide-react';
+import { useId } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { MODULE_COLORS } from '@/lib/constants';
 import { EXAMPLE_REFERENCES } from './constants';
@@ -50,6 +51,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
     handleGenerate,
     handleExampleClick,
   } = useMaterialStyleTransfer(onGenerate);
+  const descriptionId = useId();
 
   return (
     <div className="w-full space-y-4">
@@ -165,10 +167,11 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
 
       {/* Reference Description */}
       <div>
-        <label className="text-2xs font-medium text-text-muted block mb-1">
+        <label htmlFor={descriptionId} className="text-2xs font-medium text-text-muted block mb-1">
           Describe the look you want (optional with image, required without)
         </label>
         <textarea
+          id={descriptionId}
           value={referenceDescription}
           onChange={(e) => setReferenceDescription(e.target.value)}
           placeholder="e.g., Stylized fire with scrolling noise, bright orange-to-red color ramp, flickering emissive edges..."

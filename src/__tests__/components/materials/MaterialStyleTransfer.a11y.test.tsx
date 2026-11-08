@@ -62,3 +62,12 @@ describe('MaterialStyleTransfer — the Refine Parameters disclosure', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
   });
 });
+
+describe('MaterialStyleTransfer — the look description field', () => {
+  it('is programmatically labelled by its visible caption', () => {
+    const { container } = render(<MaterialStyleTransfer onGenerate={() => {}} isGenerating={false} />);
+    const textarea = container.querySelector('textarea')!;
+    const label = textarea.id ? container.querySelector(`label[for="${textarea.id}"]`) : null;
+    expect(label?.textContent).toMatch(/Describe the look you want/);
+  });
+});
