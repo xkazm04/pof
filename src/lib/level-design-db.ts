@@ -171,8 +171,8 @@ export function getSummary(): LevelDesignSummary {
   // Only `rooms` and `sync_status` feed the summary — skip parsing the heavy
   // `connections` / `difficulty_arc` / `sync_report` blobs that getAllDocs() would.
   const rows = getDb()
-    .prepare('SELECT rooms, sync_status FROM level_design_docs')
-    .all() as { rooms: string; sync_status: LevelDesignDocument['syncStatus'] }[];
+    .prepare('SELECT rooms, sync_status, last_code_hash FROM level_design_docs')
+    .all() as { rooms: string; sync_status: LevelDesignDocument['syncStatus']; last_code_hash: string | null }[];
 
   const diffDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<DifficultyLevel, number>;
   const typeDist = {
@@ -187,7 +187,8 @@ export function getSummary(): LevelDesignSummary {
 
   for (const row of rows) {
     const status = row.sync_status;
-    if (status === 'synced') syncedCount++;
+    // Same rule as the client twin: `synced` with no lastCodeHash is "Never checked", not synced.
+    if (status === 'synced') { if (row.last_code_hash) syncedCount++; }
     else if (status === 'diverged' || status === 'doc-ahead' || status === 'code-ahead') divergedCount++;
     else if (status === 'unlinked') unlinkedCount++;
 

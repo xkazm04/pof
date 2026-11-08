@@ -66,7 +66,8 @@ export function deriveSummary(docs: LevelDesignDocument[]): LevelDesignSummary {
   let unlinkedCount = 0;
 
   for (const doc of docs) {
-    if (doc.syncStatus === 'synced') syncedCount++;
+    // A `synced` doc with no lastCodeHash is shown as "Never checked" by SyncDot, so it is not counted as synced.
+    if (doc.syncStatus === 'synced') { if (doc.lastCodeHash) syncedCount++; }
     else if (doc.syncStatus === 'diverged' || doc.syncStatus === 'doc-ahead' || doc.syncStatus === 'code-ahead') divergedCount++;
     else if (doc.syncStatus === 'unlinked') unlinkedCount++;
 

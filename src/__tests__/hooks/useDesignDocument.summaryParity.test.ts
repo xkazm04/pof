@@ -21,7 +21,7 @@ vi.mock('@/lib/db', () => ({
     exec: () => {},
     prepare: (sql: string) => ({
       all: () => (sql.includes('SELECT rooms')
-        ? docRows.map((r) => ({ rooms: r.rooms, sync_status: r.sync_status }))
+        ? docRows.map((r) => ({ rooms: r.rooms, sync_status: r.sync_status, last_code_hash: r.last_code_hash }))
         : docRows),
       get: () => docRows[0],
       run: () => ({ changes: 1, lastInsertRowid: 1 }),
@@ -51,13 +51,15 @@ const TYPES = ['combat', 'puzzle', 'exploration', 'boss', 'safe', 'transition', 
 /** Every sync bucket, every room type, every difficulty, plus the out-of-range,
  *  unknown-type and damaged-blob edges each side guards. */
 const TABLE: Row[] = [
-  row(1, 'synced', TYPES.map((t, i) => room(`a${i}`, t, (i % 5) + 1))),
+  { ...row(1, 'synced', TYPES.map((t, i) => room(`a${i}`, t, (i % 5) + 1))), last_code_hash: 'h1' },
   row(2, 'diverged', [room('b1', 'boss', 5), room('b2', 'boss', 0)]),
   row(3, 'doc-ahead', [room('c1', 'hub', 6)]),
   row(4, 'code-ahead', [room('d1', 'not-a-type', 2)]),
   row(5, 'unlinked', []),
   row(6, 'unlinked', 'not json at all'),
   row(7, 'something-new', [room('e1', 'safe', 1)]),
+  // synced but never compared (codegen stamps it): not counted as synced on either side
+  row(8, 'synced', []),
 ];
 
 describe('deriveSummary ↔ getSummary parity', () => {
@@ -70,7 +72,7 @@ describe('deriveSummary ↔ getSummary parity', () => {
     expect(server.syncedCount).toBe(1);
     expect(server.divergedCount).toBe(3);
     expect(server.unlinkedCount).toBe(2);
-    expect(server.totalDocs).toBe(7);
+    expect(server.totalDocs).toBe(8);
   });
 
   it('[control] the comparison notices a drifted input', () => {
