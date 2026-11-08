@@ -7928,8 +7928,8 @@
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T23:58:08.468Z",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:45:46.810Z",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
@@ -7981,19 +7981,20 @@
         }
       ],
       "withdrawn": {
-        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
+        "worker": "bdc0a94e-03b8-4318-8494-c02d53bfefe0",
         "state": "not-applicable",
-        "at": "2026-10-24T23:59:45.296495+00:00",
-        "reason": "reviewer (sonnet): The anchor SaveLoadView.tsx:3 is only a createSimpleModuleView call. It does not show that the on-device save and socket preconditions are absent, and the context files I could name are a transpiler and a dialogue view, which I did not trace."
+        "at": "2026-11-08T03:47:08.796794+00:00",
+        "reason": "reviewer (sonnet): The anchor at index.tsx:13 is a useState line for the active tab. It does not show that the context never installs, launches or connects to a device, so it is incidental."
       }
     },
     "0f8602ad-d98f-4d1d-9644-0467be9e70b9/fire-tv-device-realities": {
       "context": "debug-performance",
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T23:58:08.468Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:45:46.810Z",
+      "worker": "bdc0a94e-03b8-4318-8494-c02d53bfefe0",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
@@ -8043,13 +8044,7 @@
           "evidence": "src/components/modules/core-engine/sub_debug/console/CommandCatalog.tsx:84 Run executes a console command against an existing editor connection; it does not launch a streaming-stick game.",
           "carriedFrom": "2026-10-17"
         }
-      ],
-      "withdrawn": {
-        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
-        "state": "not-applicable",
-        "at": "2026-10-24T23:59:45.420556+00:00",
-        "reason": "reviewer (sonnet): The anchor MemorySection.tsx:14 is a component signature and comment about memory slices. It does not show that thread-priority, audio-stream or device preconditions are absent, and I did not trace the other files."
-      }
+      ]
     },
     "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/fire-tv-device-realities": {
       "context": "hud-damage-and-navigation",
@@ -8115,8 +8110,8 @@
       "subject": "fire-tv-device-realities",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T23:58:08.468Z",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:45:46.810Z",
       "techniques": [
         {
           "technique": "abi-inspect-the-apk",
@@ -8174,10 +8169,10 @@
         }
       ],
       "withdrawn": {
-        "worker": "48f9514e-59d6-4ebb-b3f6-9f2c36ba43e9",
+        "worker": "bdc0a94e-03b8-4318-8494-c02d53bfefe0",
         "state": "not-applicable",
-        "at": "2026-10-24T23:59:45.563856+00:00",
-        "reason": "reviewer (sonnet): The anchor types.ts:2 only says the plan's types live in lib. It does not say 'World Partition', and I did not open the lib streaming-plan file or other planner files to confirm what 'streaming' means here."
+        "at": "2026-11-08T03:47:08.886895+00:00",
+        "reason": "reviewer (sonnet): The anchor at index.tsx:43 is only the component signature. It does not itself show that 'streaming' means level streaming and not a device, so it is incidental. The claim also rests on a grep for terms that are too narrow."
       }
     },
     "27a34084-b33e-4538-8173-600d5162f922/node-boot-and-declarative-bootstrap": {
@@ -23328,6 +23323,21 @@
           "evidence": "src/components/modules/core-engine/sub_character/simulator/feedback/ResultsPanel.tsx:126 Duration is treated as one-sided, with shorter always better. There is no floor or ceiling envelope, and Avg TTK (predictive ResultsPanel) is shown without any bound."
         }
       ]
+    },
+    "f9a4a5bc-b02a-4085-83f0-32492b13c805/fire-tv-device-realities": {
+      "context": "audio-module",
+      "subject": "fire-tv-device-realities",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T03:45:46.810Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "bdc0a94e-03b8-4318-8494-c02d53bfefe0",
+        "state": "not-applicable",
+        "at": "2026-11-08T03:47:08.702268+00:00",
+        "reason": "reviewer (sonnet): The anchor at route.ts:101 is a comment about the provider's capability contract. It does not show that the route has no device audio stream, so it is an incidental anchor and the absence search is thin."
+      }
     }
   }
 }

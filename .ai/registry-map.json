@@ -13689,7 +13689,11 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_debug/index.tsx:37 The debug dashboard draws UE profiling sessions (draw calls, GC, memory, crashes) from captured or sample data; it does not measure startup time, thread priority, durable saves or audio streams on a streaming-stick device. A search of sub_debug and src/components/modules for fire tv, firetv, streaming stick, keep_screen_on and aapt found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:fc37d71f0a5437da",
+          "evaluatedRevision": 2
         },
         {
           "subject": "build-economics",
