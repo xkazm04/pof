@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiError, respondFromResult, withRoute } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
 import { getService } from '@/lib/blender-mcp/service';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { ledger } from '@/lib/blender-mcp/generation-ledger';
 import { isGenerationProvider } from '@/app/api/blender-mcp/_lib/provider';
 
@@ -10,12 +11,14 @@ import { isGenerationProvider } from '@/app/api/blender-mcp/_lib/provider';
 export const POST = withRoute(async (req: NextRequest) => {
   const denied = requireOperator(req);
   if (denied) return denied;
-  const body = await req.json();
-  const jobId = body.jobId as string;
+  const body = await readJsonObject(req);
+  if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+  const jobId = body.jobId;
   const provider: unknown = body.provider;
 
   if (!jobId || !provider)
     return apiError('jobId and provider are required', 400);
+  if (typeof jobId !== 'string') return apiError('jobId must be a string', 400);
   if (!isGenerationProvider(provider))
     return apiError('provider must be hyper3d or hunyuan3d', 400);
 
