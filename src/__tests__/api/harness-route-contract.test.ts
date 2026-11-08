@@ -98,3 +98,22 @@ describe('harness writes are operator-guarded', () => {
     expect(h.deleted).toEqual(['r1']);
   });
 });
+
+describe("a refused start leaves the current run's server state alone", () => {
+  it('keeps the previous config and event buffer when the statePath belongs to another project', async () => {
+    const previous = { statePath: 'C:/state/live' };
+    const events = [{ type: 'harness:started' }];
+    G.harnessConfig = previous;
+    G.harnessEvents = events;
+    G.harnessStatus = 'paused';
+    h.identity = () => { throw new Error('statePath belongs to C:/other'); };
+
+    const res = await post({ ...START, statePath: 'C:/state/foreign' });
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('C:/other');
+    expect(h.created).toBe(0);
+    expect(G.harnessConfig).toBe(previous);
+    expect(G.harnessEvents).toBe(events);
+  });
+});

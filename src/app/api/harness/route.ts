@@ -376,9 +376,6 @@ export async function POST(request: NextRequest) {
       executor: executorOverride,
     });
 
-    globalForHarness.harnessConfig = config;
-    globalForHarness.harnessEvents = [];
-
     // Durable identity: a start pointed at an existing statePath RESUMES the same
     // run (same runId) rather than silently minting a new one and fragmenting
     // history. A prior TERMINAL run at the statePath forks with recorded
@@ -400,6 +397,12 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       return apiError(err instanceof Error ? err.message : String(err), 400);
     }
+
+    // Only an accepted start may replace these: GET reads the last config's statePath and a
+    // paused run's event buffer, and a refused start must not repoint either at the other run.
+    globalForHarness.harnessConfig = config;
+    globalForHarness.harnessEvents = [];
+
     const orchestrator = createHarnessOrchestrator(config, {
       ...(identity.resumeRunId ? { resumeRunId: identity.resumeRunId } : {}),
       ...(identity.parentRunId ? { parentRunId: identity.parentRunId } : {}),
