@@ -227,7 +227,7 @@ describe('calibration history — drift is comparable across runs', () => {
   });
 
   it('a failed append is RETURNED, so an unpersisted run is never reported as persisted', () => {
-    const r = appendCalibrationRun(run({}), join(tmp(), 'nested-as-a-file', ' bad'));
+    const r = appendCalibrationRun(run({}), join(tmp(), 'nested-as-a-file', '\u0000bad'));
     expect(r.ok).toBe(false);
   });
 
