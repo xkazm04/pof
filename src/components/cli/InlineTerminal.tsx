@@ -11,6 +11,7 @@ import { resubmitPendingCallbacks, tabJumpTarget } from '@/components/cli/sugges
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { apiFetch } from '@/lib/api-utils';
 
 interface InlineTerminalProps {
   sessionId: string;
@@ -72,6 +73,19 @@ export function InlineTerminal({
     },
     [height, minHeight, maxHeight, setInlineTerminalHeight]
   );
+
+  // Closing unmounts CompactTerminal, which only closes its EventSource; the spawned
+  // CLI would keep running unattached. removeSession also drops currentExecutionId,
+  // the only persisted handle, so reap the server run BEFORE removing the session.
+  const handleClose = useCallback(() => {
+    const live = useCLIPanelStore.getState().sessions[sessionId];
+    const executionId = live?.isRunning ? live.currentExecutionId : null;
+    if (executionId) {
+      void apiFetch(`/api/claude-terminal/query?executionId=${encodeURIComponent(executionId)}`, { method: 'DELETE' })
+        .catch(() => { /* best-effort: the process may have already exited */ });
+    }
+    removeSession(sessionId);
+  }, [sessionId, removeSession]);
 
   const handleSuggestionAction = useCallback((action: SuggestionAction) => {
     switch (action.type) {
@@ -152,7 +166,7 @@ export function InlineTerminal({
             <Minimize2 className="w-3 h-3" aria-hidden="true" />
           </button>
           <button
-            onClick={() => removeSession(sessionId)}
+            onClick={handleClose}
             className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
             title="Close terminal"
             aria-label="Close terminal"
