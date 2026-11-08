@@ -9,6 +9,9 @@ vi.hoisted(() => {
 
 import { POST as profilesPOST, GET as profilesGET } from '@/app/api/packaging/profiles/route';
 import { createDefaultProfile } from '@/lib/packaging/build-profiles';
+import { getSetting, setSetting } from '@/lib/db';
+
+const PROFILES_KEY = 'build_profiles';
 
 const post = (handler: (r: NextRequest) => Promise<Response>, path: string, body: unknown) =>
   handler(new NextRequest(`http://localhost/api/${path}`, {
@@ -39,5 +42,16 @@ describe('POST /api/packaging/profiles — profile shape', () => {
   });
   it('saves a default profile', async () => {
     expect((await post(profilesPOST, 'packaging/profiles', { profile: good })).status).toBe(200);
+  });
+});
+
+describe('POST /api/packaging/profiles - corrupt profile store', () => {
+  it('answers a corrupt stored list with 409 naming the problem, like history set-budget', async () => {
+    setSetting(PROFILES_KEY, '{oops');
+    const res = await post(profilesPOST, 'packaging/profiles', { profile: createDefaultProfile('Win64') });
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toMatch(/build_profiles|corrupt|unreadable/i);
+    // The bytes the operator needs to recover are still there.
+    expect(getSetting(PROFILES_KEY)).toBe('{oops');
   });
 });

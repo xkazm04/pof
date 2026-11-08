@@ -41,6 +41,10 @@ export const POST = withRoute(async (req: NextRequest) => {
   if (!moduleId || !itemId || !projectPath) {
     return apiError('moduleId, itemId, and projectPath are required', 400);
   }
+  // Identity fields key the progress row: a number or object would bind wrongly or throw.
+  for (const [name, value] of [['moduleId', moduleId], ['itemId', itemId], ['projectPath', projectPath]] as const) {
+    if (typeof value !== 'string') return apiError(`${name} must be a string`, 400);
+  }
 
   // ── Validate the id against what the module actually declares ─────────────
   const verdict = resolveProgressKey(moduleId, itemId);

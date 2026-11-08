@@ -6,6 +6,7 @@ import {
 } from '@/lib/packaging/build-profiles-db';
 import { PLATFORM_IDS } from '@/lib/packaging/build-profiles';
 import { generateUATCommand } from '@/lib/packaging/uat-command-generator';
+import { SettingsBlobCorruptError } from '@/lib/settings/settings-blob';
 
 const BUILD_CONFIGS = ['Development', 'DebugGame', 'Shipping', 'Test'];
 const isStringArray = (v: unknown) => Array.isArray(v) && v.every((s) => typeof s === 'string');
@@ -53,8 +54,13 @@ export const POST = withRoute(async (request: NextRequest) => {
     case 'save': {
       const invalid = profileError(body.profile);
       if (invalid) return apiError(invalid, 400);
-      const profile = upsertProfile(body.profile);
-      return apiSuccess({ profile });
+      try {
+        return apiSuccess({ profile: upsertProfile(body.profile) });
+      } catch (e) {
+        // An unreadable stored list is refused (bytes quarantined): a store problem, not a server fault.
+        if (e instanceof SettingsBlobCorruptError) return apiError(e.message, 409);
+        throw e;
+      }
     }
     case 'generate-command': {
       const profile = body.profile as BuildProfile;
