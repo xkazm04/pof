@@ -10,12 +10,29 @@ export const ACCENT = MODULE_COLORS.content;
    CONSTANTS — mirrors UDamageNumberWidget.h exactly
    ══════════════════════════════════════════════════════════════════════════ */
 
+/** FLinearColor values from UDamageNumberWidget.h - the one source for every damage-number tool. */
+export const ELEMENT_RGBA: Record<DamageElement, [number, number, number, number]> = {
+  physical: [1.0, 1.0, 1.0, 1.0],
+  fire: [1.0, 0.3, 0.1, 1.0],
+  ice: [0.3, 0.6, 1.0, 1.0],
+  lightning: [1.0, 1.0, 0.2, 1.0],
+  heal: [0.2, 1.0, 0.3, 1.0],
+};
+
+/** Header default font sizes (px): normal and crit. */
+export const NORMAL_FONT_SIZE = 18;
+export const CRIT_FONT_SIZE = 26;
+
+export function rgbaToCss([r, g, b, a]: [number, number, number, number]): string {
+  return `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
+}
+
 export const ELEMENT_COLORS: Record<DamageElement, string> = {
-  physical: 'rgba(255,255,255,1)',
-  fire: 'rgba(255,77,26,1)',
-  ice: 'rgba(77,153,255,1)',
-  lightning: 'rgba(255,255,51,1)',
-  heal: 'rgba(51,255,77,1)',
+  physical: rgbaToCss(ELEMENT_RGBA.physical),
+  fire: rgbaToCss(ELEMENT_RGBA.fire),
+  ice: rgbaToCss(ELEMENT_RGBA.ice),
+  lightning: rgbaToCss(ELEMENT_RGBA.lightning),
+  heal: rgbaToCss(ELEMENT_RGBA.heal),
 };
 
 export const ELEMENT_ICONS: Record<DamageElement, typeof Swords> = {
@@ -30,8 +47,8 @@ export const DEFAULT_PHYSICS: PhysicsConfig = {
   lifetime: 1.0,
   floatDistance: 80,
   horizontalSpread: 30,
-  normalFontSize: 18,
-  critFontSize: 26,
+  normalFontSize: NORMAL_FONT_SIZE,
+  critFontSize: CRIT_FONT_SIZE,
   fadeStart: 0.4,
   physicsMode: 'linear',
   gravity: 200,
