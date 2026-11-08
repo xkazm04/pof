@@ -25,24 +25,13 @@ const ROUTE = '/api/blender-mcp/execute';
 const WRAPPER = ['components/modules/visual-gen/blender-pipeline/ScriptRunner.tsx'];
 
 /**
- * Call sites still fetching the route directly. Each is OUTSIDE the write set
- * of the lot that introduced this guard (wave 23 / Lot KC owns `blender-mcp`,
- * `scene-composer` and `ScriptRunner`), so migrating them would have meant
- * editing files another parallel session may hold uncommitted work in.
- *
- * Migrating one is mechanical: replace the `tryApiFetch(ROUTE, …)` call with
- * `executeViaMCP('<human script name>', code)` — same `Result`, plus a row in
- * the panel — and delete its line here.
+ * Call sites still fetching the route directly. EMPTY: all seven former residuals
+ * (material-lab, PostProcessStackBuilder, MaterialPatternCatalog, ProceduralLevelWizard,
+ * LevelFlowEditor, state-machine-shared, AIComboChoreographer) dispatch through
+ * `executeViaMCP` now. The list only exists so a future, reasoned residual has a place
+ * to be named; the stale-entry check below still keeps it honest.
  */
-const UNMIGRATED = [
-  'components/modules/visual-gen/material-lab/useMaterialStore.ts',
-  'components/modules/content/materials/PostProcessStackBuilder/index.tsx',
-  'components/modules/content/materials/MaterialPatternCatalog/index.tsx',
-  'components/modules/content/level-design/ProceduralLevelWizard/useProceduralLevelWizard.ts',
-  'components/modules/content/level-design/LevelFlowEditor/useLevelFlowEditor.ts',
-  'components/modules/content/animations/shared/state-machine-shared.ts',
-  'components/modules/content/animations/AIComboChoreographer/useAIComboChoreographer.ts',
-];
+const UNMIGRATED: string[] = [];
 
 /**
  * A DISPATCH is the route string passed to a fetch call — `fetch(`,
@@ -96,6 +85,11 @@ describe('every /api/blender-mcp/execute dispatch goes through executeViaMCP', (
       stale,
       'These no longer fetch the execute route; delete them from UNMIGRATED',
     ).toEqual([]);
+  });
+
+  it('has no residuals left: every dispatch is recorded in Script History', () => {
+    expect(UNMIGRATED).toHaveLength(0);
+    expect(dispatchers).toEqual(WRAPPER);
   });
 
   it('Auto-Rig dispatches through executeViaMCP — its armature is recorded and its receipt read', () => {

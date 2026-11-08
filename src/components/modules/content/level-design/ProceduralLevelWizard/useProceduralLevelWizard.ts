@@ -3,10 +3,9 @@
 import { useCallback, useRef, useMemo, useEffect, useDeferredValue, useReducer } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
 import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { generatePreview, DEFAULT_MAX_PREVIEW_SIZE } from '@/lib/level-design/procgen-preview';
 import { previewConfigFromSpec, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
@@ -187,11 +186,7 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
       const metadataCode = levelMetadataScript({ spawnPoints: placement.spawns });
       const combinedCode = geometryCode + '\n\n' + metadataCode;
 
-      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: combinedCode }),
-      });
+      const result = await executeViaMCP('Procedural level export', combinedCode);
       if (result.ok) {
         // Report the size that was actually shipped, never the configured one.
         const shipped = `Exported ${plan.width}x${plan.height} ${plan.isFullSize ? '' : `(${Math.round(plan.scale * 100)}% of requested) `}level to Blender. ${describeSpawnPlacement(placement)}`;

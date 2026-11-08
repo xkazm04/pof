@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
 import { logger } from '@/lib/logger';
 import { getAppOrigin } from '@/lib/constants';
 import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
@@ -373,11 +374,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       textures: plan.textures,
     });
 
-    const result = await tryApiFetch<unknown>('/api/blender-mcp/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
+    const result = await executeViaMCP('Send material to Blender', code);
     if (!result.ok) {
       logger.warn(`[material-lab] send to Blender: ${result.error}`);
       return result;
