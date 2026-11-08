@@ -130,7 +130,18 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       // carries no analysis used to throw on `json.data.analysis` INSIDE the try,
       // so the catch below reported it as a connection problem — blaming the
       // user's network for a malformed server response.
-      const json = (await res.json()) as ApiResponse<{ analysis?: AnalyzedProperties }>;
+      // A non-JSON reply (an HTML error page, a proxy 502) is the server's fault, not a
+      // parse message for the user: name it with its status instead of echoing the
+      // SyntaxError ("Unexpected token '<' ...") verbatim.
+      let json: ApiResponse<{ analysis?: AnalyzedProperties }>;
+      try {
+        json = (await res.json()) as ApiResponse<{ analysis?: AnalyzedProperties }>;
+      } catch (parseError) {
+        if (!isCurrent()) return;
+        logger.warn('[MaterialStyleTransfer] analyze reply was not JSON', res.status, parseError);
+        setAnalyzeError(`The analyzer sent an unreadable reply (HTTP ${res.status}) — retry, or check the server log.`);
+        return;
+      }
       if (!isCurrent()) return;
       if (json.success && json.data?.analysis) {
         setAnalysis(json.data.analysis);
