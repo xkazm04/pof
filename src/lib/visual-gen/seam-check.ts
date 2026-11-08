@@ -60,7 +60,8 @@ export async function detectSeams(
   image: Uint8Array,
   opts: SeamCheckOptions = {},
 ): Promise<SeamCheckResult> {
-  const threshold = opts.threshold ?? DEFAULT_SEAM_THRESHOLD;
+  // NaN compares false against every delta, which would turn the check off.
+  const threshold = Number.isFinite(opts.threshold) ? (opts.threshold as number) : DEFAULT_SEAM_THRESHOLD;
 
   const { data, info } = await sharp(Buffer.from(image))
     .removeAlpha()
@@ -69,6 +70,8 @@ export async function detectSeams(
   const w = info.width;
   const h = info.height;
   const ch = info.channels; // RGB → 3 after removeAlpha (1 for greyscale)
+  // With one row or column each edge is compared to itself, so the delta is 0 by construction.
+  if (w < 2 || h < 2) throw new Error(`${w}x${h} image has no opposite edges to compare`);
 
   const channelAt = (x: number, y: number, c: number): number => data[(y * w + x) * ch + c];
 

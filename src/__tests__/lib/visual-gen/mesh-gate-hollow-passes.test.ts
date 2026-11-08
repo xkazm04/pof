@@ -7,6 +7,8 @@ import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visu
 import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
 import { planKitAtlas } from '@/lib/visual-gen/texel-density';
+import sharp from 'sharp';
+import { detectSeams, detectSeamsSafe } from '@/lib/visual-gen/seam-check';
 import { fetchMeshForGrading } from '@/lib/visual-gen/mesh-fetch';
 import { runMeshViews } from '@/lib/visual-gen/mesh-views';
 
@@ -155,5 +157,25 @@ describe('fetchMeshForGrading reports a failed body read as a refusal', () => {
     const out = await fetchMeshForGrading('https://x.deemos.com/a.glb', 'job1', { fetchFn, fileExists: () => false, outDir: 'C:/nowhere' });
     expect(out.ok).toBe(false);
     if (!out.ok) expect(out.reason).toContain('socket hang up');
+  });
+});
+
+describe('the seam check says nothing when it compared nothing', () => {
+  const solid = (width: number, height: number) =>
+    sharp({ create: { width, height, channels: 3, background: { r: 90, g: 90, b: 90 } } }).png().toBuffer();
+
+  it('a one-pixel-wide image has no opposite edge to compare, so it has no verdict', async () => {
+    expect(await detectSeamsSafe(await solid(1, 16))).toBeNull();
+  });
+
+  it('a one-pixel-tall image has no verdict either', async () => {
+    expect(await detectSeamsSafe(await solid(16, 1))).toBeNull();
+  });
+
+  it('an unreadable threshold falls back to the default instead of disabling the check', async () => {
+    const left = await sharp({ create: { width: 8, height: 16, channels: 3, background: { r: 0, g: 0, b: 0 } } }).png().toBuffer();
+    const img = await sharp({ create: { width: 16, height: 16, channels: 3, background: { r: 255, g: 255, b: 255 } } })
+      .composite([{ input: left, left: 0, top: 0 }]).png().toBuffer();
+    expect((await detectSeams(img, { threshold: NaN })).hasSeam).toBe(true);
   });
 });
