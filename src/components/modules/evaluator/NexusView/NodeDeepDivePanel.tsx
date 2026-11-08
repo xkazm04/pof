@@ -21,6 +21,9 @@ import type { RetryableSource } from './useNexusSignals';
 /** How many of the module's newest recorded runs the deep-dive lists. */
 const RECENT_SESSION_ROWS = 8;
 
+/** How many matching patterns the deep-dive lists before disclosing the rest. */
+const PATTERN_ROWS = 5;
+
 // ─── Deep Dive Panel ───────────────────────────────────────────────────────
 
 export function NodeDeepDivePanel({
@@ -113,7 +116,7 @@ export function NodeDeepDivePanel({
               onToggle={() => setExpandedSection(expandedSection === 'patterns' ? null : 'patterns')}
             >
               <div className="space-y-1.5">
-                {patterns.slice(0, 5).map((p) => (
+                {patterns.slice(0, PATTERN_ROWS).map((p) => (
                   <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-background">
                     <BookOpen className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
                     <span className="text-xs text-text flex-1 truncate">{p.title}</span>
@@ -123,6 +126,9 @@ export function NodeDeepDivePanel({
                     <span className="text-2xs text-text-muted">{p.sessionCount} uses</span>
                   </div>
                 ))}
+                {patterns.length > PATTERN_ROWS && (
+                  <div className="px-2 py-1 text-2xs text-text-muted">+{patterns.length - PATTERN_ROWS} more</div>
+                )}
               </div>
             </CollapsibleSection>
           )}
