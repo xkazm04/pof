@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { CodeViewer } from '@/components/ui/CodeViewer';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import { MOTION } from '@/lib/constants';
-import { MODULE_COLORS, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_PURPLE_BOLD, STATUS_NEUTRAL } from '@/lib/chart-colors';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -151,7 +151,7 @@ export function EconomyCodeGenPanel() {
                   >
                     <FileCode
                       className="w-3 h-3"
-                      style={{ color: LANG_COLORS[file.language] ?? '#888' }}
+                      style={{ color: LANG_COLORS[file.language] ?? STATUS_NEUTRAL }}
                     />
                     {file.filename}
                     <span className="text-text-muted/50">{file.lines}L</span>
