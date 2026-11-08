@@ -9,7 +9,7 @@
  * entity RESOLVABLE; the browser store becomes a cache of it, never the record.
  *
  * A client never writes SQLite directly, and it may not claim a code seed's id: an id that
- * collides with a code-seeded entity is refused with the collision named (400), because the
+ * collides with a code-seeded entity is refused with the collision named (409), because the
  * union in `seededEntities` resolves the code seed and the row would be silently inert.
  *
  * GET is unguarded (a read); POST/DELETE go through `requireOperator` like every other
