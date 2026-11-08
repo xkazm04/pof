@@ -15,7 +15,7 @@ export function LootTablePagination({ safePage, totalPages, totalCount, setPage 
   return (
     <div className="flex items-center justify-center gap-2 mb-3">
       <button
-        onClick={() => setPage(p => Math.max(0, p - 1))}
+        onClick={() => setPage(Math.max(0, safePage - 1))}
         disabled={safePage === 0}
         className="p-1 rounded border border-border/30 disabled:opacity-30 cursor-pointer"
       >
@@ -25,7 +25,7 @@ export function LootTablePagination({ safePage, totalPages, totalCount, setPage 
         Page {safePage + 1} / {totalPages} ({totalCount} items)
       </span>
       <button
-        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+        onClick={() => setPage(Math.min(totalPages - 1, safePage + 1))}
         disabled={safePage >= totalPages - 1}
         className="p-1 rounded border border-border/30 disabled:opacity-30 cursor-pointer"
       >
