@@ -170,9 +170,17 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
     };
   }, [isPlaying, speedFactor, accelFactor, dodgeDistFactor, dodgeDurFactor, values, runKey]);
 
+  // The canvas pixels are invisible to AT; the name carries the tuning it animates.
+  const label = `Movement preview (${isPlaying ? 'playing' : 'paused, press play'}): walk speed ${
+    Math.round(values['movement.maxWalkSpeed'])} cm/s, acceleration ${
+    Math.round(values['movement.acceleration'])} cm/s², dodge ${
+    Math.round(values['dodge.distance'])} cm over ${Number(values['dodge.duration'].toFixed(2))} s`;
+
   return (
     <canvas
       ref={canvasRef}
+      role="img"
+      aria-label={label}
       width={400}
       height={120}
       className="w-full rounded-lg border border-border/30 bg-surface-deep/50"
