@@ -11,6 +11,7 @@ import { ReplicationScaffoldPanel } from '@/components/modules/game-systems/mult
 import { useProjectStore } from '@/stores/projectStore';
 import { TranspilePane } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/TranspilePane';
 import { DiffPane } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/DiffPane';
+import { QuestGeneratorPanel } from '@/components/modules/game-systems/DialogueView/QuestGeneratorPanel';
 import { ChangeCard } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/ChangeCard';
 import type { SemanticChange } from '@/types/blueprint';
 
@@ -153,5 +154,19 @@ describe('badge tints use the opacity tokens, not a raw hex-alpha suffix', () =>
       return (src.match(/\$\{[^}]+\}[0-9a-fA-F]{2}`/g) ?? []).map((m) => `${f}: ${m}`);
     });
     expect(hits).toEqual([]);
+  });
+});
+
+describe('QuestGeneratorPanel - a failed level-doc load is said, not swallowed', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('shows why the level-doc picker is missing when GET /api/quest-generation fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ success: false, error: 'db locked' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )));
+    render(<QuestGeneratorPanel />);
+    const note = await screen.findByTestId('level-docs-error');
+    expect(note.textContent).toContain('db locked');
   });
 });

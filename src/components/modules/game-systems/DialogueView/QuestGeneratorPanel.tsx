@@ -26,6 +26,7 @@ export function QuestGeneratorPanel() {
   const [error, setError] = useState<string | null>(null);
   const [levelDocs, setLevelDocs] = useState<Array<{ id: number; name: string; roomCount: number }>>([]);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [docsError, setDocsError] = useState<string | null>(null);
 
   const projectPath = useProjectStore((s) => s.projectPath);
 
@@ -38,7 +39,8 @@ export function QuestGeneratorPanel() {
           setSelectedDocId(data.docs[0].id);
         }
       })
-      .catch(() => { /* ignore */ });
+      // A failed load hides the picker, so say why instead of swallowing it.
+      .catch((e: unknown) => setDocsError(e instanceof Error ? e.message : 'Level docs could not be loaded'));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generate = useCallback(async () => {
@@ -139,6 +141,11 @@ export function QuestGeneratorPanel() {
         <p className="text-2xs text-text-muted mt-1.5">
           Scans project actors and level designs to procedurally generate quests with dialogue trees.
         </p>
+        {docsError && (
+          <p data-testid="level-docs-error" className="text-2xs text-text-muted mt-1">
+            Level docs unavailable ({docsError}) - generating without one.
+          </p>
+        )}
       </SurfaceCard>
 
       {error && (
