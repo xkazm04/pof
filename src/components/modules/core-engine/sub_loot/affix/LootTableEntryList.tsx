@@ -18,6 +18,11 @@ export function LootTableEntryList({
   groupedEntries, sourceFilter, editorTotalWeight, filteredEntries,
   onUpdateWeight, onRemoveEntry,
 }: LootTableEntryListProps) {
+  // The slider scale follows the table: an imported DropWeight of 250 (or 2.5) must not be
+  // pinned to 100 / rounded to an integer on the first touch.
+  // 25% headroom so the heaviest row can still be raised.
+  const sliderMax = Math.max(100, Math.ceil(Math.max(0, ...filteredEntries.map((e) => e.weight)) * 1.25));
+  const sliderStep = filteredEntries.every((e) => Number.isInteger(e.weight)) ? 1 : 'any';
   return (
     <div className="space-y-3 mb-3 max-h-[28rem] overflow-y-auto pr-1">
       {groupedEntries.map(({ source, entries }) => (
@@ -36,7 +41,8 @@ export function LootTableEntryList({
                   <input
                     type="range"
                     min={0}
-                    max={100}
+                    max={sliderMax}
+                    step={sliderStep}
                     value={entry.weight}
                     onChange={(e) => onUpdateWeight(entry.id, Number(e.target.value))}
                     aria-label={`Weight for ${entry.name}`}
