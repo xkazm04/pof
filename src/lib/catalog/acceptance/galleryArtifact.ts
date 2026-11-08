@@ -163,7 +163,7 @@ export function gradeGallerySelection(
       detail: `selection ${JSON.stringify(history.selectedId)} unresolved`,
       reason:
         `the artifact selects candidate id ${JSON.stringify(history.selectedId)}, which is not among the ` +
-        `${kept} candidate(s) in the ${history.batches.length} kept batch(es) — the graded selection points at nothing.`,
+        `${kept} candidate${kept === 1 ? '' : 's'} in the ${history.batches.length} kept batch${history.batches.length === 1 ? '' : 'es'} — the graded selection points at nothing.`,
     };
   }
 
