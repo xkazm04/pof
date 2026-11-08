@@ -94,3 +94,30 @@ describe('a press that does not move the deadline', () => {
     expect(puts(mock)).toEqual([]);
   });
 });
+
+describe('a deadline write the server refuses', () => {
+  it('puts the saved date back and says why', async () => {
+    installFetch({ put: () => respond({ success: false, error: 'disk full' }, 500) });
+    const { container, findByTestId, findByRole } = render(<CalendarRoadmapView />);
+    const marker = await findByTestId('deadline-marker-ms-1');
+    placeSvg(container, 0, 0);
+    drag(marker, 300);
+    const alert = await findByRole('alert');
+    expect(alert.textContent).toContain('disk full');
+    expect(container.textContent).toContain(cardDate(DEADLINE));
+  });
+
+  it('does not undo a newer edit when the older write fails', async () => {
+    const pending: Array<(v: unknown) => void> = [];
+    const mock = installFetch({ put: () => new Promise((r) => pending.push(r)) });
+    const { container, findByTestId } = render(<CalendarRoadmapView />);
+    const marker = await findByTestId('deadline-marker-ms-1');
+    placeSvg(container, 0, 0);
+    drag(marker, 300);
+    drag(await findByTestId('deadline-marker-ms-1'), 340);
+    await waitFor(() => expect(pending.length).toBe(2));
+    const newer = puts(mock)[1].targetDate as string;
+    await act(async () => { pending[0](respond({ success: false, error: 'late refusal' }, 500)); });
+    expect(container.textContent).toContain(cardDate(newer));
+  });
+});

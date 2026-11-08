@@ -6,6 +6,7 @@ import { useModuleStore } from '@/stores/moduleStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { Milestone } from '@/types/project-health';
 import { toLocalNoon } from '@/lib/roadmap-dates';
+import { tryApiFetch } from '@/lib/api-utils';
 import {
   WEEK_PX, ROW_HEIGHT, HEADER_HEIGHT, LEFT_GUTTER,
 } from './constants';
@@ -25,6 +26,9 @@ export function useCalendarRoadmapView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDate, setEditDate] = useState('');
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // What the server last confirmed: the only value a refused write may restore.
+  const settledRef = useRef<DeadlineMap>({});
   const dragRef = useRef<DragState | null>(null);
   const dragAbortRef = useRef<AbortController | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -44,7 +48,7 @@ export function useCalendarRoadmapView() {
   useEffect(() => {
     fetch('/api/milestone-deadlines')
       .then((r) => r.json())
-      .then((j) => { if (j.success) setDeadlines(j.data); })
+      .then((j) => { if (j.success) { settledRef.current = j.data; setDeadlines(j.data); } })
       .catch(() => {});
   }, []);
 
@@ -58,11 +62,29 @@ export function useCalendarRoadmapView() {
       }
       return { ...prev, [milestoneId]: { targetDate, label: '' } };
     });
-    await fetch('/api/milestone-deadlines', {
+    setSaveError(null);
+    const result = await tryApiFetch('/api/milestone-deadlines', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ milestoneId, targetDate }),
-    }).catch(() => {});
+    });
+    if (result.ok) {
+      const settled = { ...settledRef.current };
+      if (targetDate) settled[milestoneId] = { targetDate, label: '' };
+      else delete settled[milestoneId];
+      settledRef.current = settled;
+      return;
+    }
+    // Revert only if this write's value is still on screen: a newer edit owns the row now.
+    setDeadlines((current) => {
+      if ((current[milestoneId]?.targetDate ?? null) !== targetDate) return current;
+      const next = { ...current };
+      const prior = settledRef.current[milestoneId];
+      if (prior) next[milestoneId] = prior;
+      else delete next[milestoneId];
+      return next;
+    });
+    setSaveError(`Deadline not saved: ${result.error}`);
   }, []);
 
   // Timeline range computation
@@ -210,5 +232,6 @@ export function useCalendarRoadmapView() {
     saveDeadline,
     handleDragStart,
     getVariance,
+    alerts: [saveError].filter((m): m is string => m !== null),
   };
 }
