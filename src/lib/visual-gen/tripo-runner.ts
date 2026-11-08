@@ -227,9 +227,15 @@ function tripoErr(json: unknown): string {
   return 'unexpected Tripo response';
 }
 
-/** File extension → the image `type` Tripo expects (jpeg→jpg). Pure. */
+/**
+ * File extension → the image `type` Tripo expects (jpeg→jpg), from a path or a URL. Reads
+ * the last segment only, query/fragment stripped (signed CDN URLs carry both); a name with
+ * no extension is `png`. Pure.
+ */
 export function imageTypeFromPath(path: string): string {
-  const ext = (path.split('.').pop() ?? '').toLowerCase();
+  const name = path.split(/[?#]/)[0].split(/[\\/]/).pop() ?? '';
+  const dot = name.lastIndexOf('.');
+  const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
   return ext === 'jpeg' ? 'jpg' : ext || 'png';
 }
 
@@ -262,7 +268,7 @@ export function buildCreateTaskBody(spec: TripoSpec): Record<string, unknown> {
     const files = TRIPO_VIEW_ORDER.map((v) => viewFileEntry(spec.views?.[v]));
     return { type: 'multiview_to_model', files, ...opt };
   }
-  const type = spec.imageType ?? (spec.imagePath ? imageTypeFromPath(spec.imagePath) : 'png');
+  const type = spec.imageType ?? imageTypeFromPath(spec.imagePath ?? spec.imageUrl ?? '');
   const file = spec.imageToken
     ? { type, file_token: spec.imageToken }
     : { type, url: spec.imageUrl };
