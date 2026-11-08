@@ -120,6 +120,6 @@ describe('a verdict the store could not record', () => {
     expect(body.data.verdict).toBe('pass');
     expect(body.data.recorded).toBe(false);
     expect(body.data.recordError).toContain('SQLITE_BUSY');
-    expect(mockEmit).toHaveBeenCalled();
+    expect(mockEmit).not.toHaveBeenCalled(); // no server-side eval.visual receiver exists
   });
 });

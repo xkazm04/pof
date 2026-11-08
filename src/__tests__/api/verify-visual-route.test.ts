@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe('POST /api/verify/visual', () => {
-  it('runs the Gemini check, records the verdict, emits eval.visual, returns the verdict', async () => {
+  it('runs the Gemini check, records the verdict, returns the verdict and emits nothing (no server-side receiver exists)', async () => {
     visionReturns({
       visibleElements: ['player health bar (top-left)', 'enemy bar (top-centre)'],
       anyEmptyOrZeroWidth: false,
@@ -79,11 +79,9 @@ describe('POST /api/verify/visual', () => {
     expect(mockRecord).toHaveBeenCalledWith(
       expect.objectContaining({ moduleId: 'arpg-ui', itemId: 'au-1', verdict: 'pass', anyEmpty: false }),
     );
-    expect(mockEmit).toHaveBeenCalledWith(
-      'eval.visual',
-      expect.objectContaining({ moduleId: 'arpg-ui', itemId: 'au-1', verdict: 'pass' }),
-      expect.anything(),
-    );
+    // The server bus has no eval.visual subscriber (the devtools onAny lives in the browser's
+    // own bus instance), so an emit here reaches nobody.
+    expect(mockEmit).not.toHaveBeenCalled();
   });
 
   it('records a fail verdict when Gemini reports an empty element', async () => {
