@@ -11,7 +11,7 @@ import {
   READINESS_MEANING,
   type ReadinessLevel,
 } from '@/lib/status/readiness';
-import { deriveCell, type StepCell, type CellGrade } from '@/lib/status/statusModel';
+import { deriveCell, NOT_HEADLESS_PREFIX, type StepCell, type CellGrade } from '@/lib/status/statusModel';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 
 /** Minimal cell factory — only the fields readiness reads. */
@@ -178,6 +178,28 @@ describe('readinessLabel', () => {
     expect(label).toContain('PROVEN');
     expect(label).toContain('waiting');
     expect(label).toContain('declared');
+  });
+});
+
+describe('readinessOf: a trusted cell says the reason it is trusted', () => {
+  const trusted = (extra: Partial<StepCell>) => readinessOf(cell('trusted', extra)).because;
+
+  it('a gate pass demoted for not being headless-operable does not claim its engine scales', () => {
+    const because = trusted({ reason: 'not headless-operable via pof-mcp: x' });
+    expect(because).toContain('headless');
+    expect(because).not.toContain('scales to quality');
+  });
+
+  it('a judge pass below the shippable bar says so', () => {
+    expect(trusted({ judgeAttribution: { applied: true, verdict: 'pass', provenance: 'current', score: 70, judge: 'llm-panel', note: '' } as never })).toContain('judge');
+  });
+
+  it('the prefix readiness matches is the one gateHeadless stamps', () => {
+    expect(readinessOf(cell('trusted', { reason: `${NOT_HEADLESS_PREFIX}: y` })).because).toContain('headless');
+  });
+
+  it('the seeded control: a plain trusted-engine pass keeps the engine-class sentence', () => {
+    expect(trusted({})).toContain('scales to quality');
   });
 });
 

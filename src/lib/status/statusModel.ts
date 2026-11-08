@@ -129,6 +129,9 @@ export function orphanedFacts(facts: readonly FactAddress[], liveKeys: ReadonlyS
 
 export type HeadlessLookup = (catalogId: string, step: string) => HeadlessFact | undefined;
 
+/** The reason prefix {@link gateHeadless} stamps; readiness reads it to say why a cell is R3. */
+export const NOT_HEADLESS_PREFIX = 'not headless-operable via pof-mcp';
+
 /** Gate a derived cell on headless-operability: a `verified` grade demands the step be
  *  PROVEN headless-operable via pof-mcp (a machine-reproducible gate), so a would-be
  *  `verified` cell whose step has no coverage entry OR is `operable:false` is demoted to
@@ -144,7 +147,7 @@ export function gateHeadless(
   if (cell.grade !== 'verified') return cell;
   const fact = lookup(catalogId, step);
   if (fact && fact.operable) return cell;
-  const prefix = 'not headless-operable via pof-mcp';
+  const prefix = NOT_HEADLESS_PREFIX;
   const reason = cell.reason ? `${prefix}: ${cell.reason}` : prefix;
   return { ...cell, grade: 'trusted', reason };
 }
