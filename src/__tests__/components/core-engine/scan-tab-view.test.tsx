@@ -49,3 +49,19 @@ describe('ScanTab — pass toggles state their selection', () => {
     expect([...byLabel.entries()].filter(([, v]) => v === 'true').length).toBe(1);
   });
 });
+
+describe('ScanTab — empty list after every finding is resolved', () => {
+  it('says all findings are resolved, not that no scan has run', () => {
+    view.current = state([], [finding('a', '2026-11-08T01:00:00Z'), finding('b', '2026-11-08T01:00:00Z')]);
+    const { container } = render(<ScanTab moduleId="arpg-combat" />);
+    const text = container.textContent ?? '';
+    expect(text).not.toContain('No scan results yet');
+    expect(text).toContain('No open findings');
+  });
+
+  it('control: with no findings at all the first-scan copy stays', () => {
+    view.current = state([]);
+    const { container } = render(<ScanTab moduleId="arpg-combat" />);
+    expect(container.textContent ?? '').toContain('No scan results yet');
+  });
+});
