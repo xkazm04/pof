@@ -27,7 +27,7 @@ export const USAGE = `usage: review:module <moduleId> --project-path <path> --ue
   --project-path <path>   UE project the review is ABOUT (required)
   --ue-version <ver>      e.g. 5.7.3 (required)
   --project-name <name>   default: basename of the project path
-  --origin <url>          running PoF app (default ${DEFAULT_ORIGIN})
+  --origin <url>          running PoF app (default http://localhost:$PORT, else ${DEFAULT_ORIGIN})
   --write                 actually start the review (default: dry-run, prints the plan only)
   --ledger <path>         daily-cap ledger (default ~/.pof/review-runner-ledger.json, or env POF_REVIEW_LEDGER)
   --help                  this text`;
@@ -84,7 +84,8 @@ export function parseArgs(argv: readonly string[], env: Record<string, string | 
       ueVersion,
       // Split on both separators: a Windows path is not a basename on a POSIX host.
       projectName: values.get('--project-name') ?? (projectPath.split(/[\\/]+/).filter(Boolean).pop() ?? basename(projectPath)),
-      origin: (values.get('--origin') ?? DEFAULT_ORIGIN).replace(/\/+$/, ''),
+      // Default to the port the app itself runs on (getAppOrigin reads the same PORT).
+      origin: (values.get('--origin') ?? (env.PORT && /^\d+$/.test(env.PORT) ? `http://localhost:${env.PORT}` : DEFAULT_ORIGIN)).replace(/\/+$/, ''),
       write,
       ledgerPath: values.get('--ledger') ?? env.POF_REVIEW_LEDGER ?? join(homedir(), '.pof', 'review-runner-ledger.json'),
     },
