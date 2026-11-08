@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Dices, Users } from 'lucide-react';
 import { ACCENT_CYAN, OPACITY_8, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, withOpacity, OPACITY_12 } from '@/lib/chart-colors';
 import { TabButtonGroup } from '../../unique-tabs/_shared';
-import { RARITY_TIERS, DEFAULT_ENEMY_LOOT_BINDINGS } from '../_shared/data';
+import { RARITY_TIERS } from '../_shared/data';
 import type { EnemyLootBinding } from '../_shared/data';
 import { useLootTuningStore } from '../_shared/lootTuningStore';
 import { runBatch, deviationFor } from './lootSimEngine';
@@ -24,11 +24,10 @@ function deriveTier(dropChance: number): string {
   return 'Minion';
 }
 
-const SELECTABLE_BINDINGS: SelectableBinding[] = DEFAULT_ENEMY_LOOT_BINDINGS.map(b => ({
-  ...b,
-  id: b.archetypeId,
-  tier: deriveTier(b.dropChance),
-}));
+/** Picker rows from the TUNED roster, so the % shown is the % the roll will use. */
+function toSelectable(bindings: readonly EnemyLootBinding[]): SelectableBinding[] {
+  return bindings.map(b => ({ ...b, id: b.archetypeId, tier: deriveTier(b.dropChance) }));
+}
 
 /** The global rarity table as a binding: every kill drops, tiers by RARITY_TIERS weight. */
 const GLOBAL_BINDING = { dropChance: 1, rarityWeights: RARITY_TIERS.map(t => t.weight) };
@@ -42,6 +41,7 @@ interface RollRun {
 
 export function DropSimulator() {
   const tunedBindings = useLootTuningStore((s) => s.bindings);
+  const selectable = useMemo(() => toSelectable(tunedBindings), [tunedBindings]);
   /** The last roll WITH the binding it ran against: deviations judge the counts on screen, not the live picker. */
   const [roll, setRoll] = useState<RollRun | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -163,7 +163,7 @@ export function DropSimulator() {
 
       {/* Enemy Picker Selector */}
       <ScalableSelector<SelectableBinding>
-        items={SELECTABLE_BINDINGS}
+        items={selectable}
         groupBy="tier"
         renderItem={renderEnemyItem}
         onSelect={(items) => setSelectedEnemyId(items.length > 0 ? items[0].id : null)}

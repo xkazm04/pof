@@ -52,4 +52,10 @@ describe('DropSimulator', () => {
     act(() => useLootTuningStore.getState().dispatch({ type: 'setField', id: 'MeleeGrunt', field: 'dropChance', value: 0.9 }));
     expect(tierChips(container).join('|')).toBe(before);
   });
+
+  it('lists the TUNED roster in the enemy picker, the values the roll will use', () => {
+    act(() => useLootTuningStore.getState().dispatch({ type: 'setField', id: 'MeleeGrunt', field: 'dropChance', value: 0.9 }));
+    const { container } = render(<DropSimulator />);
+    expect(container.querySelector('[data-pick="MeleeGrunt"]')!.textContent).toContain('Drop: 90%');
+  });
 });
