@@ -82,3 +82,15 @@ describe('dragging a deadline', () => {
     expect(Math.abs(days - 82.5)).toBeLessThanOrEqual(1.5);
   });
 });
+
+describe('a press that does not move the deadline', () => {
+  it('writes nothing', async () => {
+    const mock = installFetch();
+    const { findByTestId } = render(<CalendarRoadmapView />);
+    const marker = await findByTestId('deadline-marker-ms-1');
+    fireEvent.mouseDown(marker, { clientX: 300 });
+    fireEvent.mouseUp(window);
+    await act(async () => { await Promise.resolve(); });
+    expect(puts(mock)).toEqual([]);
+  });
+});

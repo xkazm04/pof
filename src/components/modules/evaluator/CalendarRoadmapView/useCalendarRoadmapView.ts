@@ -169,7 +169,8 @@ export function useCalendarRoadmapView() {
       const drag = dragRef.current;
       if (drag) {
         // Persist the dragged-to date, not the stale value captured at start.
-        saveDeadline(drag.milestoneId, drag.currentDate);
+        // A press that never moved the marker changed nothing, so it writes nothing.
+        if (drag.currentDate !== drag.originalDate) saveDeadline(drag.milestoneId, drag.currentDate);
         dragRef.current = null;
       }
       controller.abort(); // removes both listeners via the shared signal
