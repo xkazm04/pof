@@ -359,8 +359,8 @@ const QUALITY_COLORS = [
 
 /** Map a 1-5 quality score to its semantic color. */
 export function qualityColor(score: number | null): string {
-  if (score === null || score < 1 || score > 5) return 'var(--text-muted)';
-  return QUALITY_COLORS[score];
+  if (score === null || !(score >= 1 && score <= 5)) return 'var(--text-muted)';
+  return QUALITY_COLORS[Math.round(score)];
 }
 
 // ── Score bands (0-100) ─────────────────────────────────────────────────────
