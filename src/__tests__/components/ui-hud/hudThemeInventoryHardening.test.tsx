@@ -228,3 +228,15 @@ describe('Equipment slot stubs are distinguishable on screen', () => {
     expect(new Set(equipStubs).size).toBe(allOn.equipmentSlots.length);
   });
 });
+
+describe('FadeTimeline fills use the canonical OPACITY_* scale', () => {
+  it('no raw two-digit alpha suffix on a colour token', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const src = fs.readFileSync(path.resolve('src/components/modules/content/ui-hud/HudThemeEditor/FadeTimeline.tsx'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const raw = src.match(/\$\{[A-Z_]+\}[0-9a-fA-F]{2}`/g) ?? [];
+    expect(raw).toEqual([]);
+    expect(src).toMatch(/\$\{[A-Z_]+\}\$\{OPACITY_\d+\}/);
+  });
+});
