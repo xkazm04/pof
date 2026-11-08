@@ -12,6 +12,10 @@
  *   #           --no-geometry (anim only)  --format fbx|glb
  *   #           --force-rig (skip the anatomy gate — a wrong rig SUCCEEDS, so opt in only)
  *   #           --rig-model <version> (override the pin; normally leave it to the pin)
+ *   #           --anim-task <id> (COLLECT an already-bought retarget: polls + downloads, issues
+ *   #           no POST. Needs only --output. A poll timeout or failed download prints
+ *   #           POF_TRIPO_RESUME=<the exact flags>, mirroring pof_tripo.mjs.)
+ *   # POF_TRIPO_ANIM_POLL_MS overrides the 600000 ms poll window (tests, short probes).
  *
  * THE RIG MODEL IS PINNED, NOT INHERITED. This script used to send `animate_rig` with no
  * `model_version`, which the API resolves to `v1.0-20240301` — a **biped-only** rigger.
@@ -42,6 +46,8 @@ function parseArgs(argv) {
   return o;
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Task ids bought so far, by label, so a recoverable failure can print how to collect them. */
+const taskIds = {};
 const auth = () => ({ authorization: `Bearer ${API_KEY}` });
 
 async function post(body) {
@@ -53,14 +59,21 @@ async function get(id) {
   return res.json().catch(() => ({}));
 }
 
-/** Create a task, poll to success, return the full output object. */
-async function runTask(label, body, maxMs = 600000) {
-  const created = await post(body);
-  if (created.code !== 0 || !created.data?.task_id) {
-    throw new Error(`${label} create ${created.code}: ${created.message || 'unknown'}${created.suggestion ? ' (' + created.suggestion + ')' : ''}`);
+/**
+ * Create a task (or, with `existingId`, adopt one already paid for), poll to success, return
+ * the full output object. A poll timeout is `recoverable`: the task id is still good.
+ */
+async function runTask(label, body, maxMs = 600000, existingId = undefined) {
+  let id = existingId;
+  if (!id) {
+    const created = await post(body);
+    if (created.code !== 0 || !created.data?.task_id) {
+      throw new Error(`${label} create ${created.code}: ${created.message || 'unknown'}${created.suggestion ? ' (' + created.suggestion + ')' : ''}`);
+    }
+    id = created.data.task_id;
   }
-  const id = created.data.task_id;
   console.log(`POF_TRIPO_${label.toUpperCase()}=${id}`);
+  taskIds[label] = id;
   const deadline = Date.now() + maxMs;
   while (Date.now() < deadline) {
     const s = await get(id);
@@ -71,7 +84,16 @@ async function runTask(label, body, maxMs = 600000) {
     if (['failed', 'cancelled', 'banned', 'expired', 'unknown'].includes(status)) throw new Error(`${label} task ${status}`);
     await sleep(4000);
   }
-  throw new Error(`${label} timed out`);
+  const err = new Error(`${label} timed out`);
+  err.recoverable = true;
+  throw err;
+}
+
+/** The retarget is paid for once its id exists; print the flags that collect it without a POST. */
+function printResume(a) {
+  if (!taskIds.anim) return;
+  const fmt = a.format ? ` --format ${a.format}` : '';
+  console.log(`POF_TRIPO_RESUME=--anim-task ${taskIds.anim} --output ${JSON.stringify(resolve(a.output))}${fmt}`);
 }
 
 async function main() {
@@ -79,8 +101,8 @@ async function main() {
   if (!API_KEY) { console.log('POF_TRIPO_ERROR=no TRIPO_API_KEY in env'); process.exitCode = 1; return; }
   // A flag with no value parses as `true`, which would buy tasks and fail at resolve(true).
   const given = (k) => typeof a[k] === 'string';
-  if (!given('output') || (!given('model-task') && !given('rig-task'))) {
-    console.log('POF_TRIPO_ERROR=need --output and one of --model-task / --rig-task'); process.exitCode = 1; return;
+  if (!given('output') || (!given('model-task') && !given('rig-task') && !given('anim-task'))) {
+    console.log('POF_TRIPO_ERROR=need --output and one of --model-task / --rig-task / --anim-task'); process.exitCode = 1; return;
   }
   const format = a.format || 'fbx';
   const animation = a.animation || 'preset:run';
@@ -88,7 +110,7 @@ async function main() {
   try {
     // 1. Rig (unless a rig task id was supplied).
     let rigTaskId = a['rig-task'];
-    if (!rigTaskId) {
+    if (!rigTaskId && !given('anim-task')) {
       const wantRig = a['rig-type'] || 'biped';
       // FREE LOCAL PRE-FLIGHT, ahead of every paid task. Pin the rig model for this
       // morphology and refuse a pairing the API would accept and answer wrongly — there
@@ -156,12 +178,13 @@ async function main() {
       bake_animation: true,
       export_with_geometry: a['no-geometry'] ? false : true,
     };
-    const ret = await runTask('anim', retBody);
+    const pollMs = Number(process.env.POF_TRIPO_ANIM_POLL_MS) || 600000;
+    const ret = await runTask('anim', retBody, pollMs, given('anim-task') ? a['anim-task'] : undefined);
 
     const url = ret.output.model || ret.output.pbr_model || ret.output.base_model || ret.output.rigged_model;
     if (!url) { console.log(`POF_TRIPO_ERROR=no model url in retarget output: ${JSON.stringify(ret.output).slice(0, 300)}`); process.exitCode = 1; return; }
     const dl = await fetch(url);
-    if (!dl.ok) { console.log(`POF_TRIPO_ERROR=download ${dl.status}`); process.exitCode = 1; return; }
+    if (!dl.ok) { console.log(`POF_TRIPO_ERROR=download ${dl.status}`); printResume(a); process.exitCode = 1; return; }
     const outPath = resolve(a.output);
     mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, Buffer.from(await dl.arrayBuffer()));
@@ -169,6 +192,7 @@ async function main() {
     console.log(`POF_TRIPO_DONE=${outPath}`);
   } catch (e) {
     console.log(`POF_TRIPO_ERROR=${e instanceof Error ? e.message : String(e)}`);
+    if (e && e.recoverable) printResume(a);
     process.exitCode = 1;
   }
 }
