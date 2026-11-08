@@ -112,7 +112,7 @@ export const PIPELINES: QueryPipeline[] = [
       componentStep('test-elev', 'test-elevation-advantage', 'Scores height difference vs threat — prefers high ground positions', [
         { label: 'ReferenceContext', value: 'TargetActor' },
         { label: 'MaxElevationBonus', value: `${eqsFloat(EQS_ELEVATION_ADVANTAGE.maxElevationBonus)} UU` },
-        { label: 'PenalizeLowGround', value: 'false' },
+        { label: 'PenalizeLowGround', value: String(EQS_ELEVATION_ADVANTAGE.penalizeLowGround) },
         { label: 'Score', value: '0.0 – 1.0 (clamped)' },
       ]),
       componentStep('test-path-cover', 'test-path-exists', 'Filters unreachable cover points via synchronous nav path query', PATH_EXISTS_PARAMS),
