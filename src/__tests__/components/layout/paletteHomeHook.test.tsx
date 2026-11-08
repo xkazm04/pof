@@ -30,7 +30,7 @@ const recent = { id: 'cl-arpg-combat-x', type: 'checklist' as const, moduleId: '
 async function openPalette() {
   render(<GlobalSearchPanel />);
   act(() => { fireEvent.keyDown(window, { key: 'k', ctrlKey: true }); });
-  return screen.findByRole('textbox', { name: /search checklist items/i });
+  return screen.findByRole('combobox', { name: /search checklist items/i });
 }
 
 describe('palette home (blank query)', () => {

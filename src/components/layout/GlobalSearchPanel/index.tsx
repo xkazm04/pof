@@ -1,10 +1,12 @@
 'use client';
 
+import { useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, X, RefreshCw, Loader2,
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { TYPE_META } from './constants';
 import { SearchResultRow } from './SearchResultRow';
@@ -36,6 +38,12 @@ export function GlobalSearchPanel() {
     backdropMotion,
     panelMotion,
   } = useGlobalSearchPanel();
+  // The palette focuses its own input on open; the trap only contains Tab and restores the opener.
+  const panelRef = useFocusTrap<HTMLDivElement>(open, { autoFocus: false });
+  // Combobox + grid: rows hold two buttons (select, Run), so a flat listbox of options would be invalid.
+  const gridId = useId();
+  const rowsShown = results.length > 0 && !(searchFailed && !loading);
+  const rowId = (i: number) => `${gridId}-row-${i}`;
 
   return (
     <AnimatePresence>
@@ -52,6 +60,8 @@ export function GlobalSearchPanel() {
           {/* Panel */}
           <motion.div
             key="search-panel"
+            ref={panelRef}
+            tabIndex={-1}
             {...panelMotion}
             role="dialog"
             aria-modal="true"
@@ -66,6 +76,11 @@ export function GlobalSearchPanel() {
               <input
                 ref={inputRef}
                 type="text"
+                role="combobox"
+                aria-haspopup="grid"
+                aria-expanded={rowsShown}
+                aria-controls={rowsShown ? gridId : undefined}
+                aria-activedescendant={rowsShown && results[activeIndex] ? rowId(activeIndex) : undefined}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -162,19 +177,22 @@ export function GlobalSearchPanel() {
                   <p className="text-2xs text-text-muted mt-1">Try different keywords or rebuild the index</p>
                 </div>
               ) : (
-                results.map((r, i) => (
-                  <SearchResultRow
-                    key={r.id}
-                    result={r}
-                    intents={intents[i]}
-                    active={i === activeIndex}
-                    index={i}
-                    homeKind={homeKinds?.[i]}
-                    onSelect={handleSelect}
-                    onRun={handleRun}
-                    onHover={setActiveIndex}
-                  />
-                ))
+                <div id={gridId} role="grid" aria-label="Search results">
+                  {results.map((r, i) => (
+                    <SearchResultRow
+                      key={r.id}
+                      rowId={rowId(i)}
+                      result={r}
+                      intents={intents[i]}
+                      active={i === activeIndex}
+                      index={i}
+                      homeKind={homeKinds?.[i]}
+                      onSelect={handleSelect}
+                      onRun={handleRun}
+                      onHover={setActiveIndex}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 

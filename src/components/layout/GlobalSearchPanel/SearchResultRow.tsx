@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { Layers, ArrowRight, Play, CheckCircle2, Circle } from 'lucide-react';
 import type { SearchResult } from '@/lib/search-index';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { stripHighlightMarkers } from '@/lib/search-markers';
 import { TYPE_META } from './constants';
 import { highlightMarkers } from './helpers';
 import type { SearchIntents } from './searchIntents';
@@ -13,6 +14,7 @@ import type { SearchIntents } from './searchIntents';
 // Run button — the only click that dispatches its prompt.
 
 export const SearchResultRow = memo(function SearchResultRow({
+  rowId,
   result,
   intents,
   active,
@@ -22,6 +24,8 @@ export const SearchResultRow = memo(function SearchResultRow({
   onRun,
   onHover,
 }: {
+  /** DOM id the combobox input names in aria-activedescendant. */
+  rowId: string;
   result: SearchResult;
   intents: SearchIntents;
   active: boolean;
@@ -34,16 +38,20 @@ export const SearchResultRow = memo(function SearchResultRow({
 }) {
   const meta = TYPE_META[intents.kind] ?? TYPE_META.feature;
   const Icon = meta.icon;
-  const plainTitle = result.title.replace(/[→←]/g, '');
+  const plainTitle = stripHighlightMarkers(result.title);
 
   return (
     <div
+      id={rowId}
+      role="row"
+      aria-selected={active}
       data-index={index}
       onMouseEnter={() => onHover(index)}
       className={`flex items-start transition-colors ${
         active ? 'bg-surface-hover' : 'hover:bg-surface-hover/50'
       }`}
     >
+      <div role="gridcell" className="flex-1 min-w-0 flex">
       <button
         onClick={() => onSelect(result)}
         className="flex-1 min-w-0 flex items-start gap-3 px-4 py-2.5 text-left focus-ring-inset"
@@ -106,19 +114,22 @@ export const SearchResultRow = memo(function SearchResultRow({
           <ArrowRight className="w-3.5 h-3.5 text-text-muted flex-shrink-0 mt-1" />
         )}
       </button>
+      </div>
 
       {/* Run — explicit click only; Shift+Enter is the keyboard twin */}
       {intents.run && (
+        <div role="gridcell" className="flex-shrink-0 self-center flex">
         <button
           onClick={() => onRun(result)}
           aria-label={`${homeKind === 'alert' ? 'Run fix' : 'Run quick action'} ${plainTitle}`}
           title="Run in the module's CLI session (shift+enter)"
-          className="flex-shrink-0 self-center mr-3 flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs border border-border text-text-muted hover:text-text transition-colors focus-ring"
+          className="mr-3 flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs border border-border text-text-muted hover:text-text transition-colors focus-ring"
         >
           <Play className="w-3 h-3" aria-hidden="true" />
           Run
           {active && <kbd className="ml-0.5 font-mono">⇧↵</kbd>}
         </button>
+        </div>
       )}
     </div>
   );
