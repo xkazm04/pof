@@ -141,18 +141,36 @@ describe('expansion bars share one scale', () => {
     return { label, pct };
   };
 
-  it('a German TranslationCard bar matches the Overview ExpansionFactorBars width', () => {
+  it('a German TranslationCard locale marker matches the Overview ExpansionFactorBars width', () => {
     const entry: TranslationEntry = {
       stringId: 'str-1', locale: 'de', translatedText: 'Inventar', status: 'translated',
       translatorNotes: '', backTranslation: '', confidence: 0.9, expansionWarning: false, charDelta: 0,
     };
     const card = render(<TranslationCard entry={entry} sourceText="Inventory" />);
-    const cardWidth = widthFor(card.container, 'card').pct[0];
+    const marker = card.container.querySelector<HTMLElement>('[data-testid="expansion-locale-marker"]');
+    const markerPos = marker?.style.left;
     cleanup();
     const bars = render(<ExpansionFactorBars />);
     // German (x1.35) is the widest locale, so it is the first sorted bar.
     const overviewWidth = widthFor(bars.container, 'overview').pct[0];
-    expect(cardWidth).toBe(overviewWidth);
+    expect(markerPos).toBe(overviewWidth);
+  });
+
+  it('TranslationCard fill reflects the entry, not the locale constant', () => {
+    const base: TranslationEntry = {
+      stringId: 'str-1', locale: 'de', translatedText: '', status: 'translated',
+      translatorNotes: '', backTranslation: '', confidence: 0.9, expansionWarning: false, charDelta: 0,
+    };
+    const fillOf = (translatedText: string) => {
+      const r = render(<TranslationCard entry={{ ...base, translatedText }} sourceText="Inventory" />);
+      const w = r.container.querySelector<HTMLElement>('[data-testid="expansion-entry-fill"]')?.style.width;
+      cleanup();
+      return w;
+    };
+    const shorter = fillOf('Inventar');
+    const longer = fillOf('Inventarverwaltung');
+    expect(shorter).toBeTruthy();
+    expect(shorter).not.toBe(longer);
   });
 });
 
@@ -262,5 +280,33 @@ describe('the sub-tab strip only points at panels that exist', () => {
     // The selected tab still names its panel.
     const selected = tabs.find((t) => t.getAttribute('aria-selected') === 'true');
     expect(selected?.getAttribute('aria-controls')).toBe('loc-panel-overview');
+  });
+});
+
+describe('Overview replacement suggestions are all reachable', () => {
+  const many: LOCTEXTReplacementSuggestion[] = Array.from({ length: 12 }, (_, i) => ({
+    stringId: `s${i}`, originalCode: `orig${i}`, suggestedCode: `NSLOCTEXT("ns", "k${i}", "t${i}")`,
+  }));
+  const scan = {
+    totalStrings: 12, hardcodedCount: 12, ftextFromStringCount: 0,
+    alreadyLocalizedCount: 0, strings: [], hazards: [], moduleBreakdown: {},
+  } as unknown as ScanResult;
+
+  it('shows only 10 until expanded, then all 12 suggestedCode strings', () => {
+    render(
+      <OverviewTab
+        scanResult={scan} locReadiness={0} localizedCount={0} totalStrings={12}
+        hardcoded={12} ftextCount={0} progress={{}} expansionIssues={{}} qaByLocale={{}}
+        replacements={many}
+        readiness={{ total: 0, overflow: 0, nearBudget: 0, bypassesCatalog: 0, fragments: 0, fits: 0, reflow: 0, unbudgeted: 0 }}
+        scanProvenance={null} onOpenReadiness={() => {}}
+      />,
+    );
+    const reachable = () => many.filter((r) => document.body.textContent?.includes(r.suggestedCode)).length;
+    expect(reachable()).toBe(10);
+    const btn = Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('Show all'));
+    expect(btn).toBeTruthy();
+    fireEvent.click(btn as HTMLButtonElement);
+    expect(reachable()).toBe(12);
   });
 });
