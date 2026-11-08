@@ -70,6 +70,14 @@ export interface SearchComboboxProps<P> {
 }
 
 const DEFAULT_MAX_HITS = 12;
+
+/** "1 entity matches" / "3 entities match" — the live region is the only count a screen
+ *  reader gets, so plural form (consonant+y -> ies) and verb agreement both matter. */
+function matchPhrase(n: number, noun: string): string {
+  if (n === 1) return `1 ${noun} matches`;
+  const plural = /[^aeiou]y$/i.test(noun) ? `${noun.slice(0, -1)}ies` : `${noun}s`;
+  return `${n} ${plural} match`;
+}
 const NO_HITS: never[] = [];
 
 // Popup chrome shared by the listbox and the no-match message so both hang off the input
@@ -129,7 +137,7 @@ export function SearchCombobox<P>({
     : !open
     ? ''
     : hasHits
-      ? `${matches.length} ${noun}${matches.length === 1 ? '' : 's'} match${hidden > 0 ? `, showing first ${hits.length}` : ''}`
+      ? `${matchPhrase(matches.length, noun)}${hidden > 0 ? `, showing first ${hits.length}` : ''}`
       : emptyUniverse
         ? 'Nothing loaded yet'
         : `No ${noun} matches`;
