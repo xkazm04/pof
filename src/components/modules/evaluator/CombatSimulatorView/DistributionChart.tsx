@@ -11,7 +11,15 @@ export function DistributionChart({
   color: 'emerald' | 'red' | 'blue';
   unit?: string;
 }) {
-  if (buckets.length === 0) return null;
+  if (buckets.length === 0) {
+    // Typed empty state: no axis or bars drawn around nothing, which would read as "measured: zero".
+    return (
+      <SurfaceCard className="p-3">
+        <div className="text-2xs text-text-muted font-medium mb-2">{title}</div>
+        <p className="text-xs text-text-muted">No fights recorded for this distribution.</p>
+      </SurfaceCard>
+    );
+  }
   const maxCount = Math.max(...buckets.map((b) => b.count), 1);
   const colorMap = {
     emerald: 'bg-emerald-400/70',

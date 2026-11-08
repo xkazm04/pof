@@ -11,7 +11,17 @@ import { pct, formatNumber } from './helpers';
 export function ThreatBreakdownPanel({ breakdown }: { breakdown: ThreatBreakdown }) {
   const { bySource, byEnemy, totalDeaths, totalDamageTaken } = breakdown;
 
-  if (totalDamageTaken === 0 && bySource.length === 0) return null;
+  if (totalDamageTaken === 0 && bySource.length === 0) {
+    return (
+      <SurfaceCard className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Skull className="w-4 h-4 text-red-400" />
+          <h2 className="text-sm font-medium text-text">Death Recap & Threat Breakdown</h2>
+        </div>
+        <p className="text-xs text-text-muted">No damage was taken in this run, so there is no threat to rank.</p>
+      </SurfaceCard>
+    );
+  }
 
   const topSource = bySource[0];
 
