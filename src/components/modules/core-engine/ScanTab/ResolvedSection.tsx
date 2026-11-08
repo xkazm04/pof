@@ -10,7 +10,9 @@ export function ResolvedSection({ findings }: { findings: ScanFinding[] }) {
   return (
     <div>
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text transition-colors"
       >
         {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}

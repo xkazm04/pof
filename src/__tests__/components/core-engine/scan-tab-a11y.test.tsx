@@ -2,10 +2,15 @@
  * ScanTab / TelemetryEvolution control semantics (scan-sweep night 2026-11-08,
  * core-engine-scan-telemetry). Plain DOM assertions — no jest-dom.
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent } from '@testing-library/react';
 import { FindingRow } from '@/components/modules/core-engine/ScanTab/FindingRow';
 import type { ScanFinding } from '@/types/scan';
+import { ResolvedSection } from '@/components/modules/core-engine/ScanTab/ResolvedSection';
+import { SuggestionsList } from '@/components/modules/core-engine/TelemetryEvolution/SuggestionsList';
+import type { GenreEvolutionSuggestion } from '@/types/telemetry';
+
+vi.mock('@/components/modules/core-engine/GenreTemplateGallery', () => ({ GenreTemplateGallery: () => null }));
 
 afterEach(cleanup);
 
@@ -58,5 +63,28 @@ describe('FindingRow — selection and disclosure semantics', () => {
     fireEvent.click(container.querySelector('[role="checkbox"]') as Element);
     expect(selects).toBe(1);
     expect(toggles).toBe(0);
+  });
+});
+
+describe('disclosure buttons state their expanded state', () => {
+  it('ResolvedSection toggle flips aria-expanded', () => {
+    const { container } = render(<ResolvedSection findings={[{ ...finding(), resolvedAt: '2026-11-08T01:00:00Z' }]} />);
+    const btn = container.querySelector('button') as HTMLElement;
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('SuggestionsList header states whether its details are open', () => {
+    const sug: GenreEvolutionSuggestion = {
+      id: 's1', subGenre: 'souls-like', label: 'Lean souls-like', description: 'd', confidence: 70,
+      patterns: [], status: 'pending', proposedChanges: { prioritize: [], deprioritize: [], add: [] },
+      createdAt: '2026-11-08T00:00:00Z', resolvedAt: null,
+    };
+    const closed = render(<SuggestionsList suggestions={[sug]} expandedId={null} onToggle={() => {}} onResolve={() => {}} />);
+    expect(closed.container.querySelector('button')?.getAttribute('aria-expanded')).toBe('false');
+    cleanup();
+    const open = render(<SuggestionsList suggestions={[sug]} expandedId="s1" onToggle={() => {}} onResolve={() => {}} />);
+    expect(open.container.querySelector('button')?.getAttribute('aria-expanded')).toBe('true');
   });
 });
