@@ -114,3 +114,22 @@ describe('case 5: DR_ATTRIBUTES is derived from DR_CONFIGS', () => {
     expect(DR_ATTRIBUTES[0].curve[0].marginalValue).toBeCloseTo(2.0, 9);
   });
 });
+
+describe('drMarginalSeries samples the points the falloff turns on', () => {
+  const cfg = { ...STR, softCap: 55 };
+
+  it('samples an off-grid soft cap, so the chart kink sits on the soft-cap line', () => {
+    const pts = drMarginalSeries(cfg, 10).map(c => c.points);
+    expect(pts).toContain(55);
+    expect(pts).toEqual([...pts].sort((a, b) => a - b));
+    expect(drMarginalSeries(cfg, 10).find(c => c.points === 55)?.marginalValue).toBeCloseTo(cfg.baseValuePerPoint, 9);
+  });
+
+  it('always ends on the 100-point sample, even on a step that skips it', () => {
+    expect(drMarginalSeries(STR, 7).at(-1)?.points).toBe(100);
+  });
+
+  it('leaves a soft cap already on the grid at one sample', () => {
+    expect(drMarginalSeries(STR, 10).map(c => c.points)).toEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  });
+});
