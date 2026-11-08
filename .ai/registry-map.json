@@ -4221,7 +4221,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/animations/shared/state-machine-shared.ts:12 The context renders a read-only diagram from an AnimBP scan. Its one write is a user-clicked, deterministic NLA-strip script sent to the local Blender MCP, so no machine judgement or autonomous action needs a human gate. A search of AnimationStateMachine/ and animations/shared/ found no approv, consent, unattended or hitl construct.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23
         },
         {
           "subject": "mcp-tools",
@@ -8468,7 +8472,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/recipe.ts:392 The state-graph recipe hands the AnimBP authoring back to the operator as one prose sentence inside a model prompt. There is no runbook, no record that the person did it, no verification, and no retirement condition for what is a tooling-gap workaround. That is the 'instructions are not a handoff' failure the human-performed-steps technique names.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23
         },
         {
           "subject": "self-describing-model-packages",
@@ -11370,7 +11378,11 @@
           "revision": 22,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:138 The Asset Oracle remedy sends an autonomous Claude CLI run that edits the UE project. Its one declared boundary, 'no delete, deletes stay a human decision', exists only inside plan.prompt, and the CLI is spawned with --dangerously-skip-permissions, so the boundary holds only while the model behaves: a request, not a gate in the substrate.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:9adc955a19c6822e",
+          "evaluatedRevision": 23
         },
         {
           "subject": "module-design",

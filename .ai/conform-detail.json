@@ -21954,16 +21954,11 @@
       "context": "animation-state-machine-viewer",
       "subject": "hitl-approval",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:59:43.676Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "fa7863c8-4c77-48d7-9136-ebe6e399ba5a",
-        "state": "not-applicable",
-        "at": "2026-11-07T04:00:24.754844+00:00",
-        "reason": "reviewer (sonnet): The viewer is not read-only: StateMachineHeader.tsx has an 'Export to Blender NLA' button (handleExportToBlenderNLA, line 126 onward), and useAnimationStateMachine.ts:219 calls exportStatesToBlenderNLA, which writes NLA tracks into Blender. That action has no confirmation step, and the anchor at lin"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:16:55.193Z",
+      "worker": "135bd731-6c23-469b-8e27-4fe68d43161a",
+      "techniques": []
     },
     "f825075c-6d22-4629-8aa6-ad7dbca2b500/hitl-approval": {
       "context": "catalog-pipelines",
@@ -23389,6 +23384,95 @@
       "evaluatedTs": "2026-11-08T04:03:25.600Z",
       "worker": "80c7ade5-a85f-46df-a85d-1646669aaa13",
       "techniques": []
+    },
+    "8234e336-4af3-4c49-9e31-9740282bdde2/hitl-approval": {
+      "context": "code-quality-evaluation",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:16:55.193Z",
+      "worker": "135bd731-6c23-469b-8e27-4fe68d43161a",
+      "techniques": [
+        {
+          "technique": "gate-state-machines",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:138 The irreversible delete is excluded only by prompt text. No recorded state or executor check refuses a delete during the run."
+        },
+        {
+          "technique": "fixed-policy-amendable-plan",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:305 The Deep Eval fix sends a free-form prompt as the executor's whole terms. No fixed policy (allowed paths, forbidden ops) lives outside the context the executor can reinterpret."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:116 A remedy's result is judged against a deterministic rescan of the targeted violation keys, so the human reads 'N of M still reported' rather than the CLI's own claim."
+        },
+        {
+          "technique": "unattended-mode",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/AssetCodeOracleView/RemedyBar.tsx:10 The one-click grant is scoped by construction to non-delete violation types. Orphan and unreferenced remedies, which could only be deletes, get no button. This is a scope rule at the dispatch site, separate from the prompt-only in-run limit."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:16 Verdicts superseded by a later rubric, or stale because the content changed, stay visible with their provenance and are counted separately. They are not rewritten, and they no longer count toward current quality."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/JudgeVerdictsView/index.tsx:22 The verdict browser only displays judge verdicts. A judge pass here is a recoverable quality signal, not admission to a trust boundary."
+        }
+      ],
+      "registryProposal": "The subject has no technique for the common 'operator clicks Fix, an agent edits the repo' shape. There the click is the consent, but the in-run limits (no delete, scope) can only be enforced by the CLI's permission layer. It would help to state outright that a human-initiated dispatch still needs its forbidden operations enforced below the prompt."
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/hitl-approval": {
+      "context": "catalog-core-infrastructure",
+      "subject": "hitl-approval",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:16:55.193Z",
+      "worker": "135bd731-6c23-469b-8e27-4fe68d43161a",
+      "techniques": [
+        {
+          "technique": "human-performed-steps",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/recipe.ts:392 A prose handoff with no executable runbook, no hand-back record, and no 'delete when Python can author AnimBP graphs' condition. recipe.ts:395 admits verify cannot see the human's part."
+        },
+        {
+          "technique": "fail-loud-classification-default",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/headless.ts:115 A checker that cannot grade a payload never falls to an optimistic pass. It resolves to pending and carries the reason as a marker."
+        },
+        {
+          "technique": "gate-state-machines",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/artifactCommit.ts:9 Work authority is separate from transition authority. The writer (lab, MCP-submitting agent, script) cannot set its own verdict; the server checker derives it."
+        },
+        {
+          "technique": "oracle-before-gate",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/lifecycle.ts:46 The 'verified' claim names its comparator, a drained L3/L4 runtime gate, and refuses shape-only evidence."
+        },
+        {
+          "technique": "resume-after-decision",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/stepPrompt.ts:20 What the operator previewed under 'view prompt' is what gets sent. The server rebuilds the same string from the same inputs, so what runs is what was shown."
+        },
+        {
+          "technique": "decision-records",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/produceDirection.ts:16 Each produced artifact records verbatim what the operator asked for and the prompt sent (the 'what was shown' field). Content-hash binding keeps provenance tied to the content version (artifactCommit.ts:146)."
+        },
+        {
+          "technique": "truncated-verdict-space",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/catalog/lifecycle.ts:32 Machine checkers may admit a pass and 'verified', but that is a recoverable pipeline status, not admission across a trust boundary, so truncating the machine's yes is not required."
+        }
+      ],
+      "registryProposal": "Most of this context is machine-only acceptance (an oracle gate with no human in it). The subject's techniques assume a human verdict, so their gate-sees-target and oracle principles carry over only by analogy. A short note on 'automated gates under the same discipline' would make such pairs judgeable without stretching."
     }
   }
 }
