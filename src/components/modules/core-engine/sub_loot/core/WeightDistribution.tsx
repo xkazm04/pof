@@ -130,7 +130,7 @@ export function WeightDistribution() {
                 <span className="text-text">{activeTier.weight} / {TOTAL_WEIGHT}</span>
                 <span className="text-text-muted">Drop Rate</span>
                 <span className="text-text">{((activeTier.weight / TOTAL_WEIGHT) * 100).toFixed(2)}%</span>
-                <span className="text-text-muted">Avg per 100 kills</span>
+                <span className="text-text-muted">Avg per 100 drops</span>
                 <span className="text-text">{((activeTier.weight / TOTAL_WEIGHT) * 100).toFixed(0)}</span>
                 <span className="text-text-muted">Affixes</span>
                 <span className="text-text">
