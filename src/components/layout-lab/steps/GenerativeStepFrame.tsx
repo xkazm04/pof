@@ -5,6 +5,7 @@ import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
 import { RawArtifactDisclosure } from './shared/RawArtifactDisclosure';
+import { PanelCrashBoundary } from '../StepCrashBoundary';
 import { selectedCandidate, selectionSource, type GenCandidate, type GenHistory } from './shared/genHistory';
 import { useGenerativeStep } from './shared/useGenerativeStep';
 import { useGeneratedImageAssets } from './shared/useGeneratedImageAssets';
@@ -95,9 +96,14 @@ export function GenerativeStepFrame({
 
   const galleryPanel: StepPanel = {
     label: galleryLabel ?? 'Candidate gallery (kept across re-rolls)',
+    // Same containment as ArchetypeStep's gallery: `data.genHistory` is also written by other
+    // sessions, the MCP submit path and headless drains, so a throw costs this panel only —
+    // never the acceptance banner, Produce or the Raw artifact window.
     node: (
-      <CandidateGallery t={t} history={history} onSelect={reselect} columns={galleryColumns}
-        emptyHint={galleryEmptyHint} />
+      <PanelCrashBoundary t={t} panel="candidate gallery" step={step}>
+        <CandidateGallery t={t} history={history} onSelect={reselect} columns={galleryColumns}
+          emptyHint={galleryEmptyHint} />
+      </PanelCrashBoundary>
     ),
   };
   const ownPanels = panels({ art, history, selected: selectedCandidate(history) });
