@@ -1,0 +1,84 @@
+/**
+ * Deadline writes and the Gantt's drawing rules, driven through the real view.
+ * Each case was watched red against the code it replaced.
+ */
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
+import { addWeeks, startOfWeek } from '@/components/modules/evaluator/CalendarRoadmapView/helpers';
+
+const WEEK = 7 * 24 * 60 * 60 * 1000;
+const state = vi.hoisted(() => ({
+  milestones: [{
+    id: 'ms-1',
+    name: 'Combat',
+    targetCompletion: 100,
+    predictedDate: new Date(Date.now() + 10 * 7 * 24 * 60 * 60 * 1000).toISOString(),
+    predictedWeeks: 10,
+    currentProgress: 50,
+    color: 'var(--color-module-core)',
+  }],
+  summary: { overallCompletion: 50 } as { overallCompletion: number } | null,
+  fetchHealth: vi.fn(),
+  error: null as string | null,
+}));
+
+vi.mock('@/stores/projectHealthStore', () => ({
+  useProjectHealthStore: (sel: (s: unknown) => unknown) => sel(state),
+}));
+vi.mock('@/stores/moduleStore', () => ({
+  useModuleStore: (sel: (s: unknown) => unknown) => sel({ checklistProgress: {} }),
+}));
+vi.mock('@/stores/evaluatorStore', () => ({
+  useEvaluatorStore: (sel: (s: unknown) => unknown) => sel({ scanHistory: [], lastScan: null }),
+}));
+
+import { CalendarRoadmapView } from '@/components/modules/evaluator/CalendarRoadmapView';
+
+const DEADLINE = new Date(Date.now() + 5 * WEEK).toISOString();
+const respond = (body: unknown, status = 200) => ({
+  ok: status < 300, status, json: () => Promise.resolve(body),
+});
+const okBody = { success: true, data: { ok: true } };
+
+function installFetch(opts: { get?: unknown; put?: () => unknown } = {}) {
+  const mock = vi.fn((_url: string, init?: RequestInit) => {
+    if (init?.method === 'PUT') return Promise.resolve(opts.put ? opts.put() : respond(okBody));
+    return Promise.resolve(opts.get ?? respond({ success: true, data: { 'ms-1': { targetDate: DEADLINE, label: '' } } }));
+  });
+  globalThis.fetch = mock as unknown as typeof fetch;
+  return mock;
+}
+const puts = (mock: ReturnType<typeof installFetch>) =>
+  mock.mock.calls.filter((c) => c[1]?.method === 'PUT').map((c) => JSON.parse(String(c[1]?.body)));
+
+function placeSvg(container: HTMLElement, left: number, scrollLeft: number) {
+  const svg = container.querySelector('svg.select-none') as SVGSVGElement;
+  vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({ left } as DOMRect);
+  Object.defineProperty(svg.parentElement, 'scrollLeft', { value: scrollLeft, configurable: true });
+}
+function drag(marker: Element, clientX: number) {
+  fireEvent.mouseDown(marker, { clientX });
+  fireEvent.mouseMove(window, { clientX });
+  fireEvent.mouseUp(window);
+}
+const cardDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+beforeEach(() => { state.error = null; });
+
+describe('dragging a deadline', () => {
+  it('reads the pointer once when the timeline is scrolled sideways', async () => {
+    const mock = installFetch();
+    const { container, findByTestId } = render(<CalendarRoadmapView />);
+    const marker = await findByTestId('deadline-marker-ms-1');
+    // Scrolled 560px: the svg's own rect has already moved left by that much.
+    placeSvg(container, -560, 560);
+    drag(marker, 300);
+    await waitFor(() => expect(puts(mock).length).toBe(1));
+    const start = addWeeks(startOfWeek(new Date()), -4);
+    const days = (new Date(puts(mock)[0].targetDate).getTime() - start.getTime()) / 86400000;
+    // x = 300 + 560 = 860 -> (860 - 200) / 56 weeks = 82.5 days into the timeline.
+    expect(Math.abs(days - 82.5)).toBeLessThanOrEqual(1.5);
+  });
+});

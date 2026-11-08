@@ -154,7 +154,9 @@ export function useCalendarRoadmapView() {
       const drag = dragRef.current;
       if (!drag || !svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
-      const svgX = me.clientX - rect.left + svgRef.current.parentElement!.scrollLeft;
+      // The svg's rect already moves with its scroller, so clientX - rect.left is
+      // the svg coordinate; adding scrollLeft again counted the scroll twice.
+      const svgX = me.clientX - rect.left;
       const newDate = toLocalNoon(xToDate(svgX)).toISOString();
       drag.currentDate = newDate;
       setDeadlines((prev) => ({
