@@ -14,8 +14,14 @@ export function useNexusView() {
   // Feature statuses come from the ONE shared all-statuses path (this view and
   // the other Evaluator dashboards mount together; each used to run the same
   // full-table scan). Only the first load shows the spinner.
-  const { statusMap, isLoading: statusesLoading, loaded: statusesLoaded } = useFeatureStatuses();
+  // A failed read is surfaced, never drawn: topology places every module from the
+  // feature definitions, so an empty map would paint all of them as "0/N".
+  const {
+    statusMap, isLoading: statusesLoading, loaded: statusesLoaded,
+    failed: statusesFailed, error: statusesError, refresh: retryStatuses,
+  } = useFeatureStatuses();
   const isLoading = statusesLoading && !statusesLoaded;
+  const statusError = statusesFailed ? (statusesError ?? 'Failed to load feature statuses') : null;
 
   // State
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -105,6 +111,8 @@ export function useNexusView() {
 
   return {
     isLoading,
+    statusError,
+    retryStatuses,
     selectedModule,
     setSelectedModule,
     setHoveredModule,

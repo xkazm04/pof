@@ -5,10 +5,11 @@ import {
   Loader2, ZoomIn, ZoomOut, Maximize2,
   Network, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
-import { STATUS_BLOCKER, MODULE_COLORS } from '@/lib/chart-colors';
+import { STATUS_BLOCKER, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
 import type { SourceStatus } from '@/lib/evaluator/nexus-signals';
 import { LAYERS } from './constants';
 import type { LayerConfig } from './constants';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useNexusView } from './useNexusView';
 import { NexusGraph } from './NexusGraph';
 import { NodeDeepDivePanel } from './NodeDeepDivePanel';
@@ -18,6 +19,8 @@ import { NodeDeepDivePanel } from './NodeDeepDivePanel';
 export function NexusView() {
   const {
     isLoading,
+    statusError,
+    retryStatuses,
     selectedModule,
     setSelectedModule,
     setHoveredModule,
@@ -41,8 +44,25 @@ export function NexusView() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="flex items-center justify-center gap-2 py-16" role="status" aria-live="polite">
         <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
+        <span className="text-xs text-text-muted">Loading feature statuses…</span>
+      </div>
+    );
+  }
+
+  // Same rule as DependencyGraph / FeatureConstellation: a failed status read is not
+  // drawn — every node would read "0/N", i.e. "nothing implemented", not "nothing loaded".
+  if (statusError) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Network className="w-4 h-4" style={{ color: ACCENT_VIOLET }} />
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+            Nexus Intelligence Map
+          </span>
+        </div>
+        <InlineErrorRetry message={`Could not load feature statuses: ${statusError}`} onRetry={retryStatuses} />
       </div>
     );
   }
