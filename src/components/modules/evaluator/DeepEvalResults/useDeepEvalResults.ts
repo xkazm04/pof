@@ -219,8 +219,10 @@ export function useDeepEvalResults() {
               body: JSON.stringify({ projectPath, files: newFiles, since }),
             });
             setAttribution(res.attribution ?? {});
-          } catch {
-            // Attribution is optional — leave it empty if git/the route fails.
+          } catch (err) {
+            // Attribution is optional (rows just show no commit), but a failure leaves a trace so a
+            // broken git path is distinguishable from 'no commits touched these files'.
+            logger.warn('Deep-eval git attribution unavailable:', err instanceof Error ? err.message : err);
           }
         }
       }
