@@ -7,7 +7,7 @@ import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib
 import { startMeshFinishJob } from '@/lib/visual-gen/mesh-finish-job-store';
 import { planFinishFromCritique } from '@/lib/visual-gen/finish-routing';
 import { critiqueMesh } from '@/lib/visual-gen/mesh-critique';
-import { localCritiqueDeps } from '@/lib/visual-gen/polycount-presets';
+import { ASSET_CLASS_IDS, localCritiqueDeps } from '@/lib/visual-gen/polycount-presets';
 import { safeAssetDir, safeAssetName } from '@/lib/visual-gen/generated-assets';
 import { assessStage } from '@/lib/visual-gen/critique-stage';
 
@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
 
     if (body.name !== undefined && typeof body.name !== 'string') return apiError('name must be a string', 400);
     if (body.assetClass !== undefined && typeof body.assetClass !== 'string') return apiError('assetClass must be a string', 400);
+    if (body.assetClass !== undefined && !(ASSET_CLASS_IDS as readonly string[]).includes(body.assetClass)) {
+      return apiError(`assetClass must be one of ${ASSET_CLASS_IDS.join(', ')}`, 400);
+    }
 
     const name = safeAssetName((body.name ?? '').trim());
     if (!name) return apiError('name must be a safe generated-asset basename (e.g. "jinx_hd.glb")', 400);

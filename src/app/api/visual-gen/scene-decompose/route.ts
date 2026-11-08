@@ -60,6 +60,23 @@ type CropGate = SceneDecomposeCropGate;
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
+/**
+ * Size ceilings, checked BEFORE the scene is decoded, cropped or sent to a vision model.
+ *
+ * Image: 16 MiB decoded. Measured 2026-11-08 over the 256 raster images under `generated/`:
+ * p50 134 KiB, p90 963 KiB, p99 3.1 MiB, max 4.2 MiB, so the ceiling is ~3.8x the largest real
+ * scene art seen and refuses only an upload no panel in this repo produces. Hint: 2000
+ * characters, a sentence or two of scene direction (the panel sends none).
+ */
+const MAX_SCENE_IMAGE_BYTES = 16 * 1024 * 1024;
+const MAX_HINT_CHARS = 2000;
+
+/** Decoded byte length of a base64 payload, without decoding it. Pure. */
+function decodedBase64Bytes(base64: string): number {
+  const pad = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - pad;
+}
+
 /** The refusal for the first field that is the wrong shape, or null. Pure. */
 function invalidField(body: Record<string, unknown>): string | null {
   const { imageDataUrl, hint, gateCrops, seed, areaExtent, jitterDegrees } = body;
@@ -111,6 +128,12 @@ export async function POST(request: NextRequest) {
     if (!body.imageDataUrl) return apiError('Missing required field: imageDataUrl', 400);
     const image = parseVisionImage(body.imageDataUrl);
     if (!image) return apiError('imageDataUrl must be a base64 image data URL', 400);
+    if (decodedBase64Bytes(image.base64) > MAX_SCENE_IMAGE_BYTES) {
+      return apiError(`imageDataUrl exceeds the ${MAX_SCENE_IMAGE_BYTES} byte ceiling`, 413);
+    }
+    if (body.hint !== undefined && body.hint.length > MAX_HINT_CHARS) {
+      return apiError(`hint exceeds the ${MAX_HINT_CHARS} character ceiling`, 413);
+    }
 
     const decomposed = await decomposeScene(image, { hint: body.hint });
     // Only a call that never happened is an outage. A scene the model LOOKED at and found
