@@ -109,7 +109,9 @@ export interface ImportedObject {
 
 // ─── Generation ─────────────────────────────────────────────────────────────
 
-export type GenerationProvider = 'hyper3d' | 'hunyuan3d';
+/** The one list of providers the bridge can dispatch to; the type and the route guard derive from it. */
+export const GENERATION_PROVIDERS = ['hyper3d', 'hunyuan3d'] as const;
+export type GenerationProvider = (typeof GENERATION_PROVIDERS)[number];
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
