@@ -113,6 +113,28 @@ describe('drainPythonAll', () => {
     expect(d.saved).toHaveLength(1);
   });
 
+  it('a step drained to fail on an EARLIER run still stops its chain on a re-drain', async () => {
+    // Run 1 condemned Import Mixamo Clips and stopped the chain; run 2 (no force) must not
+    // dispatch IK Rigs over that persisted fail just because the failed step is "already drained".
+    const seen: string[] = [];
+    const d = deps({
+      listArtifacts: () => [
+        { ...artifact('Import Mixamo Clips', 'player_movement.import_clips', { created: [], skipped: [], failed: ['boom'] }), status: 'fail' },
+        artifact('IK Rigs', 'player_movement.build_ik_rigs'),
+      ],
+      run: async (m) => { seen.push(m); return { ok: true, data: { created: ['a'], skipped: [], failed: [] } }; },
+    });
+    const s = await drainPythonAll({}, d);
+    expect(seen).toEqual([]);
+    expect(s.results.map((r) => r.outcome)).toEqual(['already-drained', 'upstream-failed']);
+    expect(d.saved).toHaveLength(0);
+    // continueOnFail still opts out of the stop, as it does for a fail drained this run.
+    const seen2: string[] = [];
+    const s2 = await drainPythonAll({}, { ...d, run: async (m) => { seen2.push(m); return { ok: true, data: { created: ['a'], skipped: [], failed: [] } }; } }, { continueOnFail: true });
+    expect(seen2).toEqual(['player_movement.build_ik_rigs']);
+    expect(s2.results.map((r) => r.outcome)).toEqual(['already-drained', 'drained']);
+  });
+
   it('continueOnFail keeps the chain going', async () => {
     const d = deps({
       listArtifacts: () => [

@@ -140,7 +140,14 @@ export async function drainPythonAll(
       const dispatch = readDispatch(a.data);
       if (!dispatch) { skipped++; row('no-dispatch', 'step declares no python module'); continue; }
       if (broken) { skipped++; row('upstream-failed', 'an earlier step in this chain was condemned', a.status, dispatch.module); continue; }
-      if (!opts?.force && hasResult(a.data)) { skipped++; row('already-drained', 'a module return is already recorded', a.status, dispatch.module); continue; }
+      if (!opts?.force && hasResult(a.data)) {
+        skipped++;
+        row('already-drained', 'a module return is already recorded', a.status, dispatch.module);
+        // Its PERSISTED verdict still speaks for the chain: a fail recorded on an earlier run
+        // condemns the steps after it exactly as a fail drained this run does.
+        if (a.status === 'fail' && !opts?.continueOnFail) broken = true;
+        continue;
+      }
 
       const out = await deps.run(dispatch.module, dispatch.function);
       if (!out.ok) {
