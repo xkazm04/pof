@@ -298,13 +298,13 @@ export function useScanTab(moduleId: SubModuleId) {
     setSelectedFindings(new Set());
   }, [selectedFindings, resolveFindings]);
 
-  // Poll for new findings while the scan is running (every 3s)
-  // Pauses when module is suspended (hidden in LRU).
+  // Poll for new findings while the scan is running (UI_TIMEOUTS.pollInterval, the
+  // CLI-driven completion poll). Pauses when module is suspended (hidden in LRU).
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useSuspendableEffect(() => {
     if (scanCli.isRunning) {
       // Start polling
-      pollRef.current = setInterval(() => { void fetchAndMergeFindings(); }, 3000);
+      pollRef.current = setInterval(() => { void fetchAndMergeFindings(); }, UI_TIMEOUTS.pollInterval);
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
       };
