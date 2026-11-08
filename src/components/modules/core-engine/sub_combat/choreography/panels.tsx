@@ -32,8 +32,8 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
     <BlueprintPanel className="p-3 space-y-3 w-full xl:w-56">
       <div className="flex items-center justify-between">
         <SectionHeader label="Waves" />
-        <button onClick={onAdd} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
-          <Plus className="w-3 h-3 text-text-muted" />
+        <button type="button" onClick={onAdd} aria-label="Add wave" className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+          <Plus className="w-3 h-3 text-text-muted" aria-hidden />
         </button>
       </div>
       <div className="space-y-1">
@@ -49,6 +49,7 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
               <div className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 <Clock className="w-2.5 h-2.5" />
                 <input type="number" min={0} max={120} step={1} value={wave.spawnTimeSec}
+                  aria-label={`${wave.label} spawn time (seconds)`}
                   onChange={(e) => onUpdateTime(i, Number(e.target.value))}
                   onClick={(e) => e.stopPropagation()}
                   className="w-10 bg-transparent border-b border-border/40 text-xs font-mono text-text-muted focus:outline-none focus:border-cyan-400/50" />
@@ -56,9 +57,9 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
               </div>
             </div>
             {waves.length > 1 && (
-              <button onClick={(e) => { e.stopPropagation(); onRemove(i); }}
+              <button type="button" aria-label={`Remove ${wave.label}`} onClick={(e) => { e.stopPropagation(); onRemove(i); }}
                 className="p-0.5 rounded hover:bg-surface-deep transition-colors shrink-0">
-                <Trash2 className="w-2.5 h-2.5 text-text-muted hover:text-red-400" />
+                <Trash2 className="w-2.5 h-2.5 text-text-muted hover:text-red-400" aria-hidden />
               </button>
             )}
           </div>
@@ -85,11 +86,11 @@ export function TimelineSection({ simResult, waves, scrubTime, isPlaying, onScru
       <div className="flex items-center justify-between">
         <SectionHeader label={`Combat Timeline \u2014 ${simResult.damageEvents.length} events, ${simResult.totalDurationSec.toFixed(1)}s`} />
         <div className="flex items-center gap-1">
-          <button onClick={onTogglePlay} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
-            {isPlaying ? <Pause className="w-3 h-3 text-text-muted" /> : <Play className="w-3 h-3 text-text-muted" />}
+          <button type="button" onClick={onTogglePlay} aria-label={isPlaying ? 'Pause playback' : 'Play encounter'} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+            {isPlaying ? <Pause className="w-3 h-3 text-text-muted" aria-hidden /> : <Play className="w-3 h-3 text-text-muted" aria-hidden />}
           </button>
-          <button onClick={onReset} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
-            <RotateCcw className="w-3 h-3 text-text-muted" />
+          <button type="button" onClick={onReset} aria-label="Reset playback to 0s" className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+            <RotateCcw className="w-3 h-3 text-text-muted" aria-hidden />
           </button>
           <span className="text-xs font-mono text-text-muted ml-1">{scrubTime.toFixed(1)}s</span>
         </div>
