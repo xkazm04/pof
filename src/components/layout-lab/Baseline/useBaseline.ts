@@ -67,9 +67,11 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   const [resetFailure, setResetFailure] = useState<{ entityId: string; error: string } | null>(null);
   // Explicit refresh-from-server state. A refresh RECONCILES (it can adopt content and drop
   // steps the server no longer has), so what it did is reported, never applied silently.
+  // Report + error are KEYED by the entity the refresh ran against (like `resetFailure`): a
+  // refresh answered after an entity switch must never print on the entity now open.
   const [refreshing, setRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [refreshOutcome, setRefreshOutcome] = useState<RefreshOutcome | null>(null);
+  const [refreshFailure, setRefreshFailure] = useState<{ entityId: string; error: string } | null>(null);
+  const [refreshReport, setRefreshReport] = useState<{ entityId: string; outcome: RefreshOutcome } | null>(null);
 
   // Responsive shell: below COLLAPSE_BREAKPOINT the 580px of catalog+pipeline chrome
   // is hidden and surfaced as left slide-over drawers, leaving the canvas full-width.
@@ -307,22 +309,24 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // holding local work the server has not got is KEPT and reported.
   const refreshFromServer = useCallback(async () => {
     if (!catalogId || !entityKey) return;
-    setRefreshError(null);
-    setRefreshOutcome(null);
+    setRefreshFailure(null);
+    setRefreshReport(null);
     setRefreshing(true);
     try {
       const res = await refreshArtifacts(catalogId, entityKey);
-      if (!res.ok) { setRefreshError(res.error); return; }
+      if (!res.ok) { setRefreshFailure({ entityId: entityKey, error: res.error }); return; }
       // ONE server-row → local-artifact projection, shared with the catalog-wide refresh
       // (`labCatalogRefresh.ts`) so the two scopes cannot reconcile against different shapes.
-      setRefreshOutcome(useLabPipelineStore.getState().refreshEntity(entityKey, toLabArtifacts(res.data)));
+      const outcome = useLabPipelineStore.getState().refreshEntity(entityKey, toLabArtifacts(res.data));
+      setRefreshReport({ entityId: entityKey, outcome });
     } finally {
       setRefreshing(false);
     }
   }, [catalogId, entityKey]);
 
   // A different entity's result must never be read as this one's.
-  useEffect(() => { setRefreshOutcome(null); setRefreshError(null); }, [entityKey]);
+  const refreshOutcome = refreshReport && refreshReport.entityId === entityKey ? refreshReport.outcome : null;
+  const refreshError = refreshFailure && refreshFailure.entityId === entityKey ? refreshFailure.error : null;
 
   const handleSelectCatalog = (id: string) => {
     onSelectCatalog(id);
@@ -361,7 +365,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading, artsError, retryArts,
     refreshFromServer, refreshing, refreshError, refreshOutcome,
-    dismissRefresh: () => { setRefreshOutcome(null); setRefreshError(null); },
+    dismissRefresh: () => { setRefreshReport(null); setRefreshFailure(null); },
     driftByStep, adoptServerStep, entitySteps,
     runDrain, drainOutcome, dismissDrainOutcome,
     handleSelectCatalog, handleSelectEntity, selectStep,
