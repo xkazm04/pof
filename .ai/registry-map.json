@@ -10096,7 +10096,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:95 The input-bindings surface is a native semantic table over a fixed 16-row binding profile held on the client, with rows keyed by action identity and a single-cell rebind write, so the table techniques that apply are realized and the rest have no precondition here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "engine-binding-surface",
@@ -13993,7 +13997,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/SquadChoreographyEditor/SquadMemberRow.tsx:33 Squad members are a listbox of options with a roving tabindex, and EQS components are cards and pipeline diagrams. A case-insensitive search of the four context directories found no <table, thead, aria-sort, role=\"grid\" or pageSize, so the table techniques have no surface here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         }
       ],
       "governance": "governed"
@@ -14892,7 +14900,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:35 The Responsive Breakpoints list is a four-column, read-only comparison drawn as CSS-grid divs with a fake header row of spans. It carries no table or grid semantics, so assistive technology gets no column headers or row/column relations. The rule is to keep a native table for read-only cells, and that is not done here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "mcp-tools",
@@ -15675,7 +15687,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/HolisticHealthView/QualityTab.tsx:26 HolisticHealthView and UnifiedSummaryView show data as charts, gauges, stat cards and flex-row lists, never as a table. A case-insensitive search of both directories found no <table, thead, aria-sort, role=\"grid\" or pageSize.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "model-composed-workspace",
@@ -16807,7 +16823,11 @@
           "revision": 14,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/LivePreview.tsx:57 None of this context's listed files renders a table. The loot-filter preview and rule list are flex-div lists keyed by id, the heatmap is an SVG chart, and the export writes UE DataTable JSON, not CSV. A recursive search of sub_inventory found no aria-sort, pageSize, csv or columnheader, so the table techniques have nothing to apply to.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c587a204413d5373",
+          "evaluatedRevision": 14
         },
         {
           "subject": "search",

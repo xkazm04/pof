@@ -23473,6 +23473,114 @@
         }
       ],
       "registryProposal": "Most of this context is machine-only acceptance (an oracle gate with no human in it). The subject's techniques assume a human verdict, so their gate-sees-target and oracle principles carry over only by analogy. A short note on 'automated gates under the same discipline' would make such pairs judgeable without stretching."
+    },
+    "12c245d3-0dae-4736-afc8-fb30a8f60f76/table": {
+      "context": "inventory-economy-simulator",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:26:39.736Z",
+      "worker": "bb42d57c-e99a-4edc-a0b8-91ec5a7190ca",
+      "techniques": []
+    },
+    "dfa14e0a-4a6a-4f47-8606-8bfe87085e34/table": {
+      "context": "character-overview-input",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:26:39.736Z",
+      "worker": "bb42d57c-e99a-4edc-a0b8-91ec5a7190ca",
+      "techniques": [
+        {
+          "technique": "client-server-split",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:28 The whole set is a 16-row constant (INPUT_BINDINGS) plus persisted overrides, held and resolved on the client. That is the small-set case where client placement is correct."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:106 Rows are keyed by stable record identity, not array index, so a rebind updates the row in place."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:98 Static header cells with no sort affordance. Rows keep the profile's authored order."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:104 A bounded, fixed set of 16 rows is rendered whole, so there is no window to page."
+        },
+        {
+          "technique": "one-door-for-range-writes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:60 Only single-cell rebinds through one store action exist. There is no paste or fill-drag range write."
+        },
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsRow.tsx:53 One button per row in a 16-row native table is the right shape (few rows, not a grid). Caveat: the button carries focus:outline-none (line 54) with only a hover ring, so keyboard focus is not visible. That is an accessibility gap, not a grid-model choice."
+        }
+      ]
+    },
+    "739c172b-ab24-4b0d-92fc-0ddcd39d5466/table": {
+      "context": "holistic-quality-overview",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:26:39.736Z",
+      "worker": "bb42d57c-e99a-4edc-a0b8-91ec5a7190ca",
+      "techniques": []
+    },
+    "2fd8d59d-6d5d-4aed-aeca-7926be0ca764/table": {
+      "context": "eqs-squad-combat-spatial",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:26:39.736Z",
+      "worker": "bb42d57c-e99a-4edc-a0b8-91ec5a7190ca",
+      "techniques": []
+    },
+    "4bf87448-56bb-4e01-b146-3a3139aeb801/table": {
+      "context": "game-ui-hud",
+      "subject": "table",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:26:39.736Z",
+      "worker": "bb42d57c-e99a-4edc-a0b8-91ec5a7190ca",
+      "techniques": [
+        {
+          "technique": "grid-keyboard-model",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:35 Read-only tabular cells should be a native table. This one is div soup with no semantics at all, while the Widget Binding Inspector in the same file does use a native table."
+        },
+        {
+          "technique": "client-server-split",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:15 Rows are compile-time constants imported from _shared/data, so there is no server and no placement decision."
+        },
+        {
+          "technique": "sorting",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:138 Header cells have no sort affordance."
+        },
+        {
+          "technique": "pagination",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:145 A small constant set is rendered whole."
+        },
+        {
+          "technique": "performance",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:146 Rows are keyed by widget identity, not index."
+        }
+      ],
+      "registryProposal": "grid-keyboard-model frames the choice as native table vs grid. It could say outright that a third shape, read-only tabular data drawn as styled divs with no table or grid roles, is the failure, because it loses header association for assistive technology."
     }
   }
 }
