@@ -106,4 +106,21 @@ describe('operator guard', () => {
   }
 });
 
+describe('view-gate status', () => {
+  it('reports the reference-conformance answer the caller asked for', async () => {
+    const memberConformance = { verdict: 'fail', reason: 'a barrel, not a crate' };
+    seams.getView.mockReturnValue({
+      status: 'done',
+      verdict: 'pass',
+      conformance: 'fail',
+      members: [{ name: 'crate', meshPath: 'crate.glb', conformance: memberConformance }],
+      startedAt: 1,
+    });
+    const res = await viewGateStatus(new NextRequest('http://localhost/api/visual-gen/view-gate/status?jobId=v1'));
+    const { data } = await res.json();
+    expect(data.conformance).toBe('fail');
+    expect(data.members[0].conformance).toEqual(memberConformance);
+  });
+});
+
 // FINDINGS-APPEND

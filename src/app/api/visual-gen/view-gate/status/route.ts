@@ -21,6 +21,8 @@ export async function GET(req: NextRequest) {
       status: job.status,
       /** Aggregate over members: fail > unmeasured > warn > pass. */
       verdict: job.verdict,
+      /** Does the asset depict its reference: reported beside `verdict`, never folded in. */
+      conformance: job.conformance,
       members: job.members.map((m) => ({
         name: m.name,
         meshPath: m.meshPath,
@@ -36,6 +38,7 @@ export async function GET(req: NextRequest) {
               unjudged: m.gate.unjudged,
             }
           : undefined,
+        conformance: m.conformance,
         error: m.error,
       })),
       kit: job.kit,
