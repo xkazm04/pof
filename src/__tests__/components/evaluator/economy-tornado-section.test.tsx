@@ -40,5 +40,20 @@ describe('TornadoSection', () => {
     expect(container.textContent).toContain('baseline 0.412');
     expect(container.textContent).toContain('0.380 → 0.450');
   });
+
+  it('keys a converter (vendor sale) as a converter, not as a faucet', async () => {
+    apiFetchMock.mockResolvedValue({
+      output: 'gini', range: 0.5, baseline: 0.4,
+      entries: [
+        { paramId: 'kill-gold', label: 'Monster Gold', kind: 'faucet', baseValue: 10, lowValue: 5, highValue: 15, low: 0.38, high: 0.45 },
+        { paramId: 'loot-vendor-sell', label: 'Vendor Loot Sales', kind: 'converter', baseValue: 8, lowValue: 4, highValue: 12, low: 0.39, high: 0.41 },
+      ],
+    });
+    const { getByText, getByTitle, container } = render(<TornadoSection config={CONFIG} />);
+    await act(async () => { fireEvent.click(getByText('Run sweep')); });
+    const dot = (title: string) => (getByTitle(title).querySelector('span') as HTMLElement).style.backgroundColor;
+    expect(dot('Vendor Loot Sales')).not.toBe(dot('Monster Gold'));
+    expect(container.textContent).toContain('Converter');
+  });
 });
 
