@@ -568,6 +568,13 @@ export const DIFFICULTY_BRUTE: DifficultyPoint[] = [
   { level: 45, value: 32 }, { level: 50, value: 28 },
 ];
 
+/** Difficulty-curve series; label + colour resolved from ARCHETYPES by id. */
+export const DIFFICULTY_SERIES: { id: string; label: string; color: string; data: DifficultyPoint[] }[] = [
+  { id: 'melee-grunt', data: DIFFICULTY_GRUNT },
+  { id: 'ranged-caster', data: DIFFICULTY_CASTER },
+  { id: 'brute', data: DIFFICULTY_BRUTE },
+].map(s => ({ ...s, ...archetypeIdentity(s.id) }));
+
 /* ── 5.5 Spawn Wave Choreographer data ───────────────────────────────── */
 
 export interface SpawnPoint { id: number; x: number; y: number; order: number; role?: EnemyRole; color?: string; }
@@ -608,12 +615,23 @@ export interface ArchetypeStats {
   dangerRank: number;
 }
 
-export const KILL_DEATH_STATS: ArchetypeStats[] = [
-  { id: 'melee-grunt', label: 'Forest Grunt', color: ACCENT_RED, timesSpawned: 1247, timesKilled: 1198, avgLifespan: '18.3s', totalDmgDealt: 45230, killsOnPlayer: 23, dangerRank: 3 },
-  { id: 'ranged-caster', label: 'Dark Mage', color: ACCENT_PURPLE_BOLD, timesSpawned: 843, timesKilled: 801, avgLifespan: '24.7s', totalDmgDealt: 67890, killsOnPlayer: 31, dangerRank: 4 },
-  { id: 'brute', label: 'Stone Brute', color: MODULE_COLORS.content, timesSpawned: 412, timesKilled: 356, avgLifespan: '42.1s', totalDmgDealt: 89450, killsOnPlayer: 67, dangerRank: 1 },
-  { id: 'elite-knight', label: 'Hollow Knight', color: MODULE_COLORS.core, timesSpawned: 298, timesKilled: 241, avgLifespan: '38.5s', totalDmgDealt: 72340, killsOnPlayer: 52, dangerRank: 2 },
+type KillDeathRow = Omit<ArchetypeStats, 'label' | 'color'>;
+
+/** Label + colour for an archetype id: ARCHETYPES is the single owner of identity. */
+export function archetypeIdentity(id: string): { label: string; color: string } {
+  const a = ARCHETYPES.find(x => x.id === id);
+  if (!a) throw new Error(`Unknown archetype id: ${id}`);
+  return { label: a.label, color: a.color };
+}
+
+const KILL_DEATH_ROWS: KillDeathRow[] = [
+  { id: 'melee-grunt', timesSpawned: 1247, timesKilled: 1198, avgLifespan: '18.3s', totalDmgDealt: 45230, killsOnPlayer: 23, dangerRank: 3 },
+  { id: 'ranged-caster', timesSpawned: 843, timesKilled: 801, avgLifespan: '24.7s', totalDmgDealt: 67890, killsOnPlayer: 31, dangerRank: 4 },
+  { id: 'brute', timesSpawned: 412, timesKilled: 356, avgLifespan: '42.1s', totalDmgDealt: 89450, killsOnPlayer: 67, dangerRank: 1 },
+  { id: 'elite-knight', timesSpawned: 298, timesKilled: 241, avgLifespan: '38.5s', totalDmgDealt: 72340, killsOnPlayer: 52, dangerRank: 2 },
 ];
+
+export const KILL_DEATH_STATS: ArchetypeStats[] = KILL_DEATH_ROWS.map(r => ({ ...r, ...archetypeIdentity(r.id) }));
 
 export const MAX_KILLS_ON_PLAYER = Math.max(...KILL_DEATH_STATS.map(a => a.killsOnPlayer)) || 1;
 

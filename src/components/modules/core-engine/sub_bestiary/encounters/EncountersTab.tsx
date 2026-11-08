@@ -4,12 +4,12 @@ import { useState, useMemo, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Map as MapIcon } from 'lucide-react';
 import {
-  MODULE_COLORS, ACCENT_RED, ACCENT_PURPLE_BOLD, STATUS_ERROR,
+  MODULE_COLORS, STATUS_ERROR,
   withOpacity, OPACITY_8, OPACITY_25,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
-  DIFFICULTY_GRUNT, DIFFICULTY_CASTER, DIFFICULTY_BRUTE,
+  DIFFICULTY_SERIES,
   SPAWN_POINTS,
   TACTICS_ENEMIES, TACTICS_ROLE_COLORS,
   EXPANDED_WAVES, TIER_GLOW_COLORS, ALL_TIERS,
@@ -57,11 +57,7 @@ export function EncountersTab({ accent }: EncountersTabProps) {
       <BlueprintPanel color={STATUS_ERROR} className="p-3">
         <SectionHeader icon={TrendingUp} label="Enemy Difficulty Curve" color={STATUS_ERROR} />
         <div className="mt-3">
-          <DifficultyChart series={[
-            { label: 'Grunt', data: DIFFICULTY_GRUNT, color: ACCENT_RED },
-            { label: 'Caster', data: DIFFICULTY_CASTER, color: ACCENT_PURPLE_BOLD },
-            { label: 'Brute', data: DIFFICULTY_BRUTE, color: MODULE_COLORS.content },
-          ]} accent={STATUS_ERROR} />
+          <DifficultyChart series={DIFFICULTY_SERIES} accent={STATUS_ERROR} />
         </div>
       </BlueprintPanel>
 
