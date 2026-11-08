@@ -236,7 +236,8 @@ export function EconomySimulatorView() {
             <WealthDistributionChart metrics={metrics} snapshots={result.finalSnapshots} />
 
             {/* Supply/Demand */}
-            <SupplyDemandSection data={supplyDemand} maxLevel={config?.maxLevel ?? 25} />
+            {/* Axis from the config the shown run USED, not the unrun edit in the panel */}
+            <SupplyDemandSection data={supplyDemand} maxLevel={result.config.maxLevel} />
 
             {/* Inflation Alerts */}
             <AlertsSection alerts={alerts} />
