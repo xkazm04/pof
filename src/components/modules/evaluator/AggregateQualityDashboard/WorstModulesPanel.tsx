@@ -46,7 +46,7 @@ export function WorstModulesPanel({ worstModules, setSelectedModule }: WorstModu
               {m.avgQuality}
             </span>
             <span className="text-xs text-text-muted">
-              {m.implemented}/{m.total} done
+              {m.implemented + m.improved}/{m.total} done
             </span>
           </div>
         ))}
