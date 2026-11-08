@@ -1,4 +1,4 @@
-import { ACCENT_ORANGE, STATUS_MUTED, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING } from '@/lib/chart-colors';
+import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { GaugeMetric, DiffEntry, HeatmapCell } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
@@ -108,13 +108,6 @@ export const LOOT_DIFF_ENTRIES: DiffEntry[] = [
 
 export const DROPS_PER_HOUR_GAUGE: GaugeMetric = { label: 'Items/Hour', current: 45, target: 60, unit: '/hr' };
 export const GOLD_PER_HOUR_GAUGE: GaugeMetric = { label: 'Gold/Hour', current: 2300, target: 3000, unit: 'g' };
-
-export const DROP_SOURCE_BREAKDOWN = [
-  { source: 'Grunt', pct: 40, color: STATUS_MUTED },
-  { source: 'Caster', pct: 30, color: STATUS_INFO },
-  { source: 'Boss', pct: 20, color: ACCENT_VIOLET },
-  { source: 'Chest', pct: 10, color: STATUS_WARNING },
-];
 
 /* -- 7.5 Affix data ------------------------------------------------------- */
 
