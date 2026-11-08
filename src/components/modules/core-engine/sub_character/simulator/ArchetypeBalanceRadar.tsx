@@ -45,6 +45,18 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
     const sorted = [...balanceResults].sort((a, b) => b.compositeScore - a.compositeScore);
     return !needsTruncation || showAll ? sorted : sorted.slice(0, TOP_N);
   }, [balanceResults, showAll, needsTruncation]);
+
+  if (balanceResults.length < 2) {
+    return (
+      <BlueprintPanel className="p-3" color={ACCENT_CYAN}>
+        <SectionHeader icon={Radar} label="Balance Radar" color={ACCENT_CYAN} />
+        <div role="status" className="text-xs font-mono text-text-muted" data-testid="radar-empty">
+          Pick at least two characters to compare
+        </div>
+      </BlueprintPanel>
+    );
+  }
+
   return (
     <BlueprintPanel className="p-3" color={ACCENT_CYAN}>
       <div className="flex items-center gap-3 mb-1">

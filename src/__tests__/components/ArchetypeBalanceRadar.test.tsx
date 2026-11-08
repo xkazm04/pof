@@ -50,3 +50,14 @@ describe('ArchetypeBalanceRadar score-delta badge', () => {
     expect(legend?.textContent).toContain('Off (≥8 pts)');
   });
 });
+
+describe('ArchetypeBalanceRadar empty state', () => {
+  it('asks for at least two characters instead of drawing an empty radar', () => {
+    for (const rs of [[], [result('Solo', 0.5)]]) {
+      const { container, unmount } = render(<ArchetypeBalanceRadar balanceResults={rs} scoreMean={0.5} />);
+      expect(container.querySelector('[data-testid="radar-empty"]')?.textContent).toBe('Pick at least two characters to compare');
+      expect(container.querySelector('table')).toBeNull();
+      unmount();
+    }
+  });
+});
