@@ -55,6 +55,8 @@ export function PityTimerSection({ pityThreshold, setPityThreshold }: PityTimerS
     }
   }, [pityCount, pityThreshold]);
 
+  // Same rule doPityDrop forces on: the next drop is guaranteed once it would reach the threshold.
+  const guaranteedNext = pityCount + 1 >= pityThreshold;
   const progress = Math.min(pityCount / pityThreshold, 1);
   const fillColor = pityCount >= pityThreshold * 0.8 ? STATUS_WARNING : STATUS_INFO;
   const fillLen = ARC_LEN * progress;
@@ -124,7 +126,7 @@ export function PityTimerSection({ pityThreshold, setPityThreshold }: PityTimerS
             <span className="text-2xs font-mono" style={{ color: STATUS_INFO }}>{pityThreshold}</span>
           </div>
           <div className="text-2xs font-mono" style={{ color: fillColor }}>
-            {pityCount >= pityThreshold ? 'GUARANTEED RARE NEXT!' : `${pityCount} since last Rare+`}
+            {guaranteedNext ? 'GUARANTEED RARE NEXT!' : `${pityCount} since last Rare+`}
           </div>
         </div>
       </div>

@@ -20,6 +20,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
   ),
 }));
 
+import { PityTimerSection } from '@/components/modules/core-engine/sub_loot/pity/PityTimerSection';
 import { DroughtCalculator } from '@/components/modules/core-engine/sub_loot/pity/DroughtCalculator';
 import { DropSimulator } from '@/components/modules/core-engine/sub_loot/simulation/DropSimulator';
 import { useLootTuningStore, resetLootTuning } from '@/components/modules/core-engine/sub_loot/_shared/lootTuningStore';
@@ -74,5 +75,21 @@ describe('DroughtCalculator headline stats honour the pity toggle', () => {
     fireEvent.click(getByText('Pity @ 20'));
     expect(stat(container, 'Median (P50)')).toBe('35 kills');
     expect(stat(container, 'Expected Dry')).toBe('50 kills');
+  });
+});
+
+describe('PityTimerSection', () => {
+  it('announces the guarantee on the drop that will be forced, which is reachable', () => {
+    const spy = vi.spyOn(Math, 'random').mockReturnValue(0); // every unforced roll is Common
+    try {
+      const { getByText, container } = render(<PityTimerSection pityThreshold={10} setPityThreshold={() => {}} />);
+      for (let i = 0; i < 9; i++) fireEvent.click(getByText('Drop!'));
+      // 9 dry drops: drop 10 is forced (pityCount + 1 >= threshold), so the next one IS guaranteed.
+      expect(container.textContent).toContain('GUARANTEED RARE NEXT!');
+      fireEvent.click(getByText('Drop!'));
+      expect(container.textContent).toContain('0 since last Rare+');
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
