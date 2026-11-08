@@ -1,4 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { applyStyle, styleRequestOf } from '@/lib/visual-gen/style-apply';
@@ -24,6 +25,9 @@ const isMode = (v: unknown): v is Mode => MODES.includes(v as Mode);
  */
 
 export async function POST(request: Request) {
+  // Spends Leonardo credit: refuse a cross-site POST (a text/plain form skips CORS preflight).
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
     const body = await readJsonObject(request);
     if (!body) return apiError(MALFORMED_BODY_ERROR, 400);

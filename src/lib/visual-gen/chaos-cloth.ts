@@ -34,6 +34,18 @@ import { CHAOS_CLOTH_NOT_RUN, CHAOS_CLOTH_PLUGINS, type ClothResult } from './ch
 export { CHAOS_CLOTH_NOT_RUN, CHAOS_CLOTH_PLUGINS };
 export type { ClothResult } from './chaos-cloth-contract';
 
+/**
+ * Escape a value for a single-quoted Python string literal: backslash, quote and line breaks
+ * cannot end the literal early. Ordinary /Game paths and names pass through byte-identical.
+ */
+function py(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
+}
+
 export interface ClothOptions {
   /** /Game path of the target character skeletal mesh (the skin-weight transfer source). */
   targetSkeletalMesh: string;
@@ -62,16 +74,16 @@ export interface ClothOptions {
  * the editor. Emits `POF_CLOTH_*` markers the caller parses.
  */
 export function buildClothGraphPython(opts: ClothOptions): string {
-  const dest = opts.destPath ?? '/Game/Generated/Cloth';
-  const dfName = opts.dataflowName ?? 'DF_Cloth';
-  const caName = opts.clothAssetName ?? 'CA_Cloth';
-  const meshName = opts.garmentMeshName ?? 'ClothGarment';
+  const dest = py(opts.destPath ?? '/Game/Generated/Cloth');
+  const dfName = py(opts.dataflowName ?? 'DF_Cloth');
+  const caName = py(opts.clothAssetName ?? 'CA_Cloth');
+  const meshName = py(opts.garmentMeshName ?? 'ClothGarment');
 
   // Resolve the garment: import a glb → static mesh, else use the given /Game path.
   const garmentLines = opts.garmentGlbPath
     ? [
         '_task = unreal.AssetImportTask()',
-        `_task.filename = '${opts.garmentGlbPath.replace(/\\/g, '/')}'`,
+        `_task.filename = '${py(opts.garmentGlbPath.replace(/\\/g, '/'))}'`,
         `_task.destination_path = '${dest}'`,
         `_task.destination_name = '${meshName}'`,
         '_task.automated = True',
@@ -81,10 +93,10 @@ export function buildClothGraphPython(opts: ClothOptions): string {
         '_gp = list(_task.imported_object_paths)',
         "_garment = _gp[0] if _gp else 'NONE'",
       ]
-    : [`_garment = '${opts.garmentMeshPath ?? 'NONE'}'`];
+    : [`_garment = '${py(opts.garmentMeshPath ?? 'NONE')}'`];
 
   const transferLine = opts.transferMethod
-    ? [`if _ntsw: _DFEBL.set_dataflow_node_property(_udf, _ntsw, 'TransferMethod', '${opts.transferMethod}')`]
+    ? [`if _ntsw: _DFEBL.set_dataflow_node_property(_udf, _ntsw, 'TransferMethod', '${py(opts.transferMethod)}')`]
     : [];
 
   return [
@@ -114,8 +126,8 @@ export function buildClothGraphPython(opts: ClothOptions): string {
     "unreal.log('POF_CLOTH_NODES=' + str(len(_nodes)))",
     // 4) set node properties (asset refs pass as object-path strings)
     `if _nsm: _DFEBL.set_dataflow_node_property(_udf, _nsm, 'StaticMesh', _garment)`,
-    `if _ntsw: _DFEBL.set_dataflow_node_property(_udf, _ntsw, 'SkeletalMesh', '${opts.targetSkeletalMesh}')`,
-    `if _nph: _DFEBL.set_dataflow_node_property(_udf, _nph, 'PhysicsAsset', '${opts.physicsAsset}')`,
+    `if _ntsw: _DFEBL.set_dataflow_node_property(_udf, _ntsw, 'SkeletalMesh', '${py(opts.targetSkeletalMesh)}')`,
+    `if _nph: _DFEBL.set_dataflow_node_property(_udf, _nph, 'PhysicsAsset', '${py(opts.physicsAsset)}')`,
     ...transferLine,
     // 5) connect the chain (terminal input pin = CollectionLod0)
     "_c1 = _DFEBL.connect_dataflow_nodes(_udf, _nsm, 'Collection', _ntsw, 'Collection') if (_nsm and _ntsw) else False",
