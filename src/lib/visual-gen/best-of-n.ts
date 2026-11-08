@@ -1,36 +1,12 @@
 /**
- * Best-of-N generation — the free "self-correction" mechanism for a DETERMINISTIC
- * generator. TripoSR is feed-forward (re-rolling the same image = the same mesh), so
- * true iterative refinement ("fix the legs") isn't possible for free. The honest free
- * lever is a param sweep: generate K variants (foreground framing / mc-resolution),
- * critique each (geometry health + CLIP fidelity), and keep the highest-scoring. Pairs
- * with the experiment-lab A-B-compare idea. The bigger refinement lever (regenerate the
- * 2D input) lives upstream and isn't wired yet.
+ * Gate-driven re-roll for a STOCHASTIC generator, plus the shared mesh scoring. (A
+ * TripoSR parameter sweep lived here and was removed with 0 callers:
+ * TripoSR is deterministic and the sweep measured near-tied, see docs/research/impact-map.md.)
  */
-import { runTriposr, type TriposrSpec, type TriposrResult } from './triposr-runner';
 import { critiqueMesh, ungatedReason, CRITIQUE_CALIBRATION_CAVEAT, type CritiqueResult } from './mesh-critique';
 import { assessStage, type MeshStage } from './critique-stage';
 
-export interface Variant {
-  label: string;
-  foregroundRatio?: number;
-  mcResolution?: number;
-}
-
-export interface GenCandidate {
-  variant: string;
-  result: TriposrResult;
-  critique?: CritiqueResult;
-  /** 0–100, over the components that were actually measured (see `scoreLabel`). */
-  combinedScore: number;
-  /** What that number is made of — geometry+fidelity, geometry-only, or ungraded. */
-  scoreLabel: string;
-}
-
-export interface BestOfResult {
-  best?: GenCandidate;
-  candidates: GenCandidate[];
-}
+type Critic = (glbPath: string) => Promise<CritiqueResult>;
 
 /** Which components a combined score was actually computed from. */
 export type ScoreBasis = 'geometry+fidelity' | 'geometry-only' | 'ungraded';
@@ -85,46 +61,6 @@ export function scoreBreakdown(result: { clipMax?: number }, critique?: Critique
 /** The combined score alone. See {@link scoreBreakdown} for what it is made of. Pure. */
 export function combinedScore(result: { clipMax?: number }, critique?: CritiqueResult): number {
   return scoreBreakdown(result, critique).score;
-}
-
-type Runner = (spec: TriposrSpec) => Promise<TriposrResult>;
-type Critic = (glbPath: string) => Promise<CritiqueResult>;
-
-function sanitize(label: string): string {
-  return label.replace(/[^a-z0-9]/gi, '');
-}
-
-/** Generate each variant, critique it, and pick the highest combined score. `runner`/
- * `critic` are injectable for tests; default to the real ones. */
-export async function generateBestOf(
-  base: TriposrSpec,
-  variants: Variant[],
-  deps: { runner?: Runner; critic?: Critic; outputFor?: (label: string) => string } = {},
-): Promise<BestOfResult> {
-  const runner = deps.runner ?? runTriposr;
-  const critic = deps.critic ?? critiqueMesh;
-  const outputFor = deps.outputFor ?? ((label) => base.outputPath.replace(/(\.[^.]+)$/, `_${sanitize(label)}$1`));
-
-  const candidates: GenCandidate[] = [];
-  for (const v of variants) {
-    const spec: TriposrSpec = {
-      ...base,
-      outputPath: outputFor(v.label),
-      fidelity: true,
-      ...(v.foregroundRatio !== undefined ? { foregroundRatio: v.foregroundRatio } : {}),
-      ...(v.mcResolution !== undefined ? { mcResolution: v.mcResolution } : {}),
-    };
-    const result = await runner(spec);
-    let critique: CritiqueResult | undefined;
-    if (result.ok && result.meshPath) {
-      try { critique = await critic(result.meshPath); } catch { /* critique is best-effort */ }
-    }
-    const breakdown = scoreBreakdown(result, critique);
-    candidates.push({ variant: v.label, result, critique, combinedScore: breakdown.score, scoreLabel: breakdown.label });
-  }
-
-  const best = candidates.filter((c) => c.result.ok).sort((a, b) => b.combinedScore - a.combinedScore)[0];
-  return { best, candidates };
 }
 
 // ── gate-driven retry (the STOCHASTIC counterpart to the param sweep above) ────
@@ -204,9 +140,8 @@ export interface RetryOutcome<R> {
 /**
  * Re-roll a STOCHASTIC generator until its mesh clears the Tier-1 geometry gate.
  *
- * `generateBestOf` above sweeps parameters because TripoSR is feed-forward — re-rolling
- * the same image returns the same mesh, so variation has to be forced through params,
- * and the sweep proved near-tied in practice. A stochastic cloud generator has the
+ * A parameter sweep over TripoSR was tried and removed (it is feed-forward, so re-rolling
+ * the same image returns the same mesh, and the sweep proved near-tied in practice). A stochastic cloud generator has the
  * opposite shape: the same input genuinely re-rolls, so the honest lever is to regenerate
  * a broken mesh instead of shipping it. This is the loop that does that.
  *
