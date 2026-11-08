@@ -1,0 +1,5 @@
+ue5-state-sync {"better":1}
+material-configurator {"better":2,"demoted":1}
+save-system {"unmeasurable":1,"better":2}
+session-analytics-reporting {"better":4}
+prompt-evolution {"better":6,"demoted":1,"unmeasurable":1}
