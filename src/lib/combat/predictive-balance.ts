@@ -545,17 +545,18 @@ export function planPredictiveSweep(
         }
       }
       survivalCurves[label] = curvePoints;
-
-      // DPS breakdown for mid-level (static per-ability rate, not a fight).
-      dpsBreakdowns[label] = PLAYER_ABILITIES
-        .filter(ab => ab.baseDamage > 0)
-        .map((ab, i) => {
-          const raw = ab.baseDamage + midAttrs.attackPower * ab.attackPowerScaling;
-          const effectiveDPS = raw / Math.max(ab.cooldownSec, ab.castTimeSec);
-          return { abilityName: ab.name, avgDamage: effectiveDPS, color: ABILITY_COLORS[i % ABILITY_COLORS.length] };
-        })
-        .sort((a, b) => b.avgDamage - a.avgDamage);
     }
+
+    // DPS breakdown for the mid-level player: a static per-ability rate (no
+    // archetype, no fight), so it is emitted once, keyed by the player level.
+    dpsBreakdowns[`Lv.${midLevel} player`] = PLAYER_ABILITIES
+      .filter(ab => ab.baseDamage > 0)
+      .map((ab, i) => {
+        const raw = ab.baseDamage + midAttrs.attackPower * ab.attackPowerScaling;
+        const effectiveDPS = raw / Math.max(ab.cooldownSec, ab.castTimeSec);
+        return { abilityName: ab.name, avgDamage: effectiveDPS, color: ABILITY_COLORS[i % ABILITY_COLORS.length] };
+      })
+      .sort((a, b) => b.avgDamage - a.avgDamage);
 
     const sensitivity: SensitivityCurve[] = [];
     for (const attr of sensAttrs) {

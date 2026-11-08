@@ -15,7 +15,7 @@ export function DPSBreakdownChart({ breakdowns }: {
   return (
     <div className="space-y-1.5">
       <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">
-        {label} — Effective DPS/ability
+        {label} — static DPS per ability
       </div>
       {items.map(item => {
         const pct = (item.avgDamage / maxDPS) * 100;
