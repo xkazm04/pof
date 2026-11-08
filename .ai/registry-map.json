@@ -5066,7 +5066,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:2 The viewer and browser load and grade generated meshes (the output side) and never handle a reconstruction's source image. A grep of asset-viewer/ and asset-browser/ for gateInputImage, inputGate, ungated, image-to-3d and referenceRole found nothing; the only hits are 'tripo' mentions in mesh-stat comments.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         },
         {
           "subject": "mcp-tools",
@@ -27344,7 +27348,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_tripo.mjs:11 The paid Tripo CLI uploads the given image straight to the provider. planTripoCli/executeTripoCli never call the Tier-0 input gate and stamp no 'submitted ungated' state for the input (their only ungated note is about the mesh gate on the output). The paid path skips the gate entirely, which is exactly the failure the protocol names.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         },
         {
           "subject": "generative-artifact-gating",
@@ -27931,7 +27939,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:91 Scene-mode decomposition runs with only a free-text hint and no declared inventory. There is no coverage or residue check and no minimum-over-regions frame verdict, and the generator's 'excluded' discard list is dropped from the API response. A prop the VLM missed is silently absent while every crop verdict stays green.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         },
         {
           "subject": "browser-credential-boundary",

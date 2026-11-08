@@ -15942,14 +15942,14 @@
       "subject": "image-to-3d-input-gating",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T21:17:50.717Z",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:17:50.852Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "34fc255d-9d77-4076-8afb-467ccf2f0369",
+        "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
         "state": "not-applicable",
-        "at": "2026-10-24T21:18:44.305374+00:00",
-        "reason": "reviewer (sonnet): The anchor wizard/wizard-data.ts is not one of this context's files (overview, features, _shared, index), and the absence search used narrow terms (no 'image', 'upload' or 'concept'), so the anchor does not show that no image-to-3D input exists here."
+        "at": "2026-11-08T02:19:34.560920+00:00",
+        "reason": "reviewer (sonnet): The anchor (data.ts:27) is a Wizard subtab subtitle that mentions Mixamo and Quixel; it does not show that image-to-3D is absent. The cited SOURCES list is in wizard/wizard-data.ts, which is not one of this context's files."
       }
     },
     "f825075c-6d22-4629-8aa6-ad7dbca2b500/catalog-pipeline-authoring": {
@@ -23008,6 +23008,95 @@
         }
       ],
       "registryProposal": "In generator-failure-deterministic-gates, 'a schema violation fails closed' could name clamping into the valid range explicitly as a failure. It is the most common way parsers quietly turn an out-of-range value into an in-range verdict."
+    },
+    "c120fef4-1da4-432b-9fac-7abb92a27830/image-to-3d-input-gating": {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:17:50.852Z",
+      "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
+      "techniques": [
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_tripo.mjs:43 The paid dispatch is planned and run without gateInputImage. A fail cannot return an error instead of a job, and the input is never stamped ungated (tripo-cli.ts:119 only says the mesh is ungated)."
+        },
+        {
+          "technique": "single-subject-plain-background",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_triposr.py:52 Before TripoSR runs, the background is matted out and the subject is composited onto a uniform 0.5 mid-grey field (line 55) after resize_foreground leaves a margin. Hunyuan also runs BackgroundRemover (pof_hunyuan.py:36). The rule 'reject if the matte fails' is not enforced."
+        },
+        {
+          "technique": "text-is-never-geometry",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_txt2img.py:12 The source image is briefed without text or watermarks at generation time, the cheapest fix the technique names. The same negative prompt also briefs single-subject, uncropped, plain-background inputs."
+        }
+      ]
+    },
+    "6f37d3d5-8476-45cf-8598-a7a900cfe93c/image-to-3d-input-gating": {
+      "context": "visual-gen-mesh",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:17:50.852Z",
+      "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
+      "techniques": [
+        {
+          "technique": "scene-partition-is-the-gated-unit",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:91 No expected inventory is declared before decomposing and no region/backdrop/residue states are reported. Gating each crop instead of the whole frame (line 67, cropPropRegion) is conformant with step 3."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:111 Ran and unavailable are kept as separate states (line 72). A caller opt-out returns an empty array, not a per-prop 'skipped, submitted ungated' stamp, so opting out reads as silence."
+        },
+        {
+          "technique": "part-cut-planning",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/mesh-split/route.ts:14 mesh-split separates independent props after generation to save credits. The parts ship independently, which the technique excludes."
+        }
+      ],
+      "registryProposal": "mesh-split's credit-amortisation path (one image-to-3D job for a group of props, split afterwards) is a scene-mode generation whose partition is never gated before spend. scene-partition-is-the-gated-unit could name this 'batch several subjects into one paid job' case explicitly."
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/image-to-3d-input-gating": {
+      "context": "asset-viewer-and-browser",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:17:50.852Z",
+      "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
+      "techniques": []
+    },
+    "a5282390-b3a3-4015-90c9-7ff9f7481788/image-to-3d-input-gating": {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:17:50.852Z",
+      "techniques": [
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_vlm_critique.py:57 Defects are an open field and the verdict is prose. The parse loop at line 71 only prints the keys it found and still reports done."
+        },
+        {
+          "technique": "single-subject-plain-background",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/pof_vlm_batch.py:44 These scripts judge generated outputs (mesh renders, 2D assets) as shippable assets, not reconstruction inputs. Isolation preparation does not happen here."
+        }
+      ],
+      "withdrawn": {
+        "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
+        "state": "deviation",
+        "at": "2026-11-08T02:19:34.640497+00:00",
+        "reason": "reviewer (sonnet): The critic scripts (pof_vlm_critique.py, pof_vlm_batch.py) judge generated outputs, not reconstruction inputs. The verdict's own technique anchor says so. A deviation against input-gating for open defect text and a prose verdict is therefore about a different concern than the subject."
+      }
     }
   }
 }
