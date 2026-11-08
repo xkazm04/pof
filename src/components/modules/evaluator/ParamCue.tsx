@@ -19,12 +19,17 @@ import {
   STATUS_NEUTRAL, OVERLAY_WHITE,
 } from '@/lib/chart-colors';
 
+/** Keyed by the union, so a kind added to PPParamCueKind without a cue here fails
+ *  typecheck instead of silently missing from ALL_CUE_KINDS (and its tests). */
+const CUE_KIND_SET: Record<PPParamCueKind, true> = {
+  glow: true, blur: true, threshold: true, temperature: true, tint: true, saturation: true,
+  contrast: true, brightness: true, distance: true, aperture: true, corners: true,
+  vignette: true, speed: true, fringe: true, grain: true, fog: true, level: true,
+  'channel-r': true, 'channel-g': true, 'channel-b': true,
+};
+
 /** Every cue kind — exported so tests can render the full set. */
-export const ALL_CUE_KINDS: PPParamCueKind[] = [
-  'glow', 'blur', 'threshold', 'temperature', 'tint', 'saturation', 'contrast',
-  'brightness', 'distance', 'aperture', 'corners', 'vignette', 'speed', 'fringe',
-  'grain', 'fog', 'level', 'channel-r', 'channel-g', 'channel-b',
-];
+export const ALL_CUE_KINDS = Object.keys(CUE_KIND_SET) as PPParamCueKind[];
 
 const W = 46;
 const H = 18;
