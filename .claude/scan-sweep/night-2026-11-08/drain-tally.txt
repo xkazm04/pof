@@ -45,3 +45,12 @@ character-simulator {"better":6}
 platform-services-api {"better":4}
 image-generation {"better":3,"partially_superseded":1}
 project-health-dashboards {"better":3,"unmeasurable":1}
+roadmap-workflow-management {"better":2}
+ue5-filesystem {"better":6}
+catalog-browser-ui {"better":4,"superseded":3}
+hud-theme-and-inventory {"better":6,"superseded":1}
+core-engine-scan-telemetry {"superseded":2,"demoted":1,"better":2}
+visual-gen-quality-and-animation {"better":7}
+hud-damage-and-navigation {"better":5,"demoted":1}
+bestiary-encounters-metrics {"better":5,"partially_superseded":1}
+audio-view-and-catalog {"better":6}
