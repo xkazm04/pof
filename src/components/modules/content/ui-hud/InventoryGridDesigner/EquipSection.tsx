@@ -1,6 +1,6 @@
 import { Shield } from 'lucide-react';
 import type { InventoryConfig, EquipmentSlotConfig } from '@/lib/prompts/inventory';
-import { EQUIP_POSITIONS } from './constants';
+import { EQUIP_POSITIONS, equipStub } from './constants';
 
 export function EquipSection({
   config,
@@ -73,7 +73,7 @@ export function EquipSection({
                   className="text-[11px] font-bold uppercase tracking-wider relative z-10 transition-colors"
                   style={{ color: isEnabled ? '#6ee7b7' : 'rgba(156,163,175,0.5)' }}
                 >
-                  {pos.label.slice(0, 4)}
+                  {equipStub(pos, 4)}
                 </span>
                 <span
                   className={`text-[11px] font-mono leading-none px-1.5 py-0.5 rounded ${isEnabled ? 'bg-emerald-500/20 text-emerald-300' : 'bg-violet-900/30 text-violet-400/50'}`}

@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Check } from 'lucide-react';
 import type { InventoryConfig, SlotTypeConfig, EquipmentSlotConfig } from '@/lib/prompts/inventory';
 import { DimensionControl } from './DimensionControl';
-import { EQUIP_POSITIONS, RARITY_COLORS } from './constants';
+import { EQUIP_POSITIONS, RARITY_COLORS, equipStub } from './constants';
 
 export function GridSection({
   config,
@@ -114,7 +114,7 @@ export function GridSection({
                   title={slot.label}
                 >
                   <span className="text-[11px] text-amber-300 font-bold leading-none select-none uppercase">
-                    {pos.label.slice(0, 3)}
+                    {equipStub(pos, 3)}
                   </span>
                   <div className="absolute inset-0 border border-amber-400/50 rounded-md animate-ping opacity-20 pointer-events-none" />
                 </div>

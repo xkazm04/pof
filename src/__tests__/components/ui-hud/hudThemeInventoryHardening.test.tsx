@@ -211,3 +211,20 @@ describe('Inventory designer toggles expose their on/off state', () => {
     expect(pressed(panel)).toEqual(ALL_INTERACTIONS.map((i) => String(cfg.interactions.includes(i.id))));
   });
 });
+
+describe('Equipment slot stubs are distinguishable on screen', () => {
+  it('every equipment position renders a distinct visible stub, in both previews', async () => {
+    const { InventoryGridDesigner } = await import('@/components/modules/content/ui-hud/InventoryGridDesigner');
+    const { DEFAULT_CONFIG } = await import('@/lib/prompts/inventory');
+    const allOn = { ...DEFAULT_CONFIG, equipmentSlots: DEFAULT_CONFIG.equipmentSlots.map((s) => ({ ...s, enabled: true })) };
+    useHudDesignStore.getState().setInventoryDraft('C:/P1', allOn);
+    render(<InventoryGridDesigner onGenerate={vi.fn()} isGenerating={false} />);
+    // Grid tab: the silhouette's 24px stubs (title = full label).
+    const gridStubs = allOn.equipmentSlots.map((s) => document.querySelector(`[title="${s.label}"]`)?.textContent?.trim());
+    expect(new Set(gridStubs).size).toBe(allOn.equipmentSlots.length);
+    fireEvent.click(screen.getByRole('tab', { name: 'Equip' }));
+    const equipStubs = allOn.equipmentSlots.map((s) =>
+      screen.getByRole('button', { name: s.label }).querySelector('span')!.textContent!.trim());
+    expect(new Set(equipStubs).size).toBe(allOn.equipmentSlots.length);
+  });
+});
