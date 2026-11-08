@@ -61,8 +61,12 @@ export function ABTestCard({
 
   const handleUseWording = useCallback(async () => {
     if (!winnerVariant) return;
-    await navigator.clipboard.writeText(winnerVariant.prompt);
-    toast.success(`Copied “${winnerVariant.label}” to clipboard`);
+    try {
+      await navigator.clipboard.writeText(winnerVariant.prompt);
+      toast.success(`Copied “${winnerVariant.label}” to clipboard`);
+    } catch {
+      toast.error('Clipboard unavailable in this browser');
+    }
   }, [winnerVariant]);
 
   const plainStatus = test.status === 'concluded' ? 'Decided' : test.status === 'running' ? 'Testing' : 'Stopped';

@@ -2,6 +2,7 @@ import {
   Shuffle, ChevronDown, ChevronRight, Copy, FlaskConical,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/Badge';
 import type { PromptVariant, MutationType } from '@/types/prompt-evolution';
 import { MUTATION_OPTIONS } from '@/lib/prompt-evolution/mutations';
@@ -122,7 +123,12 @@ export function VariantCard({
 
                 {/* Copy */}
                 <button
-                  onClick={() => navigator.clipboard.writeText(variant.prompt)}
+                  onClick={() => {
+                    navigator.clipboard.writeText(variant.prompt).then(
+                      () => toast.success(`Copied “${variant.label}” to clipboard`),
+                      () => toast.error('Clipboard unavailable in this browser'),
+                    );
+                  }}
                   className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded border border-border hover:bg-surface transition-colors"
                 >
                   <Copy className="w-3 h-3" />
