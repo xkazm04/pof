@@ -100,8 +100,6 @@ export function BuildHistoryDashboard() {
           return dir * ((a.sizeBytes ?? 0) - (b.sizeBytes ?? 0));
         case 'duration':
           return dir * ((a.durationMs ?? 0) - (b.durationMs ?? 0));
-        case 'errors':
-          return dir * (a.errorCount - b.errorCount);
         default:
           return 0;
       }
