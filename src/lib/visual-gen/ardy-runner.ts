@@ -137,7 +137,8 @@ export function parseArdyOutput(stdout: string): ParsedArdy {
   // A python traceback can still be followed by nothing at all, so absence of the save line
   // is the real failure signal — never report ok on a stdout we did not understand.
   const error = trace
-    ? (stdout.match(/^(\w*(?:Error|Exception).*)$/m)?.[1]?.trim() ?? 'python traceback (see stdout)')
+    // `[\w.]*`: a module-qualified class (torch.cuda.OutOfMemoryError) is the GPU failure.
+    ? (stdout.match(/^([\w.]*(?:Error|Exception).*)$/m)?.[1]?.trim() ?? 'python traceback (see stdout)')
     : npzPath
       ? undefined
       : ARDY_NO_SAVE;
