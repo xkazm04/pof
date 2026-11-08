@@ -66,8 +66,42 @@ interface LcsOp<T> {
   b: T | null;
 }
 
+/**
+ * Lengths of the shared prefix and suffix of two arrays (never overlapping). Equal ends
+ * are always part of some optimal LCS, so the table only has to cover what is left.
+ */
+function commonEnds<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean): { pre: number; suf: number } {
+  const max = Math.min(a.length, b.length);
+  let pre = 0;
+  while (pre < max && eq(a[pre], b[pre])) pre++;
+  let suf = 0;
+  while (suf < max - pre && eq(a[a.length - 1 - suf], b[b.length - 1 - suf])) suf++;
+  return { pre, suf };
+}
+
+/**
+ * Cells of the LCS table `diffPrompts` allocates for the line pass of two texts, after
+ * the shared prefix/suffix is trimmed. Exposed so the cost can be asserted without timing.
+ */
+export function lcsTableCells(before: string, after: string): number {
+  const a = splitLines(before);
+  const b = splitLines(after);
+  const { pre, suf } = commonEnds(a, b, (x, y) => x === y);
+  return (a.length - pre - suf + 1) * (b.length - pre - suf + 1);
+}
+
 /** Classic LCS backtrace over two arrays, yielding eq/del/add ops in order. */
 function lcsOps<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean): LcsOp<T>[] {
+  const { pre, suf } = commonEnds(a, b, eq);
+  if (pre === 0 && suf === 0) return lcsMiddle(a, b, eq);
+  const head: LcsOp<T>[] = [];
+  for (let k = 0; k < pre; k++) head.push({ type: 'eq', a: a[k], b: b[k] });
+  const mid = lcsMiddle(a.slice(pre, a.length - suf), b.slice(pre, b.length - suf), eq);
+  for (let k = suf; k > 0; k--) mid.push({ type: 'eq', a: a[a.length - k], b: b[b.length - k] });
+  return head.concat(mid);
+}
+
+function lcsMiddle<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean): LcsOp<T>[] {
   const n = a.length;
   const m = b.length;
   // dp[i][j] = LCS length of a[i:] and b[j:]
@@ -137,8 +171,9 @@ function ensureSegs(segs: DiffWordSegment[], type: DiffChangeType): DiffWordSegm
 
 // ── Public entry point ──────────────────────────────────────────────────────
 
+/** Split on LF, dropping a trailing CR so CRLF and LF copies of one text diff as equal. */
 function splitLines(s: string): string[] {
-  return s.length ? s.split('\n') : [];
+  return s.length ? s.split('\n').map((l) => (l.endsWith('\r') ? l.slice(0, -1) : l)) : [];
 }
 
 /**

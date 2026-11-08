@@ -91,4 +91,19 @@ describe('MermaidDiagram', () => {
     fireEvent.click(node);
     expect(onNodeClick).not.toHaveBeenCalled();
   });
+
+  it('ships a :focus-visible stroke from --focus-accent for interactive nodes only', async () => {
+    renderMock.mockResolvedValue({ svg: NODE_SVG });
+    const { container } = render(
+      <MermaidDiagram code="graph TD" ariaLabel="Architecture" onNodeClick={vi.fn()} />
+    );
+    await waitFor(() => expect(container.querySelector('.node')?.getAttribute('tabindex')).toBe('0'));
+    const css = Array.from(container.querySelectorAll('style')).map((st) => st.textContent).join('');
+    expect(css).toContain('.node[tabindex]:focus-visible');
+    expect(css).toContain('--focus-accent');
+    expect((container.firstChild as HTMLElement).className).toContain('mermaid-interactive');
+    cleanup();
+    const passive = render(<MermaidDiagram code="graph TD" ariaLabel="Pie" />);
+    expect(passive.container.querySelectorAll('style')).toHaveLength(0);
+  });
 });

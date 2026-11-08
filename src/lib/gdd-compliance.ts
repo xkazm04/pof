@@ -8,6 +8,7 @@ import { SUB_MODULES } from './module-registry';
 import { countChecklist } from './checklist-progress';
 import { getDb } from './db';
 import { getFeaturesByModule } from './feature-matrix-db';
+import { normalizeProjectId } from './project-id';
 import { mappedFeaturesFor } from './feature-definitions';
 import type { FeatureRow, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
 import type {
@@ -708,12 +709,28 @@ export function runComplianceAudit(
 // action that 400'd. All three phantoms are replaced by one real path — the API
 // action calls these, they write SQLite, and `runComplianceAudit` re-applies them.
 
+interface ResolutionRow {
+  project_path: string;
+  gap_id: string;
+  module_id: string;
+  resolved_at: string;
+  note: string;
+}
+
+/**
+ * Rows for a project under ANY spelling of its path. `project_path` stores the raw
+ * spelling the caller sent (legacy rows included), so the match normalizes both sides
+ * in JS with the same `normalizeProjectId` the audit's feature reads use.
+ */
+function rowsForProject(projectPath: string): ResolutionRow[] {
+  const id = normalizeProjectId(projectPath);
+  return (getDb().prepare('SELECT * FROM gdd_gap_resolutions').all() as ResolutionRow[])
+    .filter((r) => normalizeProjectId(r.project_path) === id);
+}
+
 /** Ids of the gaps resolved for a project, as a set for the audit merge. */
 function resolvedGapIds(projectPath: string): Set<string> {
-  const rows = getDb()
-    .prepare('SELECT gap_id FROM gdd_gap_resolutions WHERE project_path = ?')
-    .all(projectPath) as { gap_id: string }[];
-  return new Set(rows.map((r) => r.gap_id));
+  return new Set(rowsForProject(projectPath).map((r) => r.gap_id));
 }
 
 /**
@@ -726,6 +743,14 @@ export function resolveGap(
   opts: { moduleId?: string; note?: string } = {},
 ): GapResolution {
   const resolvedAt = new Date().toISOString();
+  // Fold other spellings of this project's row for the gap into the one written below.
+  for (const r of rowsForProject(projectPath)) {
+    if (r.gap_id === gapId && r.project_path !== projectPath) {
+      getDb()
+        .prepare('DELETE FROM gdd_gap_resolutions WHERE project_path = ? AND gap_id = ?')
+        .run(r.project_path, gapId);
+    }
+  }
   getDb()
     .prepare(
       `INSERT INTO gdd_gap_resolutions (project_path, gap_id, module_id, resolved_at, note)
@@ -741,21 +766,20 @@ export function resolveGap(
 
 /** Re-open a resolved gap. Returns whether a resolution was actually removed. */
 export function unresolveGap(projectPath: string, gapId: string): boolean {
-  const info = getDb()
-    .prepare('DELETE FROM gdd_gap_resolutions WHERE project_path = ? AND gap_id = ?')
-    .run(projectPath, gapId);
-  return info.changes > 0;
+  let removed = false;
+  for (const r of rowsForProject(projectPath)) {
+    if (r.gap_id !== gapId) continue;
+    const info = getDb()
+      .prepare('DELETE FROM gdd_gap_resolutions WHERE project_path = ? AND gap_id = ?')
+      .run(r.project_path, gapId);
+    if (info.changes > 0) removed = true;
+  }
+  return removed;
 }
 
 /** Every resolution recorded for a project, newest first. */
 export function listResolutions(projectPath: string): GapResolution[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT gap_id, module_id, resolved_at, note
-       FROM gdd_gap_resolutions WHERE project_path = ?
-       ORDER BY resolved_at DESC`,
-    )
-    .all(projectPath) as { gap_id: string; module_id: string; resolved_at: string; note: string }[];
+  const rows = rowsForProject(projectPath).sort((a, b) => b.resolved_at.localeCompare(a.resolved_at));
   return rows.map((r) => ({
     gapId: r.gap_id,
     moduleId: r.module_id,

@@ -96,6 +96,16 @@ export const POST = withRoute(async (request: NextRequest) => {
     if (!(FEATURE_STATUSES as readonly unknown[]).includes(f.status)) {
       return apiError(`Invalid status for "${f.featureName}": ${String(f.status)}`, 400);
     }
+    // Optional fields: absent/null is fine, a present value must have the stored type. An
+    // object nextSteps/lastReviewedAt reached the SQLite bind as a 500, and a non-numeric
+    // qualityScore was silently stored as null.
+    const wrongOptional =
+      (f.qualityScore != null && (typeof f.qualityScore !== 'number' || Number.isNaN(f.qualityScore)) && 'qualityScore') ||
+      (f.nextSteps != null && typeof f.nextSteps !== 'string' && 'nextSteps') ||
+      (f.lastReviewedAt != null && typeof f.lastReviewedAt !== 'string' && 'lastReviewedAt');
+    if (wrongOptional) {
+      return apiError(`Invalid ${wrongOptional} for "${f.featureName}": expected ${wrongOptional === 'qualityScore' ? 'a number' : 'a string'}`, 400);
+    }
   }
 
   const seedOnly = body.seedOnly === true;
