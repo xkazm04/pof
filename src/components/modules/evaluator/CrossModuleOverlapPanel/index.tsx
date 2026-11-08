@@ -57,6 +57,16 @@ export function CrossModuleOverlapPanel() {
   const [copyError, setCopyError] = useState<{ overlap: OverlapPair; message: string } | null>(null);
   const [reviewError, setReviewError] = useState<{ key: string; message: string } | null>(null);
   const reviewing = useRef<string | null>(null);
+  // The Copied-feedback timer: kept so a re-copy restarts it and leaving the tab cancels it.
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unmounted = useRef(false);
+  useEffect(() => {
+    unmounted.current = false;
+    return () => {
+      unmounted.current = true;
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    };
+  }, []);
   const statuses = useFeatureStatuses();
   // A failed or unsettled status read is NOT an empty map: twins stay unclassified.
   const statusMap = statuses.loaded && !statuses.failed ? statuses.statusMap : null;
@@ -145,10 +155,12 @@ export function CrossModuleOverlapPanel() {
       setCopyError({ overlap, message: `Could not copy overlap details: ${err instanceof Error ? err.message : String(err)}` });
       return;
     }
+    if (unmounted.current) return;
     setCopyError(null);
     const id = `${overlap.moduleA}:${overlap.featureA}:${overlap.moduleB}:${overlap.featureB}`;
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), UI_TIMEOUTS.copyFeedback);
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopiedId(null), UI_TIMEOUTS.copyFeedback);
   }, []);
 
   if (source.state === 'loading') {
