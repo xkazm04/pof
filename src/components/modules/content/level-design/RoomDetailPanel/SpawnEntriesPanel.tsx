@@ -44,6 +44,8 @@ export function SpawnEntriesPanel({
   return (
     <div className="bg-black/40 border border-violet-900/30 rounded-xl overflow-hidden">
       <button
+        type="button"
+        aria-expanded={showSpawns}
         onClick={() => setShowSpawns(!showSpawns)}
         className="flex items-center justify-between w-full p-3 bg-violet-900/10 hover:bg-violet-900/20 transition-colors border-b border-violet-900/30"
       >
