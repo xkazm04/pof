@@ -23,6 +23,12 @@ export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
     const filter = parseDrainFilter((k) => sp.get(k));
+    // Same rule as POST: a scope key the caller SENT but that did not parse (`tier=l3`, `entityId=`)
+    // would preview a WIDER queue than it named, and the POST that runs it would refuse. Refuse here too.
+    const unparsed = SCOPE_KEYS.filter((k) => sp.get(k) !== null && filter[k] === undefined);
+    if (unparsed.length > 0) {
+      return apiError(`drain scope key(s) ${unparsed.join(', ')} did not parse — refusing rather than previewing a wider queue`, 400);
+    }
     return apiSuccess(collectDeferred(filter));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'drain GET failed', 500);

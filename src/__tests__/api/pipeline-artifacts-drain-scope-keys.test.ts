@@ -11,16 +11,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const { drainAllMock } = vi.hoisted(() => ({
+const { drainAllMock, collectDeferredMock } = vi.hoisted(() => ({
+  collectDeferredMock: vi.fn(() => [] as unknown[]),
   drainAllMock: vi.fn(async () => ({ ran: 0, passed: 0, failed: 0, skipped: 0, results: [] })),
 }));
 
 vi.mock('@/lib/test-gate-runner', async () => {
   const actual = await vi.importActual<typeof import('@/lib/test-gate-runner')>('@/lib/test-gate-runner');
-  return { ...actual, buildExecutors: vi.fn().mockReturnValue([]), drainAll: drainAllMock };
+  return { ...actual, buildExecutors: vi.fn().mockReturnValue([]), drainAll: drainAllMock, collectDeferred: collectDeferredMock };
 });
 
-import { POST, __resetDrainInFlight } from '@/app/api/pipeline-artifacts/drain/route';
+import { GET, POST, __resetDrainInFlight } from '@/app/api/pipeline-artifacts/drain/route';
 
 const post = (body: unknown) => POST(new NextRequest('http://localhost/api/pipeline-artifacts/drain', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -29,6 +30,7 @@ const post = (body: unknown) => POST(new NextRequest('http://localhost/api/pipel
 beforeEach(() => {
   __resetDrainInFlight();
   drainAllMock.mockClear();
+  collectDeferredMock.mockClear();
 });
 
 describe('POST /api/pipeline-artifacts/drain — a sent scope key never widens the drain', () => {
@@ -72,5 +74,28 @@ describe('POST /api/pipeline-artifacts/drain — a sent scope key never widens t
     const res = await post({});
     expect(res.status).toBe(200);
     expect((drainAllMock.mock.calls[0] as unknown[])[1]).toEqual({});
+  });
+});
+
+const get = (query: string) => GET(new NextRequest(`http://localhost/api/pipeline-artifacts/drain${query}`));
+
+describe('GET /api/pipeline-artifacts/drain — the preview refuses what POST refuses', () => {
+  it.each([
+    ['tier', '?catalogId=items&tier=l3'],
+    ['entityId', '?catalogId=items&entityId='],
+    ['entityIds', '?catalogId=items&entityIds='],
+    ['catalogId', '?catalogId='],
+  ])('refuses an unparsed %s with 400 instead of previewing a wider queue', async (key, query) => {
+    const res = await get(query);
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain(key);
+    expect(collectDeferredMock).not.toHaveBeenCalled();
+  });
+
+  it('still previews a well-formed scope, and an unscoped GET', async () => {
+    expect((await get('?catalogId=items&entityId=item-1&tier=L3')).status).toBe(200);
+    expect(collectDeferredMock).toHaveBeenLastCalledWith({ catalogId: 'items', entityId: 'item-1', tier: 'L3' });
+    expect((await get('')).status).toBe(200);
+    expect(collectDeferredMock).toHaveBeenLastCalledWith({});
   });
 });
