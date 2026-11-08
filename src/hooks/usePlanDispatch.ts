@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { invalidateFeatureData } from '@/hooks/useModuleAggregates';
 import { planDispatch, type PlanDispatchResult } from '@/lib/implementation-planner/plan-dispatch';
-import type { PlanItem } from '@/lib/implementation-planner/plan-generator';
+import { featureKeyName, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import type { CallbackStatus } from '@/lib/cli-task';
 import { getAppOrigin } from '@/lib/constants';
 import { MODULE_COLORS } from '@/lib/chart-colors';
@@ -33,8 +33,6 @@ export interface UsePlanDispatchResult {
   /** Why the last dispatch was refused or did not land; null after a landing. */
   lastError: string | null;
 }
-
-const shortName = (key: string) => key.slice(key.indexOf('::') + 2);
 
 /**
  * The ONE plan dispatch door (table, plan map, Dependencies tab): gates the item
@@ -85,7 +83,7 @@ export function usePlanDispatch(opts: UsePlanDispatchOptions): UsePlanDispatchRe
     }
     const result = planDispatch(item, getAppOrigin());
     if (!result.ok) {
-      setLastError(`${item.featureName} is blocked by ${result.error.unmet.map(shortName).join(', ')}`);
+      setLastError(`${item.featureName} is blocked by ${result.error.unmet.map(featureKeyName).join(', ')}`);
       return result;
     }
     setLastError(null);

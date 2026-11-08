@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ChevronDown, ChevronRight, Link2 } from 'lucide-react';
-import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
+import { getModuleLabel, splitFeatureKey, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import type { SubModuleId } from '@/types/modules';
 import { STATUS_STYLES } from './constants';
 import { EffortBadge, ImpactBadge, ModuleBadge } from './Badges';
@@ -90,8 +90,7 @@ export function PlanItemRow({
                   </span>
                   <div className="flex flex-wrap gap-1 mt-0.5">
                     {item.dependsOn.map((dep) => {
-                      const [mod, ...rest] = dep.split('::');
-                      const feat = rest.join('::');
+                      const { moduleId: mod, featureName: feat } = splitFeatureKey(dep);
                       return (
                         <span
                           key={dep}
@@ -117,8 +116,7 @@ export function PlanItemRow({
                   </span>
                   <div className="flex flex-wrap gap-1 mt-0.5">
                     {item.impact.directDependents.slice(0, 8).map((dep) => {
-                      const [mod, ...rest] = dep.split('::');
-                      const feat = rest.join('::');
+                      const { moduleId: mod, featureName: feat } = splitFeatureKey(dep);
                       return (
                         <span key={dep} className="text-2xs px-1.5 py-px rounded bg-purple-500/10 text-purple-400/80 font-mono">
                           {getModuleLabel(mod as SubModuleId)} / {feat}

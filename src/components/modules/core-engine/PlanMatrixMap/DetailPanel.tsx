@@ -2,7 +2,7 @@
 
 import { X, Clock, Zap, ArrowRight, Link2, CheckCircle2 } from 'lucide-react';
 import { type CanvasNode } from '@/lib/implementation-planner/layout-engine';
-import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
+import { getModuleLabel, featureKeyName, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { formatEffortTime } from '@/lib/implementation-planner/effort-estimator';
 import {
   STATUS_NEUTRAL, ACCENT_BLUE_BOLD, OVERLAY_WHITE,
@@ -85,7 +85,6 @@ export function DetailPanel({
             <div className="grid grid-cols-2 gap-2">
               {item.dependsOn.map((dep) => {
                 const dn = allNodes.get(dep);
-                const [mod, ...rest] = dep.split('::');
                 return (
                   <button
                     key={dep}
@@ -98,7 +97,7 @@ export function DetailPanel({
                     }}
                   >
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dn?.color ?? STATUS_NEUTRAL }} />
-                    <span className="truncate">{rest.join('::')}</span>
+                    <span className="truncate">{featureKeyName(dep)}</span>
                   </button>
                 );
               })}
@@ -115,14 +114,13 @@ export function DetailPanel({
             <div className="flex flex-wrap gap-2">
               {item.impact.directDependents.slice(0, 12).map((dep) => {
                 const dn = allNodes.get(dep);
-                const [mod, ...rest] = dep.split('::');
                 return (
                   <button
                     key={dep}
                     onClick={() => dn && onSelectNode(dep)}
                     className="text-xs px-3 py-1.5 rounded-lg font-mono bg-purple-500/10 text-purple-400/90 hover:bg-purple-500/20 border border-purple-500/20 transition-colors truncate max-w-full"
                   >
-                    {rest.join('::')}
+                    {featureKeyName(dep)}
                   </button>
                 );
               })}
@@ -141,7 +139,7 @@ export function DetailPanel({
           <button
             onClick={() => onExecute(item)}
             disabled={!item.isReady}
-            title={item.isReady ? undefined : `Waits on: ${item.unmetDeps.map((d) => d.slice(d.indexOf('::') + 2)).join(', ')}`}
+            title={item.isReady ? undefined : `Waits on: ${item.unmetDeps.map(featureKeyName).join(', ')}`}
             onMouseEnter={(e) => {
               if (!item.isReady) return;
               e.currentTarget.style.boxShadow = `0 0 30px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_60)}`;

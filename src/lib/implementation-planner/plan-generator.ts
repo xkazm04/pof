@@ -229,6 +229,22 @@ export function generatePlan(
 }
 
 /**
+ * The feature-key format is `moduleId::featureName` (owned by feature-definitions).
+ * Split at the FIRST `::`, so a featureName that itself contains `::` survives.
+ * A key without `::` has no module: it is returned whole as the feature name.
+ */
+export function splitFeatureKey(key: string): { moduleId: string; featureName: string } {
+  const at = key.indexOf('::');
+  if (at < 0) return { moduleId: '', featureName: key };
+  return { moduleId: key.slice(0, at), featureName: key.slice(at + 2) };
+}
+
+/** The feature-name half of a `moduleId::featureName` key. */
+export function featureKeyName(key: string): string {
+  return splitFeatureKey(key).featureName;
+}
+
+/**
  * Get module labels for display.
  */
 export function getModuleLabel(moduleId: SubModuleId): string {
