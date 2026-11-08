@@ -35,7 +35,8 @@ export function DonutChart({
     <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`}>
       {segments.map((seg, i) => {
         const startAngle = -90 + segments.slice(0, i).reduce((s, s2) => s + (s2.pct / 100) * 360, 0);
-        const sweep = (seg.pct / 100) * 360;
+        // A full 360° arc has coincident endpoints, which SVG renders as nothing; stop just short.
+        const sweep = Math.min((seg.pct / 100) * 360, 359.99);
         const startRad = (startAngle * Math.PI) / 180;
         const endRad = ((startAngle + sweep) * Math.PI) / 180;
         const largeArc = sweep > 180 ? 1 : 0;
