@@ -3,7 +3,6 @@
 import {
   HeartPulse, RefreshCw, XCircle, Zap, Shield,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
