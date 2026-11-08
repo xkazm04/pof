@@ -32,12 +32,18 @@ export async function PUT(req: NextRequest) {
       return apiError('Request body must be a JSON object', 400);
     }
     const { milestoneId, targetDate, label } = body as {
-      milestoneId: string;
-      targetDate: string | null;
+      milestoneId?: string;
+      targetDate?: string | null;
       label?: string;
     };
 
-    if (!milestoneId) return apiError('milestoneId is required', 400);
+    if (typeof milestoneId !== 'string' || !milestoneId) return apiError('milestoneId is required', 400);
+    if (label !== undefined && typeof label !== 'string') return apiError('label must be a string', 400);
+    // Only an explicit null or '' clears a deadline: an omitted field is not a delete.
+    if (targetDate === undefined) return apiError('targetDate is required (null clears the deadline)', 400);
+    if (targetDate !== null && targetDate !== '' && (typeof targetDate !== 'string' || !Number.isFinite(Date.parse(targetDate)))) {
+      return apiError('targetDate must be a parseable date, or null to clear it', 400);
+    }
 
     const db = getDb();
 
