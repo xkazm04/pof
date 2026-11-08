@@ -1,6 +1,7 @@
 # PoF: Blender headless — render a UE-exported animation FBX (armature-only) to MP4.
 # Builds a box-proxy body from the armature so the retargeted motion is reviewable.
-# Usage: blender --background --python pof_fbx_render.py -- <in.fbx> <out.mp4>
+# Usage: blender --background --python-exit-code 1 --python pof_fbx_render.py -- <in.fbx> <out.mp4>
+# Always pass --python-exit-code 1: Blender exits 0 after a script exception by default.
 import math
 import sys
 
@@ -15,7 +16,11 @@ bpy.ops.import_scene.fbx(filepath=fbx_path, automatic_bone_orientation=True)
 
 arm = next(o for o in bpy.context.scene.objects if o.type == "ARMATURE")
 scene = bpy.context.scene
-act = arm.animation_data.action
+act = arm.animation_data.action if arm.animation_data else None
+if act is None:
+    # Blender exits 0 after a script exception unless --python-exit-code is passed; say it here.
+    print("POF_RENDER_ERROR=no animation action on the imported armature")
+    sys.exit(1)
 scene.frame_start, scene.frame_end = int(act.frame_range[0]), max(int(act.frame_range[1]), int(act.frame_range[0]) + 1)
 scene.render.fps = 20
 
