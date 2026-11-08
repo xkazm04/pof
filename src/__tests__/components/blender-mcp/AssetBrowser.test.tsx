@@ -203,6 +203,24 @@ describe('AssetBrowser — import', () => {
     );
   });
 
+  it('re-enables the other Import buttons once the download confirms, while the screenshot is still pending', async () => {
+    const base = mockAssetFetch();
+    const impl = base.getMockImplementation()!;
+    base.mockImplementation((url: string, init?: RequestInit) =>
+      String(url).includes('/screenshot') ? new Promise(() => {}) : impl(url, init),
+    );
+    render(<AssetBrowser />);
+    fireEvent.click(screen.getByTestId('asset-browser-search-button'));
+    await waitFor(() => expect(screen.getByTestId('asset-import-polyhaven:rock_01')).toBeTruthy());
+
+    fireEvent.click(screen.getByTestId('asset-import-polyhaven:rock_01'));
+    await waitFor(() =>
+      expect(screen.getByTestId('asset-import-polyhaven:rock_01').textContent).toMatch(/in scene/i),
+    );
+    expect(base.mock.calls.some((c) => String(c[0]).includes('/screenshot'))).toBe(true);
+    expect(screen.getByTestId('asset-import-sketchfab:crate_99').hasAttribute('disabled')).toBe(false);
+  });
+
   it('omits resolution for Sketchfab downloads', async () => {
     const fetchMock = mockAssetFetch();
     render(<AssetBrowser />);

@@ -149,13 +149,16 @@ export function useAssetBrowser(): UseAssetBrowser {
           next.add(key);
           return next;
         });
+        // The import is confirmed: release the other Import buttons now. The snapshot below is
+        // best-effort and must not gate the next import.
+        setImportingKey(null);
         // Auto-capture so the import is visible in the embedded viewport.
         const shot = await captureViewportSnapshot();
         if (shot.ok) addScreenshot(shot.data);
       } else {
         setImportError(`${asset.name || asset.id}: ${result.error}`);
+        setImportingKey(null);
       }
-      setImportingKey(null);
     },
     [resolution, addScreenshot],
   );
