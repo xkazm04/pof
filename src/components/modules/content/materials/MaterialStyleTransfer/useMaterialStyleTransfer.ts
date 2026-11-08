@@ -29,6 +29,9 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   const [adjustmentsOpen, setAdjustmentsOpen] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Latest-wins token: an analysis answers the reference it was asked about. Clearing or
+  // replacing that reference mints a new token, so a late completion is inert.
+  const analyzeTokenRef = useRef(0);
 
   // Adjustable overrides on top of analysis
   const [overrideRoughness, setOverrideRoughness] = useState<number | null>(null);
@@ -56,6 +59,8 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
     }
     const reader = new FileReader();
     reader.onload = () => {
+      analyzeTokenRef.current += 1;
+      setIsAnalyzing(false);
       setUploadError(null);
       setImageDataUrl(reader.result as string);
       setAnalysis(null);
@@ -91,6 +96,8 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
   }, [acceptFile]);
 
   const handleClearImage = useCallback(() => {
+    analyzeTokenRef.current += 1;
+    setIsAnalyzing(false);
     setImageDataUrl(null);
     setAnalysis(null);
     setAnalyzeError(null);
@@ -104,6 +111,8 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
 
   const handleAnalyze = useCallback(async () => {
     if (!imageDataUrl && !referenceDescription.trim()) return;
+    const token = ++analyzeTokenRef.current;
+    const isCurrent = () => token === analyzeTokenRef.current;
     setIsAnalyzing(true);
     setAnalyzeError(null);
 
@@ -122,6 +131,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
       // so the catch below reported it as a connection problem — blaming the
       // user's network for a malformed server response.
       const json = (await res.json()) as ApiResponse<{ analysis?: AnalyzedProperties }>;
+      if (!isCurrent()) return;
       if (json.success && json.data?.analysis) {
         setAnalysis(json.data.analysis);
         setAdjustmentsOpen(true);
@@ -138,6 +148,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
         );
       }
     } catch (error) {
+      if (!isCurrent()) return;
       logger.error('[MaterialStyleTransfer] analysis request failed', error);
       setAnalyzeError(
         error instanceof Error && error.message
@@ -145,7 +156,7 @@ export function useMaterialStyleTransfer(onGenerate: (config: StyleTransferConfi
           : 'The analysis request failed — check your connection and retry.',
       );
     } finally {
-      setIsAnalyzing(false);
+      if (isCurrent()) setIsAnalyzing(false);
     }
   }, [imageDataUrl, referenceDescription]);
 
