@@ -71,7 +71,8 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // steps the server no longer has), so what it did is reported, never applied silently.
   // Report + error are KEYED by the entity the refresh ran against (like `resetFailure`): a
   // refresh answered after an entity switch must never print on the entity now open.
-  const [refreshing, setRefreshing] = useState(false);
+  // In-flight flag keyed by entity like the report (a set, as `resettingIds`): item-1's slow refresh must not paint item-2's button busy.
+  const [refreshingIds, setRefreshingIds] = useState<ReadonlySet<string>>(() => new Set());
   const [refreshFailure, setRefreshFailure] = useState<{ entityId: string; error: string } | null>(null);
   const [refreshReport, setRefreshReport] = useState<{ entityId: string; outcome: RefreshOutcome } | null>(null);
 
@@ -302,7 +303,8 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     if (!catalogId || !entityKey) return;
     setRefreshFailure(null);
     setRefreshReport(null);
-    setRefreshing(true);
+    const refreshId = entityKey;
+    setRefreshingIds((cur) => new Set(cur).add(refreshId));
     try {
       const res = await refreshArtifacts(catalogId, entityKey);
       if (!res.ok) { setRefreshFailure({ entityId: entityKey, error: res.error }); return; }
@@ -311,10 +313,11 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
       const outcome = useLabPipelineStore.getState().refreshEntity(entityKey, toLabArtifacts(res.data));
       setRefreshReport({ entityId: entityKey, outcome });
     } finally {
-      setRefreshing(false);
+      setRefreshingIds((cur) => { const n = new Set(cur); n.delete(refreshId); return n; });
     }
   }, [catalogId, entityKey]);
 
+  const refreshing = !!entityKey && refreshingIds.has(entityKey);
   // A different entity's result must never be read as this one's.
   const refreshOutcome = refreshReport && refreshReport.entityId === entityKey ? refreshReport.outcome : null;
   const refreshError = refreshFailure && refreshFailure.entityId === entityKey ? refreshFailure.error : null;
