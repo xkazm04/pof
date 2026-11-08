@@ -226,22 +226,36 @@ interface OneSkinCtx {
 }
 
 async function runOneSkin(job: SkinJob, originalTaskId: string, ctx: OneSkinCtx): Promise<SkinResult> {
-  const created = await ctx.http.postJson(
-    `${TRIPO_BASE}/task`,
-    { ...ctx.auth, 'Content-Type': 'application/json' },
-    buildTextureTaskBody(originalTaskId, job.variant),
-  );
+  // A transport fault on one skin stays that skin's failure: letting it throw discarded every
+  // skin already paid for in this set, along with the task ids that could recover them.
+  const reason = (e: unknown) => (e instanceof Error ? e.message : String(e));
+  let created: { json: unknown };
+  try {
+    created = await ctx.http.postJson(
+      `${TRIPO_BASE}/task`,
+      { ...ctx.auth, 'Content-Type': 'application/json' },
+      buildTextureTaskBody(originalTaskId, job.variant),
+    );
+  } catch (e) {
+    return { name: job.name, ok: false, error: `task creation failed: ${reason(e)}` };
+  }
   const pc = parseTaskCreate(created.json);
   if (!pc.ok) return { name: job.name, ok: false, error: pc.error };
   const taskId = pc.taskId!;
 
   for (let i = 0; i < ctx.maxPolls; i++) {
-    const s = await ctx.http.getJson(`${TRIPO_BASE}/task/${taskId}`, ctx.auth);
-    const ps = parseTaskStatus(s.json);
+    // No body parses as `transient`, so a rejected poll just waits for the next one.
+    const s = await ctx.http.getJson(`${TRIPO_BASE}/task/${taskId}`, ctx.auth).catch(() => undefined);
+    const ps = parseTaskStatus(s?.json);
     if (ps.state === 'failed') return { name: job.name, ok: false, taskId, error: ps.error };
     if (ps.state === 'success') {
       if (!ps.modelUrl) return { name: job.name, ok: false, taskId, error: 'task succeeded but no model URL in output' };
-      const ok = await ctx.http.download(ps.modelUrl, job.outputPath);
+      let ok: boolean;
+      try {
+        ok = await ctx.http.download(ps.modelUrl, job.outputPath);
+      } catch (e) {
+        return { name: job.name, ok: false, taskId, error: `skin download failed: ${reason(e)}` };
+      }
       if (!ok || !ctx.fileExists(job.outputPath)) return { name: job.name, ok: false, taskId, error: 'skin download failed' };
       const result: SkinResult = { name: job.name, ok: true, taskId, meshPath: job.outputPath };
       if (ctx.measure) {
