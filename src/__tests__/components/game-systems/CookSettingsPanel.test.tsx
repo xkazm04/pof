@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { useState } from 'react';
-import { render, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { DEFAULT_COOK_SETTINGS, type CookSettings } from '@/lib/packaging/build-profiles';
 import { CookSettingsPanel } from '@/components/modules/game-systems/CookSettingsPanel';
 
@@ -21,6 +21,16 @@ function Harness({ onSettings }: { onSettings: (s: CookSettings) => void }) {
 function textareas(): HTMLTextAreaElement[] {
   return Array.from(document.querySelectorAll('textarea'));
 }
+
+describe('CookSettingsPanel field labels', () => {
+  it('associates each visible field label with its control', () => {
+    render(<CookSettingsPanel settings={{ ...DEFAULT_COOK_SETTINGS }} onChange={() => {}} />);
+    const [maps, plugins] = textareas();
+    expect(screen.getByLabelText('Maps to include')).toBe(maps);
+    expect(screen.getByLabelText('Plugins to disable')).toBe(plugins);
+    expect(screen.getByLabelText('Budget (MB, 0 = unlimited)')).toBe(document.querySelector('input[type="number"]'));
+  });
+});
 
 describe('CookSettingsPanel list fields', () => {
   it('keeps the newline you type so a second map can be entered', () => {

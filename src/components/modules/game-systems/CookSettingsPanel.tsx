@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Flame, Package, Lock, Zap, Map, Puzzle, Image, AlertTriangle } from 'lucide-react';
 import type { CookSettings } from '@/lib/packaging/build-profiles';
 import { COOK_SETTING_APPLICATION } from '@/lib/packaging/uat-command-generator';
@@ -46,8 +46,8 @@ const parseLines = (text: string) => text.split('\n').filter((l) => l.trim());
  * list back used to swallow the newline, so a second entry could not be typed.
  * A list changed from outside (another profile loaded) replaces the draft.
  */
-function ListTextarea({ value, onChange, placeholder, className }: {
-  value: string[]; onChange: (v: string[]) => void; placeholder: string; className: string;
+function ListTextarea({ id, value, onChange, placeholder, className }: {
+  id: string; value: string[]; onChange: (v: string[]) => void; placeholder: string; className: string;
 }) {
   const [draft, setDraft] = useState(() => value.join('\n'));
   const [seen, setSeen] = useState(value);
@@ -57,6 +57,7 @@ function ListTextarea({ value, onChange, placeholder, className }: {
   }
   return (
     <textarea
+      id={id}
       value={draft}
       onChange={(e) => { setDraft(e.target.value); onChange(parseLines(e.target.value)); }}
       placeholder={placeholder}
@@ -99,6 +100,7 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
   const update = <K extends keyof CookSettings>(key: K, value: CookSettings[K]) => {
     onChange({ ...settings, [key]: value });
   };
+  const fieldId = useId();
 
   const inputClass = 'w-full bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50';
 
@@ -167,11 +169,12 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
       {/* Maps */}
       <Section title="Map Selection">
         <div>
-          <label className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
+          <label htmlFor={`${fieldId}-maps`} className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
             <Map className="w-3 h-3" />
             Maps to include
           </label>
           <ListTextarea
+            id={`${fieldId}-maps`}
             value={settings.mapsToInclude}
             onChange={(v) => update('mapsToInclude', v)}
             placeholder="Leave empty to include all maps.&#10;One map per line, e.g.:&#10;/Game/Maps/MainMenu&#10;/Game/Maps/Level1"
@@ -183,11 +186,12 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
       {/* Plugins */}
       <Section title="Plugin Management">
         <div>
-          <label className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
+          <label htmlFor={`${fieldId}-plugins`} className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
             <Puzzle className="w-3 h-3" />
             Plugins to disable
           </label>
           <ListTextarea
+            id={`${fieldId}-plugins`}
             value={settings.pluginsToDisable}
             onChange={(v) => update('pluginsToDisable', v)}
             placeholder="Recorded here; NOT excluded by the generated command.&#10;One per line, e.g.:&#10;OnlineSubsystemSteam"
@@ -200,10 +204,11 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
       {/* Texture budget */}
       <Section title="Texture Streaming">
         <div>
-          <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">
+          <label htmlFor={`${fieldId}-budget`} className="text-2xs text-text-muted font-medium uppercase tracking-wider">
             Budget (MB, 0 = unlimited)
           </label>
           <input
+            id={`${fieldId}-budget`}
             type="number"
             value={settings.textureStreamingBudgetMB}
             onChange={(e) => update('textureStreamingBudgetMB', Number(e.target.value) || 0)}
