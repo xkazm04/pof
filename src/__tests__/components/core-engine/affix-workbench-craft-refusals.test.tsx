@@ -65,7 +65,7 @@ describe('CraftingStation — a craft button is live exactly when the kernel wou
           refusalFor={(id) => craftRefusal({ affixes: c.affixes, wallet }, id, c.rarity)} />,
       );
       const mismatches = CRAFTING_ACTIONS.filter((a) => {
-        const btn = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes(a.name));
+        const btn = [...container.querySelectorAll('button')].find((b) => b.textContent?.startsWith(a.name));
         if (!btn) throw new Error(`no button for ${a.name}`);
         const kernelRuns = craftRefusal({ affixes: c.affixes, wallet }, a.id, c.rarity) === null;
         return (btn as HTMLButtonElement).disabled === kernelRuns;

@@ -11,12 +11,12 @@ export const ACCENT = ACCENT_EMERALD;
 /* ── Currency Definitions ───────────────────────────────────────────────── */
 
 export const CURRENCIES: CurrencyDef[] = [
-  { id: 'chaos', name: 'Chaos Shard', icon: '🔴', color: STATUS_ERROR, description: 'Reforges all affixes randomly', defaultBalance: 200 },
+  { id: 'chaos', name: 'Chaos Shard', icon: '🔴', color: STATUS_ERROR, description: 'Reforges every unlocked affix randomly', defaultBalance: 200 },
   { id: 'exalted', name: 'Exalted Shard', icon: '🟡', color: STATUS_WARNING, description: 'Adds a single random affix', defaultBalance: 50 },
   { id: 'annulment', name: 'Annulment Shard', icon: '🟣', color: ACCENT_VIOLET, description: 'Removes a random affix', defaultBalance: 30 },
   { id: 'divine', name: 'Divine Shard', icon: '🔵', color: STATUS_INFO, description: 'Re-rolls magnitudes of existing affixes', defaultBalance: 40 },
   { id: 'eternal', name: 'Eternal Lock', icon: '🔒', color: ACCENT_PURPLE, description: 'Locks prefixes or suffixes from modification', defaultBalance: 10 },
-  { id: 'forging', name: 'Forging Potential', icon: '⚡', color: ACCENT_EMERALD, description: 'Consumed by every craft — item degrades when depleted', defaultBalance: 100 },
+  { id: 'forging', name: 'Forging Potential', icon: '⚡', color: ACCENT_EMERALD, description: 'Spent by every paid craft — at 0, no paid craft can run', defaultBalance: 100 },
 ];
 
 /* ── Crafting Action Definitions ────────────────────────────────────────── */
@@ -35,15 +35,15 @@ export const CRAFTING_ACTIONS: CraftingActionDef[] = [
     costs: { annulment: 1, exalted: 1, forging: 10 }, successChance: 0.7, color: ACCENT_ORANGE,
   },
   {
-    id: 'divine_roll', name: 'Divine Roll', description: 'Re-roll magnitudes of all affixes (keeps types)',
+    id: 'divine_roll', name: 'Divine Roll', description: 'Re-roll magnitudes of unlocked affixes (keeps types)',
     costs: { divine: 1, forging: 3 }, successChance: 1.0, color: STATUS_INFO,
   },
   {
-    id: 'lock_prefix', name: 'Lock Prefixes', description: 'Protect all prefixes from modification (1 craft)',
+    id: 'lock_prefix', name: 'Lock Prefixes', description: 'Protect all prefixes until the next Reforge or Unlock All',
     costs: { eternal: 1, forging: 2 }, successChance: 1.0, color: ACCENT_PURPLE,
   },
   {
-    id: 'lock_suffix', name: 'Lock Suffixes', description: 'Protect all suffixes from modification (1 craft)',
+    id: 'lock_suffix', name: 'Lock Suffixes', description: 'Protect all suffixes until the next Reforge or Unlock All',
     costs: { eternal: 1, forging: 2 }, successChance: 1.0, color: ACCENT_PURPLE,
   },
   {

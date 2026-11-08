@@ -86,7 +86,7 @@ export function CraftingStation({
 
           {/* Wallet reset */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono text-text-muted">Forging Potential acts as item durability</span>
+            <span className="text-xs font-mono text-text-muted">Forging Potential runs out: every paid craft spends it</span>
             <button onClick={onResetWallet}
               className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono text-text-muted hover:text-text transition-colors"
               style={{ border: `1px solid ${withOpacity(ACCENT_PURPLE, OPACITY_15)}` }}>
