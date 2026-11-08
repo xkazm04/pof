@@ -11,9 +11,19 @@ export function SceneExporter() {
   const [format, setFormat] = useState<'fbx' | 'gltf'>('gltf');
   const [status, setStatus] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleExport = async () => {
-    if (!outputPath) return;
+    if (!outputPath || exporting) return;
+    setExporting(true);
+    try {
+      await runExport();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const runExport = async () => {
     setStatus('Exporting…');
     setFailed(false);
     const code = exportSceneScript({ outputPath, format });
@@ -67,7 +77,7 @@ export function SceneExporter() {
         />
         <button
           onClick={handleExport}
-          disabled={!outputPath}
+          disabled={!outputPath || exporting}
           className="flex items-center gap-1 px-3 py-1 rounded bg-accent/10 text-accent text-xs hover:bg-accent/20 disabled:opacity-40"
         >
           <Download className="w-3 h-3" /> Export
