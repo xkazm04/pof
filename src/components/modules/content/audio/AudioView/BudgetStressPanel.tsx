@@ -1,11 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useAudioEventCatalogStore } from '@/components/modules/content/audio/audioEventCatalogStore';
+import { useAudioEventCatalogStore, selectSceneEvents } from '@/components/modules/content/audio/audioEventCatalogStore';
 import {
   DEFAULT_EVENTS, PRIORITY_CONFIG, MAX_EVENT_CONCURRENCY, clampEventConcurrency,
 } from '@/components/modules/content/audio/AudioEventCatalog/constants';
 import type { AudioEvent } from '@/components/modules/content/audio/AudioEventCatalog/types';
+import { MAX_EVENT_COOLDOWN_MS, clampEventCooldown } from '@/components/modules/content/audio/AudioEventCatalog/EventEditor';
 import { useAudioSetLibrary } from '@/components/modules/content/audio/AudioPropertyPanel/useAudioSetLibrary';
 import { eventBudget } from '@/lib/audio-runtime-contract';
 import {
@@ -42,9 +43,8 @@ const inputCls = 'w-16 px-2 py-1 bg-surface-deep border border-border rounded te
  * Event Catalog seeds from.
  */
 export function BudgetStressPanel({ sceneId, voiceLimit }: BudgetStressPanelProps) {
-  const own = useAudioEventCatalogStore((s) => s.byScene[sceneId]);
-  const legacy = useAudioEventCatalogStore((s) => s.legacyEvents);
-  const events: AudioEvent[] = own ?? legacy ?? DEFAULT_EVENTS;
+  const stored = useAudioEventCatalogStore((s) => selectSceneEvents(s, sceneId));
+  const events: AudioEvent[] = stored ?? DEFAULT_EVENTS;
 
   const library = useAudioSetLibrary(true);
   const libraryReady = !library.isLoading && !library.error;
@@ -177,9 +177,9 @@ function BudgetRow({ row, event, rate, keepFix, onPatch }: {
               onChange={(e) => onPatch(row.id, { concurrency: clampEventConcurrency(e.target.value) })}
             />
             <input
-              type="number" min={0} step={50} aria-label={`${row.name} cooldown ms`} className={inputCls}
+              type="number" min={0} max={MAX_EVENT_COOLDOWN_MS} step={50} aria-label={`${row.name} cooldown ms`} className={inputCls}
               value={event.cooldownMs}
-              onChange={(e) => onPatch(row.id, { cooldownMs: Math.max(0, Number(e.target.value) || 0) })}
+              onChange={(e) => onPatch(row.id, { cooldownMs: clampEventCooldown(Number(e.target.value)) })}
             />
           </div>
         )}

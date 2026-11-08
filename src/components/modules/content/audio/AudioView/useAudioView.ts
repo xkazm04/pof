@@ -218,8 +218,6 @@ export function useAudioView() {
     isLoading,
     error,
     retry,
-    setActiveDocId,
-    updateDoc,
     deleteDoc,
     refetch,
     activeTab,

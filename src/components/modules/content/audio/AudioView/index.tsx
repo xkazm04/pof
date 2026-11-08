@@ -114,6 +114,8 @@ export function AudioView() {
       {/* Toast notification */}
       {rvToast && (
         <div
+          role={rvToast.type === 'success' ? 'status' : 'alert'}
+          aria-live={rvToast.type === 'success' ? 'polite' : 'assertive'}
           className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
             rvToast.type === 'success'
               ? 'bg-surface border-green-500/30 text-green-400'
@@ -121,6 +123,7 @@ export function AudioView() {
           }`}
         >
           <span
+            aria-hidden="true"
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: rvToast.type === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
           />
@@ -162,6 +165,7 @@ export function AudioView() {
               </div>
 
               <button
+                type="button"
                 onClick={handleGenerateAll}
                 disabled={audioCli.isRunning || (activeDoc.zones.length === 0 && activeDoc.emitters.length === 0)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
@@ -172,9 +176,9 @@ export function AudioView() {
                 }}
               >
                 {audioCli.isRunning ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Zap className="w-3 h-3" />
+                  <Zap className="w-3 h-3" aria-hidden="true" />
                 )}
                 {audioCli.isRunning ? 'Generating...' : 'Generate Audio System'}
               </button>

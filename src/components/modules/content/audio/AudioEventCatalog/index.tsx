@@ -4,10 +4,10 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Loader2,
-  Volume2, Zap,
+  Volume2, Zap, X,
 } from 'lucide-react';
 import {
-  ACCENT_EMERALD,
+  ACCENT_EMERALD, STATUS_ERROR,
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_50,
 } from '@/lib/chart-colors';
 import { useAudioEventCatalogStore } from '@/components/modules/content/audio/audioEventCatalogStore';
@@ -29,6 +29,28 @@ import {
 export type {
   EventCategory, SpatialMode, PriorityLevel, AudioEvent, AudioEventCatalogConfig,
 } from './types';
+
+/**
+ * Why a row would put a blank or doubled binding in the generated manager. A
+ * trigger is "a named gameplay hook": blank is unbound, two rows on one hook
+ * ask the generator to bind it twice. Keyed by event id; duplicates flag every
+ * row sharing the trigger.
+ */
+function eventProblems(events: readonly AudioEvent[]): Map<string, string> {
+  const byTrigger = new Map<string, number>();
+  for (const e of events) {
+    const t = e.trigger.trim();
+    if (t) byTrigger.set(t, (byTrigger.get(t) ?? 0) + 1);
+  }
+  const out = new Map<string, string>();
+  for (const e of events) {
+    const t = e.trigger.trim();
+    if (!e.name.trim()) out.set(e.id, 'Give this event a name.');
+    else if (!t) out.set(e.id, 'Give this event a trigger.');
+    else if ((byTrigger.get(t) ?? 0) > 1) out.set(e.id, `Trigger "${t}" is used by more than one event; give each event its own.`);
+  }
+  return out;
+}
 
 const NO_SUGGESTIONS: EventSoundSuggestions = { suggested: {}, ambiguous: {} };
 
@@ -55,6 +77,8 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   /** The event whose tied suggestions the user asked to pick from. */
   const [pickFor, setPickFor] = useState<string | null>(null);
+  /** The most recently deleted row, kept so Undo can put it back. */
+  const [lastDeleted, setLastDeleted] = useState<{ event: AudioEvent; index: number } | null>(null);
 
   // The generated-audio library — two GETs, no writes, nothing generated or
   // played. `null` while loading or unreadable, so coverage reads UNKNOWN.
@@ -91,6 +115,12 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
     spatial2d: events.filter((e) => e.spatial === '2d').length,
   }), [events]);
 
+  const problems = useMemo(() => eventProblems(events), [events]);
+  const firstProblemName = useMemo(() => {
+    const bad = events.find((e) => problems.has(e.id));
+    return bad ? (bad.name.trim() || 'Unnamed event') : null;
+  }, [events, problems]);
+
   // -- CRUD --
 
   const addEvent = useCallback((category: EventCategory) => {
@@ -113,9 +143,26 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
   }, []);
 
   const deleteEvent = useCallback((id: string) => {
+    const index = events.findIndex((e) => e.id === id);
+    if (index >= 0) setLastDeleted({ event: events[index], index });
     setEvents((prev) => prev.filter((e) => e.id !== id));
     if (editingEventId === id) setEditingEventId(null);
-  }, [editingEventId]);
+  }, [editingEventId, events]);
+
+  // Delete is one click on a hover-revealed X beside the row target, so it is
+  // recoverable: Undo re-inserts the exact row (id, tags, bound sound set) at
+  // its old position.
+  const undoDelete = useCallback(() => {
+    if (!lastDeleted) return;
+    const { event, index } = lastDeleted;
+    setEvents((prev) => {
+      if (prev.some((e) => e.id === event.id)) return prev;
+      const next = [...prev];
+      next.splice(Math.min(index, next.length), 0, event);
+      return next;
+    });
+    setLastDeleted(null);
+  }, [lastDeleted]);
 
   const updateEvent = useCallback((id: string, patch: Partial<AudioEvent>) => {
     setEvents((prev) => prev.map((e) => e.id === id ? { ...e, ...patch } : e));
@@ -252,6 +299,33 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
           })}
         </div>
 
+        {lastDeleted && (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-3 px-4 py-2 rounded-lg border border-border bg-surface text-sm text-text"
+          >
+            <span>Deleted event &ldquo;{lastDeleted.event.name}&rdquo;.</span>
+            <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={undoDelete}
+                className="px-3 py-1 rounded-md font-semibold border border-border hover:bg-surface-hover focus-ring"
+                style={{ color: ACCENT }}
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={() => setLastDeleted(null)}
+                aria-label="Dismiss undo"
+                className="px-2 py-1 rounded-md text-text-muted hover:text-text focus-ring"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            </span>
+          </div>
+        )}
+
         {/* Category groups */}
         <div className="space-y-6">
           {CATEGORIES.map((cat) => {
@@ -302,6 +376,7 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
                 event={editingEvent}
                 onUpdate={(patch) => updateEvent(editingEvent.id, patch)}
                 onClose={() => setEditingEventId(null)}
+                problem={problems.get(editingEvent.id)}
                 soundLibrary={soundLibrary}
                 soundOnlyIds={pickFor === editingEvent.id && !editingEvent.assetSetId
                   ? suggestions.ambiguous[editingEvent.id]
@@ -316,9 +391,9 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
           <button
             type="button"
             onClick={() => onGenerate(config)}
-            disabled={isGenerating || events.length === 0}
+            disabled={isGenerating || events.length === 0 || problems.size > 0}
             aria-busy={isGenerating}
-            aria-describedby={events.length === 0 ? 'audio-events-generate-hint' : undefined}
+            aria-describedby={events.length === 0 || problems.size > 0 ? 'audio-events-generate-hint' : undefined}
             className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 group focus-ring"
             style={{
               backgroundColor: withOpacity(ACCENT, OPACITY_10),
@@ -345,6 +420,12 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
           {events.length === 0 && (
             <p id="audio-events-generate-hint" className="text-xs text-text-muted text-center">
               Add at least one event before generating the audio manager.
+            </p>
+          )}
+          {events.length > 0 && problems.size > 0 && (
+            <p id="audio-events-generate-hint" className="text-xs text-center" style={{ color: STATUS_ERROR }}>
+              {problems.size} {problems.size === 1 ? 'event needs' : 'events need'} fixing before generating
+              (first: {firstProblemName}). {problems.get(events.find((e) => problems.has(e.id))!.id)}
             </p>
           )}
         </div>

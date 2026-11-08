@@ -34,6 +34,20 @@ interface AudioEventCatalogState {
 }
 
 /**
+ * THE read rule for a scene's catalog: its own slot, else the pre-scoping legacy
+ * catalog, else null (the caller seeds defaults). The editor, the store's
+ * `getEvents` and the stress panel all read through this, so the stress test
+ * always stresses exactly the catalog the editor shows. Allocation-free (returns
+ * a stored reference), so it is safe as a Zustand selector.
+ */
+export function selectSceneEvents(
+  state: Pick<AudioEventCatalogState, 'byScene' | 'legacyEvents'>,
+  sceneId: string,
+): AudioEvent[] | null {
+  return state.byScene[sceneId] ?? state.legacyEvents;
+}
+
+/**
  * Persisted home for the curated event catalog, scoped per audio scene.
  *
  * Previously a single global list: AudioView mounts tab panels conditionally,
@@ -47,13 +61,9 @@ export const useAudioEventCatalogStore = create<AudioEventCatalogState>()(
     (set, get) => ({
       byScene: {},
       legacyEvents: null,
-      getEvents: (sceneId) => {
-        const own = get().byScene[sceneId];
-        if (own) return own;
-        // First read of an un-scoped scene: inherit the pre-scoping global
-        // catalog so existing curation is preserved rather than discarded.
-        return get().legacyEvents;
-      },
+      // An un-scoped scene inherits the pre-scoping global catalog so existing
+      // curation is preserved rather than discarded (see selectSceneEvents).
+      getEvents: (sceneId) => selectSceneEvents(get(), sceneId),
       setEvents: (sceneId, events) =>
         set((s) => ({ byScene: { ...s.byScene, [sceneId]: events } })),
       clearScene: (sceneId) =>
