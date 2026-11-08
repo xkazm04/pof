@@ -95,6 +95,10 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
         </p>
       )}
 
+      {sweep && sweep.entries.length === 0 && (
+        <p className="text-2xs text-text-muted">No faucet/sink parameters to sweep.</p>
+      )}
+
       {sweep && sweep.entries.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-2xs text-text-muted/60">
