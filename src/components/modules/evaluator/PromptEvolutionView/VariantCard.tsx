@@ -38,6 +38,7 @@ export function VariantCard({
       {/* Header */}
       <button
         onClick={onToggle}
+        aria-expanded={isExpanded}
         className="w-full flex items-center gap-2 p-2.5 text-left hover:bg-surface/50 transition-colors"
       >
         {isExpanded ? (
@@ -114,6 +115,7 @@ export function VariantCard({
                           onClick={() => onStartTest(variant.id, s.id)}
                           className="px-1.5 py-0.5 text-[11px] rounded border border-border hover:bg-surface transition-colors"
                           title={s.label}
+                          aria-label={`Start A/B test against ${s.label}`}
                         >
                           <FlaskConical className="w-3 h-3 inline" />
                         </button>

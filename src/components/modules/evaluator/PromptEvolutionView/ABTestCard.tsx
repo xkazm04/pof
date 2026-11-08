@@ -75,6 +75,7 @@ export function ABTestCard({
     <SurfaceCard level={2} className="overflow-hidden">
       <button
         onClick={onToggle}
+        aria-expanded={isExpanded}
         className="w-full flex items-center gap-2 p-3 text-left hover:bg-surface/50 transition-colors"
       >
         {isExpanded ? (
