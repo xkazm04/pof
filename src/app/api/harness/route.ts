@@ -85,6 +85,8 @@ function wireOrchestratorEvents(orchestrator: HarnessOrchestrator): void {
 
 // ── GET ─────────────────────────────────────────────────────────────────────
 
+const READ_ACTIONS = new Set(['plan', 'guide', 'progress', 'events']);
+
 /** The plan block of the status summary — one shape for the in-memory and the on-disk read. */
 function summarizePlan(plan: GamePlan) {
   return {
@@ -210,6 +212,10 @@ function respondFromDisk(action: string | null, statePath: string) {
 
 export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get('action');
+  // Refused rather than answered: an unrecognised action used to get the status summary.
+  if (action !== null && !READ_ACTIONS.has(action)) {
+    return apiError(`Unknown action: ${action}`, 400);
+  }
   const config = globalForHarness.harnessConfig;
   const orchestrator = globalForHarness.harnessOrchestrator;
 

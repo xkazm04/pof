@@ -163,3 +163,18 @@ describe('start refuses input the run could not honour', () => {
     expect((await res.json()).error).toContain('statePath');
   });
 });
+
+describe('GET /api/harness', () => {
+  const get = (q: string) => GET(new NextRequest(`http://localhost:3001/api/harness${q}`));
+
+  it('refuses an unknown action instead of answering the status summary', async () => {
+    const res = await get('?action=plaan');
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('plaan');
+  });
+
+  it('still answers the bare status read and the known actions', async () => {
+    expect((await get('')).status).toBe(200);
+    expect((await get('?action=events')).status).toBe(200);
+  });
+});
