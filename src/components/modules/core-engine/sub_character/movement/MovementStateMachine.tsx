@@ -84,8 +84,13 @@ export function MovementStateMachine() {
           return (
             <g
               key={state.label}
+              role="button"
+              tabIndex={0}
+              aria-label={`${state.label} state: show transitions`}
               onMouseEnter={() => setHoveredState(i)}
               onMouseLeave={() => setHoveredState(null)}
+              onFocus={() => setHoveredState(i)}
+              onBlur={() => setHoveredState(null)}
               style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
               opacity={isDimmed ? 0.35 : 1}
             >

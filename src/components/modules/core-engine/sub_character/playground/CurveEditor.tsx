@@ -28,6 +28,7 @@ export function CurveEditor({
 }: CurveEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
   const dragIds = draggableIndices ?? points.map((_, i) => i).filter(i => i > 0 && i < points.length - 1);
 
   const toSvg = useCallback((p: CurvePoint) => ({
@@ -70,6 +71,28 @@ export function CurveEditor({
   const handlePointerUp = useCallback(() => {
     setDraggingIdx(null);
   }, []);
+
+  /** Keyboard nudge: arrows move a handle 0.02 (Shift 0.1) through the same
+   *  neighbour-X constraint and onChange the drag uses. */
+  const handleKeyDown = useCallback((idx: number) => (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 0.1 : 0.02;
+    const dx = e.key === 'ArrowRight' ? step : e.key === 'ArrowLeft' ? -step : 0;
+    const dy = e.key === 'ArrowUp' ? step : e.key === 'ArrowDown' ? -step : 0;
+    if (dx === 0 && dy === 0) return;
+    e.preventDefault();
+    const cur = points[idx];
+    const newPt = {
+      x: Math.max(0, Math.min(1, cur.x + dx)),
+      y: Math.max(0, Math.min(1, cur.y + dy)),
+    };
+    const prev = points[idx - 1];
+    const next = points[idx + 1];
+    if (prev) newPt.x = Math.max(prev.x + 0.02, newPt.x);
+    if (next) newPt.x = Math.min(next.x - 0.02, newPt.x);
+    const updated = [...points];
+    updated[idx] = newPt;
+    onChange(updated);
+  }, [points, onChange]);
 
   // Build smooth path
   const pathD = useMemo(() => {
@@ -144,12 +167,21 @@ export function CurveEditor({
         {points.map((pt, i) => {
           const sp = toSvg(pt);
           const isDraggable = dragIds.includes(i);
-          const isActive = draggingIdx === i;
+          const isActive = draggingIdx === i || focusedIdx === i;
           return (
             <g key={i}>
               {isDraggable && (
                 <circle cx={sp.x} cy={sp.y} r={12} fill="transparent"
                   className="cursor-grab active:cursor-grabbing"
+                  role="slider" tabIndex={0}
+                  aria-label={`${label} point ${i}`}
+                  aria-orientation="vertical"
+                  aria-valuemin={0} aria-valuemax={100}
+                  aria-valuenow={Math.round(pt.y * 100)}
+                  aria-valuetext={`${xLabel} ${pt.x.toFixed(2)}, ${yLabel} ${pt.y.toFixed(2)}`}
+                  onFocus={() => setFocusedIdx(i)}
+                  onBlur={() => setFocusedIdx((cur) => (cur === i ? null : cur))}
+                  onKeyDown={handleKeyDown(i)}
                   onPointerDown={handlePointerDown(i)} />
               )}
               <circle cx={sp.x} cy={sp.y}
