@@ -16,6 +16,7 @@ export function useModuleActions(): UseModuleActionsResult {
   const createSession = useCLIPanelStore((s) => s.createSession);
   const findSessionByModule = useCLIPanelStore((s) => s.findSessionByModule);
   const setActiveTab = useCLIPanelStore((s) => s.setActiveTab);
+  const setSessionTaskMeta = useCLIPanelStore((s) => s.setSessionTaskMeta);
 
   const sendPromptToModule = useCallback((moduleId: SubModuleId, prompt: string) => {
     const mod = SUB_MODULE_MAP[moduleId];
@@ -32,6 +33,9 @@ export function useModuleActions(): UseModuleActionsResult {
       });
     }
     setActiveTab(tabId);
+    // The reused tab may carry an earlier dispatch's task type ('feature-review'),
+    // and the terminal attributes this run's spend from it — stamp our own.
+    setSessionTaskMeta(tabId, 'interactive', mod.label);
 
     // Dispatch when the target terminal announces readiness (handshake) instead
     // of a blind fixed mount-delay that can fire before the terminal's listener
@@ -39,7 +43,7 @@ export function useModuleActions(): UseModuleActionsResult {
     // listener is a no-op). A safety-fallback timer still fires if it never
     // announces. See src/lib/cli-dispatch.ts.
     dispatchPromptWhenReady(tabId, prompt);
-  }, [projectPath, createSession, findSessionByModule, setActiveTab]);
+  }, [projectPath, createSession, findSessionByModule, setActiveTab, setSessionTaskMeta]);
 
   return { sendPromptToModule };
 }
