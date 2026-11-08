@@ -69,6 +69,9 @@ function poissonDisk(
   rng: () => number,
   maxAttempts: number,
 ): Array<[number, number]> {
+  // A non-positive radius makes an infinite grid and a non-positive area has no cell to
+  // seed: both mean 'nothing to scatter', not a crash.
+  if (!(radius > 0) || !(width > 0) || !(height > 0) || !Number.isFinite(radius)) return [];
   const cellSize = radius / Math.SQRT2;
   const gridW = Math.ceil(width / cellSize);
   const gridH = Math.ceil(height / cellSize);
