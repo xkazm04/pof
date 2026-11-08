@@ -12,9 +12,11 @@ import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
 } from '@/lib/chart-colors';
 import { formatBytes, formatDuration } from '@/lib/format';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
-export function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: number) => void }) {
+export function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: number) => void | Promise<unknown> }) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <div className="border-b border-border/40 last:border-b-0">
@@ -120,7 +122,7 @@ export function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (i
               )}
               <div className="col-span-2 pt-1">
                 <button
-                  onClick={(e) => { e.stopPropagation(); onDelete(build.id); }}
+                  onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true); }}
                   className="flex items-center gap-1 text-2xs opacity-60 hover:opacity-100 transition-opacity"
                   style={{ color: STATUS_ERROR }}
                 >
@@ -132,6 +134,16 @@ export function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (i
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* A recorded build drives the version and the size-regression baseline: ask first. */}
+      <ConfirmDialog
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => onDelete(build.id)}
+        title={`Delete build #${build.id}?`}
+        description={`Build #${build.id} (${platformLabel(build.platform)} ${build.config}) is removed from the history. The version and size-trend baselines are recomputed without it.`}
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

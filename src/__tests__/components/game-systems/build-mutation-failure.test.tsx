@@ -5,7 +5,7 @@
  * (law: failure-not-empty-success).
  */
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 vi.mock('@/components/modules/game-systems/CookProgress', () => ({ CookProgress: () => null }));
 vi.mock('@/components/modules/game-systems/SmokeTest', () => ({ SmokeTest: () => null }));
@@ -55,6 +55,12 @@ const dashboardData = {
   trend: [], version: '0.1.0', nextVersion: '0.1.1',
 };
 
+/** Deletes ask first; confirm the dialog so the failing DELETE is actually sent. */
+async function confirmDelete() {
+  const dialog = await screen.findByRole('dialog');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+}
+
 async function alertText() {
   const alert = await screen.findByRole('alert');
   return alert.textContent ?? '';
@@ -77,6 +83,7 @@ describe('BuildHistoryDashboard mutation failures', () => {
     render(<BuildHistoryDashboard />);
     fireEvent.click(await screen.findByText('#7'));
     fireEvent.click(await screen.findByText('Delete'));
+    await confirmDelete();
     expect(await alertText()).toMatch(/database is locked/);
   });
 
@@ -119,6 +126,7 @@ describe('BuildConfigSelector mutation failures', () => {
     render(<BuildConfigSelector />);
     await openCard();
     fireEvent.click(await screen.findByText('Delete'));
+    await confirmDelete();
     expect(await alertText()).toMatch(/database is locked/);
   });
 });

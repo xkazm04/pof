@@ -10,6 +10,7 @@ import {
 import type { BuildProfile, PlatformId } from '@/lib/packaging/build-profiles';
 import { PLATFORM_NOTES, unappliedCookSettings } from '@/lib/packaging/uat-command-generator';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, STATUS_MUTED, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
@@ -34,7 +35,7 @@ interface PlatformProfileCardProps {
   profile: BuildProfile;
   uatCommand?: string;
   onEdit: (profile: BuildProfile) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => void | Promise<unknown>;
   onSetDefault: (id: string) => void;
   onPackage: (profile: BuildProfile) => void;
 }
@@ -44,6 +45,7 @@ export function PlatformProfileCard({
 }: PlatformProfileCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [cmdCopied, setCmdCopied] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const Icon = PLATFORM_ICONS[profile.platform] ?? Monitor;
   const color = PLATFORM_COLORS[profile.platform] ?? STATUS_MUTED;
@@ -220,7 +222,7 @@ export function PlatformProfileCard({
                   </button>
                 )}
                 <button
-                  onClick={() => onDelete(profile.id)}
+                  onClick={() => setConfirmingDelete(true)}
                   className="flex items-center gap-0.5 text-2xs opacity-60 hover:opacity-100 transition-opacity ml-auto"
                   style={{ color: STATUS_ERROR }}
                 >
@@ -232,6 +234,15 @@ export function PlatformProfileCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onConfirm={() => onDelete(profile.id)}
+        title={`Delete profile "${profile.name}"?`}
+        description={`The ${profile.platform} ${profile.config} build profile "${profile.name}" and its cook settings are removed. This cannot be undone.`}
+        confirmLabel="Delete"
+      />
     </motion.div>
   );
 }
