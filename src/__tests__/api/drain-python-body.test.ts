@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const { drainAll } = vi.hoisted(() => ({
-  drainAll: vi.fn(async () => ({ results: [] })),
+  drainAll: vi.fn<(f: unknown, d: unknown, o: unknown) => Promise<{ results: never[] }>>(async () => ({ results: [] })),
 }));
 vi.mock('@/lib/catalog/pipelines/registry.generated', () => ({}));
 vi.mock('@/lib/catalog/acceptance/pythonDrain', () => ({
@@ -53,5 +53,26 @@ describe('drain-python bridgeUrl', () => {
   it('accepts an omitted bridgeUrl', async () => {
     expect((await post({})).status).toBe(200);
     expect(drainAll).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('drain-python boolean flags', () => {
+  const optsOf = () => drainAll.mock.calls[0][2] as { apply: boolean; force: boolean; continueOnFail: boolean };
+
+  it.each([
+    { apply: 'false' }, { apply: 0 }, { force: 'true' }, { continueOnFail: 1 }, { apply: null },
+  ])('400s %j and dispatches nothing', async (body) => {
+    expect((await post(body)).status).toBe(400);
+    expect(drainAll).not.toHaveBeenCalled();
+  });
+
+  it('passes a boolean apply:false through as a dry run', async () => {
+    expect((await post({ apply: false })).status).toBe(200);
+    expect(optsOf()).toEqual({ apply: false, force: false, continueOnFail: false });
+  });
+
+  it('keeps the defaults when the flags are absent (apply on)', async () => {
+    expect((await post({})).status).toBe(200);
+    expect(optsOf()).toEqual({ apply: true, force: false, continueOnFail: false });
   });
 });

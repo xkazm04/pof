@@ -113,6 +113,10 @@ export async function POST(req: NextRequest) {
     const body = read.data as {
       catalogId?: string; entityId?: string; force?: boolean; continueOnFail?: boolean; bridgeUrl?: unknown; apply?: boolean;
     };
+    // A flag that is present must be a boolean: `apply: 'false'` used to read as a LIVE apply.
+    for (const flag of ['apply', 'force', 'continueOnFail'] as const) {
+      if (body[flag] !== undefined && typeof body[flag] !== 'boolean') return apiError(`${flag} must be a boolean`, 400);
+    }
     let bridgeUrl: string | undefined;
     if (body.bridgeUrl !== undefined) {
       if (typeof body.bridgeUrl !== 'string') return apiError('bridgeUrl must be a string', 400);
