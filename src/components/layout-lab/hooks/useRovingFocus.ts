@@ -1,7 +1,8 @@
 'use client';
 import { useState, useCallback, type KeyboardEvent } from 'react';
 
-/** Roving-tabindex keyboard nav for a vertical list. ArrowUp/Down (+ j/k) move the
+/** Roving-tabindex keyboard nav for a vertical list. `initial` is the selected index: the
+ *  cursor starts there and follows any later change to it. ArrowUp/Down (+ j/k) move the
  *  active index; Enter/Space select. One tab-stop (the active item).
  *
  *  The list can shrink under the cursor (a tree group collapses, the rail switches to a
@@ -10,6 +11,13 @@ import { useState, useCallback, type KeyboardEvent } from 'react';
  *  order. Clamping is a derivation, so growing the list back restores nothing stale. */
 export function useRovingFocus(count: number, initial: number, onSelect: (i: number) => void) {
   const [stored, setActive] = useState(initial);
+  // The cursor FOLLOWS the externally selected index: when `initial` changes the stored cursor is
+  // resynced in render (a prev-value bail-out, not an effect), so no consumer repeats this rule.
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (initial !== prevInitial) {
+    setPrevInitial(initial);
+    setActive(initial);
+  }
   const clamp = useCallback((i: number) => Math.max(0, Math.min(count - 1, i)), [count]);
   const active = count === 0 ? 0 : clamp(stored);
   const onKeyDown = useCallback((e: KeyboardEvent) => {

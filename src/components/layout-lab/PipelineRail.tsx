@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRovingFocus } from './hooks/useRovingFocus';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
@@ -101,14 +101,6 @@ export function PipelineRail({
 }: PipelineRailProps) {
   const reduce = useReducedMotion();
   const roving = useRovingFocus(steps.length, stepIdx ?? 0, onSelectStep);
-  // Keep the roving cursor synced to the externally-selected step
-  // (render-phase bail-out, not an effect).
-  const want = stepIdx ?? 0;
-  const [prevWant, setPrevWant] = useState(want);
-  if (want !== prevWant) {
-    setPrevWant(want);
-    roving.setActive(want);
-  }
 
   // Roving tabindex moves the ACTIVE index (which item is the tab-stop); DOM focus has to
   // follow it or an Arrow/j/k press moves nothing a keyboard user can see, and the visible
