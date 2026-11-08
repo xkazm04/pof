@@ -134,7 +134,7 @@ export function CanvasNodes({ pm }: { pm: PlanMatrixState }) {
 
                     {/* Feature Name */}
                     <div
-                      className={`text-xs truncate flex-1 ${isReady ? 'text-white font-semibold' : 'text-gray-300 font-medium'}`}
+                      className={`text-xs truncate flex-1 ${isReady ? 'text-text font-semibold' : 'text-text-muted font-medium'}`}
                       title={node.item.featureName}
                     >
                       {node.item.featureName}

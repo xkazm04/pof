@@ -5,7 +5,7 @@ import { type CanvasNode } from '@/lib/implementation-planner/layout-engine';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { formatEffortTime } from '@/lib/implementation-planner/effort-estimator';
 import {
-  STATUS_NEUTRAL, ACCENT_BLUE_BOLD,
+  STATUS_NEUTRAL, ACCENT_BLUE_BOLD, OVERLAY_WHITE,
   SURFACE_MINIMAP_CLUSTER, BORDER_DAG_NEUTRAL,
   OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_60,
   withOpacity,
@@ -30,8 +30,8 @@ export function DetailPanel({
     <div className="absolute top-0 right-0 w-[600px] bottom-0 bg-surface-deep/95 backdrop-blur-xl border-l border-border/50 shadow-2xl overflow-y-auto z-40 flex flex-col animate-in slide-in-from-right-8 duration-300">
       {/* Header */}
       <div className="sticky top-0 bg-surface-deep/80 backdrop-blur-md border-b border-border/50 px-6 py-5 flex items-center justify-between z-10">
-        <h3 className="text-xl font-bold text-white truncate pr-4">{item.featureName}</h3>
-        <button onClick={onClose} aria-label="Close feature details" className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-surface-hover transition-colors flex-shrink-0">
+        <h3 className="text-xl font-bold text-text truncate pr-4">{item.featureName}</h3>
+        <button onClick={onClose} aria-label="Close feature details" className="text-text-muted hover:text-text p-2 rounded-full hover:bg-surface-hover transition-colors flex-shrink-0">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -39,7 +39,7 @@ export function DetailPanel({
       <div className="px-6 py-6 flex-1 flex flex-col gap-6">
         {/* Badges */}
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-mono px-3 py-1 rounded-md bg-surface-hover text-gray-300 border border-border/50">
+          <span className="text-sm font-mono px-3 py-1 rounded-md bg-surface-hover text-text-muted border border-border/50">
             {getModuleLabel(item.moduleId)}
           </span>
           <span className="text-sm px-3 py-1 rounded-md font-medium border" style={{ backgroundColor: `${node.color}15`, color: node.color, borderColor: `${node.color}30` }}>
@@ -54,23 +54,23 @@ export function DetailPanel({
 
         {/* Description */}
         <div className="bg-background/50 rounded-xl p-5 border border-border/30">
-          <p className="text-sm text-gray-300 leading-relaxed">{item.description}</p>
+          <p className="text-sm text-text-muted leading-relaxed">{item.description}</p>
         </div>
 
         {/* Effort + Impact */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-background/50 rounded-xl p-5 border border-border/30 flex flex-col gap-2">
-            <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">Effort</span>
-            <span className="text-lg font-semibold text-white flex items-center gap-2">
+            <span className="text-xs text-text-muted uppercase tracking-wider font-bold">Effort</span>
+            <span className="text-lg font-semibold text-text flex items-center gap-2">
               <Clock className="w-5 h-5 text-blue-400" /> {formatEffortTime(item.effort.minutes)}
             </span>
             {item.effort.reason !== 'baseline' && (
-              <span className="text-xs text-gray-400 mt-1 leading-relaxed">{item.effort.reason}</span>
+              <span className="text-xs text-text-muted mt-1 leading-relaxed">{item.effort.reason}</span>
             )}
           </div>
           <div className="bg-background/50 rounded-xl p-5 border border-border/30 flex flex-col gap-2">
-            <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">Impact</span>
-            <span className="text-lg font-semibold text-white flex items-center gap-2">
+            <span className="text-xs text-text-muted uppercase tracking-wider font-bold">Impact</span>
+            <span className="text-lg font-semibold text-text flex items-center gap-2">
               <Zap className="w-5 h-5 text-amber-400" /> {item.impact.score} Score
             </span>
           </div>
@@ -79,7 +79,7 @@ export function DetailPanel({
         {/* Dependencies */}
         {item.dependsOn.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">
+            <div className="flex items-center gap-2 text-xs text-text-muted font-bold uppercase tracking-wider mb-3">
               <Link2 className="w-4 h-4" /> Depends on ({item.dependsOn.length})
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -109,7 +109,7 @@ export function DetailPanel({
         {/* Unblocks */}
         {item.impact.directDependents.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">
+            <div className="flex items-center gap-2 text-xs text-text-muted font-bold uppercase tracking-wider mb-3">
               <ArrowRight className="w-4 h-4" /> Unblocks ({item.impact.directDependents.length})
             </div>
             <div className="flex flex-wrap gap-2">
@@ -127,7 +127,7 @@ export function DetailPanel({
                 );
               })}
               {item.impact.directDependents.length > 12 && (
-                <span className="text-xs text-gray-400 px-3 py-1.5 bg-surface-hover rounded-lg border border-border/50">
+                <span className="text-xs text-text-muted px-3 py-1.5 bg-surface-hover rounded-lg border border-border/50">
                   +{item.impact.directDependents.length - 12} more
                 </span>
               )}
@@ -150,8 +150,8 @@ export function DetailPanel({
               if (!item.isReady) return;
               e.currentTarget.style.boxShadow = `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}`;
             }}
-            className="w-full flex items-center justify-center gap-3 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-6 py-4 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
-            style={{ boxShadow: item.isReady ? `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}` : 'none' }}
+            className="w-full flex items-center justify-center gap-3 text-base font-bold hover:brightness-110 px-6 py-4 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100"
+            style={{ color: OVERLAY_WHITE, backgroundColor: ACCENT_BLUE_BOLD, boxShadow: item.isReady ? `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}` : 'none' }}
           >
             <ArrowRight className="w-5 h-5" />
             {item.isReady ? 'Implement Feature' : `Blocked by ${item.unmetDeps.length}`}

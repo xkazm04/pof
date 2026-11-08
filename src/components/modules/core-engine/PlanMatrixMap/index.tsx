@@ -81,7 +81,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId, dispatch }: PlanMatri
         </div>
 
       {/* ── Top Right Stats ── */}
-      <div className="absolute top-4 right-4 flex items-center gap-4 px-4 py-2 bg-surface-deep/80 backdrop-blur-md border border-border/50 shadow-lg rounded-lg z-20 text-xs font-medium text-gray-300 select-none">
+      <div className="absolute top-4 right-4 flex items-center gap-4 px-4 py-2 bg-surface-deep/80 backdrop-blur-md border border-border/50 shadow-lg rounded-lg z-20 text-xs font-medium text-text-muted select-none">
         <div className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> {plan.items.length} features</div>
         <div className="flex items-center gap-1.5 text-green-400"><CheckCircle2 className="w-3.5 h-3.5" /> {readyCount} ready</div>
         <div className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {formatEffortTime(plan.totalEffortMinutes)}</div>
@@ -93,7 +93,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId, dispatch }: PlanMatri
           const el = containerRef.current;
           if (el) zoomToCenter(0.8, el.clientWidth, el.clientHeight);
         }} title="Zoom out (−)" />
-        <span className="text-xs font-mono text-gray-300 px-2 min-w-[48px] text-center select-none">
+        <span className="text-xs font-mono text-text-muted px-2 min-w-[48px] text-center select-none">
           {Math.round(transform.zoom * 100)}%
         </span>
         <ToolbarBtn icon={ZoomIn} onClick={() => {
@@ -117,23 +117,23 @@ export function PlanMatrixMap({ moduleId: initialModuleId, dispatch }: PlanMatri
           className="fixed z-50 px-3 py-2 rounded-lg bg-surface-deep/95 backdrop-blur-sm border border-border shadow-2xl pointer-events-none"
           style={{ left: hoverPos.x + 14, top: hoverPos.y - 8, maxWidth: 280 }}
         >
-          <div className="text-xs font-medium text-white mb-1">{hoveredNode.item.featureName}</div>
+          <div className="text-xs font-medium text-text mb-1">{hoveredNode.item.featureName}</div>
           <div className="flex items-center gap-1.5 flex-wrap text-2xs">
-            <span className="font-mono px-1 py-px rounded bg-surface-hover text-gray-300">
+            <span className="font-mono px-1 py-px rounded bg-surface-hover text-text-muted">
               {getModuleLabel(hoveredNode.item.moduleId)}
             </span>
             <span className="px-1 py-px rounded font-medium" style={{ backgroundColor: `${hoveredNode.color}20`, color: hoveredNode.color }}>
               {hoveredNode.item.status}
             </span>
-            <span className="text-gray-300">
+            <span className="text-text-muted">
               <Clock className="w-2.5 h-2.5 inline mr-0.5" />{formatEffortTime(hoveredNode.item.effort.minutes)}
             </span>
-            <span className="text-gray-300">
+            <span className="text-text-muted">
               <Zap className="w-2.5 h-2.5 inline mr-0.5" />{hoveredNode.item.impact.score} impact
             </span>
           </div>
           {hoveredNode.item.dependsOn.length > 0 && (
-            <div className="text-2xs text-gray-400 mt-1">
+            <div className="text-2xs text-text-muted mt-1">
               <Link2 className="w-2.5 h-2.5 inline mr-0.5" />
               {hoveredNode.item.dependsOn.length} dep{hoveredNode.item.dependsOn.length !== 1 ? 's' : ''}
             </div>
@@ -168,9 +168,9 @@ export function PlanMatrixMap({ moduleId: initialModuleId, dispatch }: PlanMatri
       )}
 
       {/* ── Legend ── */}
-      <div className="absolute bottom-6 left-6 flex flex-col gap-1.5 text-xs text-gray-300 bg-surface-deep/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 select-none z-20 shadow-lg">
+      <div className="absolute bottom-6 left-6 flex flex-col gap-1.5 text-xs text-text-muted bg-surface-deep/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 select-none z-20 shadow-lg">
         <div className="flex items-center gap-3 mb-1 border-b border-border/50 pb-1">
-          <span className="font-semibold text-white">Status</span>
+          <span className="font-semibold text-text">Status</span>
           <span className="opacity-40">|</span>
           <span>row = category &middot; left = higher impact &middot; size = impact</span>
         </div>
