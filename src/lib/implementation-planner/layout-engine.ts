@@ -65,7 +65,8 @@ function impactRadius(score: number): number {
 
 /**
  * Compute canvas layout: groups PlanItems into module clusters, positions nodes
- * within each cluster (X = effort, Y = sorted by impact), arranges clusters in a grid.
+ * within each cluster (one row per category, each row ordered by impact with the
+ * highest on the left; radius = impact), arranges clusters in a grid.
  */
 export function computeCanvasLayout(items: PlanItem[]): CanvasLayout {
   // Group by module

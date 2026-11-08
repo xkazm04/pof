@@ -7,7 +7,8 @@ import {
 import { getModuleLabel } from '@/lib/implementation-planner/plan-generator';
 import { formatEffortTime } from '@/lib/implementation-planner/effort-estimator';
 import { usePlanMatrixMap } from './usePlanMatrixMap';
-import { STATUS_DOT_COLORS } from './constants';
+import { PLAN_STATUS_COLORS } from '@/lib/chart-colors';
+import { PLAN_NODE_STATUSES } from './constants';
 import { ToolbarBtn, ToggleBtn } from './ToolbarControls';
 import { Sidebar } from './Sidebar';
 import { Canvas } from './Canvas';
@@ -168,12 +169,12 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
         <div className="flex items-center gap-3 mb-1 border-b border-border/50 pb-1">
           <span className="font-semibold text-white">Status</span>
           <span className="opacity-40">|</span>
-          <span>X = effort &middot; Y = impact</span>
+          <span>row = category &middot; left = higher impact &middot; size = impact</span>
         </div>
         <div className="flex items-center gap-3">
-          {(['implemented', 'partial', 'missing', 'unknown'] as const).map((s) => (
+          {PLAN_NODE_STATUSES.map((s) => (
             <span key={s} className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: STATUS_DOT_COLORS[s] }} />
+              <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: PLAN_STATUS_COLORS[s] }} />
               {s.charAt(0).toUpperCase() + s.slice(1)}
             </span>
           ))}
