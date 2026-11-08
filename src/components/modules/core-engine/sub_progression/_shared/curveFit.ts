@@ -157,7 +157,9 @@ export function initialCurveTuning(params: CurveParams): CurveTuningState {
 export function curveTuningReducer(state: CurveTuningState, action: CurveTuningAction): CurveTuningState {
   switch (action.type) {
     case 'setLive':
-      return { ...state, live: { ...state.live, ...action.params } };
+      // Dragging off a previewed fit makes the curve no longer the fit: the pane stops
+      // saying "Fitted" and Apply cannot commit a curve the fit never produced.
+      return { ...state, live: { ...state.live, ...action.params }, previewing: false };
     case 'toggleCompare':
       // A previewed fit leaves only through Apply or Revert, never a silent toggle.
       if (state.previewing) return state;

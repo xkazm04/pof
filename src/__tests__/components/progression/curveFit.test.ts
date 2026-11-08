@@ -114,6 +114,14 @@ describe('curveTuningReducer — preview / apply / revert', () => {
     expect(off.live).toEqual({ baseXp: 240, curveExp: 1.5 });
   });
 
+  it('moving a slider during a preview ends it: the curve is no longer the fit, and Apply must not commit it', () => {
+    const previewed = curveTuningReducer(start, { type: 'previewFit', params: fitted });
+    const moved = curveTuningReducer(previewed, { type: 'setLive', params: { baseXp: fitted.baseXp + 10 } });
+    expect(moved.previewing).toBe(false);
+    expect(moved.compareMode).toBe(true);
+    expect(moved.snapshot).toEqual({ baseXp: 100, curveExp: 1.5 });
+  });
+
   it('a second fit while previewing keeps the pre-fit curve to revert to; compare cannot silently apply', () => {
     const first = curveTuningReducer(start, { type: 'previewFit', params: fitted });
     const second = curveTuningReducer(first, { type: 'previewFit', params: { baseXp: 200, curveExp: 2 } });
