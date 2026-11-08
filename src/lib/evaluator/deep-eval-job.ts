@@ -44,6 +44,8 @@ interface DeepEvalJob {
   snap: DeepEvalJobSnapshot;
   controller: AbortController;
   done: Promise<DeepEvalResult>;
+  /** True once the run has settled. Cancel flips `snap.status` at once, so the start guard reads this instead. */
+  settled: boolean;
 }
 
 export interface StartDeepEvalJobOptions {
@@ -93,7 +95,10 @@ export function startDeepEvalJob(
   opts: StartDeepEvalJobOptions,
 ): Result<{ scanId: string; done: Promise<DeepEvalResult> }, 'already-running'> {
   const { projectPath } = opts;
-  if (jobs.get(projectPath)?.snap.status === 'running') return err('already-running');
+  // Guarded on the run being unsettled, not on status: a cancel flips status to 'cancelled'
+  // before the killed passes have settled, and a start then would overlap the old CLI runs.
+  const existing = jobs.get(projectPath);
+  if (existing && !existing.settled) return err('already-running');
 
   const scanId = opts.scanId ?? `deep-${Date.now()}`;
   const moduleIds = opts.moduleIds ?? getEvaluableModuleIds();
@@ -146,7 +151,10 @@ export function startDeepEvalJob(
   // The route only `void`s `done`; this branch keeps a rejection from going unhandled.
   done.catch(() => undefined);
 
-  jobs.set(projectPath, { snap, controller, done });
+  const job: DeepEvalJob = { snap, controller, done, settled: false };
+  const markSettled = () => { job.settled = true; };
+  done.then(markSettled, markSettled);
+  jobs.set(projectPath, job);
   return ok({ scanId, done });
 }
 

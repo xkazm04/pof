@@ -47,3 +47,16 @@ describe('module eval context lookup reads own properties only', () => {
     }
   });
 });
+
+describe('buildEvalPrompt project line', () => {
+  it('an empty projectName reads the module-name fallback, never an empty quoted name', () => {
+    const prompt = buildEvalPrompt({ moduleId: 'audio' as SubModuleId, pass: 'structure', projectName: '', moduleName: 'MyProject', sourcePath: 'Source/MyProject/' });
+    expect(prompt).toContain('UE5 project "MyProject"');
+    expect(prompt).not.toContain('UE5 project ""');
+  });
+
+  it('a real projectName still wins', () => {
+    const prompt = buildEvalPrompt({ moduleId: 'audio' as SubModuleId, pass: 'structure', projectName: 'PoF', moduleName: 'MyProject', sourcePath: 'Source/MyProject/' });
+    expect(prompt).toContain('UE5 project "PoF"');
+  });
+});
