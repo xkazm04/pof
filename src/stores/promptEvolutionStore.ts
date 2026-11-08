@@ -44,6 +44,9 @@ let suggestionsRequestSeq = 0;
 // Same rule for the per-item history: picking items fast must not let an older
 // item's history land last (startChallenge plans against whatever is held).
 let historyRequestSeq = 0;
+// And for the per-module A/B tests and prompt clusters.
+let testsRequestSeq = 0;
+let clustersRequestSeq = 0;
 
 /**
  * What a decide-now press came to. A refusal (409 "not enough trials") is an
@@ -167,14 +170,17 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   },
 
   loadTests: async (moduleId) => {
+    const requestSeq = ++testsRequestSeq;
     try {
       const abTests = await apiFetch<ABTestView[]>('/api/prompt-evolution', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get-tests', ...(moduleId ? { moduleId } : {}) }),
       });
+      if (requestSeq !== testsRequestSeq) return;
       set({ abTests });
     } catch (err) {
+      if (requestSeq !== testsRequestSeq) return;
       set({ error: err instanceof Error ? err.message : 'Failed to load A/B tests' });
     }
   },
@@ -320,6 +326,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   },
 
   clusterPrompts: async (moduleId) => {
+    const requestSeq = ++clustersRequestSeq;
     set({ isClustering: true, error: null });
     try {
       const clusters = await apiFetch<PromptCluster[]>('/api/prompt-evolution', {
@@ -327,8 +334,10 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'cluster-prompts', moduleId }),
       });
+      if (requestSeq !== clustersRequestSeq) return;
       set({ clusters, isClustering: false });
     } catch (err) {
+      if (requestSeq !== clustersRequestSeq) return;
       set({ error: err instanceof Error ? err.message : 'Clustering failed', isClustering: false });
     }
   },
