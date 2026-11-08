@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-syntax -- the hex literals below are PBR base
+   COLOURS under test (material data), not UI theme colours. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useMaterialStore } from '@/components/modules/visual-gen/material-lab/useMaterialStore';
 
@@ -41,5 +43,37 @@ describe('useMaterialStore — uploaded blob URLs are released', () => {
     setTexture('metallic', 'blob:http://x/m');
     setTexture('metallic', 'blob:http://x/m');
     expect(revoke).not.toHaveBeenCalled();
+  });
+});
+
+describe('useMaterialStore — a stored preset row is coerced into the sliders\' ranges', () => {
+  it('clamps out-of-range numbers, drops non-finite ones and refuses a non-hex colour', async () => {
+    vi.stubGlobal('fetch', async () => ({
+      json: async () => ({
+        success: true,
+        data: [{
+          id: 'p1', name: 'Bad row', createdAt: '2026-11-08 00:00:00',
+          params: { baseColor: 'red', metallic: 7, roughness: -0.5, normalStrength: Number.NaN, aoStrength: 1e9 },
+        }],
+      }),
+    }));
+    const result = await useMaterialStore.getState().loadPresets();
+    expect(result.ok).toBe(true);
+    expect(useMaterialStore.getState().presets[0].params).toEqual({
+      baseColor: '#808080', // default: 'red' is not what <input type="color"> or hexToLinearRgb accept
+      metallic: 1,
+      roughness: 0,
+      normalStrength: 1, // NaN falls back to the default
+      aoStrength: 1,
+    });
+  });
+
+  it('keeps a well-formed row exactly as stored', async () => {
+    const params = { baseColor: '#c0c0c0', metallic: 0.25, roughness: 0.75, normalStrength: 1.5, aoStrength: 0.5 };
+    vi.stubGlobal('fetch', async () => ({
+      json: async () => ({ success: true, data: [{ id: 'p2', name: 'Good', createdAt: '2026-11-08 00:00:00', params }] }),
+    }));
+    await useMaterialStore.getState().loadPresets();
+    expect(useMaterialStore.getState().presets[0].params).toEqual(params);
   });
 });

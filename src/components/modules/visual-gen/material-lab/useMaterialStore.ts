@@ -73,14 +73,21 @@ const MATERIALS_ENDPOINT = '/api/visual-gen/materials';
  * slider. Named fields only — an unknown key in the row is not silently adopted.
  */
 function toPbrParams(raw: Record<string, unknown>): PBRParams {
-  const num = (key: keyof PBRParams, fallback: number) =>
-    typeof raw[key] === 'number' ? (raw[key] as number) : fallback;
+  // The route stores any params object, so a row is clamped to the editor's
+  // slider ranges here: a NaN or out-of-range number would otherwise reach the
+  // slider, the preview and both exports unchanged.
+  const num = (key: keyof PBRParams, fallback: number, max: number) => {
+    const v = raw[key];
+    return typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(0, v)) : fallback;
+  };
+  const colour = raw.baseColor;
   return {
-    baseColor: typeof raw.baseColor === 'string' ? raw.baseColor : DEFAULT_PARAMS.baseColor,
-    metallic: num('metallic', DEFAULT_PARAMS.metallic),
-    roughness: num('roughness', DEFAULT_PARAMS.roughness),
-    normalStrength: num('normalStrength', DEFAULT_PARAMS.normalStrength),
-    aoStrength: num('aoStrength', DEFAULT_PARAMS.aoStrength),
+    // `<input type="color">` and hexToLinearRgb both need #rrggbb.
+    baseColor: typeof colour === 'string' && /^#[0-9a-f]{6}$/i.test(colour) ? colour : DEFAULT_PARAMS.baseColor,
+    metallic: num('metallic', DEFAULT_PARAMS.metallic, 1),
+    roughness: num('roughness', DEFAULT_PARAMS.roughness, 1),
+    normalStrength: num('normalStrength', DEFAULT_PARAMS.normalStrength, 2),
+    aoStrength: num('aoStrength', DEFAULT_PARAMS.aoStrength, 1),
   };
 }
 
