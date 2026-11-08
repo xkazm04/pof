@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { getSpec, upsertSpec } from '@/lib/ability/ability-spec-db';
 import type { AttrRelationship, SpecProvenance, SpecWrite } from '@/lib/ability/spec';
 import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
@@ -45,6 +46,8 @@ export async function GET(req: NextRequest) {
  * left OFF the write so upsertSpec can tell them from an explicit null.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const body = await req.json().catch(() => undefined);
     // A body that is not a JSON object is the caller's error (400), not a server fault.
