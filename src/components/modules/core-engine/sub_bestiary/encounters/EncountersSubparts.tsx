@@ -4,7 +4,7 @@ import {
   STATUS_WARNING,
   withOpacity, OPACITY_20, OPACITY_25,
 } from '@/lib/chart-colors';
-import { TACTICS_ENEMIES, TACTICS_ROLE_COLORS } from '../_shared/data';
+import { TACTICS_ENEMIES, TACTICS_ROLE_COLORS, TACTICS_CONFIG } from '../_shared/data';
 
 /* ── Tactics Legend ───────────────────────────────────────────────────── */
 
@@ -15,8 +15,8 @@ export function TacticsLegend() {
         <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Tactics Config</div>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'MaxSimultaneous', value: '2' },
-            { label: 'FlankingEnabled', value: 'true' },
+            { label: 'MaxSimultaneous', value: String(TACTICS_CONFIG.maxSimultaneous) },
+            { label: 'FlankingEnabled', value: String(TACTICS_CONFIG.flankingEnabled) },
           ].map(c => (
             <div key={c.label} className="bg-surface-deep rounded border border-border/30 px-2 py-1.5 text-center">
               <div className="text-xs font-mono font-bold text-text">{c.value}</div>

@@ -700,6 +700,9 @@ export const TACTICS_ENEMIES: TacticsEnemy[] = [
   { id: 5, x: 136, y: 24, role: 'waiting', label: 'WAIT-2' },
 ];
 
+/** Group-tactics rules the planner map and its config chips both read. */
+export const TACTICS_CONFIG = { maxSimultaneous: 2, flankingEnabled: true } as const;
+
 export const TACTICS_ROLE_COLORS: Record<TacticsEnemy['role'], string> = {
   attacking: ACCENT_RED,
   flanking: MODULE_COLORS.content,
