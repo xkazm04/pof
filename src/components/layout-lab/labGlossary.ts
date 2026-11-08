@@ -7,8 +7,9 @@
  *   - `short`: a one-word/short-phrase label (chip-sized)
  *   - `plain`: a one-sentence human definition (tooltip / coach copy)
  *
- * It is read-only and pure — no React, no truth source — so the same glossary
- * powers tooltips, the NextStepCoach banner, and any future help text.
+ * It is read-only and pure — no React, no truth source. Its consumers are the NextStepCoach
+ * banner (`STATUS_GLOSSARY`, `plainEntitySummary`); the app-wide jargon tooltip (`TermChip`)
+ * reads `@/lib/blueprint-glossary`, not this file.
  */
 
 import type { AcceptanceTier, AcceptanceStatus } from '@/lib/catalog/acceptance/types';
@@ -20,15 +21,6 @@ export interface GlossaryEntry {
   plain: string;
 }
 
-/** Acceptance tiers, lightest → heaviest proof. */
-export const TIER_GLOSSARY: Record<AcceptanceTier, GlossaryEntry> = {
-  L0: { short: 'data check', plain: 'A quick check that the row is filled in.' },
-  L1: { short: 'human pick', plain: 'A human has chosen one of the options the step produced.' },
-  L2: { short: 'rules check', plain: 'The numbers follow the rules (budgets, ranges, constraints).' },
-  L3: { short: 'live test', plain: 'A live Unreal test confirmed this works at runtime.' },
-  L4: { short: 'looks-good test', plain: 'A live Unreal render was compared to the reference and looks right.' },
-};
-
 /** Status words used everywhere in the lab. */
 export const STATUS_GLOSSARY: Record<AcceptanceStatus, GlossaryEntry> = {
   pass: { short: 'done', plain: 'This step is finished and meets its acceptance check.' },
@@ -36,32 +28,6 @@ export const STATUS_GLOSSARY: Record<AcceptanceStatus, GlossaryEntry> = {
   deferred: { short: 'waiting on Unreal', plain: 'This step is waiting on a live Unreal run; queue it with “Run deferred gates”.' },
   pending: { short: 'held', plain: 'This step has a row, but its acceptance is held — the coach names what settles it.' },
 };
-
-/** Other lab jargon that surfaces in the UI. */
-export const TERM_GLOSSARY: Record<string, GlossaryEntry> = {
-  deferred: STATUS_GLOSSARY.deferred,
-  drain: {
-    short: 'run waiting tests',
-    plain: 'Send every step that is waiting on Unreal through the live runner so they get a real verdict.',
-  },
-  'config-complete': {
-    short: 'all set up',
-    plain: 'Every step is finished or only waiting on a live Unreal test — nothing is missing or broken.',
-  },
-  tier: {
-    short: 'proof level',
-    plain: 'How strong the proof is: data check → human pick → rules → live test → looks-good test.',
-  },
-  acceptance: {
-    short: 'acceptance',
-    plain: 'The automatic check this step has to pass before it is considered done.',
-  },
-};
-
-/** Lookup helper — case-insensitive — returns null if the term isn’t glossed. */
-export function lookupTerm(term: string): GlossaryEntry | null {
-  return TERM_GLOSSARY[term.toLowerCase()] ?? null;
-}
 
 /** Compose a one-line plain summary for an EntityRollup-shaped object. */
 export interface PlainSummaryInput {

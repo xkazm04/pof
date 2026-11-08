@@ -11,7 +11,7 @@ import { NextStepCoach } from '@/components/layout-lab/NextStepCoach';
 import { pickNextActionableStep, type StepStatus } from '@/components/layout-lab/nextActionableStep';
 import { LIGHT } from '@/components/layout-lab/theme';
 import {
-  TIER_GLOSSARY, STATUS_GLOSSARY, TERM_GLOSSARY, plainEntitySummary, lookupTerm,
+  STATUS_GLOSSARY, plainEntitySummary,
 } from '@/components/layout-lab/labGlossary';
 import type { EntityRollup } from '@/lib/catalog/rollup';
 
@@ -63,18 +63,9 @@ describe('pickNextActionableStep', () => {
 });
 
 describe('labGlossary', () => {
-  it('lookupTerm is case-insensitive and returns null for unknown terms', () => {
-    expect(lookupTerm('DRAIN')?.short).toBe('run waiting tests');
-    expect(lookupTerm('config-complete')).toEqual(TERM_GLOSSARY['config-complete']);
-    expect(lookupTerm('not-a-real-term')).toBeNull();
-  });
-
-  it('covers every acceptance status and tier', () => {
+  it('covers every acceptance status', () => {
     (['pass', 'fail', 'deferred', 'pending'] as const).forEach((s) => {
       expect(STATUS_GLOSSARY[s].plain.length).toBeGreaterThan(10);
-    });
-    (['L0', 'L1', 'L2', 'L3', 'L4'] as const).forEach((tier) => {
-      expect(TIER_GLOSSARY[tier].short.length).toBeGreaterThan(0);
     });
   });
 
