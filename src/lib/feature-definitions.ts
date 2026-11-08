@@ -1,5 +1,7 @@
 import type { SubModuleId, PartialModuleMap } from '@/types/modules';
 import { isFeatureDone } from '@/lib/feature-done';
+import { getModuleChecklist } from '@/lib/module-registry';
+import { countChecklist } from '@/lib/checklist-progress';
 
 // ─── Module-level prerequisite graph ──────────────────────────────────────────
 // Defines which modules should be completed before starting another.
@@ -47,6 +49,15 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'scene-composer': ['asset-viewer', 'blender-pipeline'],
 };
 
+/**
+ * Done items of one module, counted by the ONE checklist counting rule
+ * (`countChecklist`): only ids the registry still declares. Persisted progress
+ * outlives renamed / removed items, and a stale `true` must not satisfy a prerequisite.
+ */
+function doneItems(moduleId: string, progress: Record<string, boolean> | undefined): number {
+  return countChecklist({ checklist: getModuleChecklist(moduleId as SubModuleId) }, progress).done;
+}
+
 /** Modules that depend on `moduleId` (i.e. moduleId is a prerequisite for them). */
 function getDependents(moduleId: SubModuleId): SubModuleId[] {
   const result: SubModuleId[] = [];
@@ -90,8 +101,7 @@ export function getRecommendedNextModules(
     const progress = checklistProgress[modId];
     const total = checklistSizes[modId] ?? 0;
     if (!progress || total === 0) return 0;
-    const done = Object.values(progress).filter(Boolean).length;
-    return Math.round((done / total) * 100);
+    return Math.round((doneItems(modId, progress) / total) * 100);
   }
 
   const currentProgress = moduleProgress(currentModuleId);
@@ -149,7 +159,7 @@ export function getUnmetPrerequisites(
     let completed = 0;
     let pct = 0;
     if (progress && total > 0) {
-      completed = Object.values(progress).filter(Boolean).length;
+      completed = doneItems(prereqId, progress);
       pct = Math.round((completed / total) * 100);
     }
     if (pct < 50) {

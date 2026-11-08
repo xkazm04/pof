@@ -7,6 +7,14 @@ import {
   getRecommendedNextModules,
   getUnmetPrerequisites,
 } from '@/lib/feature-definitions';
+import { getModuleChecklist } from '@/lib/module-registry';
+import type { SubModuleId } from '@/types/modules';
+
+/** Tick the first `n` REAL registry items of a module (stale ids are never counted). */
+function ticked(moduleId: SubModuleId, n: number): Record<string, boolean> {
+  return Object.fromEntries(getModuleChecklist(moduleId).map((c, i) => [c.id, i < n]));
+}
+const sizeOf = (moduleId: SubModuleId) => getModuleChecklist(moduleId).length;
 
 describe('MODULE_PREREQUISITES', () => {
   it('is a non-empty record', () => {
@@ -134,17 +142,16 @@ describe('getRecommendedNextModules', () => {
 
   it('recommends dependent modules when current module is substantially complete', () => {
     // arpg-character is a prereq for arpg-animation and arpg-gas
+    // Make arpg-character ~80% complete, on its real registry items
+    const charSize = sizeOf('arpg-character');
     const progress: Record<string, Record<string, boolean>> = {
-      'arpg-character': {},
+      'arpg-character': ticked('arpg-character', Math.ceil(charSize * 0.8)),
     };
-    // Make arpg-character 80% complete (8 of 10 items)
-    for (let i = 0; i < 8; i++) progress['arpg-character'][`item${i}`] = true;
-    for (let i = 8; i < 10; i++) progress['arpg-character'][`item${i}`] = false;
 
     const sizes: Record<string, number> = {
-      'arpg-character': 10,
-      'arpg-animation': 5,
-      'arpg-gas': 5,
+      'arpg-character': charSize,
+      'arpg-animation': sizeOf('arpg-animation'),
+      'arpg-gas': sizeOf('arpg-gas'),
     };
 
     const result = getRecommendedNextModules('arpg-character', progress, sizes);
@@ -157,11 +164,10 @@ describe('getRecommendedNextModules', () => {
 
   it('caps results to 3 recommendations', () => {
     const progress: Record<string, Record<string, boolean>> = {
-      'arpg-character': {},
+      'arpg-character': ticked('arpg-character', sizeOf('arpg-character')),
     };
-    for (let i = 0; i < 10; i++) progress['arpg-character'][`item${i}`] = true;
 
-    const sizes: Record<string, number> = { 'arpg-character': 10 };
+    const sizes: Record<string, number> = { 'arpg-character': sizeOf('arpg-character') };
     // Give all dependent modules sizes so they qualify
     for (const [mod] of Object.entries(MODULE_PREREQUISITES)) {
       if (!sizes[mod]) sizes[mod] = 5;
@@ -183,13 +189,13 @@ describe('getUnmetPrerequisites', () => {
   });
 
   it('excludes prerequisites that are >= 50% complete', () => {
+    // Make arpg-gas ~60% complete, on its real registry items
+    const gasSize = sizeOf('arpg-gas');
     const progress: Record<string, Record<string, boolean>> = {
-      'arpg-gas': {},
+      'arpg-gas': ticked('arpg-gas', Math.ceil(gasSize * 0.6)),
     };
-    // Make arpg-gas 60% complete (6 of 10)
-    for (let i = 0; i < 6; i++) progress['arpg-gas'][`item${i}`] = true;
 
-    const sizes = { 'arpg-gas': 10, 'arpg-animation': 5 };
+    const sizes = { 'arpg-gas': gasSize, 'arpg-animation': sizeOf('arpg-animation') };
     const result = getUnmetPrerequisites('arpg-combat', progress, sizes);
 
     // arpg-gas should NOT appear (60% >= 50%)

@@ -22,6 +22,8 @@ import { describe, it, expect } from 'vitest';
 import {
   MODULE_FEATURE_DEFINITIONS,
   MODULE_PREREQUISITES,
+  getRecommendedNextModules,
+  getUnmetPrerequisites,
   type FeatureDefinition,
 } from '@/lib/feature-definitions';
 import { SUB_MODULES, CATEGORIES, getSubModulesForCategory } from '@/lib/module-registry';
@@ -255,5 +257,33 @@ describe('category membership integrity (CATEGORIES)', () => {
   it('every module belongs to a declared category', () => {
     const ids = new Set(CATEGORIES.map((c) => c.id as string));
     expect(SUB_MODULES.filter((m) => !ids.has(m.categoryId)).map((m) => m.id)).toEqual([]);
+  });
+});
+
+// ─── Module progress counts only registry checklist items ───────────────────
+//
+// Persisted progress outlives renamed / removed checklist items. countChecklist
+// (the project's one counting rule) ignores keys the registry no longer has; the
+// Recommended-next banner's readers must agree with it, or a stale `true` claims
+// a prerequisite is met when no current item is done.
+
+describe('recommended-next progress ignores stale checklist keys', () => {
+  const sizes = Object.fromEntries(SUB_MODULES.map((m) => [m.id, m.checklist?.length ?? 0]));
+  const staleOnly = (moduleId: string) => {
+    const real = Object.fromEntries((SUB_MODULES.find((m) => m.id === moduleId)?.checklist ?? []).map((c) => [c.id, false]));
+    const stale = Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`removed-${i}`, true]));
+    return { ...real, ...stale };
+  };
+
+  it('a module with only stale ticks is not "substantially complete"', () => {
+    const progress = { 'arpg-character': staleOnly('arpg-character') };
+    expect(getRecommendedNextModules('arpg-character', progress, sizes)).toEqual([]);
+  });
+
+  it('a prerequisite with only stale ticks is still unmet, at 0%', () => {
+    const progress = { 'arpg-gas': staleOnly('arpg-gas') };
+    const unmet = getUnmetPrerequisites('arpg-combat', progress, sizes);
+    const gas = unmet.find((p) => p.moduleId === 'arpg-gas');
+    expect(gas).toMatchObject({ completed: 0, progress: 0 });
   });
 });
