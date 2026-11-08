@@ -5,7 +5,7 @@ import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
-import { useBlenderStore, type ScriptJob, type ScriptStatus } from './useBlenderStore';
+import { useBlenderStore, SCRIPT_HISTORY_CAP, type ScriptJob, type ScriptStatus } from './useBlenderStore';
 
 const STATUS_CONFIG: Record<ScriptStatus, { icon: typeof Loader2; color: string; label: string }> = {
   idle: { icon: Loader2, color: 'text-text-muted', label: 'Idle' },
@@ -108,6 +108,7 @@ export async function executeViaMCP(scriptName: string, scriptCode: string) {
 export function ScriptRunner() {
   const scripts = useBlenderStore((s) => s.scripts);
   const clearCompleted = useBlenderStore((s) => s.clearCompleted);
+  const droppedCount = useBlenderStore((s) => s.droppedCount);
 
   if (scripts.length === 0) {
     return (
@@ -142,6 +143,11 @@ export function ScriptRunner() {
           </button>
         )}
       </div>
+      {droppedCount > 0 && (
+        <p className="text-xs text-text-muted" data-testid="script-history-dropped">
+          {droppedCount} older {droppedCount === 1 ? 'script was' : 'scripts were'} dropped (history keeps the newest {SCRIPT_HISTORY_CAP}).
+        </p>
+      )}
       <div className="space-y-2">
         {scripts.map((job) => (
           <ScriptCard key={job.id} job={job} />
