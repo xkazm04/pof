@@ -25,13 +25,21 @@ interface Props {
 
 export function MonteCarloSimulator({ genome, rarity, level }: Props) {
   const [iterations, setIterations] = useState<number>(1000);
-  const [stats, setStats] = useState<SimulationStats | null>(null);
+  const [run, setRun] = useState<{ key: string; stats: SimulationStats } | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Everything simulateRolls reads from its props: stats from other inputs are stale.
+  const inputKey = JSON.stringify([
+    genome.id, genome.traits, genome.mutation, genome.minRarity,
+    genome.itemType, genome.evolution?.tier ?? 0, rarity, level,
+  ]);
+  const stats = run && run.key === inputKey ? run.stats : null;
+  const stale = run !== null && stats === null;
 
   const runSimulation = () => {
     startTransition(() => {
       const result = simulateRolls(genome, rarity, level, DEMO_AFFIX_POOL, iterations, GOD_ROLL_THRESHOLD);
-      setStats(result);
+      setRun({ key: inputKey, stats: result });
     });
   };
 
@@ -83,7 +91,11 @@ export function MonteCarloSimulator({ genome, rarity, level }: Props) {
         <div className="flex items-center justify-center py-8">
           <div className="text-center space-y-2">
             <Sigma className="w-7 h-7 text-text-muted/30 mx-auto" />
-            <p className="text-xs text-text-muted">Run a batch to see the real distribution across thousands of attempts</p>
+            <p className="text-xs text-text-muted">
+              {stale
+                ? 'Genome, rarity or level inputs changed since the last batch - run again for current results'
+                : 'Run a batch to see the real distribution across thousands of attempts'}
+            </p>
           </div>
         </div>
       ) : (
