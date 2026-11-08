@@ -49,14 +49,14 @@ export interface BuildParseResult {
 
 // ─── Regex patterns ──────────────────────────────────────────────────────────
 
-// MSVC compilation error/warning: file(line[,col]): error CXXXX: message
-const MSVC_DIAG = /^(.+?)\((\d+)(?:,(\d+))?\)\s*:\s*(error|warning)\s+(C\d+|D\d+)?\s*:\s*(.+)$/;
+// MSVC compilation error/warning: file(line[,col]): [fatal ]error CXXXX: message
+const MSVC_DIAG = /^(.+?)\((\d+)(?:,(\d+))?\)\s*:\s*(?:fatal\s+)?(error|warning)\s+(C\d+|D\d+)?\s*:\s*(.+)$/;
 
 // Clang compilation error/warning: file:line:col: error|warning: message
 const CLANG_DIAG = /^(.+?):(\d+):(\d+):\s*(error|warning):\s*(.+)$/;
 
-// MSVC linker error: file.obj : error LNK2019: message
-const LINKER_DIAG = /^(.+?\.(?:obj|lib))\s*:\s*(error|warning)\s+(LNK\d+)\s*:\s*(.+)$/;
+// MSVC linker error: file.obj : error LNK2019: message / Foo.dll : fatal error LNK1120: message
+const LINKER_DIAG = /^(.+?\.(?:obj|lib|exe|dll))\s*:\s*(?:fatal\s+)?(error|warning)\s+(LNK\d+)\s*:\s*(.+)$/;
 
 // UBT errors/warnings: ERROR: message / WARNING: message
 const UBT_DIAG = /^\s*(ERROR|WARNING)\s*:\s*(.+)$/;
