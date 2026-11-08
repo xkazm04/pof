@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { deriveCatalogLifecycle, syncCatalogLifecycle, syncEntityLifecycle, CatalogNotFoundError } from '@/lib/catalog/headless';
 
 /**
@@ -33,6 +34,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     // A body that is not a JSON object is the caller's error (400), not a server fault.
     const body = (await req.json().catch(() => undefined)) as Record<string, unknown> | undefined;
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {

@@ -261,6 +261,16 @@ export function mergeCallbackBody(
   return { ok: true, body: { ...(parsed as Record<string, unknown>), ...staticFields } };
 }
 
+/**
+ * Headers for a callback POST. The server-side settlement (run-callbacks.ts) is a header-less
+ * caller of the operator-guarded write routes, so when `POF_OPERATOR_TOKEN` is configured it
+ * presents the same token; a browser (no `process.env` secret) sends none and stays same-origin.
+ */
+function callbackHeaders(): Record<string, string> {
+  const token = typeof window === 'undefined' ? process.env.POF_OPERATOR_TOKEN : undefined;
+  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
 /** POST (or PATCH) one merged callback body and read the `{ success }` API envelope. */
 export async function postCallbackBody(
   req: { url: string; method: TaskCallback['method']; body: Record<string, unknown> },
@@ -269,7 +279,7 @@ export async function postCallbackBody(
   try {
     const res = await fetch(req.url, {
       method: req.method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: callbackHeaders(),
       body: JSON.stringify(req.body),
       ...(signal ? { signal } : {}),
     });

@@ -18,12 +18,7 @@ import { NextRequest } from 'next/server';
 const ROOTS = ['catalog', 'catalog-entities', 'pipeline', 'pipeline-artifacts'].map((r) => path.join(process.cwd(), 'src/app/api', r));
 
 /** Write routes deliberately NOT guarded yet — key: path under src/app/api. */
-const EXEMPT: Record<string, string> = {
-  'catalog/step-submit/route.ts': 'pof_submit_artifact (pof-mcp) posts without a token',
-  'catalog/lifecycle/route.ts': 'pof-mcp / headless lifecycle sync posts without a token',
-  'pipeline/route.ts': 'cli-task @@CALLBACK target (server-to-server, no token plumbing)',
-  'pipeline-artifacts/drain/settle-test/route.ts': 'pof_ue_run_tests (pof-mcp) posts without a token',
-};
+const EXEMPT: Record<string, string> = {};
 
 function walk(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];

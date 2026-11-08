@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { submitStepArtifact, CatalogNotFoundError } from '@/lib/catalog/headless';
 
 /**
@@ -15,6 +16,8 @@ import { submitStepArtifact, CatalogNotFoundError } from '@/lib/catalog/headless
  */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const body = (await req.json().catch(() => undefined)) as {
       catalogId?: unknown;
       entityId?: unknown;

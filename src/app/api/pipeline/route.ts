@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { listTracks, upsertTrack } from '@/lib/pipeline-db';
 import { TRACK_STATES, ALL_TRACKS } from '@/lib/pipeline/tracks';
 import type { PipelineTrackId, TrackState } from '@/lib/pipeline/tracks';
@@ -22,6 +23,8 @@ export async function GET(req: NextRequest) {
 /** POST /api/pipeline { catalogId, entityId, trackId, state, note? } → upsert */
 export async function POST(req: NextRequest) {
   try {
+    const denied = requireOperator(req);
+    if (denied) return denied;
     const body = (await req.json().catch(() => undefined)) as Record<string, unknown> | undefined;
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
       return apiError('Request body must be a JSON object', 400);
