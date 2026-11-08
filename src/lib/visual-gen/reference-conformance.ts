@@ -117,6 +117,11 @@ export function parseConformanceReply(raw: string): ConformanceReply {
   if (!Number.isFinite(severityRaw)) {
     return { ok: false, error: `SEVERITY was not a number ("${severityMatch[1]}")` };
   }
+  // Below the scale is a malformed answer, and clamping it to 0 would read as a match —
+  // the same rule `parseViewCritiqueReply` already holds for the damage verdict.
+  if (severityRaw < 0) {
+    return { ok: false, error: `SEVERITY ${severityRaw} is below the 0-${SEVERITY_MAX} scale` };
+  }
   const body = listMatch[1].trim();
   const divergences = /^none$/i.test(body)
     ? []

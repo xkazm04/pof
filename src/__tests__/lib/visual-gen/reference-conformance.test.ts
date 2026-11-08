@@ -91,9 +91,9 @@ describe('parseConformanceReply', () => {
     expect(r.error).toMatch(/marker/i);
   });
 
-  it('clamps a severity outside the scale instead of trusting it', () => {
+  it('clamps a severity above the scale and refuses one below it', () => {
     expect(parseConformanceReply('DIVERGENCES=none; SEVERITY=9').severity).toBe(3);
-    expect(parseConformanceReply('DIVERGENCES=none; SEVERITY=-4').severity).toBe(0);
+    expect(parseConformanceReply('DIVERGENCES=none; SEVERITY=-4').ok).toBe(false);
   });
 });
 
