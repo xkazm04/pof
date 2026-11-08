@@ -5,6 +5,7 @@ import { OPACITY_6, OPACITY_10, OPACITY_80, OVERLAY_WHITE, OVERLAY_BLACK,
   withOpacity, OPACITY_50,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 import type { CurvePoint } from './types';
 import { SVG_W, SVG_H, PAD, PLOT_W, PLOT_H } from './types';
 
@@ -151,9 +152,9 @@ export function CurveEditor({
 
         {/* Axis labels */}
         <text x={PAD.left + PLOT_W / 2} y={SVG_H - 2} textAnchor="middle"
-          className="text-[9px] font-mono" fill="var(--text-muted)" style={{ fontSize: 9 }}>{xLabel}</text>
+          className={`${TEXT_SCALE.meta} font-mono`} fill="var(--text-muted)">{xLabel}</text>
         <text x={8} y={PAD.top + PLOT_H / 2} textAnchor="middle"
-          className="text-[9px] font-mono" fill="var(--text-muted)" style={{ fontSize: 9 }}
+          className={`${TEXT_SCALE.meta} font-mono`} fill="var(--text-muted)"
           transform={`rotate(-90, 8, ${PAD.top + PLOT_H / 2})`}>{yLabel}</text>
 
         {/* Area fill */}
@@ -198,10 +199,10 @@ export function CurveEditor({
               />
               {isActive && (
                 <g>
-                  <rect x={sp.x - 28} y={sp.y - 24} width={56} height={16} rx={4}
+                  <rect x={sp.x - 32} y={sp.y - 26} width={64} height={18} rx={4}
                     fill={withOpacity(OVERLAY_BLACK, OPACITY_80)} stroke={color} strokeWidth="0.5" />
-                  <text x={sp.x} y={sp.y - 13} textAnchor="middle"
-                    fill={color} className="text-[8px] font-mono font-bold" style={{ fontSize: 8 }}>
+                  <text x={sp.x} y={sp.y - 14} textAnchor="middle"
+                    fill={color} className={`${TEXT_SCALE.meta} font-mono font-bold`}>
                     {pt.x.toFixed(2)}, {pt.y.toFixed(2)}
                   </text>
                 </g>

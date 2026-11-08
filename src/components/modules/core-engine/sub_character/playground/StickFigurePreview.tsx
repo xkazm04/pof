@@ -180,7 +180,7 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
       drawGroundLine(ctx, W, groundY);
       drawStickFigure(ctx, W / 2, groundY, 0, false);
       ctx.fillStyle = withOpacity(OVERLAY_WHITE, OPACITY_30);
-      ctx.font = '9px monospace';
+      ctx.font = '10px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('Press play to preview movement feel', W / 2, H - 4);
       ctx.textAlign = 'start';

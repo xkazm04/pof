@@ -114,7 +114,7 @@ export function MovementStateMachine() {
               <text
                 x={pos.x} y={pos.y + 4}
                 textAnchor="middle"
-                className="text-[9px] font-mono font-bold pointer-events-none"
+                className={`${TEXT_SCALE.meta} font-mono font-bold pointer-events-none`}
                 style={{ fill: state.color }}
               >
                 {state.label}
