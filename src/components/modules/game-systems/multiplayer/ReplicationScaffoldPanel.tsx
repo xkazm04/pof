@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
-  Network, Radio, Bell, ArrowRight, Loader2, XCircle, Upload,
-  Clipboard, ClipboardCheck, ShieldCheck,
+  Network, Radio, Bell, ArrowRight, Loader2, XCircle, Upload, ShieldCheck,
 } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
@@ -12,7 +11,7 @@ import {
   lifetimeReplicatedPropsDefinition,
 } from '@/lib/replication-scaffolder';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
-import { UI_TIMEOUTS } from '@/lib/constants';
+import { CopyButton } from '@/components/ui/CopyButton';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO,
   OPACITY_20, OPACITY_30, statusBg, statusBorder,
@@ -41,7 +40,6 @@ export function ReplicationScaffoldPanel() {
     useBlueprintTranspiler({ projectPath, surface: 'replication' });
   const { result: transpileResult, running: isLoading, error } = transpileRun;
   const scanStale = transpileRun.staleBecause.includes('blueprintJson');
-  const [copied, setCopied] = useState(false);
 
   // One request: the transpile carries everything the scan shows.
   const handleScan = useCallback(() => {
@@ -59,13 +57,6 @@ export function ReplicationScaffoldPanel() {
   }, [replication, className]);
 
   const repNotifyCount = replication?.properties.filter((p) => p.repNotify).length ?? 0;
-
-  const copyCode = useCallback(async () => {
-    if (!lifetimeBody) return;
-    await navigator.clipboard.writeText(lifetimeBody);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [lifetimeBody]);
 
   return (
     <div className="space-y-4">
@@ -190,16 +181,13 @@ export function ReplicationScaffoldPanel() {
               <div className="rounded-lg border border-border bg-surface-secondary overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-deep">
                   <span className="text-2xs font-medium text-text">Generated replication boilerplate</span>
-                  <button
-                    onClick={copyCode}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-text-muted hover:text-text transition-colors"
-                  >
-                    {copied ? (
-                      <><ClipboardCheck className="w-3 h-3 text-green-400" /> Copied</>
-                    ) : (
-                      <><Clipboard className="w-3 h-3" /> Copy</>
-                    )}
-                  </button>
+                  {/* Shared primitive: one clipboard contract (a denied write
+                      is caught, the timer comes from UI_TIMEOUTS). */}
+                  <CopyButton
+                    text={lifetimeBody}
+                    tooltip="Copy replication boilerplate"
+                    copiedTooltip="Replication boilerplate copied"
+                  />
                 </div>
                 <pre className="overflow-auto p-3 text-2xs font-mono text-text leading-relaxed whitespace-pre max-h-72">
                   {lifetimeBody}
