@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { getDb } from '@/lib/db';
+import { getDb, prepareCached } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { jsonUnsafeKeys } from '@/lib/catalog/entityPayload';
 import type { LifecycleRecord, LifecycleState, StoredCatalogEntity, TestResult } from '@/lib/catalog/types';
@@ -66,8 +66,8 @@ export function listLifecycle(catalogId: string): LifecycleRecord[] {
 
 export function getLifecycle(catalogId: string, entityId: string): LifecycleRecord | null {
   ensureTable();
-  const row = getDb()
-    .prepare('SELECT * FROM catalog_lifecycle WHERE catalog_id = ? AND entity_id = ?')
+  // Hot per-entity read: compiled once per connection (prepareCached), not per call.
+  const row = prepareCached('SELECT * FROM catalog_lifecycle WHERE catalog_id = ? AND entity_id = ?', getDb())
     .get(catalogId, entityId) as Record<string, unknown> | undefined;
   return row ? rowToLifecycle(row) : null;
 }
@@ -213,9 +213,10 @@ export function listAllEntities(): PersistedCatalogEntity[] {
 
 export function getEntity(catalogId: string, entityId: string): PersistedCatalogEntity | null {
   ensureEntityTable();
-  const row = getDb()
-    .prepare(`SELECT ${ENTITY_COLUMNS} FROM catalog_entities WHERE catalog_id = ? AND entity_id = ?`)
-    .get(catalogId, entityId) as Record<string, unknown> | undefined;
+  const row = prepareCached(
+    `SELECT ${ENTITY_COLUMNS} FROM catalog_entities WHERE catalog_id = ? AND entity_id = ?`,
+    getDb(),
+  ).get(catalogId, entityId) as Record<string, unknown> | undefined;
   return row ? rowToEntity(row) : null;
 }
 

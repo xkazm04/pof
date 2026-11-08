@@ -841,8 +841,9 @@ function migrateSessionAnalyticsIsoDefaults(database: Database.Database): void {
 let stmtCacheDb: Database.Database | null = null;
 let stmtCache = new Map<string, Database.Statement>();
 
-export function prepareCached(sql: string): Database.Statement {
-  const database = getDb();
+/** `database` defaults to the shared connection; a module that resolves its own handle
+ *  (and so honours a swapped/mocked `getDb`) passes it explicitly. */
+export function prepareCached(sql: string, database: Database.Database = getDb()): Database.Statement {
   if (stmtCacheDb !== database) {
     stmtCacheDb = database;
     stmtCache = new Map();
