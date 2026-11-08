@@ -90,7 +90,10 @@ export function explainTestVerdict(
   }
 
   // Inconclusive: still running with no clear lead, or no trials at all.
-  if (!concluded && (totalTrials < 2 || verdict.tie)) {
+  // The per-arm floor is the verdict's own shortfall, so a leader is never claimed
+  // while the card beside it still says the test needs more runs.
+  const belowFloor = verdict.shortfall.A > 0 || verdict.shortfall.B > 0;
+  if (!concluded && (totalTrials < 2 || belowFloor || verdict.tie)) {
     const detail = totalTrials === 0
       ? 'No runs recorded yet.'
       : judged

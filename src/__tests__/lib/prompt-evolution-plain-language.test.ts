@@ -64,6 +64,28 @@ describe('explainTestVerdict', () => {
     expect(v.why).toMatch(/more times/i);
   });
 
+  it('does not name a leader while either arm is below the 3-run floor (1 vs 1)', () => {
+    const v = explainTestVerdict(
+      makeTest({ variantATrials: 1, variantASuccesses: 1, variantBTrials: 1, variantBSuccesses: 0 }),
+    );
+    expect(v.winnerSlot).toBeNull();
+    expect(v.headline).toBe('Too early to call');
+  });
+
+  it('does not name a leader at 3 vs 1', () => {
+    const v = explainTestVerdict(
+      makeTest({ variantATrials: 3, variantASuccesses: 3, variantBTrials: 1, variantBSuccesses: 0 }),
+    );
+    expect(v.headline).toBe('Too early to call');
+  });
+
+  it('names a running leader once both arms clear the floor (3 vs 3)', () => {
+    const v = explainTestVerdict(
+      makeTest({ variantATrials: 3, variantASuccesses: 3, variantBTrials: 3, variantBSuccesses: 0 }),
+    );
+    expect(v.headline).toBe('Wording A is ahead');
+  });
+
   it('declares the concluded winner with concrete counts (8 of 10)', () => {
     const v = explainTestVerdict(
       makeTest({
