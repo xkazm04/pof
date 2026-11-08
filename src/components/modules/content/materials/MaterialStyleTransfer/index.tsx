@@ -134,7 +134,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           >
             <Upload className="w-8 h-8 opacity-40" aria-hidden="true" />
             <span className="text-xs font-medium">Drop a screenshot or click to upload</span>
-            <span className="text-2xs text-text-muted/60">PNG, JPG up to 10MB</span>
+            <span className="text-2xs text-text-muted">PNG, JPG up to 10MB</span>
           </button>
         )}
         <input

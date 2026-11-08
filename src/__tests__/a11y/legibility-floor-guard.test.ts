@@ -70,8 +70,6 @@ const CONTRAST_BASELINE: Record<string, Partial<Record<HitKind, number>>> = {
   'modules/content/animations/shared/NotifyGlyphs.tsx': { text: 1 },
   'modules/content/level-design/PacingReportPanel.tsx': { icons: 1 },
   'modules/content/materials/MaterialParameterConfigurator/ParametersSection.tsx': { text: 1 },
-  'modules/content/materials/MaterialStyleTransfer/AnalysisResults.tsx': { text: 2 },
-  'modules/content/materials/MaterialStyleTransfer/index.tsx': { text: 1 },
   'modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx': { text: 1 },
   'modules/core-engine/sub_ability/SpellbookSearch.tsx': { text: 1 },
   'modules/core-engine/sub_ability/SpellbookSearchPalette.tsx': { text: 3 },

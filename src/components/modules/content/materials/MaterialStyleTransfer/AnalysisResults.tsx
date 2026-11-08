@@ -103,7 +103,7 @@ export function AnalysisResults({
         >
           {SURFACE_LABELS[effectiveAnalysis!.surfaceType]}
         </span>
-        <span className="text-2xs text-text-muted/60">
+        <span className="text-2xs text-text-muted">
           {(effectiveAnalysis!.surfaceConfidence * 100).toFixed(0)}% confidence
         </span>
         <div className="flex-1" />
@@ -149,7 +149,7 @@ export function AnalysisResults({
         >
           {adjustmentsOpen ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
           <span className="text-2xs font-medium text-text">Refine Parameters</span>
-          <span className="text-2xs text-text-muted/60">Adjust before generating</span>
+          <span className="text-2xs text-text-muted">Adjust before generating</span>
         </button>
 
         <AnimatePresence>
