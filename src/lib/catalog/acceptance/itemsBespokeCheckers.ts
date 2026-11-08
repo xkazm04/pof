@@ -1,4 +1,4 @@
-import { readHistory, selectedCandidate } from '@/components/layout-lab/steps/shared/genHistory';
+import { readHistory, selectedCandidate } from '@/lib/catalog/genHistory';
 import { candidateAsset } from './galleryArtifact';
 import { templateGuard } from './template';
 import type { AcceptanceResult, Checker } from './types';

@@ -1,4 +1,4 @@
-import { readHistory, selectedCandidate } from '@/components/layout-lab/steps/shared/genHistory';
+import { readHistory, selectedCandidate } from '@/lib/catalog/genHistory';
 import { gradeGallerySelection } from './galleryArtifact';
 import type { AcceptanceResult, Checker } from './types';
 import type { RigFacts, RigVerdict } from '@/lib/visual-gen/rig-gate';

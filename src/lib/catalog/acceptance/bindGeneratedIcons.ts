@@ -26,7 +26,7 @@
  *
  * Pure: no fs, no clock, no db. The caller supplies the icon url and the timestamp.
  */
-import { readHistory, selectedCandidate, GEN_HISTORY_KEY, type GenHistory, type GenCandidate } from '@/components/layout-lab/steps/shared/genHistory';
+import { readHistory, selectedCandidate, GEN_HISTORY_KEY, type GenHistory, type GenCandidate } from '@/lib/catalog/genHistory';
 import { candidateAsset } from './galleryArtifact';
 
 /** Additive provenance key written next to `genHistory` when art is bound from the library. */

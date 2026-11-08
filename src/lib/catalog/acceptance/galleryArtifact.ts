@@ -5,9 +5,9 @@ import {
   makeBatch,
   readHistory,
   selectedCandidate,
-} from '@/components/layout-lab/steps/shared/genHistory';
-import { genericGalleryCandidates } from '@/components/layout-lab/steps/shared/genericGalleryCandidates';
-import type { GenCandidate } from '@/components/layout-lab/steps/shared/genHistory';
+} from '@/lib/catalog/genHistory';
+import { genericGalleryCandidates } from '@/lib/catalog/genericGalleryCandidates';
+import type { GenCandidate } from '@/lib/catalog/genHistory';
 import type { AcceptanceResult } from './types';
 
 /**
