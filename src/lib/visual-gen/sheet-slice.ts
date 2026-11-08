@@ -67,6 +67,8 @@ export type SheetRunResult =
   | { ok: false; refused?: boolean; error: string; sheetUrl?: string; verdict?: SheetGateVerdict }
   | { ok: true; sheetUrl: string; model?: string; verdict: SheetGateVerdict; icons: CutIcon[] };
 
+const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
 export function iconUrl(name: string): string {
   return `/api/visual-gen/icon/${encodeURIComponent(name)}`;
 }
@@ -123,9 +125,15 @@ export async function runContactSheet(
   // second source of truth for the one mapping that must never drift.
   const cells = width > 0 && height > 0 ? contactSheetCells(spec, width, height) : [];
   const seamXs = cells.filter((c) => c.row === 0 && c.col > 0).map((c) => c.x);
-  const measured = cells.length
-    ? await deps.image.stats(gen.path, cells, seamXs)
-    : { cellStdev: [], seams: [], interior: 0 };
+  let measured: { cellStdev: number[]; seams: number[]; interior: number };
+  try {
+    measured = cells.length
+      ? await deps.image.stats(gen.path, cells, seamXs)
+      : { cellStdev: [], seams: [], interior: 0 };
+  } catch (e) {
+    // The credit is spent and the art exists: the url has to survive whatever broke here.
+    return { ok: false, error: `the sheet was generated but could not be measured: ${messageOf(e)}`, sheetUrl: gen.url };
+  }
 
   const verdict = gradeSheet({
     cols: spec.cols,
@@ -156,7 +164,16 @@ export async function runContactSheet(
       cellIndex: cell.index,
       ...(gen.model ? { model: gen.model } : {}),
     };
-    await deps.commit(file, (out) => deps.image.cut(sheetPath, cell, out), origin);
+    try {
+      await deps.commit(file, (out) => deps.image.cut(sheetPath, cell, out), origin);
+    } catch (e) {
+      return {
+        ok: false,
+        error: `the sheet was generated but cutting stopped at ${cell.id} after ${icons.length} of ${cells.length} icons: ${messageOf(e)}`,
+        sheetUrl: gen.url,
+        verdict,
+      };
+    }
     icons.push({ entityId: cell.id, file, url: iconUrl(file) });
   }
 
