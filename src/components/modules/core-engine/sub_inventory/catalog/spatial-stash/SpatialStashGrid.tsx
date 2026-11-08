@@ -21,6 +21,7 @@ import {
   withOpacity, OPACITY_8, OPACITY_15, OPACITY_25, OPACITY_50,
   STATUS_SUCCESS, STATUS_ERROR, STATUS_SUBDUED, OVERLAY_WHITE,
 } from '@/lib/chart-colors';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 const CELL_PX = 32;
 const GAP_PX = 2;
@@ -49,6 +50,13 @@ export function SpatialStashGrid({ tab, accent }: Props) {
   const intent = useSyncExternalStore(subscribeDragIntent, getDragIntent, () => null);
   const lookupItem = useInventoryItemLookup();
   // Keyboard cursor: tied to the carried intent, so a stale cursor never outlives its pick-up.
+  // Transient explanation for a refused action (a rotate whose footprint does not fit).
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), UI_TIMEOUTS.toast);
+    return () => clearTimeout(t);
+  }, [notice]);
   const [kb, setKb] = useState<{ x: number; y: number; key: string } | null>(null);
   const intentKey = intent ? (intent.kind === 'new' ? `n:${intent.itemId}` : `m:${intent.placementId}`) : null;
   const kbPos = intent && kb && kb.key === intentKey ? kb : null;
@@ -189,6 +197,14 @@ export function SpatialStashGrid({ tab, accent }: Props) {
       tabIndex={0}
     >
       <p role="status" data-stash-status className="sr-only">{carryStatus}</p>
+      <p
+        role="status"
+        data-stash-notice
+        className={notice ? 'absolute left-0 top-full mt-1 text-xs font-mono whitespace-nowrap' : 'sr-only'}
+        style={notice ? { color: STATUS_ERROR } : undefined}
+      >
+        {notice}
+      </p>
       <div
         ref={gridRef}
         className="grid relative"
@@ -238,8 +254,9 @@ export function SpatialStashGrid({ tab, accent }: Props) {
               // toggle rotation in place when it fits
               const ok = movePlacementAction(tab.id, p.id, p.x, p.y, !p.rotated);
               if (!ok) {
-                // Try to find a nearby spot that fits the rotated footprint
-                // (keep silent on failure — designer can always drag it out).
+                // Say why nothing happened instead of leaving a dead button; the designer can
+                // still drag the tile somewhere roomier.
+                setNotice(`No room to rotate ${lookupItem(p.itemId)?.name ?? 'this item'} here`);
               }
             }}
             onRemove={() => removePlacementAction(tab.id, p.id)}
