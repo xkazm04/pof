@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { DURATION, SPRING } from '@/lib/motion';
+import { Z_INDEX } from '@/lib/constants';
 
 /**
  * Reusable, accessible modal shell.
@@ -215,7 +216,8 @@ export function Modal({
         <motion.div
           key="modal-backdrop"
           {...backdropMotion}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          style={{ zIndex: Z_INDEX.modal }}
           onClick={(e) => {
             if (closeOnBackdrop && e.target === e.currentTarget) onClose();
           }}

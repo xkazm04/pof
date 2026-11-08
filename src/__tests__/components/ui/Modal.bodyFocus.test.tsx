@@ -6,6 +6,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { Modal } from '@/components/ui/Modal';
+import { Z_INDEX } from '@/lib/constants';
 
 afterEach(cleanup);
 
@@ -70,5 +71,18 @@ describe('Modal with focus on the body', () => {
     fireEvent.keyDown(screen.getByText('Inner action'), { key: 'Escape' });
     expect(inner).toHaveBeenCalledTimes(1);
     expect(outer).toHaveBeenCalledTimes(0);
+  });
+});
+
+describe('Modal stacking', () => {
+  it('paints on the shared Z_INDEX.modal layer, above the toast layer', () => {
+    render(
+      <Modal open title="T" onClose={() => {}}>
+        <button>A</button>
+      </Modal>,
+    );
+    const backdrop = screen.getByRole('dialog').parentElement as HTMLElement;
+    expect(Number(backdrop.style.zIndex)).toBe(Z_INDEX.modal);
+    expect(Z_INDEX.modal).toBeGreaterThan(Z_INDEX.toast);
   });
 });
