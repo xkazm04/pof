@@ -73,7 +73,8 @@ export function GlobalCoach({ t }: Props) {
         display: 'flex', flexDirection: 'column',
         background: 'var(--lab-panel)',
         borderBottom: '1px solid var(--lab-line)',
-        borderLeft: `4px solid ${top ? priorityColor(top.priority, t) : t.bad}`,
+        // No candidate: red only when a fetch actually failed — a loading bar is not a failure.
+        borderLeft: `4px solid ${top ? priorityColor(top.priority, t) : failedCatalogs.length > 0 ? t.bad : t.muted}`,
         ...(t.glass ? { backdropFilter: 'blur(var(--lab-glass-blur))' } : {}),
       }}
     >

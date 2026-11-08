@@ -128,6 +128,22 @@ describe('<GlobalCoach />', () => {
     expect(container.querySelector('[data-testid="global-coach-item-0"]')).toBeNull();
   });
 
+  it('does not paint the loading placeholder in the failure colour (loading is not failed)', () => {
+    coachMock.mockReturnValue([]);
+    loadingMock.mockReturnValue(true);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    const bar = container.querySelector('[data-testid="global-coach"]') as HTMLElement;
+    expect(bar.style.borderLeft).not.toContain(LIGHT.bad);
+  });
+
+  it('keeps the failure colour on the bar when a catalog fetch failed and nothing is advised', () => {
+    coachMock.mockReturnValue([]);
+    failedMock.mockReturnValue([{ catalogId: 'items', label: 'Items', error: 'HTTP 500' }]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    const bar = container.querySelector('[data-testid="global-coach"]') as HTMLElement;
+    expect(bar.style.borderLeft).toContain(LIGHT.bad);
+  });
+
   it('drops the loading placeholder once the real recommendation lands', () => {
     coachMock.mockReturnValue([cand({ entityId: 'e1', entityName: 'Sword' })]);
     loadingMock.mockReturnValue(false);
