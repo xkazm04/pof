@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Brain, CircleCheck, CircleDot, Loader2 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { DecoratedCrashText } from '@/components/ui/CrashTerm';
 import { tryApiFetch } from '@/lib/api-utils';
 import { CATEGORY_LABELS } from '@/lib/prompt-context';
-import { SEVERITY_TOKENS, type SeverityLevel } from '@/lib/chart-colors';
+import { SEVERITY_TOKENS, STATUS_WARNING, type SeverityLevel } from '@/lib/chart-colors';
+import { MOTION } from '@/lib/constants';
+import { motionSafe } from '@/lib/motion';
 import type { ErrorMemoryStats } from '@/lib/error-memory-db';
 import type { ErrorCategory } from '@/types/error-memory';
 
@@ -99,6 +101,7 @@ export function ErrorMemoryPanel({ initialStats }: Props) {
 }
 
 function ErrorMemoryBody({ stats }: { stats: ErrorMemoryStats }) {
+  const prefersReduced = useReducedMotion();
   const isEmpty = stats.totalErrors === 0 && stats.uniqueFingerprints === 0;
   if (isEmpty) {
     return (
@@ -149,7 +152,7 @@ function ErrorMemoryBody({ stats }: { stats: ErrorMemoryStats }) {
                   style={{ background: token.color }}
                   initial={{ width: 0 }}
                   animate={{ width: `${widthPct}%` }}
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  transition={motionSafe({ duration: MOTION.slow, ease: 'easeOut' } as const, prefersReduced)}
                 />
               </div>
               <span className="font-mono text-text-muted w-8 text-right">{c.count}</span>
@@ -165,7 +168,7 @@ function StatTile({ label, value, accent }: { label: string; value: number; acce
   return (
     <div role="listitem" className="rounded-md border border-border/40 bg-surface-deep/40 px-2 py-1.5">
       <div className="text-2xs font-mono uppercase tracking-[0.1em] text-text-muted">{label}</div>
-      <div className={`font-mono text-base font-semibold ${accent ? 'text-amber-400' : 'text-text'}`} data-stat={label}>
+      <div className="font-mono text-base font-semibold text-text" style={accent ? { color: STATUS_WARNING } : undefined} data-stat={label}>
         {value}
       </div>
     </div>
