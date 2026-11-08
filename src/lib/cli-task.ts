@@ -51,11 +51,30 @@ let _callbackCounter = 0;
 /** In-memory callback registry — keyed by callback ID */
 const _callbackRegistry = new Map<string, TaskCallback>();
 
+/**
+ * Cap on live client callbacks. Every buildTaskPrompt registers one (previews too) and
+ * terminal runs settle server-side, so entries rarely leave via resolveCallback; the oldest
+ * are evicted past this bound (a Resubmit of a payload older than the cap reports
+ * "Unknown callback").
+ */
+export const CALLBACK_REGISTRY_MAX = 500;
+
+/** Number of callbacks currently registered (test/diagnostic probe). */
+export function callbackRegistrySize(): number {
+  return _callbackRegistry.size;
+}
+
 /** Register a callback and return its ID. */
 export function registerCallback(cb: Omit<TaskCallback, 'id'>): string {
   const id = `cb-${Date.now()}-${++_callbackCounter}`;
   const entry: TaskCallback = { ...cb, id };
   _callbackRegistry.set(id, entry);
+  // Map iterates in insertion order: the first key is the oldest registration.
+  while (_callbackRegistry.size > CALLBACK_REGISTRY_MAX) {
+    const oldest = _callbackRegistry.keys().next().value;
+    if (oldest === undefined) break;
+    _callbackRegistry.delete(oldest);
+  }
   return id;
 }
 
