@@ -195,7 +195,14 @@ export const GET = withRoute(async (req: NextRequest) => {
     return apiError('moduleId query parameter is required', 400);
   }
 
-  const limit = Math.min(Number(searchParams.get('limit') ?? 200), 1000);
+  // Validated before it is bound into `LIMIT ?`: NaN used to reach SQLite as a
+  // 'datatype mismatch' 500, and a negative value became an unbounded read.
+  const rawLimit = searchParams.get('limit');
+  const requested = rawLimit === null ? 200 : Number(rawLimit);
+  if (rawLimit !== null && (rawLimit.trim() === '' || !Number.isInteger(requested) || requested < 1)) {
+    return apiError('limit must be an integer >= 1', 400);
+  }
+  const limit = Math.min(requested, 1000);
 
   const db = getDb();
   const rows = db.prepare(
