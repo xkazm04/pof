@@ -223,9 +223,28 @@ export function usePromptEvolution() {
       toast.info(`“${winner.label}” is already the version in use`);
       return;
     }
+    // Same rule set as the test card. This path has no preview, so a win that
+    // carries a caution goes to its card, where the caution is read before adopting.
+    const decidedTest = abTests.find((t) =>
+      t.status === 'concluded' && t.moduleId === moduleId && t.checklistItemId === checklistItemId && t.winnerId === winner.id);
+    if (decidedTest) {
+      const plan = planAdoption({ test: decidedTest, variants, tests: abTests });
+      if (!plan.ok) {
+        toast.error(plan.error.message);
+        return;
+      }
+      if (plan.data.caution) {
+        toast.info(`${plan.data.caution} Review it on the test card before adopting.`);
+        setExpandedTestId(decidedTest.id);
+        setActiveSubTab('tests');
+        return;
+      }
+      await adoptPlanned(plan.data);
+      return;
+    }
     const incumbent = variants.find((v) => v.checklistItemId === checklistItemId && v.active) ?? null;
     await adoptPlanned({ winner, incumbent });
-  }, [getBestVariant, variants, adoptPlanned]);
+  }, [getBestVariant, variants, abTests, adoptPlanned, setActiveSubTab]);
 
   // An adopted winner stops being re-suggested.
   const visibleSuggestions = useMemo(
