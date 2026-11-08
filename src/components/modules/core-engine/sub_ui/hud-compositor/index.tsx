@@ -67,8 +67,10 @@ export function HudCompositor({ accent }: HudCompositorProps) {
       <div className="flex items-center justify-between mb-3">
         <SectionHeader icon={Eye} label="HUD Context Compositor" color={accent} />
         <button
+          type="button"
           onClick={() => setShowZLayers(z => !z)}
-          className="flex items-center gap-1 px-2 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded border transition-colors"
+          aria-pressed={showZLayers}
+          className="focus-ring flex items-center gap-1 px-2 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded border transition-colors"
           style={{
             backgroundColor: showZLayers ? `${accent}${OPACITY_20}` : 'transparent',
             borderColor: showZLayers ? `${withOpacity(accent, OPACITY_37)}` : 'var(--border)',

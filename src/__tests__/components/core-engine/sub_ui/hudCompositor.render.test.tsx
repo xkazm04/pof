@@ -22,4 +22,12 @@ describe('HudCompositor resolves contexts through the HUD registry', () => {
     for (const label of labels) expect(screen.getByText(label)).toBeTruthy();
     expect(screen.queryByTestId('hud-unresolved')).toBeNull();
   });
+
+  it('the Z-Layers toggle exposes its state with aria-pressed', () => {
+    render(<HudCompositor accent={ACCENT_PINK} />);
+    const toggle = screen.getByRole('button', { name: 'Z-Layers' });
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  });
 });
