@@ -14,6 +14,11 @@ export interface UseCRUDOptions<T> {
   errorMessage?: string;
   /** Skip auto-fetch on mount (useful when you need to call refetch manually). */
   skipInitialFetch?: boolean;
+  /**
+   * When the endpoint changes, report `initial` until the new endpoint answers instead of
+   * the previous endpoint's data. Off by default: existing callers keep the old data.
+   */
+  resetOnEndpointChange?: boolean;
 }
 
 export interface UseCRUDResult<T> {
@@ -49,8 +54,9 @@ export function useCRUD<T>(
   initial: T,
   options: UseCRUDOptions<T> = {},
 ): UseCRUDResult<T> {
-  const { transform, fetcher, errorMessage, skipInitialFetch } = options;
-  const [data, setData] = useState<T>(initial);
+  const { transform, fetcher, errorMessage, skipInitialFetch, resetOnEndpointChange } = options;
+  const [loaded, setLoaded] = useState<{ endpoint: string; value: T }>({ endpoint, value: initial });
+  const data = resetOnEndpointChange && loaded.endpoint !== endpoint ? initial : loaded.value;
   const [isLoading, setIsLoading] = useState(!skipInitialFetch);
   const [error, setError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -72,7 +78,7 @@ export function useCRUD<T>(
         result = transform ? transform(raw) : raw as T;
       }
       if (!isCurrent()) return;
-      setData(result);
+      setLoaded({ endpoint, value: result });
     } catch (err) {
       if (isCurrent()) {
         setError(err instanceof Error ? err.message : (errorMessage ?? 'Failed to fetch data'));
