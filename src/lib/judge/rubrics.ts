@@ -183,7 +183,10 @@ export function buildRubricPrompt(cls: DeliverableClass, opts: {
 export interface JudgeResult {
   dimensions: Record<string, number>;
   score: number;
+  /** DERIVED from the clamped score (`pass` only if `score >= BANDS.shippable`) - the score is the authority. */
   verdict: 'pass' | 'fail';
+  /** What the model itself wrote in its `verdict` field, kept for diagnostics only. */
+  modelVerdict: 'pass' | 'fail';
   findings: string;
   fix: string;
 }
@@ -247,10 +250,14 @@ export function parseJudgeResult(raw: string): JudgeResult | null {
   // The verdict is the first object that carries a numeric score and a pass/fail verdict.
   for (const o of jsonObjects(raw) as Iterable<Partial<JudgeResult>>) {
     if (typeof o.score !== 'number' || (o.verdict !== 'pass' && o.verdict !== 'fail')) continue;
+    const score = clampScore(o.score);
     return {
       dimensions: sanitizeDimensions(o.dimensions),
-      score: clampScore(o.score),
-      verdict: o.verdict,
+      score,
+      // The rubric states verdict = pass only if overall >= BANDS.shippable: derive it ONCE here so
+      // every harness reads the same verdict for the same draw, whatever the model wrote.
+      verdict: score >= BANDS.shippable ? 'pass' : 'fail',
+      modelVerdict: o.verdict,
       findings: String(o.findings ?? ''),
       fix: String(o.fix ?? ''),
     };

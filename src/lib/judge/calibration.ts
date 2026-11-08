@@ -307,7 +307,12 @@ export function evaluateCalibration(run: CalibrationRun | null | undefined, rubr
 
 /** A per-target band change between two runs — what "drift" concretely means. */
 export interface CalibrationDrift {
+  /** Change in the provisional-INCLUSIVE rate (`overall`). Reported, never authoritative. */
   rateDelta: number | null;
+  /** Change in the ENFORCED rate (`confirmed`); `null` when either run has no confirmed scored target. */
+  confirmedRateDelta: number | null;
+  /** The two runs scored different rubric versions, so every delta crosses a ruler change. */
+  rubricChanged: boolean;
   moved: { key: string; from: Band | null; to: Band | null; fromScore: number | null; toScore: number | null }[];
   /** Targets present in one run and not the other (the set itself changed). */
   setChanged: string[];
@@ -315,7 +320,7 @@ export interface CalibrationDrift {
 
 /** Compare two persisted runs so drift is visible, not just a new number. Pure. */
 export function calibrationDrift(prev: CalibrationRun | null | undefined, next: CalibrationRun): CalibrationDrift {
-  if (!prev) return { rateDelta: null, moved: [], setChanged: [] };
+  if (!prev) return { rateDelta: null, confirmedRateDelta: null, rubricChanged: false, moved: [], setChanged: [] };
   const byKey = (r: CalibrationRun) => new Map(r.targets.map((t) => [t.key, t]));
   const a = byKey(prev), b = byKey(next);
   const moved: CalibrationDrift['moved'] = [];
@@ -328,6 +333,8 @@ export function calibrationDrift(prev: CalibrationRun | null | undefined, next: 
   for (const key of a.keys()) if (!b.has(key)) setChanged.push(key);
   return {
     rateDelta: prev.overall.scored && next.overall.scored ? next.overall.rate - prev.overall.rate : null,
+    confirmedRateDelta: prev.confirmed.scored && next.confirmed.scored ? next.confirmed.rate - prev.confirmed.rate : null,
+    rubricChanged: prev.rubricVersion !== next.rubricVersion,
     moved,
     setChanged,
   };

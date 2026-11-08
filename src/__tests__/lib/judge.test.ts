@@ -26,8 +26,19 @@ describe('strict rubric (WS2)', () => {
     const r = parseJudgeResult('noise {"dimensions":{"silhouette":40},"score":120,"verdict":"fail","findings":"generic blob, no material read","fix":"add value hierarchy"} trailing');
     expect(r).not.toBeNull();
     expect(r!.score).toBe(100);
-    expect(r!.verdict).toBe('fail');
+    // The verdict follows the (clamped) score, not the model's contradicting word.
+    expect(r!.verdict).toBe('pass');
+    expect(r!.modelVerdict).toBe('fail');
     expect(r!.fix).toMatch(/value hierarchy/);
+  });
+
+  it('derives the verdict from the score: a model "pass" below the shippable band is a fail', () => {
+    const draw = (score: number, verdict: string) => parseJudgeResult(JSON.stringify({ dimensions: {}, score, verdict, findings: 'f', fix: 'x' }))!;
+    expect(draw(50, 'pass').verdict).toBe('fail');
+    expect(draw(50, 'pass').modelVerdict).toBe('pass');
+    expect(draw(BANDS.shippable - 1, 'pass').verdict).toBe('fail');
+    expect(draw(BANDS.shippable, 'fail').verdict).toBe('pass');
+    expect(draw(BANDS.shippable, 'fail').modelVerdict).toBe('fail');
   });
 
   it('rejects unparseable / malformed output', () => {

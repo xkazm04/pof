@@ -188,6 +188,25 @@ describe('buildCraftTrend / craftMovementOf', () => {
     expect(craftMovementOf(t)!.delta).toBe(-2);
   });
 
+  it('a lens bump or model swap is not movement — only comparable gauges trend', () => {
+    const bumped = buildCraftTrend([point('A1', { lensVersion: 1 }), point('A3', { lensVersion: 2 })]);
+    expect(bumped.direction).toBe('none');
+    expect(bumped.delta).toBeNull();
+    expect(bumped.points).toHaveLength(2);
+    expect(craftMovementOf(bumped)).toBeUndefined();
+    expect(craftTrendSummary(bumped)).toContain('not comparable');
+
+    const swapped = buildCraftTrend([point('A1', { model: 'sonnet' }), point('A3', { model: 'opus' })]);
+    expect(swapped.direction).toBe('none');
+    expect(craftMovementOf(swapped)).toBeUndefined();
+
+    // The trailing comparable run still trends after a bump.
+    const after = buildCraftTrend([point('A2', { lensVersion: 1 }), point('A1', { lensVersion: 2 }), point('A3', { lensVersion: 2 })]);
+    expect(after.comparable).toBe(2);
+    expect(after.direction).toBe('improved');
+    expect(craftMovementOf(after)).toMatchObject({ from: 'A1', to: 'A3', delta: 2, gauges: 2 });
+  });
+
   it('a single gauge yields NO movement — one measurement is not a comparison', () => {
     const t = buildCraftTrend([point('A3')]);
     expect(t.delta).toBeNull();

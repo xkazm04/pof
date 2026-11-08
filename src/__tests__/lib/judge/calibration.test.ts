@@ -242,6 +242,30 @@ describe('calibration history — drift is comparable across runs', () => {
     expect(calibrationDrift(null, after).rateDelta).toBeNull();
   });
 
+  it('drift reports the ENFORCED (confirmed) rate delta, not only the provisional-inclusive one', () => {
+    const mk = (confirmedAgreed: number, over: Partial<CalibrationRun> = {}): CalibrationRun => ({
+      ...run({}),
+      overall: { total: 20, scored: 20, agreed: 17, rate: 0.85, disagreements: [] },
+      confirmed: { total: 10, scored: 10, agreed: confirmedAgreed, rate: confirmedAgreed / 10, disagreements: [] },
+      ...over,
+    });
+    // Equal overall rate, confirmed agreement down 20pp: today's overall delta says +0pp.
+    const d = calibrationDrift(mk(9), mk(7));
+    expect(d.rateDelta).toBe(0);
+    expect(d.confirmedRateDelta).toBeCloseTo(-0.2, 5);
+    expect(d.rubricChanged).toBe(false);
+
+    // No confirmed labels on one side -> no confirmed delta claimed.
+    const none = mk(0, { confirmed: { total: 0, scored: 0, agreed: 0, rate: 0, disagreements: [] } });
+    expect(calibrationDrift(none, mk(7)).confirmedRateDelta).toBeNull();
+    expect(calibrationDrift(mk(9), none).confirmedRateDelta).toBeNull();
+
+    // A cross-rubric comparison is flagged, not silent.
+    expect(calibrationDrift(mk(9, { rubricVersion: 3 }), mk(9, { rubricVersion: 4 })).rubricChanged).toBe(true);
+    expect(calibrationDrift(null, mk(9)).confirmedRateDelta).toBeNull();
+    expect(calibrationDrift(null, mk(9)).rubricChanged).toBe(false);
+  });
+
   it('honours POF_JUDGE_CALIBRATION_PATH so a run can be pointed at a scratch file', () => {
     expect(calibrationHistoryPath({ POF_JUDGE_CALIBRATION_PATH: '/tmp/x.jsonl' })).toBe('/tmp/x.jsonl');
     expect(calibrationHistoryPath({})).toContain('judge-calibration.jsonl');
