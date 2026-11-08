@@ -118,6 +118,38 @@ describe("a refused start leaves the current run's server state alone", () => {
   });
 });
 
+describe('a start over a paused run', () => {
+  const orchestrator = { getRunId: () => 'paused-run', on: () => undefined, start: async () => undefined };
+
+  function pause() {
+    G.harnessOrchestrator = orchestrator;
+    G.harnessConfig = { statePath: 'C:/state/live' };
+    G.harnessStatus = 'paused';
+  }
+
+  it('answers 409 naming the paused run and leaves the orchestrator in place', async () => {
+    pause();
+    const res = await post({ ...START, statePath: 'C:/state/other' });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toContain('paused-run');
+    expect(h.created).toBe(0);
+    expect(G.harnessOrchestrator).toBe(orchestrator);
+    expect(G.harnessStatus).toBe('paused');
+  });
+
+  it('admits a start at the paused own statePath', async () => {
+    pause();
+    expect((await post({ ...START, statePath: 'C:/state/live' })).status).toBe(200);
+    expect(h.created).toBe(1);
+  });
+
+  it('admits a deliberate replace with replacePaused: true', async () => {
+    pause();
+    expect((await post({ ...START, statePath: 'C:/state/other', replacePaused: true })).status).toBe(200);
+    expect(h.created).toBe(1);
+  });
+});
+
 describe('start refuses input the run could not honour', () => {
   for (const scenario of ['constructor', 'toString', '__proto__', 42]) {
     it(`refuses scenario ${JSON.stringify(scenario)} instead of running the default plan`, async () => {

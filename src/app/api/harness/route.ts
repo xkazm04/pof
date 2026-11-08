@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
 // ── POST ────────────────────────────────────────────────────────────────────
 
 const START_STRING_FIELDS = ['projectPath', 'projectName', 'ueVersion', 'statePath', 'ueTestFilter'];
-const START_BOOLEAN_FIELDS = ['unlimited', 'checkpoint', 'ueTests', 'ueVisual', 'fork'];
+const START_BOOLEAN_FIELDS = ['unlimited', 'checkpoint', 'ueTests', 'ueVisual', 'fork', 'replacePaused'];
 const START_NUMBER_FIELDS: { field: string; integer: boolean; max?: number }[] = [
   { field: 'maxIterations', integer: true },
   { field: 'targetPassRate', integer: false, max: 100 },
@@ -336,6 +336,8 @@ export async function POST(request: NextRequest) {
     passRateBasis?: 'verified' | 'self-reported';
     /** Force a fresh forked run (new runId → parent) even over a resumable statePath. */
     fork?: boolean;
+    /** Deliberately displace a paused run that lives at a different statePath. */
+    replacePaused?: boolean;
   };
 
   // Shared validation cap for the free-text creative direction so an unbounded
@@ -440,6 +442,26 @@ export async function POST(request: NextRequest) {
       });
     } catch (err) {
       return apiError(err instanceof Error ? err.message : String(err), 400);
+    }
+
+    // A paused run is still a live run: a start at a different statePath would replace the
+    // orchestrator global and leave that run's row open with nothing in memory able to resume it
+    // (it could only return through a disk rehydrate that needs its statePath). Refuse unless the
+    // caller says the replace is deliberate; a start at the paused run's own statePath continues
+    // that same run and is admitted.
+    const pausedConfig = globalForHarness.harnessConfig;
+    if (
+      globalForHarness.harnessStatus === 'paused'
+      && globalForHarness.harnessOrchestrator
+      && pausedConfig
+      && pausedConfig.statePath !== config.statePath
+      && body.replacePaused !== true
+    ) {
+      const pausedId = globalForHarness.harnessOrchestrator.getRunId?.() ?? 'unknown';
+      return apiError(
+        `A paused run (${pausedId}) at ${pausedConfig.statePath} would be orphaned by this start. Resume it, start at its statePath, or pass replacePaused: true to displace it.`,
+        409,
+      );
     }
 
     // Only an accepted start may replace these: GET reads the last config's statePath and a
