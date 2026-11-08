@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { History, Trash2, GitCompareArrows, RefreshCw } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 
 // ── Session Rail ────────────────────────────────────────────────────────────
@@ -42,6 +43,8 @@ export function SessionRail() {
 
   const [baseId, setBaseId] = useState<string | null>(null);
   const [headId, setHeadId] = useState<string | null>(null);
+  // The capture awaiting delete confirmation: it may be the baseline of a compare.
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   if (sessionList.length === 0) return null;
 
@@ -109,7 +112,7 @@ export function SessionRail() {
               <button
                 type="button"
                 aria-label={`Delete session ${row.name}`}
-                onClick={() => void deleteSession(row.id)}
+                onClick={() => setPendingDelete({ id: row.id, name: row.name })}
                 className="focus-ring p-1 rounded text-text-muted hover:text-red-400 transition-colors"
               >
                 <Trash2 className="w-3 h-3" />
@@ -118,6 +121,14 @@ export function SessionRail() {
           );
         })}
       </ul>
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => deleteSession(pendingDelete!.id)}
+        title="Delete this capture?"
+        description={`${pendingDelete?.name ?? 'This capture'} is removed from the server. If it is your A or B pick for a compare, the pick is cleared.`}
+        confirmLabel="Delete capture"
+      />
     </SurfaceCard>
   );
 }
