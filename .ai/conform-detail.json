@@ -23338,6 +23338,57 @@
         "at": "2026-11-08T03:47:08.702268+00:00",
         "reason": "reviewer (sonnet): The anchor at route.ts:101 is a comment about the provider's capability contract. It does not show that the route has no device audio stream, so it is an incidental anchor and the absence search is thin."
       }
+    },
+    "01327ce7-fd73-460c-841a-3cd2466211ba/procedural-level-planning": {
+      "context": "game-world-content-api",
+      "subject": "procedural-level-planning",
+      "bundle": "game-production",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:03:25.600Z",
+      "techniques": [
+        {
+          "technique": "seed-determinism-contract",
+          "verdict": "deviation",
+          "evidence": "src/app/api/procgen/zone-pins/route.ts:16 The pin keeps seed and params but drops algorithm and generator version, two of the contract's four terms."
+        }
+      ],
+      "withdrawn": {
+        "worker": "80c7ade5-a85f-46df-a85d-1646669aaa13",
+        "state": "deviation",
+        "at": "2026-11-08T04:05:24.923085+00:00",
+        "reason": "reviewer (sonnet): The cited src/app/api/procgen/zone-pins/route.ts is not one of the context's 12 paths in .ai/registry-map.json, so the verdict is about code outside this context, even though the route and src/lib/procgen-db.ts do lack algorithm and version fields."
+      }
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/procedural-level-planning": {
+      "context": "catalog-pipelines",
+      "subject": "procedural-level-planning",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:03:25.600Z",
+      "worker": "80c7ade5-a85f-46df-a85d-1646669aaa13",
+      "techniques": []
+    },
+    "db5bb171-c9ed-4d1f-9ef5-dab6d67580c1/procedural-level-planning": {
+      "context": "hud-theme-and-inventory",
+      "subject": "procedural-level-planning",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:03:25.600Z",
+      "worker": "80c7ade5-a85f-46df-a85d-1646669aaa13",
+      "techniques": []
+    },
+    "e589fc28-aa8c-4cf7-805f-819d1b92d568/procedural-level-planning": {
+      "context": "loot-metrics-designer",
+      "subject": "procedural-level-planning",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T04:03:25.600Z",
+      "worker": "80c7ade5-a85f-46df-a85d-1646669aaa13",
+      "techniques": []
     }
   }
 }
