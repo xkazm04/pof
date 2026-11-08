@@ -411,14 +411,15 @@ export function allPrunePlans(files: ClassifiedFile[], ctx: PruneContext): Prune
  */
 export function referencedNames(text: string, onDisk: ReadonlySet<string>): string[] {
   if (!text) return [];
-  let decoded = text;
-  if (text.includes('%')) {
+  // Decoded per escape run, not as one string: a lone `%` beside an encoded URL made the whole
+  // decode throw, `generated%2Fa.glb` stayed encoded, and a referenced file read as unreferenced.
+  const decoded = text.replace(/(?:%[0-9A-Fa-f]{2})+/g, (run) => {
     try {
-      decoded = decodeURIComponent(text);
+      return decodeURIComponent(run);
     } catch {
-      decoded = text; // a lone `%` is not a reason to skip the row
+      return run;
     }
-  }
+  });
   const hits = new Set<string>();
   for (const m of decoded.matchAll(/[A-Za-z0-9][A-Za-z0-9._-]*\.[A-Za-z0-9]{2,5}/g)) {
     if (onDisk.has(m[0])) hits.add(m[0]);
