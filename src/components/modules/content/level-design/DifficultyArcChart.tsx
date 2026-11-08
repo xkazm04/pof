@@ -103,7 +103,19 @@ export function DifficultyArcChart({
 
         {/* Points */}
         {points.map((p) => (
-          <g key={p.room.id} style={{ cursor: 'pointer' }} onClick={() => onSelectRoom(p.room.id)}>
+          <g
+            key={p.room.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`${p.room.name}, difficulty ${p.room.difficulty}, pacing ${p.room.pacing}`}
+            style={{ cursor: 'pointer' }}
+            onClick={() => onSelectRoom(p.room.id)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              onSelectRoom(p.room.id);
+            }}
+          >
             <circle cx={p.x} cy={p.y} r={6} fill="var(--surface)" stroke={DIFFICULTY_COLORS[p.room.difficulty]} strokeWidth={2} />
             <text
               x={p.x}
