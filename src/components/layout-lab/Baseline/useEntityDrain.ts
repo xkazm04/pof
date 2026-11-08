@@ -1,8 +1,26 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { create } from 'zustand';
 import { drainGates } from '@/components/layout-lab/labArtifactClient';
 import { invalidateArtifacts } from '@/components/layout-lab/labArtifactCache';
 import { useLabRunnerStore } from '@/components/layout-lab/labRunnerStore';
 import { entityDrainOutcome, type EntityDrainOutcome } from '@/components/layout-lab/entityDrainOutcome';
+
+/**
+ * Drain outcomes by `${catalogId}/${entityId}`, module-scoped — NOT component state. Baseline
+ * remounts on every view toggle, so a `useState` map lost every outcome the moment the operator
+ * left for the Matrix, and a drain resolving while Baseline was unmounted reported nowhere
+ * (its header run is dropped by `finishRun(key, null)`). Transient session state, never persisted.
+ */
+const useEntityDrainOutcomes = create<{ outcomes: ReadonlyMap<string, EntityDrainOutcome> }>(() => ({ outcomes: new Map() }));
+
+function recordOutcome(key: string, outcome: EntityDrainOutcome | null) {
+  useEntityDrainOutcomes.setState(({ outcomes }) => {
+    if (!outcome && !outcomes.has(key)) return { outcomes }; // no-op keeps the same reference
+    const next = new Map(outcomes);
+    if (outcome) next.set(key, outcome); else next.delete(key);
+    return { outcomes: next };
+  });
+}
 
 /**
  * The per-entity coach drain ("Run N deferred gates"), extracted from `useBaseline`.
@@ -18,18 +36,9 @@ export function useEntityDrain(catalogId: string | undefined, entityId: string |
   // mid-drain neither blocks the new entity's drain nor attaches the "draining…" affordance
   // to the wrong entity (the `draining` flag reflects only the SELECTED entity). The live run is
   // the lab runner store's (run id = the drain key), so it also survives a Baseline remount.
-  const [outcomes, setOutcomes] = useState<ReadonlyMap<string, EntityDrainOutcome>>(() => new Map());
   const drainKey = catalogId && entityId ? `${catalogId}/${entityId}` : null;
   const draining = useLabRunnerStore((s) => (drainKey ? s.runs[drainKey]?.phase === 'running' : false));
-  const drainOutcome = drainKey ? outcomes.get(drainKey) ?? null : null;
-
-  const recordOutcome = useCallback((key: string, outcome: EntityDrainOutcome | null) => {
-    setOutcomes((prev) => {
-      const next = new Map(prev);
-      if (outcome) next.set(key, outcome); else next.delete(key);
-      return next;
-    });
-  }, []);
+  const drainOutcome = useEntityDrainOutcomes((s) => (drainKey ? s.outcomes.get(drainKey) ?? null : null));
 
   const runDrain = async () => {
     if (!catalogId || !entityId || !drainKey) return;
@@ -51,7 +60,7 @@ export function useEntityDrain(catalogId: string | undefined, entityId: string |
     }
   };
 
-  const dismissDrainOutcome = () => { if (drainKey) recordOutcome(drainKey, null); };
+  const dismissDrainOutcome = useCallback(() => { if (drainKey) recordOutcome(drainKey, null); }, [drainKey]);
 
   return { draining, runDrain, drainOutcome, dismissDrainOutcome };
 }
