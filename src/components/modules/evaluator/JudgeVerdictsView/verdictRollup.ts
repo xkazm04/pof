@@ -1,5 +1,4 @@
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import type { VerdictProvenance } from '@/lib/catalog/acceptance/types';
 import { isStanding, type StandingVerdict } from '@/lib/judge/verdictStanding';
 
 /**
@@ -49,11 +48,6 @@ export interface CatalogVerdictGroup extends VerdictStats {
 /** Does this verdict count toward current quality? Absent provenance → yes (see module note). */
 export function countsAsCurrent(v: ViewVerdict): boolean {
   return v.provenance === undefined || isStanding(v.provenance);
-}
-
-/** Provenance the server computed for this verdict, when the enriched endpoint supplied one. */
-export function provenanceOf(v: ViewVerdict): VerdictProvenance | undefined {
-  return v.provenance;
 }
 
 /** Standing first (a superseded/stale row is evidence, not today's news), then fails, then
