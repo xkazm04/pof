@@ -40,6 +40,7 @@ import type { Result } from '@/types/result';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { createReconnectScheduler } from '@/lib/connection-lifecycle';
 import { logger } from '@/lib/logger';
 
 /** Server-executed console command result (mirrors `RemoteControlClient`). */
@@ -103,8 +104,8 @@ let streamHolders = 0;
 let sawFirstFrame = false;
 /** One auto-connect attempt per stream, not per mount. */
 let autoConnectFired = false;
-/** Pending reopen after the browser gave up on the stream. */
-let reopenTimer: ReturnType<typeof setTimeout> | null = null;
+/** The closed stream a pending reopen will replace, when the browser gave up on it. */
+let pendingReopen: EventSource | null = null;
 /** Consecutive permanent closes; a delivered frame resets it. */
 let reopenAttempts = 0;
 /** `EventSource.CLOSED`: the browser will not retry this one. */
@@ -124,16 +125,27 @@ function detachStream(es: EventSource) {
   es.close();
 }
 
-function scheduleReopen(closed: EventSource) {
-  if (reopenTimer) return;
-  const delay = Math.min(UI_TIMEOUTS.ue5ReconnectBase * 2 ** reopenAttempts, UI_TIMEOUTS.ue5ReconnectMax);
-  reopenAttempts += 1;
-  reopenTimer = setTimeout(() => {
-    reopenTimer = null;
-    if (statusStream !== closed) return;
+/** The shared backoff policy; this hook only says what a retry is. */
+const reopenScheduler = createReconnectScheduler({
+  label: '[useUE5Connection]',
+  backoffBase: UI_TIMEOUTS.ue5ReconnectBase,
+  backoffMax: UI_TIMEOUTS.ue5ReconnectMax,
+  getAttempt: () => reopenAttempts,
+  setAttempt: (n) => { reopenAttempts = n; },
+  shouldRetry: () => pendingReopen !== null,
+  attempt: () => {
+    const closed = pendingReopen;
+    pendingReopen = null;
+    if (!closed || statusStream !== closed) return;
     detachStream(closed);
     statusStream = openStatusStream();
-  }, delay);
+  },
+});
+
+function scheduleReopen(closed: EventSource) {
+  if (pendingReopen) return;
+  pendingReopen = closed;
+  reopenScheduler.schedule();
 }
 
 function openStatusStream(): EventSource {
@@ -183,8 +195,8 @@ function subscribeStatusStream(onLivenessChange: () => void): () => void {
     streamHolders -= 1;
     if (streamHolders > 0) return;
 
-    if (reopenTimer) clearTimeout(reopenTimer);
-    reopenTimer = null;
+    reopenScheduler.clear();
+    pendingReopen = null;
     reopenAttempts = 0;
     if (statusStream) {
       detachStream(statusStream);
