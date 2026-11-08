@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { apiError } from '@/lib/api-utils';
 
 /** Minimal shape this guard needs — satisfied by both NextRequest and the Web `Request`. */
@@ -39,7 +40,7 @@ export function requireOperator(req: HeaderBearing): ReturnType<typeof apiError>
   const token = process.env.POF_OPERATOR_TOKEN;
   if (token) {
     const presented = readBearer(req) ?? req.headers.get('x-operator-token');
-    if (presented !== token) {
+    if (presented === null || !tokensEqual(presented, token)) {
       return apiError('Unauthorized: a valid operator token is required for this endpoint', 401);
     }
     return null;
@@ -52,6 +53,13 @@ export function requireOperator(req: HeaderBearing): ReturnType<typeof apiError>
     return apiError('Forbidden: cross-origin request to a privileged endpoint', 403);
   }
   return null;
+}
+
+/** Constant-time token compare: a length mismatch is rejected up front (lengths are not secret). */
+function tokensEqual(presented: string, token: string): boolean {
+  const a = Buffer.from(presented);
+  const b = Buffer.from(token);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function readBearer(req: HeaderBearing): string | null {

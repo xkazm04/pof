@@ -5,17 +5,25 @@ import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
 import { generationCallbackSchema, lifecycleStateSchema } from '@/lib/catalog/validation';
 import { syncEntityLifecycle } from '@/lib/catalog/headless';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { seededEntities } from '@/lib/catalog/seed';
 import { transitionOutcome } from '@/lib/catalog/generationPlan';
 import { recordTrialForVariantId } from '@/lib/prompt-evolution/engine';
 import { STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
 import { logger } from '@/lib/logger';
 
-/** GET /api/catalog?catalogId=spellbook → LifecycleRecord[] */
+/** GET /api/catalog?catalogId=spellbook → LifecycleRecord[] (404 for a catalog nothing knows) */
 export async function GET(req: NextRequest) {
   try {
     const catalogId = req.nextUrl.searchParams.get('catalogId');
     if (!catalogId) return apiError('catalogId is required', 400);
-    return apiSuccess(listLifecycle(catalogId));
+    const rows = listLifecycle(catalogId);
+    // Same answer as /entities and /lifecycle for a catalog nothing knows (a typo reads as
+    // "no such catalog", not "no entities yet"). A catalog that holds rows, declares a pipeline
+    // or seeds entities is known — including unregistered synthetic ones (loot-filter) with rows.
+    if (!rows.length && !getCatalogPipeline(catalogId) && !seededEntities(catalogId).length) {
+      return apiError(`Unknown catalog: ${catalogId}`, 404);
+    }
+    return apiSuccess(rows);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Catalog GET failed', 500);
   }
