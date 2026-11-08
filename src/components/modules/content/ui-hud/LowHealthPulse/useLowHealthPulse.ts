@@ -50,7 +50,10 @@ function useAnimationTime(active: boolean): [number, () => void] {
     if (!active) accumulatedRef.current = 0;
   }, [active]);
 
+  // Zero the accumulator too: the running frame reads it, so clearing only the
+  // state snapped straight back to the old phase on the next frame.
   const reset = useCallback(() => {
+    accumulatedRef.current = 0;
     setTime(0);
   }, []);
 
