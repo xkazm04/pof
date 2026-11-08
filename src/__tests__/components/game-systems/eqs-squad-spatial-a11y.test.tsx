@@ -125,3 +125,42 @@ describe('PatrolPointsDistribution labels — at the 12px floor and inside the v
     }
   });
 });
+
+describe('SquadMemberGlyph callout — the box holds its text and stays on canvas', () => {
+  it('for every member of every preset formation', async () => {
+    const { SquadMemberGlyph } = await import('@/components/modules/game-systems/SquadChoreographyEditor/SquadMemberGlyph');
+    const { SVG_SIZE, DRAW_RADIUS } = await import('@/components/modules/game-systems/SquadChoreographyEditor/constants');
+    const { runSquadSimulation, PRESET_FORMATIONS, DEFAULT_DIRECTOR_CONFIG } = await import('@/lib/ai-director/squad-engine');
+    const ADVANCE_11PX_MONO = 0.6 * 11;
+    let checked = 0;
+    for (const formation of PRESET_FORMATIONS) {
+      const sim = runSquadSimulation({ ...DEFAULT_DIRECTOR_CONFIG, formation });
+      if (!sim.ok) continue;
+      const maxDist = Math.max(...sim.data.members.map((m) => m.distance), DEFAULT_DIRECTOR_CONFIG.attackDistance);
+      const scale = DRAW_RADIUS / (maxDist * 1.15);
+      for (const member of sim.data.members) {
+        const { container, unmount } = render(
+          <svg><SquadMemberGlyph member={member} scale={scale} isActive onEnter={() => {}} onLeave={() => {}} /></svg>,
+        );
+        const rect = container.querySelector('rect')!;
+        const x = Number(rect.getAttribute('x'));
+        const w = Number(rect.getAttribute('width'));
+        const lines = Array.from(container.querySelectorAll('g g text'));
+        expect(lines.length).toBe(3);
+        for (const t of lines) {
+          const tx = Number(t.getAttribute('x'));
+          expect(tx).toBeGreaterThanOrEqual(x);
+          expect(tx + (t.textContent ?? '').length * ADVANCE_11PX_MONO).toBeLessThanOrEqual(x + w);
+        }
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x + w).toBeLessThanOrEqual(SVG_SIZE);
+        const y = Number(rect.getAttribute('y'));
+        expect(y).toBeGreaterThanOrEqual(0);
+        expect(y + Number(rect.getAttribute('height'))).toBeLessThanOrEqual(SVG_SIZE);
+        unmount();
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(5);
+  });
+});
