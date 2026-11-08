@@ -52,6 +52,11 @@ export function useDamageNumberPhysicsSimulator() {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
   }, []);
 
+  // The latest `tick`, so the running chain always reads the current config
+  // without the effect restarting (and re-zeroing the clock) on every edit.
+  const tickRef = useRef<(timestamp: number) => void>(() => {});
+  const stepLatest = useCallback((timestamp: number) => tickRef.current(timestamp), []);
+
   // Main simulation loop
   const tick = useCallback((timestamp: number) => {
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
@@ -107,13 +112,10 @@ export function useDamageNumberPhysicsSimulator() {
     setParticles(updated);
     setMetrics(computeReadability(updated, physics));
 
-    animFrameRef.current = requestAnimationFrame(tick);
-  }, [physics, combat, canvasW, canvasH]);
-
-  // The loop reads the config captured when the run started (unchanged from
-  // when `toggleRunning` owned the rAF chain), so keep the latest `tick` in a
-  // ref and snapshot it at run start rather than restarting on every edit.
-  const tickRef = useRef(tick);
+    // Schedule through the ref, not this closure: a slider moved mid-run must
+    // reach the next frame (the closure froze the config captured at Play).
+    animFrameRef.current = requestAnimationFrame(stepLatest);
+  }, [physics, combat, canvasW, canvasH, stepLatest]);
   tickRef.current = tick;
 
   const toggleRunning = useCallback(() => {
@@ -145,12 +147,11 @@ export function useDamageNumberPhysicsSimulator() {
   useSuspendableEffect(() => {
     if (!isRunning) return;
     lastTimeRef.current = 0;
-    const step = tickRef.current;
-    animFrameRef.current = requestAnimationFrame(step);
+    animFrameRef.current = requestAnimationFrame(stepLatest);
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isRunning]);
+  }, [isRunning, stepLatest]);
 
   // Cleanup on unmount
   useEffect(() => {
