@@ -76,7 +76,7 @@ export function useModuleReviewCli(
 
   const handleItemCompleted = useCallback((itemId: string) => {
     setLastCompletedId(itemId);
-    setTimeout(() => setLastCompletedId(null), 2000);
+    setTimeout(() => setLastCompletedId(null), UI_TIMEOUTS.completionFlash);
   }, []);
 
   const checklistCli = useChecklistCLI({
