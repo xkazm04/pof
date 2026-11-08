@@ -8,6 +8,7 @@ import { selected } from '@/lib/catalog/acceptance/dataCheckers';
 import { appendBatch, emptyHistory, historyData, makeBatch } from '@/components/layout-lab/steps/shared/genHistory';
 import type { StepSpec } from '@/lib/catalog/stepSpec';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
+import { AssetTarget } from '@/components/layout-lab/steps/shared/assetHonesty';
 
 /**
  * The gallery "Selected" panel's `✓ asset target` line must name the target the STORED artifact
@@ -50,6 +51,22 @@ describe('ArchetypeStep gallery — asset target comes from the stored artifact'
   it('a recorded target is shown as the stored one', () => {
     seed(['/Game/UI/Icons/T_Stored_Icon']);
     render(<ArchetypeStep t={t} entity={entity} step={STEP} spec={spec} />);
-    expect(screen.getByTestId('gallery-asset-target').textContent).toContain('✓ asset target: /Game/UI/Icons/T_Stored_Icon');
+    const panel = screen.getByTestId('gallery-asset-target');
+    expect(panel.textContent).toContain('asset target: /Game/UI/Icons/T_Stored_Icon');
+    expect(panel.textContent).not.toContain('✓');
+    expect((panel.querySelector('span span') as HTMLElement).style.color).not.toBe(t.ok);
   });
 });
+
+/** A target is not a delivered file: no check glyph and no `ok` colour on the line, in either path. */
+describe('AssetTarget — a target never reads as a delivered asset', () => {
+  it('draws no check glyph and no ok colour', () => {
+    const { container } = render(<AssetTarget t={t} path="/Game/UI/Icons/T_X" />);
+    const el = screen.getByTestId('asset-target');
+    expect(container.textContent).toContain('asset target: /Game/UI/Icons/T_X');
+    expect(el.textContent).not.toContain('✓');
+    expect(el.style.color).not.toBe(t.ok);
+    expect(el.style.color).toBe(t.muted);
+  });
+});
+
