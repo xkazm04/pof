@@ -3,10 +3,22 @@ import { ACCENT_EMERALD, STATUS_INFO, STATUS_NEUTRAL, OPACITY_20 } from '@/lib/c
 
 // ── Simple Chart Components (CSS-based, no chart library) ───────────────────
 
-export function BarChartSimple({ data, color }: { data: { label: string; value: number }[]; color: string }) {
+type Point = { label: string; value: number };
+
+/** Text alternative for a series: count, first, last and direction (WCAG 1.1.1). */
+export function describeSeries(title: string, points: Point[]): string {
+  if (points.length === 0) return `${title}: no data`;
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (points.length === 1) return `${title}: 1 point, ${last.label} ${last.value}`;
+  const trend = last.value > first.value ? 'rising' : last.value < first.value ? 'falling' : 'flat';
+  return `${title}: ${points.length} points, first ${first.label} ${first.value}, last ${last.label} ${last.value}, ${trend}`;
+}
+
+export function BarChartSimple({ data, color, title = 'Weekly velocity' }: { data: Point[]; color: string; title?: string }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
-    <div className="flex items-end gap-1.5 h-32">
+    <div className="flex items-end gap-1.5 h-32" role="img" aria-label={describeSeries(title, data)}>
       {data.map((d) => (
         <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
           <span className="text-xs text-text-muted">{d.value}</span>
@@ -23,7 +35,7 @@ export function BarChartSimple({ data, color }: { data: { label: string; value: 
   );
 }
 
-export function LineChartSimple({ data, color }: { data: { label: string; value: number }[]; color: string }) {
+export function LineChartSimple({ data, color, title = 'Quality score trend' }: { data: Point[]; color: string; title?: string }) {
   if (data.length === 0) return null;
   const max = Math.max(...data.map((d) => d.value), 1);
   const min = Math.min(...data.map((d) => d.value), 0);
@@ -31,7 +43,7 @@ export function LineChartSimple({ data, color }: { data: { label: string; value:
   const h = 120;
 
   return (
-    <div className="relative" style={{ height: h + 24 }}>
+    <div className="relative" style={{ height: h + 24 }} role="img" aria-label={describeSeries(title, data)}>
       {/* Grid lines */}
       {[0, 25, 50, 75, 100].map((pct) => (
         <div
@@ -72,14 +84,14 @@ export function LineChartSimple({ data, color }: { data: { label: string; value:
   );
 }
 
-export function AreaChartSimple({ data, total }: { data: { label: string; completed: number; ideal: number }[]; total: number }) {
+export function AreaChartSimple({ data, total, title = 'Cumulative progress' }: { data: { label: string; completed: number; ideal: number }[]; total: number; title?: string }) {
   if (data.length === 0) return null;
   const h = 120;
   const w = data.length * 60;
   const safeTotal = total || 1;
 
   return (
-    <div className="relative" style={{ height: h + 24 }}>
+    <div className="relative" style={{ height: h + 24 }} role="img" aria-label={`${describeSeries(title, data.map((d) => ({ label: d.label, value: d.completed })))} of ${total} items`}>
       <svg className="absolute inset-0" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
         {/* Ideal line (dashed) */}
         <polyline
@@ -110,14 +122,14 @@ export function AreaChartSimple({ data, total }: { data: { label: string; comple
   );
 }
 
-export function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: number }) {
+export function BurndownChart({ data, total, title = 'Burndown' }: { data: BurnChartPoint[]; total: number; title?: string }) {
   if (data.length === 0) return null;
   const h = 120;
   const w = data.length * 60;
   const safeTotal = total || 1;
 
   return (
-    <div className="relative" style={{ height: h + 24 }}>
+    <div className="relative" style={{ height: h + 24 }} role="img" aria-label={`${describeSeries(title, data.map((d) => ({ label: d.weekLabel, value: d.remaining })))} remaining of ${total} items`}>
       <svg className="absolute inset-0" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
         {/* Ideal burndown (dashed) */}
         <polyline
