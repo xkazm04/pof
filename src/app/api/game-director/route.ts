@@ -51,6 +51,16 @@ function normalizeSource(value: unknown, fallback: SessionSource): SessionSource
   return value === 'external' || value === 'simulated' ? value : fallback;
 }
 
+/** Every `PlaytestStatus` — the same set as the sessions table's CHECK. The
+ *  `Record` makes a status added to the type fail to compile until it is listed. */
+const PLAYTEST_STATUS_SET: Record<PlaytestStatus, true> = {
+  configuring: true, launching: true, playing: true, analyzing: true, complete: true, failed: true,
+};
+
+function isPlaytestStatus(value: unknown): value is PlaytestStatus {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLAYTEST_STATUS_SET, value);
+}
+
 /** Append one completion-pipeline disclosure to a session's timeline. */
 function stampPipelineEvent(sessionId: string, tag: string, message: string, data?: Record<string, unknown>) {
   addEvent({
@@ -249,7 +259,12 @@ export async function POST(req: Request) {
       }
 
       case 'update-status': {
-        const { sessionId, status } = body as { action: string; sessionId: string; status: PlaytestStatus };
+        const { sessionId, status } = body as { action: string; sessionId?: unknown; status?: unknown };
+        if (typeof sessionId !== 'string' || !sessionId) return apiError('sessionId required', 400);
+        // Refused here rather than at the table's CHECK, which surfaced as a 500.
+        if (!isPlaytestStatus(status)) return apiError(`Unknown session status: ${String(status)}`, 400);
+        // An UPDATE over a missing id touches nothing — say so instead of `ok: true`.
+        if (!getSession(sessionId)) return apiError('Session not found', 404);
         updateSessionStatus(sessionId, status);
         return apiSuccess({ ok: true });
       }
