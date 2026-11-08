@@ -39,6 +39,33 @@ import type {
 
 type LiveStateHandler = (state: LiveEditorState) => void;
 
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const isVec = (v: unknown, keys: string[]): boolean =>
+  isRecord(v) && keys.every((k) => typeof v[k] === 'number');
+
+/**
+ * The one validation door for state.snapshot frames. Panels read viewport,
+ * selectedActors and friends unguarded, so a frame missing any of them
+ * (plugin version mismatch) must be rejected here, not crash a render.
+ */
+export function isValidSnapshot(p: unknown): p is UE5EditorSnapshot {
+  if (!isRecord(p)) return false;
+  const vp = p.viewport;
+  return typeof p.timestamp === 'number'
+    && typeof p.editorState === 'string'
+    && typeof p.openLevel === 'string'
+    && Array.isArray(p.selectedActors)
+    && Array.isArray(p.dirtyPackages)
+    && (p.pieState == null || isRecord(p.pieState))
+    && isRecord(vp)
+    && typeof vp.fov === 'number'
+    && typeof vp.viewMode === 'string'
+    && isVec(vp.cameraLocation, ['x', 'y', 'z'])
+    && isVec(vp.cameraRotation, ['pitch', 'yaw', 'roll']);
+}
+
 // ── Live State Client ───────────────────────────────────────────────────────
 
 class UE5LiveStateClient {
@@ -334,6 +361,10 @@ class UE5LiveStateClient {
   }
 
   private handleSnapshot(snapshot: UE5EditorSnapshot) {
+    if (!isValidSnapshot(snapshot)) {
+      logger.warn('[UE5-WS] Rejected malformed state.snapshot frame');
+      return;
+    }
     this.setState({
       snapshot,
       lastSnapshotTime: snapshot.timestamp,
@@ -367,7 +398,10 @@ class UE5LiveStateClient {
     });
   }
 
-  private handlePropertyUpdate(update: PropertyWatchUpdate) {
+  private handlePropertyUpdate(raw: PropertyWatchUpdate) {
+    // The plugin's timestamp is FPlatformTime (arbitrary origin), not wall
+    // clock; stamp arrival on the client so the panel's freshness label is true.
+    const update: PropertyWatchUpdate = { ...raw, timestamp: Date.now() };
     this.watchValues.set(update.watchId, update);
     const next = new Map(this.state.propertyWatches);
     next.set(update.watchId, update);
