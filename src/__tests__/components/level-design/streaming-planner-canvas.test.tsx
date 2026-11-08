@@ -1,10 +1,11 @@
 /**
  * What the streaming planner draws on its grid has to agree with the plan it draws.
  */
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import { ZoneCell } from '@/components/modules/content/level-design/StreamingZonePlanner/ZoneCell';
 import { CELL_SIZE } from '@/components/modules/content/level-design/StreamingZonePlanner/constants';
+import { ZoneGrid } from '@/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid';
 import { TransitionLines } from '@/components/modules/content/level-design/StreamingZonePlanner/TransitionLines';
 import { TRANSITION_STYLES } from '@/components/modules/content/level-design/StreamingZonePlanner/constants';
 import type { TransitionLine } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
@@ -53,5 +54,34 @@ describe('TransitionLines condition badge', () => {
     expect(text.length).toBeLessThan(CONDITION.length);
     const width = Number(container.querySelector('rect')!.getAttribute('width'));
     expect(width).toBeLessThan(CONDITION.length * 6);
+  });
+});
+
+describe('ZoneGrid keyboard', () => {
+  const setup = () => {
+    const handleCellClick = vi.fn();
+    render(
+      <ZoneGrid gridSize={7} paintType={null} linkingFrom={null} transitionLines={[]} zones={[ZONE]}
+        zoneAt={(x, y) => (x === ZONE.gridX && y === ZONE.gridY ? ZONE : null)}
+        handleCellClick={handleCellClick} deleteTransition={() => {}} selectedZoneId={null} />,
+    );
+    return { handleCellClick, grid: screen.getByRole('application', { name: /zone grid, 1 zones?/i }) };
+  };
+
+  it('is one tab stop; arrows move a cursor, clamped at the edge, Enter acts on its cell', () => {
+    const { handleCellClick, grid } = setup();
+    expect(grid.getAttribute('tabindex')).toBe('0');
+    fireEvent.keyDown(grid, { key: 'ArrowUp' });
+    fireEvent.keyDown(grid, { key: 'ArrowRight' });
+    fireEvent.keyDown(grid, { key: 'ArrowDown' });
+    fireEvent.keyDown(grid, { key: 'Enter' });
+    expect(handleCellClick).toHaveBeenCalledWith(1, 1);
+  });
+
+  it('announces the cell under the cursor by zone name', () => {
+    const { grid } = setup();
+    fireEvent.focus(grid);
+    for (const key of ['ArrowRight', 'ArrowRight', 'ArrowDown', 'ArrowDown', 'ArrowDown']) fireEvent.keyDown(grid, { key });
+    expect(screen.getByRole('status').textContent).toMatch(/Town/);
   });
 });

@@ -1,4 +1,6 @@
-import { CELL_SIZE } from './constants';
+import { useState, type KeyboardEvent } from 'react';
+import { MODULE_COLORS } from '@/lib/constants';
+import { CELL_SIZE, ZONE_TYPES } from './constants';
 import { TransitionLines } from './TransitionLines';
 import { ZoneCell } from './ZoneCell';
 import type { StreamingZone, ZoneType, TransitionLine } from './types';
@@ -29,6 +31,24 @@ export function ZoneGrid({
   selectedZoneId,
   residentIds = null,
 }: ZoneGridProps) {
+  // The grid is one tab stop: arrows move this cursor, Enter/Space click its cell.
+  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const [focused, setFocused] = useState(false);
+  const underCursor = zoneAt(cursor.x, cursor.y);
+  const cursorLabel = `${underCursor ? `${underCursor.name}, ${ZONE_TYPES[underCursor.type].label}` : 'Empty cell'}, column ${cursor.x + 1}, row ${cursor.y + 1}`;
+
+  const onKeyDown = (e: KeyboardEvent<SVGSVGElement>) => {
+    const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (step) {
+      e.preventDefault();
+      const clamp = (n: number) => Math.max(0, Math.min(gridSize - 1, n));
+      setCursor((c) => ({ x: clamp(c.x + step[0]), y: clamp(c.y + step[1]) }));
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleCellClick(cursor.x, cursor.y);
+    }
+  };
+
   return (
     <div className="flex-1 min-w-[550px] bg-[#03030a] rounded-2xl border-2 border-surface-deep shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-4 relative overflow-hidden flex items-center justify-center">
 
@@ -41,7 +61,13 @@ export function ZoneGrid({
       <svg
         width={gridSize * CELL_SIZE + 2}
         height={gridSize * CELL_SIZE + 2}
-        className="block"
+        className="block outline-none"
+        role="application"
+        tabIndex={0}
+        aria-label={`Streaming zone grid, ${zones.length} zone${zones.length === 1 ? '' : 's'}, ${gridSize} by ${gridSize}. Arrow keys move, Enter acts on the cell.`}
+        onKeyDown={onKeyDown}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={{
           cursor: paintType ? 'crosshair' : linkingFrom ? 'crosshair' : 'default',
         }}
@@ -97,7 +123,19 @@ export function ZoneGrid({
             handleCellClick={handleCellClick}
           />
         ))}
+
+        {/* Keyboard cursor */}
+        {focused && (
+          <rect
+            data-grid-cursor="true"
+            x={cursor.x * CELL_SIZE + 1} y={cursor.y * CELL_SIZE + 1}
+            width={CELL_SIZE - 1} height={CELL_SIZE - 1} rx={8}
+            fill="none" stroke={MODULE_COLORS.content} strokeWidth={2}
+            className="pointer-events-none"
+          />
+        )}
       </svg>
+      <span role="status" className="sr-only">{focused ? cursorLabel : ''}</span>
 
       {/* Floating Hint Overlay */}
       {linkingFrom && (
