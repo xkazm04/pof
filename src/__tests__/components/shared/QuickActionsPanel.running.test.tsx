@@ -48,3 +48,12 @@ describe('QuickActionsPanel — Enter obeys the running guard', () => {
     expect(input.value).toBe('');
   });
 });
+
+describe('QuickActionsPanel — Enter that commits an IME composition is not a send', () => {
+  it('does not dispatch while the input method is composing', () => {
+    const { onRunPrompt, input } = renderPanel(false);
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    expect(onRunPrompt).not.toHaveBeenCalled();
+    expect(input.value).toBe('add a dodge roll');
+  });
+});
