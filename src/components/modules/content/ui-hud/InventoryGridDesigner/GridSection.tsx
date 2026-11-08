@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Check } from 'lucide-react';
 import type { InventoryConfig, SlotTypeConfig, EquipmentSlotConfig } from '@/lib/prompts/inventory';
 import { DimensionControl } from './DimensionControl';
@@ -142,16 +142,32 @@ export function GridSection({
         {config.stackable && (
           <div className="flex items-center gap-3 pl-6 border-l border-violet-900/40">
             <span className="text-xs font-bold uppercase text-violet-400/80">Stack Limit:</span>
-            <input
-              type="number"
-              aria-label="Stack limit"
+            <StackLimitInput
               value={config.maxStackSize}
-              onChange={(e) => setConfig((c) => ({ ...c, maxStackSize: Math.max(1, Math.min(9999, Number(e.target.value) || 1)) }))}
-              className="w-20 px-3 py-1.5 bg-black/50 border border-violet-900/60 rounded-lg text-[11px] font-mono text-violet-200 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 transition-all shadow-inner text-center"
+              onCommit={(v) => setConfig((c) => ({ ...c, maxStackSize: v }))}
             />
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+/** Number field with a string draft: an emptied field stays empty while typing; clamped to [1, 9999] on blur. */
+function StackLimitInput({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input
+      type="number"
+      aria-label="Stack limit"
+      value={draft ?? value}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (draft === null) return;
+        onCommit(Math.max(1, Math.min(9999, Math.round(Number(draft)) || 1)));
+        setDraft(null);
+      }}
+      className="w-20 px-3 py-1.5 bg-black/50 border border-violet-900/60 rounded-lg text-[11px] font-mono text-violet-200 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 transition-all shadow-inner text-center"
+    />
   );
 }
