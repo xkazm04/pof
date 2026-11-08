@@ -70,7 +70,8 @@ export function useAssetCodeOracle(): AssetCodeOracleState {
     }
     setLoading(true);
     setError(null);
-    setResult(null);
+    // The previous result stays on screen (the view marks it as rescanning): a remedy's
+    // completion reruns this, and blanking the list hid the very outcome the user waits for.
     try {
       const project = await apiFetch<{ classes: ScannedClass[] }>('/api/filesystem/scan-project', {
         ...POST_JSON, body: JSON.stringify({ projectPath, moduleName: projectName }),
@@ -106,6 +107,8 @@ export function useAssetCodeOracle(): AssetCodeOracleState {
       setResult(oracle);
       recordConsistencyScan(projectKey, score, oracle.violations.map((v) => v.id));
     } catch (err) {
+      // A failed scan must not leave the previous result presented as current.
+      setResult(null);
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);
@@ -130,7 +133,7 @@ export function useAssetCodeOracle(): AssetCodeOracleState {
 
   const fix = useCallback(
     (type: ViolationType) => {
-      if (!result) return;
+      if (!result || loading) return;
       const plan = planOracleRemedy(type, result.violations);
       if (!plan) return;
       remedyPending.current = true;
@@ -141,7 +144,7 @@ export function useAssetCodeOracle(): AssetCodeOracleState {
         logger.warn('[asset-oracle] remedy dispatch failed', e);
       });
     },
-    [result, cli],
+    [result, loading, cli],
   );
 
   return {

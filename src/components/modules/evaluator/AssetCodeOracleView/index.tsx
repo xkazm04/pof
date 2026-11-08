@@ -111,9 +111,15 @@ export function AssetCodeOracleView() {
         </div>
       )}
 
-      {/* Results */}
+      {/* Results (kept, dimmed, while a rescan is pending) */}
       {result && !nothingScanned && (
-        <>
+        <div className={`space-y-5 transition-opacity ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
+          {loading && (
+            <p role="status" className="flex items-center gap-1.5 text-2xs text-text-muted">
+              <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+              Rescanning - showing the previous result until it lands.
+            </p>
+          )}
           {/* Stats bar — consistency hero spans 2 columns, supporting metrics fill the rest */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <ConsistencyHeroCard score={result.stats.consistencyScore} delta={scanDelta} />
@@ -143,7 +149,7 @@ export function AssetCodeOracleView() {
             </div>
           )}
 
-          <RemedyBar violations={result.violations} onFix={fix} running={remedyRunning} remedy={remedy} />
+          <RemedyBar violations={result.violations} onFix={fix} running={remedyRunning || loading} remedy={remedy} />
 
           {/* Section toggle */}
           <div className="flex items-center gap-1 border-b border-border">
@@ -217,7 +223,7 @@ export function AssetCodeOracleView() {
               edges={result.dependencyGraph.edges}
             />
           )}
-        </>
+        </div>
       )}
 
       {/* Empty state */}
