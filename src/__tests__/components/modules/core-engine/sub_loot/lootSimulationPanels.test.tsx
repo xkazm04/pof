@@ -22,6 +22,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
 
 import { EXPANDED_ENTRIES } from '@/components/modules/core-engine/sub_loot/_shared/data';
 import { ECONOMY_KILLS_PER_HOUR } from '@/components/modules/core-engine/sub_loot/simulation/lootSimEngine';
+import { SmartLoot } from '@/components/modules/core-engine/sub_loot/economy/SmartLoot';
 import { EconomyImpact } from '@/components/modules/core-engine/sub_loot/economy/EconomyImpact';
 import { PityCohortChart } from '@/components/modules/core-engine/sub_loot/pity/PityCohortChart';
 import { PityTimerSection } from '@/components/modules/core-engine/sub_loot/pity/PityTimerSection';
@@ -166,5 +167,17 @@ describe('Economy profile scale has one authority', () => {
     expect(gold()).toEqual(casual.map((g) => Math.round(g * ratio)));
     // Weapons surplus +5 per casual hour.
     expect(container.textContent).toContain(`+${Math.round(5 * ratio * 10) / 10}`);
+  });
+});
+
+describe('SmartLoot mode toggle', () => {
+  it('is a named switch that reports its state', () => {
+    const { container } = render(<SmartLoot />);
+    const sw = container.querySelector('[role="switch"]');
+    expect(sw).not.toBeNull();
+    expect(sw!.getAttribute('aria-label')).toBe('Smart loot mode');
+    expect(sw!.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(sw!);
+    expect(sw!.getAttribute('aria-checked')).toBe('true');
   });
 });

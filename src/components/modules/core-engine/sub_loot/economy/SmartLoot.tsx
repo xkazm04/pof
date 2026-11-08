@@ -20,7 +20,10 @@ export function SmartLoot() {
           <span className="text-2xs text-text-muted">{smartMode ? 'Smart' : 'Raw'}</span>
           <button
             onClick={() => setSmartMode((v) => !v)}
-            className="w-8 h-4 rounded-full relative transition-colors"
+            role="switch"
+            aria-checked={smartMode}
+            aria-label="Smart loot mode"
+            className="w-8 h-4 rounded-full relative transition-colors focus-ring cursor-pointer"
             style={{ backgroundColor: smartMode ? ACCENT_VIOLET : STATUS_SUBDUED }}
           >
             <motion.div
