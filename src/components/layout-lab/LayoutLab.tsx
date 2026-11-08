@@ -74,6 +74,10 @@ export function LayoutLab() {
   const workQueue = useLabWorkQueue(catalogId, entityId, nav.open); // Matrix queue: Next opens each stop like a cell
 
   // Names this entry as the lab (legacy=0) before pushing legacy=1, so Back returns here.
+  // The skip link's target: Baseline's <main id="lab-canvas"> exists only on the composed Catalogs
+  // view; every other view (Matrix, Canon, Game, the empty-game board) is reached at the view wrapper.
+  const skipTarget = view === 'catalogs' && groups.length > 0 ? 'lab-canvas' : 'lab-view';
+
   const switchToLegacy = useCallback(() => { requestShellSwitch('legacy'); }, []);
   // The header's drain lane opens a finished drain's catalog on the Matrix (drain runs live in labRunnerStore).
   const openDrain = useCallback((c: string) => { if (c !== catalogId) nav.catalog(c); nav.view('matrix'); }, [catalogId, nav]);
@@ -90,7 +94,7 @@ export function LayoutLab() {
       className={labFontVars}
       style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}
     >
-      <a href="#lab-canvas" className="focus-ring"
+      <a href={`#${skipTarget}`} className="focus-ring"
          style={{ position: 'fixed', left: 'var(--lab-s2)', top: 'var(--lab-s2)', zIndex: 50,
                   padding: 'var(--lab-s2) var(--lab-s3)', background: 'var(--lab-panel)',
                   border: '1px solid var(--lab-line)', color: 'var(--lab-ink)',
@@ -152,7 +156,7 @@ export function LayoutLab() {
             the Matrix and Canon carry their own catalog-wide summaries. */}
         {view === 'catalogs' && groups.length > 0 && <><GlobalCoach t={theme} /><WorkQueueStrip q={workQueue} /></>}
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={view}
+          <motion.div key={view} id="lab-view" tabIndex={-1}
             initial={reduce ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
