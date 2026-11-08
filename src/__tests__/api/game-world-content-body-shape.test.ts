@@ -89,3 +89,20 @@ describe('/api/procgen/zone-pins request shape', () => {
     await expect400(await POST(req('/api/procgen/zone-pins', 'POST', raw)));
   });
 });
+
+describe('/api/animations/mixamo-result body shape', () => {
+  it.each(['{"importedCount":', 'null'])('POST refuses malformed or non-object JSON %s', async (raw) => {
+    const { POST } = await import('@/app/api/animations/mixamo-result/route');
+    await expect400(await POST(req('/api/animations/mixamo-result', 'POST', raw)));
+  });
+  it.each([null, '', ' ', -1, 2.5, true])('POST refuses importedCount %j instead of recording it as a run', async (importedCount) => {
+    const { POST } = await import('@/app/api/animations/mixamo-result/route');
+    await expect400(await POST(req('/api/animations/mixamo-result', 'POST', JSON.stringify({ importedCount, importDir: 'x' }))));
+  });
+  it.each([[4, 4], ['3', 3], [0, 0]])('control: importedCount %j is recorded as %d', async (importedCount, stored) => {
+    const { POST } = await import('@/app/api/animations/mixamo-result/route');
+    const res = await POST(req('/api/animations/mixamo-result', 'POST', JSON.stringify({ importedCount, importDir: 'x' })));
+    expect(res.status).toBe(201);
+    expect((await res.json()).data.importedCount).toBe(stored);
+  });
+});
