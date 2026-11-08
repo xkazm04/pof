@@ -6,7 +6,7 @@ import { MODULE_COLORS } from '@/lib/constants';
 import { ACCENT_VIOLET } from '@/lib/chart-colors';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { logger } from '@/lib/logger';
 import { CATEGORY_META, SHADER_SCRIPT_MAP, MATERIAL_PATTERNS } from './constants';
 import { PatternCard } from './PatternCard';

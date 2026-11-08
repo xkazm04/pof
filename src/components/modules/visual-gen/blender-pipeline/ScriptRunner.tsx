@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
-import { tryApiFetch } from '@/lib/api-utils';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { SUCCESS_TEXT, ERROR_TEXT } from '@/lib/blender-mcp/status-tokens';
 import { useBlenderStore, SCRIPT_HISTORY_CAP, type ScriptJob, type ScriptStatus } from './useBlenderStore';
 
@@ -65,46 +63,8 @@ function ScriptCard({ job }: { job: ScriptJob }) {
   );
 }
 
-/**
- * THE dispatcher for `/api/blender-mcp/execute`.
- *
- * Every Python script PoF sends to Blender must go through here, because this
- * is also what records it in the Script History panel — the panel presented to
- * the user as the record of what PoF ran in their Blender. Call sites that
- * fetched the route directly were invisible there (the panel would still say
- * "No scripts have been run yet" after a real dispatch), and several of them
- * discarded the `Result` entirely, so a failed script and a successful one were
- * indistinguishable on screen.
- *
- * `src/__tests__/lib/blender-mcp/execute-dispatch-guard.test.ts` enforces this:
- * a NEW raw fetch of the execute route fails the build.
- */
-export async function executeViaMCP(scriptName: string, scriptCode: string) {
-  const { addScript, updateScript } = useBlenderStore.getState();
-  const jobId = addScript(scriptName, []);
-
-  const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: scriptCode }),
-  });
-
-  if (result.ok) {
-    updateScript(jobId, {
-      status: 'completed',
-      output: result.data.output,
-      completedAt: Date.now(),
-    });
-  } else {
-    updateScript(jobId, {
-      status: 'failed',
-      error: result.error,
-      completedAt: Date.now(),
-    });
-  }
-
-  return result;
-}
+/** The dispatcher lives in `@/lib/blender-mcp/dispatch`; re-exported for compatibility. */
+export { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 
 export function ScriptRunner() {
   const scripts = useBlenderStore((s) => s.scripts);

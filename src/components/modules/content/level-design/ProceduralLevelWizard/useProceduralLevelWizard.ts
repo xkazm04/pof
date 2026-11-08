@@ -3,7 +3,7 @@
 import { useCallback, useRef, useMemo, useEffect, useDeferredValue, useReducer } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
 import { logger } from '@/lib/logger';

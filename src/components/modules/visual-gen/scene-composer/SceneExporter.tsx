@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Download } from 'lucide-react';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { exportSceneScript } from '@/lib/blender-mcp/scripts/export-scene';
 import { readReceipt } from '@/lib/blender-mcp/receipt';
 

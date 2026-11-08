@@ -8,7 +8,7 @@ import { MODULE_COLORS } from '@/lib/constants';
 import { ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { compositorStackScript } from '@/lib/blender-mcp/scripts/compositor-stack';
 import { logger } from '@/lib/logger';
 import { estimateGPUBudget } from '@/lib/post-process-studio/gpu-estimator';

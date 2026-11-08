@@ -1,7 +1,7 @@
 import {
   ACCENT_VIOLET, ACCENT_ORANGE, MODULE_COLORS,
 } from '@/lib/chart-colors';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import type { Result } from '@/types/result';

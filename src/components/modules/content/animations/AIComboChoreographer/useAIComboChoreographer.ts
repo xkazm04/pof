@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { comboAnimationScript } from '@/lib/blender-mcp/scripts/combo-animation';
 import type { ComboHit } from '@/lib/blender-mcp/scripts/combo-animation';
 import { logger } from '@/lib/logger';

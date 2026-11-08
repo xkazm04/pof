@@ -5,7 +5,7 @@ import type { VegetationConfig, ScatterPoint } from '@/lib/visual-gen/generators
 import { DEFAULT_TERRAIN_CONFIG } from '@/lib/visual-gen/generators/terrain';
 import { DEFAULT_DUNGEON_CONFIG } from '@/lib/visual-gen/generators/dungeon';
 import { DEFAULT_VEGETATION_CONFIG } from '@/lib/visual-gen/generators/vegetation';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { RECEIPT_MARKER, readReceipt } from '@/lib/blender-mcp/receipt';
 import { logger } from '@/lib/logger';
 import {

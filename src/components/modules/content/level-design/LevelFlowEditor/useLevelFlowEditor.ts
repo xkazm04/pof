@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { RoomNode } from '@/types/level-design';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { levelBlockoutScript } from '@/lib/blender-mcp/scripts/level-blockout';
 import type { BlockoutRoom } from '@/lib/blender-mcp/scripts/level-blockout';
 import { logger } from '@/lib/logger';
