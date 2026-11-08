@@ -103,3 +103,29 @@ describe('search failure', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
+
+describe('search pending state', () => {
+  it('a typed query reads as Searching during the debounce, not as "No results"', async () => {
+    const input = await openPalette();
+    fireEvent.change(input, { target: { value: 'dodge' } });
+    expect(screen.queryByText(/No results for/)).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('Searching…');
+  });
+
+  it('a response arriving after the query was cleared never lands', async () => {
+    let release: (v: unknown) => void = () => {};
+    apiFetch.mockImplementation((url: string) => {
+      if (url.includes('rebuild')) return Promise.resolve({ indexed: 1 });
+      return new Promise((r) => { release = r; });
+    });
+    const input = await openPalette();
+    fireEvent.change(input, { target: { value: 'dodge' } });
+    await vi.waitFor(() => expect(apiFetch.mock.calls.some(([u]) => String(u).includes('q=dodge'))).toBe(true));
+    fireEvent.change(input, { target: { value: '' } });
+    await act(async () => {
+      release({ results: [{ id: 'cl-arpg-combat-x', type: 'checklist', moduleId: 'arpg-combat', moduleLabel: 'Combat', title: 'Late hit', snippet: '', rank: 0 }], count: 1, lastRebuilt: null });
+    });
+    fireEvent.change(input, { target: { value: 'other' } });
+    expect(screen.queryByText('Late hit')).toBeNull();
+  });
+});

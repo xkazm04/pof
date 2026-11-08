@@ -38,7 +38,6 @@ export function useGlobalSearchPanel() {
   const [query, setQuery] = useState('');
   const [searchResults, setResults] = useState<SearchResult[]>([]);
   const [recents, setRecents] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [lastRebuilt, setLastRebuilt] = useState<string | null>(null);
@@ -46,6 +45,11 @@ export function useGlobalSearchPanel() {
   const [searchFailed, setSearchFailed] = useState(false);
   // Bumped to re-run the current query without changing it (Retry).
   const [searchNonce, setSearchNonce] = useState(0);
+  // Which search the shown outcome answers. `loading` is derived from it, so the
+  // debounce window counts as searching and cannot read as "No results".
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  const searchKey = query.trim() ? JSON.stringify([query, activeFilter, searchNonce]) : null;
+  const loading = searchKey !== null && settledKey !== searchKey;
 
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -94,6 +98,7 @@ export function useGlobalSearchPanel() {
       setResults([]);
       setActiveIndex(0);
       setSearchFailed(false);
+      searchSeqRef.current++; // an in-flight response no longer answers anything
       return;
     }
 
@@ -104,7 +109,6 @@ export function useGlobalSearchPanel() {
       // token is no longer current is dropped so an out-of-order (slower, older)
       // response can't clobber the results of a newer query.
       const seq = ++searchSeqRef.current;
-      setLoading(true);
       try {
         const params = new URLSearchParams({ q: query });
         if (activeFilter) params.set('types', activeFilter);
@@ -119,13 +123,15 @@ export function useGlobalSearchPanel() {
         setResults([]);
         setSearchFailed(true);
       } finally {
-        if (seq === searchSeqRef.current) setLoading(false);
+        if (seq === searchSeqRef.current) setSettledKey(searchKey);
       }
     }, 180);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
+    // searchKey is derived from exactly these three.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, activeFilter, searchNonce]);
 
   // ── Rebuild index ──
