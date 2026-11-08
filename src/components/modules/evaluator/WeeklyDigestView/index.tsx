@@ -11,7 +11,7 @@ import { useIsMounted } from '@/hooks/useIsMounted';
 import type { WeeklyDigest } from '@/types/weekly-digest';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { formatDuration } from '@/lib/format';
-import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE } from '@/lib/chart-colors';
+import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, STATUS_ERROR, ACCENT_ORANGE } from '@/lib/chart-colors';
 import { FetchError } from '@/components/modules/shared/FetchError';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { CompletionLedger } from '@/lib/roadmap/completion-ledger';
@@ -35,6 +35,7 @@ export function WeeklyDigestView() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMounted = useIsMounted();
   /** 0 = the current week; N = N weeks back. */
@@ -76,7 +77,13 @@ export function WeeklyDigestView() {
   const handleCopy = useCallback(async () => {
     if (!digest) return;
     const md = formatDigestMarkdown(digest, landed ?? undefined);
-    await navigator.clipboard.writeText(md);
+    setShareError(null);
+    try {
+      await navigator.clipboard.writeText(md);
+    } catch {
+      setShareError('Could not copy to the clipboard.');
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [digest, landed]);
@@ -85,21 +92,27 @@ export function WeeklyDigestView() {
   const handleExportImage = useCallback(async () => {
     if (!digest || !canvasRef.current) return;
     setExporting(true);
+    setShareError(null);
+    const fail = () => { setExporting(false); setShareError('Could not create the image.'); };
 
-    // Small delay to ensure canvas is available
-    await new Promise((r) => setTimeout(r, 50));
-    renderDigestToCanvas(canvasRef.current, digest, landed ?? undefined);
+    try {
+      // Small delay to ensure canvas is available
+      await new Promise((r) => setTimeout(r, 50));
+      renderDigestToCanvas(canvasRef.current, digest, landed ?? undefined);
 
-    canvasRef.current.toBlob((blob) => {
-      if (!blob) { setExporting(false); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `pof-weekly-${digest.periodStart}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setExporting(false);
-    }, 'image/png');
+      canvasRef.current.toBlob((blob) => {
+        if (!blob) { fail(); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pof-weekly-${digest.periodStart}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setExporting(false);
+      }, 'image/png');
+    } catch {
+      fail();
+    }
   }, [digest, landed]);
 
   if (loading && !digest) {
@@ -190,6 +203,8 @@ export function WeeklyDigestView() {
           onRetry={fetchDigest}
         />
       )}
+
+      {shareError && <p role="alert" className="text-2xs" style={{ color: STATUS_ERROR }}>{shareError}</p>}
 
       {/* Stat cards grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

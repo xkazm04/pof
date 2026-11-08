@@ -11,7 +11,7 @@ import { formatDuration } from '@/lib/format';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import {
   MODULE_COLORS, ACCENT_VIOLET, ACCENT_PINK, ACCENT_CYAN, ACCENT_ORANGE,
-  STATUS_SUCCESS, STATUS_INFO, OPACITY_10, OPACITY_20,
+  STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, OPACITY_10, OPACITY_20,
 } from '@/lib/chart-colors';
 import type { ProjectWrapped } from '@/types/project-wrapped';
 import { FetchError } from '../../shared/FetchError';
@@ -29,6 +29,7 @@ export function ProjectWrappedView() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isMounted = useIsMounted();
 
@@ -51,7 +52,13 @@ export function ProjectWrappedView() {
 
   const handleCopy = useCallback(async () => {
     if (!wrapped) return;
-    await navigator.clipboard.writeText(formatWrappedMarkdown(wrapped));
+    setShareError(null);
+    try {
+      await navigator.clipboard.writeText(formatWrappedMarkdown(wrapped));
+    } catch {
+      setShareError('Could not copy to the clipboard.');
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [wrapped]);
@@ -59,18 +66,24 @@ export function ProjectWrappedView() {
   const handleExportImage = useCallback(async () => {
     if (!wrapped || !canvasRef.current) return;
     setExporting(true);
-    await new Promise((r) => setTimeout(r, 50));
-    renderWrappedToCanvas(canvasRef.current, wrapped);
-    canvasRef.current.toBlob((blob) => {
-      if (!blob) { setExporting(false); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `pof-wrapped-${(wrapped.lastSessionDate ?? wrapped.generatedAt).slice(0, 10)}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setExporting(false);
-    }, 'image/png');
+    setShareError(null);
+    const fail = () => { setExporting(false); setShareError('Could not create the image.'); };
+    try {
+      await new Promise((r) => setTimeout(r, 50));
+      renderWrappedToCanvas(canvasRef.current, wrapped);
+      canvasRef.current.toBlob((blob) => {
+        if (!blob) { fail(); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pof-wrapped-${(wrapped.lastSessionDate ?? wrapped.generatedAt).slice(0, 10)}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setExporting(false);
+      }, 'image/png');
+    } catch {
+      fail();
+    }
   }, [wrapped]);
 
   if (loading && !wrapped) {
@@ -147,6 +160,8 @@ export function ProjectWrappedView() {
           onRetry={fetchWrapped}
         />
       )}
+
+      {shareError && <p role="alert" className="text-2xs" style={{ color: STATUS_ERROR }}>{shareError}</p>}
 
       {/* Celebratory hero */}
       <div
