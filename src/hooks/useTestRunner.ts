@@ -8,8 +8,9 @@
  * the same component lifecycle.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import type { PofTestSpec, PofTestResult } from '@/types/pof-bridge';
 
 /** Polling interval while waiting for test results (ms). */
@@ -31,18 +32,14 @@ export function useTestRunner(): UseTestRunnerResult {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mountedRef = useRef(true);
+  const isMounted = useIsMounted();
   // Use a ref to allow aborting ongoing polls on unmount
   const abortRef = useRef(false);
 
-  // Clean up on unmount
-  useState(() => {
-    // This runs once on mount (initializer)
-    return () => {
-      mountedRef.current = false;
-      abortRef.current = true;
-    };
-  });
+  useEffect(() => {
+    abortRef.current = false;
+    return () => { abortRef.current = true; };
+  }, []);
 
   // ── Poll for test result ───────────────────────────────────────────────────
 
@@ -75,6 +72,8 @@ export function useTestRunner(): UseTestRunnerResult {
   // ── Run test ───────────────────────────────────────────────────────────────
 
   const runTest = useCallback(async (spec: PofTestSpec): Promise<PofTestResult | null> => {
+    // A suite loop can outlive its panel; an unmounted runner sends nothing more to UE.
+    if (!isMounted()) return null;
     setIsRunning(true);
     setError(null);
     abortRef.current = false;
@@ -87,7 +86,7 @@ export function useTestRunner(): UseTestRunnerResult {
     });
 
     if (!submitResult.ok) {
-      if (mountedRef.current) {
+      if (isMounted()) {
         setError(submitResult.error);
         setIsRunning(false);
       }
@@ -96,7 +95,7 @@ export function useTestRunner(): UseTestRunnerResult {
 
     // If the result came back immediately (not running), we're done
     if (submitResult.data.status !== 'running') {
-      if (mountedRef.current) {
+      if (isMounted()) {
         setResults((prev) => [...prev, submitResult.data]);
         setIsRunning(false);
       }
@@ -106,7 +105,7 @@ export function useTestRunner(): UseTestRunnerResult {
     // Poll until completion
     const finalResult = await pollForResult(spec.testId);
 
-    if (!mountedRef.current) return finalResult;
+    if (!isMounted()) return finalResult;
 
     if (finalResult) {
       setResults((prev) => [...prev, finalResult]);
@@ -116,7 +115,7 @@ export function useTestRunner(): UseTestRunnerResult {
 
     setIsRunning(false);
     return finalResult;
-  }, [pollForResult]);
+  }, [pollForResult, isMounted]);
 
   // ── Clear results ──────────────────────────────────────────────────────────
 
