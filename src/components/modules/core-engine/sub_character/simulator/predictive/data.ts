@@ -6,16 +6,14 @@ import {
 
 export {
   type BalanceReport,
-  type CanonCheckStatus,
   type HeatmapCell,
   type SurvivalCurvePoint,
   type SensitivityCurve,
   type PredictiveBalanceConfig,
-  runPredictiveBalance,
   DEFAULT_PREDICTIVE_CONFIG,
 } from '@/lib/combat/predictive-balance';
 
-export { ENEMY_ARCHETYPES, ENEMY_ARCHETYPE_BY_ID, GEAR_LOADOUTS } from '@/lib/combat/definitions';
+export { ENEMY_ARCHETYPE_BY_ID, GEAR_LOADOUTS } from '@/lib/combat/definitions';
 
 export const ACCENT = MODULE_COLORS.core;
 
