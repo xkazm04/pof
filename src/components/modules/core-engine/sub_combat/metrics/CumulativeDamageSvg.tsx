@@ -13,7 +13,8 @@ const MAX_DMG = (TOP[0]?.dps || 1) * HORIZON;
 
 export function CumulativeDamageSvg() {
   return (
-    <svg width="100%" height="150" viewBox="0 0 260 85" className="overflow-visible" preserveAspectRatio="xMidYMid meet">
+    <svg width="100%" height="150" viewBox="0 0 260 85" className="overflow-visible" preserveAspectRatio="xMidYMid meet"
+      role="img" aria-label={`Cumulative damage over ${HORIZON} seconds for the top ${TOP.length} weapons by DPS`}>
       {[0, 20, 40, 60].map(y => <line key={y} x1="30" y1={y + 5} x2="255" y2={y + 5} stroke={withOpacity(OVERLAY_WHITE, OPACITY_4)} strokeWidth="1" />)}
       {SECONDS.map((t) => <text key={t} x={30 + t * 45} y="78" textAnchor="middle" className="text-xs font-mono" fill={withOpacity(OVERLAY_WHITE, OPACITY_30)}>{t}s</text>)}
       {TOP.map((r) => {
