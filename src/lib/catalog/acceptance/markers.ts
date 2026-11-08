@@ -30,6 +30,19 @@ export const REFERENCE_GAP = 'not in the reference';
  * same gap as a bare string graded pending. A number beside a gap note (`{ radius: 800, hearing:
  * marker }`) is a real value, so that object stays populated.
  */
+/**
+ * THE strict numeric read for a graded value: a finite number, or a non-blank string that parses to
+ * one. Everything else — '', whitespace, a list, a boolean, an object, a declared gap — is null
+ * (unpopulated). `Number(x)` alone turns '' / [] / false into 0 and true / [1] into 1, which let a
+ * blank measurement pass a budget cap (registry law: unmeasured-is-not-a-pass).
+ */
+export function readNumber(v: unknown): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v !== 'string' || !v.trim() || isDeclaredGap(v)) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function isDeclaredGap(v: unknown): boolean {
   if (typeof v === 'string') return v.trim().toLowerCase() === REFERENCE_GAP;
   if (!v || typeof v !== 'object' || Array.isArray(v)) return false;

@@ -1,7 +1,7 @@
 import { gradeGallerySelection } from './galleryArtifact';
 import type { Checker } from './types';
 import { tagRequiredFields } from './requiredFields';
-import { REFERENCE_GAP, isDeclaredGap } from './markers';
+import { REFERENCE_GAP, isDeclaredGap, readNumber } from './markers';
 import { ELEMENTS_BY_PROFILE, elementsOf, resistanceKey } from '@/lib/catalog/canon/elements';
 
 /**
@@ -122,8 +122,8 @@ export function resistancesPopulated(field: string, label: string): Checker {
 export function withinPercent(field: string, label: string, target: number, pct: number): Checker {
   return (data) => {
     const v = pickField(data, field);
-    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${pct}% of ${target})` };
-    const n = Number(v);
+    const n = readNumber(v);
+    if (n == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" ${v == null ? 'is not set' : `is not a number (${JSON.stringify(v)?.slice(0, 40)})`} (expected a value within ±${pct}% of ${target})` };
     const ok = n >= target * (1 - pct / 100) && n <= target * (1 + pct / 100);
     return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} vs ${target} ±${pct}%`, ...(ok ? {} : { reason: `${n} is outside ±${pct}% of ${target}` }) };
   };
@@ -138,8 +138,8 @@ export function withinPercent(field: string, label: string, target: number, pct:
 export function withinAbsolute(field: string, label: string, target: number, tol: number): Checker {
   return (data) => {
     const v = data[field];
-    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${tol} of ${target})` };
-    const n = Number(v);
+    const n = readNumber(v);
+    if (n == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" ${v == null ? 'is not set' : `is not a number (${JSON.stringify(v)?.slice(0, 40)})`} (expected a value within ±${tol} of ${target})` };
     const ok = Math.abs(n - target) <= tol;
     return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} vs ${target} ±${tol}`, ...(ok ? {} : { reason: `${n} is outside ±${tol} of ${target}` }) };
   };
