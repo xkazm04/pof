@@ -19,6 +19,8 @@ import type { ItemEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 import { CatalogFiltersBar, type SortBy } from './CatalogFiltersBar';
 import { AddItemForm, type NewItemState } from './AddItemForm';
 import { CatalogItemGrid } from './CatalogItemGrid';
+import { buildCreateItemPrompt } from './createItemPrompt';
+import { getAppOrigin } from '@/lib/constants';
 
 /* ── Main CatalogGearTab ───────────────────────────────────────────────── */
 
@@ -196,8 +198,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     // Surface the freshly-added item: clear filters/search and jump to the first page.
     clearFilters();
 
-    const imagePrompt = `Game item icon, ${newItem.rarity} ${newItem.type}, ${newItem.name}, ${newItem.description}, dark fantasy ARPG style, centered on black background, high detail`.slice(0, 1500);
-    const prompt = `Create a new item for the ARPG loot system:\nName: ${newItem.name}\nType: ${newItem.type}\nRarity: ${newItem.rarity}\nDescription: ${newItem.description}\n\nSteps:\n1. Call POST /api/leonardo with prompt: "${imagePrompt}"\n2. The API will return { imageUrl, generationId }\n3. Download the image from imageUrl and save to public/items/${slug}.webp\n4. Confirm the item was created with its image path\n\nItem slug: ${slug}`;
+    const prompt = buildCreateItemPrompt(newItem, slug, getAppOrigin());
     void executeCli({ type: 'checklist', moduleId, prompt, label: `Create item: ${newItem.name}` })
       .finally(() => { submittingRef.current = false; });
     setShowAddForm(false);
