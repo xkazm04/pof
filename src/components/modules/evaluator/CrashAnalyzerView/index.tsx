@@ -254,6 +254,14 @@ export function CrashAnalyzerView() {
               </MicroLabel>
             </div>
 
+            {/* A filter that matches nothing SAYS so (outside the listbox, which
+                may only hold options) rather than leaving a silent empty list. */}
+            {filteredReports.length === 0 && (
+              <p role="status" className="py-6 text-center text-xs text-text-muted" data-testid="crash-no-match">
+                No crashes match the current search or severity filter.
+              </p>
+            )}
+
             {/* Real listbox: each CrashListItem is a focusable role=option that
                 reports aria-selected, so the triage list is keyboard/SR operable. */}
             <div
