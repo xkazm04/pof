@@ -46,6 +46,7 @@ export function PatternLibraryView() {
   const isLoading = usePatternLibraryStore((s) => s.isLoading);
   const isExtracting = usePatternLibraryStore((s) => s.isExtracting);
   const error = usePatternLibraryStore((s) => s.error);
+  const mutationError = usePatternLibraryStore((s) => s.mutationError);
 
   const searchQuery = usePatternLibraryStore((s) => s.searchQuery);
   const moduleFilter = usePatternLibraryStore((s) => s.moduleFilter);
@@ -269,6 +270,10 @@ export function PatternLibraryView() {
 
         {activeTab === 'patterns' && isLoading && (
           <LoadingRow label="Loading patterns…" color={MODULE_COLORS.systems} />
+        )}
+
+        {activeTab === 'patterns' && mutationError && (
+          <p role="alert" className="mb-3 text-xs text-red-400">{mutationError}</p>
         )}
 
         {activeTab === 'patterns' && error && !isLoading && (

@@ -39,7 +39,7 @@ interface Props {
 export function AntiPatternList({ moduleId }: Props) {
   const antiPatterns = usePatternLibraryStore((s) => s.antiPatterns);
   const isExtractingAnti = usePatternLibraryStore((s) => s.isExtractingAnti);
-  const error = usePatternLibraryStore((s) => s.error);
+  const error = usePatternLibraryStore((s) => s.antiPatternError);
   const fetchAntiPatterns = usePatternLibraryStore((s) => s.fetchAntiPatterns);
   const extractAntiPatterns = usePatternLibraryStore((s) => s.extractAntiPatterns);
 

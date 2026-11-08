@@ -26,13 +26,39 @@ function idleProgress(): EvalProgress {
   };
 }
 
+/**
+ * Fold a one-module re-evaluation into the result already on screen: the re-run module's
+ * section is replaced, every other module's findings and status survive. `flat` is the full
+ * finding set to display (merged baseline), so the totals are recomputed from it.
+ */
+function foldSingleModule(prior: DeepEvalResult | null, fresh: DeepEvalResult, flat: EvalFinding[]): DeepEvalResult {
+  const findings = aggregateFindings(flat, fresh.scanId);
+  if (!prior) return { ...fresh, findings };
+  const rerun = new Set(fresh.modulesEvaluated);
+  return {
+    ...fresh,
+    findings,
+    modulesEvaluated: Array.from(new Set([...prior.modulesEvaluated, ...fresh.modulesEvaluated])),
+    passesRun: Array.from(new Set([...prior.passesRun, ...fresh.passesRun])),
+    failedModules: [...prior.failedModules.filter((m) => !rerun.has(m)), ...fresh.failedModules],
+    passStatuses: { ...prior.passStatuses, ...fresh.passStatuses },
+    passErrors: { ...prior.passErrors, ...fresh.passErrors },
+  };
+}
+
 export function useDeepEvalResults() {
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
   const ueVersion = useProjectStore((s) => s.ueVersion);
 
   const [progress, setProgress] = useState<EvalProgress | null>(null);
-  const [result, setResult] = useState<DeepEvalResult | null>(null);
+  const [result, setResultState] = useState<DeepEvalResult | null>(null);
+  // Mirror of `result` for async callbacks that fold a single-module re-run into what is shown.
+  const resultRef = useRef<DeepEvalResult | null>(null);
+  const setResult = useCallback((next: DeepEvalResult | null) => {
+    resultRef.current = next;
+    setResultState(next);
+  }, []);
   const [diff, setDiff] = useState<RegressionDiff | null>(null);
   const [view, setView] = useState<'new' | 'all'>('all');
   const [attribution, setAttribution] = useState<AttributionMap>({});
@@ -108,8 +134,6 @@ export function useDeepEvalResults() {
    */
   const applyScanResult = useCallback(
     async (evalResult: DeepEvalResult, opts?: { expandModule?: SubModuleId }) => {
-      setResult(evalResult);
-
       const currentFlat = evalResult.findings.modules.flatMap((m) => m.findings);
       // "In scope" must mean "successfully evaluated": a module whose passes
       // errored produced zero findings because it FAILED, not because it is
@@ -129,7 +153,15 @@ export function useDeepEvalResults() {
         !previous && cached && typeof cached.projectPath === 'string' ? cached.projectPath : null,
       );
 
-      const d = diffScans(previous?.findings ?? null, currentFlat, { scopeModuleIds: scope });
+      const mergedBaseline = mergeBaseline(previous?.findings ?? null, currentFlat, scope);
+      // A one-module re-run is shown merged into the rest of the baseline (the other modules'
+      // findings stay on screen); the diff then spans the merged set, whose other modules
+      // match the baseline and read as persisting rather than resolved.
+      const folded = Boolean(opts?.expandModule && previous);
+      setResult(folded ? foldSingleModule(resultRef.current, evalResult, mergedBaseline) : evalResult);
+      const d = folded
+        ? diffScans(previous?.findings ?? null, mergedBaseline)
+        : diffScans(previous?.findings ?? null, currentFlat, { scopeModuleIds: scope });
       setDiff(d);
       // Regressions are the point — open on the New-issues view when there's a
       // baseline and something new actually appeared; otherwise show everything.
@@ -137,7 +169,6 @@ export function useDeepEvalResults() {
       setAttribution({});
 
       // Persist the merged baseline (untouched modules keep their prior findings).
-      const mergedBaseline = mergeBaseline(previous?.findings ?? null, currentFlat, scope);
       const completedAt = Date.now();
       useDeepEvalStore.getState().recordScan({
         scanId: evalResult.scanId,
@@ -188,13 +219,15 @@ export function useDeepEvalResults() {
               body: JSON.stringify({ projectPath, files: newFiles, since }),
             });
             setAttribution(res.attribution ?? {});
-          } catch {
-            // Attribution is optional — leave it empty if git/the route fails.
+          } catch (err) {
+            // Attribution is optional (rows just show no commit), but a failure leaves a trace so a
+            // broken git path is distinguishable from 'no commits touched these files'.
+            logger.warn('Deep-eval git attribution unavailable:', err instanceof Error ? err.message : err);
           }
         }
       }
     },
-    [projectPath],
+    [projectPath, setResult],
   );
 
   // ── Run evaluation (a server job: start, poll, reattach) ────────────────────
@@ -257,7 +290,8 @@ export function useDeepEvalResults() {
   const startJob = useCallback(
     async (moduleIds: string[], expandModule?: SubModuleId) => {
       if (isRunning || moduleIds.length === 0) return;
-      setResult(null);
+      // A one-module re-run keeps the current view until its result is folded in.
+      if (!expandModule) setResult(null);
       expandOnApplyRef.current = expandModule;
       const res = await tryApiFetch<{ scanId: string; job: DeepEvalJobSnapshot | null }>('/api/evaluator/deep-eval', {
         method: 'POST',
@@ -279,7 +313,7 @@ export function useDeepEvalResults() {
       logger.error('Deep eval did not start:', reason);
       setProgress({ ...idleProgress(), status: 'error', error: reason });
     },
-    [isRunning, projectPath, projectName, ueVersion, jobUrl, consumeJob],
+    [isRunning, projectPath, projectName, ueVersion, jobUrl, consumeJob, setResult],
   );
 
   const handleRunEval = useCallback(
