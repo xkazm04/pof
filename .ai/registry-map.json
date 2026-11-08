@@ -10066,12 +10066,11 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:52 The context dispatches textual CLI tasks and renders character data, while context and repository searches found no WebAssembly, PhantomData, MaybeUninit, or reinterpret_cast occurrences indicating the foreign-memory binding surface this subject requires.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:823cd55ac89d000b",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:52 The context reaches UE only by dispatching a textual CLI task (and renders store/static data), and a grep of the whole sub_character directory for WebAssembly, PhantomData, MaybeUninit, reinterpret_cast and FinalizationRegistry found no hits, so there is no in-process foreign engine whose memory, lifetime or thread rules a binding layer would have to re-express.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:cf656e76f4ec68fa",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 1
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -19370,12 +19369,11 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/content/materials/tabs/ConfiguratorTab.tsx:32 The configurator dispatches CLI configuration tasks and the catalog awaits HTTP preview requests, while context and repository searches found no WebAssembly, PhantomData, MaybeUninit, or reinterpret_cast occurrences indicating a foreign-memory binding surface.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:823cd55ac89d000b",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/liveParent.ts:8 The context sees UE only as a serialized bridge manifest (plain MaterialEntry data) and as CLI tasks it dispatches, and a grep of the whole materials directory for WebAssembly, PhantomData, MaybeUninit, reinterpret_cast and FinalizationRegistry found no hits, so no binding surface over an in-process foreign engine exists here to judge.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:cf656e76f4ec68fa",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 1
         }
       ],
       "governance": "governed"

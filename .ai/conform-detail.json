@@ -11906,39 +11906,52 @@
       "subject": "engine-binding-surface",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T01:14:48.903Z",
-      "worker": "61d5883f-c644-4ee6-8168-393924348b26",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:59:45.636Z",
+      "worker": "60701d4b-7a1e-401b-a2bf-7cd0882c4430",
       "techniques": [
-        {
-          "technique": "address-sensitive-construction",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/overview/CharacterScalingPreview.tsx:11 Scaling uses numeric React state; no foreign constructor records host storage addresses."
-        },
-        {
-          "technique": "ask-the-authority-not-the-shadow",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/overview/CameraProfileComparison.tsx:107 The memoized selection controls displayed profiles, not safety-critical permission to touch a foreign runtime."
-        },
-        {
-          "technique": "capability-deferred-release",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/overview/PropertyInspector.tsx:67 Cleanup cancels UI timers; there is no movable foreign-resource owner requiring release on a permitted thread."
-        },
         {
           "technique": "hierarchy-as-three-relations",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/overview/ClassHierarchy.tsx:22 The hierarchy is rendered as a tree of descriptive data, without native handle widening, narrowing, or layout reinterpretation."
-        },
-        {
-          "technique": "phantom-capability-parameter",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/overview/PropertyRow.tsx:53 The operation forwards a slider value to a UI callback; it requires no entered foreign region or runtime capability."
+          "evidence": "src/components/modules/core-engine/sub_character/overview/ClassHierarchy.tsx:14 The 'class hierarchy' is a static display tree imported from local data, not a foreign class hierarchy re-expressed with widening, narrowing or prefix access."
         },
         {
           "technique": "pre-resolve-what-the-engine-cannot-await",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:52 Applying bindings dispatches a prompt rather than entering a synchronous engine with callbacks needing asynchronous resources."
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:52 Rebinds go out as an async CLI prompt. No synchronous engine calls back into the host for a resource."
+        },
+        {
+          "technique": "address-sensitive-construction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/CharacterScalingPreview.tsx:11 Scaling uses numeric React state; no foreign constructor records host storage addresses.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "ask-the-authority-not-the-shadow",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/CameraProfileComparison.tsx:107 The memoized selection controls displayed profiles, not safety-critical permission to touch a foreign runtime.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "capability-deferred-release",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/PropertyInspector.tsx:67 Cleanup cancels UI timers; there is no movable foreign-resource owner requiring release on a permitted thread.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "phantom-capability-parameter",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/overview/PropertyRow.tsx:53 The operation forwards a slider value to a UI callback; it requires no entered foreign region or runtime capability.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:52 The context dispatches textual CLI tasks and renders character data, while context and repository searches found no WebAssembly, PhantomData, MaybeUninit, or reinterpret_cast occurrences indicating the foreign-memory binding surface this subject requires.",
+          "evaluatedAt": "2026-10-19T01:14:48.903Z",
+          "worker": "61d5883f-c644-4ee6-8168-393924348b26",
+          "reason": "replaced by 60701d4b-7a1e-401b-a2bf-7cd0882c4430"
         }
       ]
     },
@@ -11947,39 +11960,51 @@
       "subject": "engine-binding-surface",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T01:14:48.903Z",
-      "worker": "61d5883f-c644-4ee6-8168-393924348b26",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T00:59:45.636Z",
+      "worker": "60701d4b-7a1e-401b-a2bf-7cd0882c4430",
       "techniques": [
-        {
-          "technique": "address-sensitive-construction",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/useMaterialParameterConfigurator.ts:20 Parameter storage is a React record of numbers; no foreign constructor retains its address."
-        },
         {
           "technique": "ask-the-authority-not-the-shadow",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialBudgetBar.tsx:28 Memoization computes a shader-budget estimate, not a foreign runtime's safety-critical ownership or lock answer."
-        },
-        {
-          "technique": "capability-deferred-release",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialPatternCatalog/index.tsx:56 The finally block clears UI request status; it does not release a foreign resource requiring a thread capability."
-        },
-        {
-          "technique": "hierarchy-as-three-relations",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialLayerGraph.tsx:35 This hierarchy declares checklist dependencies, not conversions between foreign runtime types."
-        },
-        {
-          "technique": "phantom-capability-parameter",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/useMaterialParameterConfigurator.ts:81 The guard refuses unsupported rendering-feature combinations; no foreign region must be entered to invoke generation."
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/liveParent.ts:8 The code does defer to the engine-reported manifest. But that is a data snapshot, not a cached answer to a safety-critical question to a foreign runtime, so the technique's precondition does not hold."
         },
         {
           "technique": "pre-resolve-what-the-engine-cannot-await",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/content/materials/MaterialPatternCatalog/index.tsx:42 Preview explicitly awaits an HTTP request; no synchronous engine callback requires resources to be acquired ahead of entry."
+          "evidence": "src/components/modules/content/materials/tabs/ConfiguratorTab.tsx:32 Configuration is fire-and-forget async CLI dispatch. No synchronous engine callback has to be pre-resolved."
+        },
+        {
+          "technique": "hierarchy-as-three-relations",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/liveParent.ts:19 The material parent/instance relation is read as a data field on manifest entries, not as a foreign type hierarchy with casts."
+        },
+        {
+          "technique": "address-sensitive-construction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/useMaterialParameterConfigurator.ts:20 Parameter storage is a React record of numbers; no foreign constructor retains its address.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "capability-deferred-release",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialPatternCatalog/index.tsx:56 The finally block clears UI request status; it does not release a foreign resource requiring a thread capability.",
+          "carriedFrom": "2026-10-19"
+        },
+        {
+          "technique": "phantom-capability-parameter",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/materials/MaterialParameterConfigurator/useMaterialParameterConfigurator.ts:81 The guard refuses unsupported rendering-feature combinations; no foreign region must be entered to invoke generation.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/materials/tabs/ConfiguratorTab.tsx:32 The configurator dispatches CLI configuration tasks and the catalog awaits HTTP preview requests, while context and repository searches found no WebAssembly, PhantomData, MaybeUninit, or reinterpret_cast occurrences indicating a foreign-memory binding surface.",
+          "evaluatedAt": "2026-10-19T01:14:48.903Z",
+          "worker": "61d5883f-c644-4ee6-8168-393924348b26",
+          "reason": "replaced by 60701d4b-7a1e-401b-a2bf-7cd0882c4430"
         }
       ]
     },
