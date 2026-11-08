@@ -60,3 +60,11 @@ describe('operator guard', () => {
     expect((await POST(post(start))).status).toBe(200);
   });
 });
+
+describe('malformed bodies', () => {
+  it.each(['not json', 'null', '[1]', '"start"'])('answers %s with 400, not 500', async (body) => {
+    const res = await POST(raw(body));
+    expect(res.status).toBe(400);
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+});

@@ -11,6 +11,7 @@
 import { type NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { buildQueue } from '@/lib/ue5-bridge/build-queue';
 import { getBuildHistory, getBuildRequestById, getBuildStatusRow } from '@/lib/ue5-bridge/build-pipeline';
 import { resolveBuildStatus } from '@/lib/ue5-bridge/build-status';
@@ -47,7 +48,9 @@ export async function POST(req: NextRequest) {
   const denied = requireOperator(req);
   if (denied) return denied;
   try {
-    const body = (await req.json()) as BuildAction;
+    const parsed = await readJsonObject(req);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as unknown as BuildAction;
 
     switch (body.action) {
       // ── Start a new build ────────────────────────────────────────
