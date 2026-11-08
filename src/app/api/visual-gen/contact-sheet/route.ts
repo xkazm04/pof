@@ -62,7 +62,7 @@ function bodyShapeRefusal(body: Record<string, unknown>): string | null {
   return null;
 }
 
-export const sharpImageOps: SheetImageOps = {
+const sharpImageOps: SheetImageOps = {
   async dimensions(path) {
     const m = await sharp(path).metadata();
     return { width: m.width ?? 0, height: m.height ?? 0 };
