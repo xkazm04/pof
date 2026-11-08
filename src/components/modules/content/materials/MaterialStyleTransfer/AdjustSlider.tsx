@@ -1,3 +1,15 @@
+/**
+ * Readout precision follows the step (same rule as the configurator's
+ * ParametersSection): whole numbers for a unit-or-larger step, otherwise at
+ * least two decimals and as many as the step carries. A value-based rule
+ * (`v > 1 ? 1 : 2`) changed the decimal count mid-drag on Emissive.
+ */
+function readoutDecimals(step: number): number {
+  if (step >= 1) return 0;
+  const frac = String(step).split('.')[1] ?? '';
+  return Math.min(6, Math.max(2, frac.length));
+}
+
 export function AdjustSlider({
   label,
   value,
@@ -18,7 +30,8 @@ export function AdjustSlider({
   onReset: () => void;
 }) {
   const isModified = value !== defaultValue;
-  const format = (v: number) => (v > 1 ? v.toFixed(1) : v.toFixed(2));
+  const decimals = readoutDecimals(step);
+  const format = (v: number) => v.toFixed(decimals);
   const display = format(value);
   // A bare number tells a screen-reader user nothing about the scale, nor whether
   // this value still matches what the analysis inferred.
