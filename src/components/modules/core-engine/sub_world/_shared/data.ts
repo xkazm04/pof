@@ -192,6 +192,13 @@ export const ASSET_FEATURES = [
   'Water system (plugin)',
 ];
 
+/** Features Region Details shows per zone type. Names come from the arpg-world matrix the panel reads. */
+export const ZONE_TYPE_FEATURES: Record<ZoneRecord['type'], string[]> = {
+  hub: ['Zone layout design', 'Zone transitions'],
+  combat: ['Enemy spawn placement', 'NavMesh coverage'],
+  boss: ['Boss encounter', 'Environmental hazards'],
+};
+
 /* ── 10.2 Enemy Density Heatmap Data ──────────────────────────────────────── */
 
 /** Sector columns of the density heatmap. */
