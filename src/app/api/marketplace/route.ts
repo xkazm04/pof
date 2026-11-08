@@ -4,6 +4,7 @@ import { partitionFeatureMatrix, generateRecommendations } from '@/lib/marketpla
 import { generateIntegration } from '@/lib/marketplace/integration-generator';
 import { ASSET_CATALOG } from '@/lib/marketplace/asset-catalog';
 import { FEATURE_STATUSES, type FeatureStatus } from '@/types/feature-matrix';
+import { SUB_MODULE_IDS } from '@/types/modules';
 
 /** A caller-supplied gap filter, keeping only real statuses; undefined → engine default. */
 function parseStatusFilter(raw: unknown): FeatureStatus[] | undefined {
@@ -76,6 +77,20 @@ export async function POST(req: NextRequest) {
 
       if (!assetId || !moduleId || !projectName) {
         return apiError('assetId, moduleId, and projectName are required', 400);
+      }
+      // generateIntegration calls string methods on these; a wrong type was a TypeError → 500.
+      if (typeof assetId !== 'string' || typeof projectName !== 'string') {
+        return apiError('assetId and projectName must be strings', 400);
+      }
+      if (!(SUB_MODULE_IDS as readonly unknown[]).includes(moduleId)) {
+        return apiError(`Unknown moduleId: ${String(moduleId)}`, 400);
+      }
+      if (apiMacro !== undefined && apiMacro !== null && typeof apiMacro !== 'string') {
+        return apiError('apiMacro must be a string', 400);
+      }
+      if (existingClasses !== undefined && existingClasses !== null
+        && !(Array.isArray(existingClasses) && existingClasses.every((c) => typeof c === 'string'))) {
+        return apiError('existingClasses must be an array of strings', 400);
       }
 
       const integration = generateIntegration(
