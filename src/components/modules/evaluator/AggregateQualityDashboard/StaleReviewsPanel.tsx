@@ -39,8 +39,9 @@ export function StaleReviewsPanel({
             type="number"
             min={1}
             max={90}
+            aria-label="Stale threshold in days"
             value={customStaleDays}
-            onChange={(e) => setCustomStaleDays(Math.max(1, parseInt(e.target.value) || 7))}
+            onChange={(e) => setCustomStaleDays(Math.min(90, Math.max(1, parseInt(e.target.value) || 7)))}
             className="w-12 px-1.5 py-1 bg-background border border-border rounded text-xs text-text text-center outline-none focus:border-border-bright transition-colors"
           />
           <span className="text-xs text-text-muted">days</span>
