@@ -127,6 +127,7 @@ export async function importGlbToUE(
     error:
       res.error ??
       (asset === 'NONE' ? 'no objects imported (is the glTF/Interchange importer enabled?)' : undefined) ??
+      (asset === undefined ? 'the editor run printed no POF_UE_IMPORT marker, so nothing confirmed an import' : undefined) ??
       collisionError ??
       scaleError,
     logs: res.logs,
