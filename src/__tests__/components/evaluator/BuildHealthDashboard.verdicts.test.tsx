@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, act, fireEvent, waitFor } from '@testing-library/react';
 import { BuildHealthDashboard } from '@/components/modules/evaluator/BuildHealthDashboard';
 import { useProjectStore } from '@/stores/projectStore';
+import { TargetRow } from '@/components/modules/evaluator/BuildHealthDashboard/TargetRow';
 import type { BuildHealthReport } from '@/lib/ue5-bridge/build-health';
 
 afterEach(cleanup);
@@ -84,5 +85,28 @@ describe('BuildHealthDashboard: Total Builds verdict (quality-gates: no verdict 
   it('still says "all passing" when every build succeeded', () => {
     const { container } = render(<BuildHealthDashboard initialReport={report({ success: 4, failed: 0, aborted: 0 })} />);
     expect(totalBuildsSub(container)).toContain('all passing');
+  });
+});
+
+describe('TargetRow: last-status glyph matches statusColor (success / failed / aborted)', () => {
+  const target = (lastStatus: 'success' | 'failed' | 'aborted') => ({
+    targetName: 'PoFEditor', builds: 3, successRate: 66, avgDurationMs: 40_000, maxDurationMs: 50_000, lastStatus,
+  });
+  const glyph = (lastStatus: 'success' | 'failed' | 'aborted') => {
+    const { container } = render(<TargetRow target={target(lastStatus)} maxAvg={50_000} />);
+    const svg = container.querySelector('svg');
+    const out = { cls: svg?.getAttribute('class') ?? '', label: svg?.getAttribute('aria-label') ?? '' };
+    cleanup();
+    return out;
+  };
+
+  it('an aborted last build does not reuse the failed glyph, and each glyph is named', () => {
+    const failed = glyph('failed');
+    const aborted = glyph('aborted');
+    const success = glyph('success');
+    expect(aborted.cls).not.toBe(failed.cls);
+    expect(failed.label).toBe('Last build failed');
+    expect(aborted.label).toBe('Last build aborted');
+    expect(success.label).toBe('Last build succeeded');
   });
 });
