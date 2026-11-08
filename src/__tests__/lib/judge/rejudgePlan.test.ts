@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { rejudgePlan, judgeClassOf, planPriorKey, type PlanStep } from '@/lib/judge/rejudgePlan';
 import type { PriorVerdict } from '@/lib/judge/fleetPlan';
 import { stepContentHash } from '@/lib/judge/contentHash';
@@ -97,5 +99,22 @@ describe('rejudgePlan', () => {
     expect(p.skipped).toHaveLength(0);
     expect(p.entries).toHaveLength(2);
     expect(p.entries.every((e) => e.bucket === 'forced' && e.reason.startsWith('forced re-judge'))).toBe(true);
+  });
+});
+
+describe('judgeClassOf — one definition, so the ?plan=1 preview and the run key priors alike', () => {
+  const ROOT = process.cwd();
+  const PREDICATE = /'text-config'\s*\?\s*'llm-panel'/g;
+  const count = (rel: string) => (readFileSync(join(ROOT, rel), 'utf8').match(PREDICATE) ?? []).length;
+
+  it('the deliverable-class -> judge-class predicate is written once, and judge-run imports it', () => {
+    expect(count('src/lib/judge/rejudgePlan.ts')).toBe(1);
+    expect(count('scripts/judge-run.ts')).toBe(0);
+    expect(readFileSync(join(ROOT, 'scripts/judge-run.ts'), 'utf8')).toContain("import { judgeClassOf } from '../src/lib/judge/rejudgePlan'");
+  });
+
+  it('maps text-config to the panel and everything else to the vision judge', () => {
+    expect(judgeClassOf('text-config')).toBe('llm-panel');
+    expect(judgeClassOf('image' as DeliverableClass)).toBe('vlm');
   });
 });

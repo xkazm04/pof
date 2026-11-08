@@ -73,6 +73,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BANDS, buildRubricPrompt, parseJudgeResult, RUBRIC_VERSION, type JudgeResult } from '../src/lib/judge/rubrics';
 import { deliverableClassOf, type DeliverableClass } from '../src/lib/judge/dimensions';
+import { judgeClassOf } from '../src/lib/judge/rejudgePlan';
 import { getModelPolicy, MODEL_IDS } from '../src/lib/model-policy';
 import { recordSpend, getBudgetStatus, getTaskTypeEstimate } from '../src/lib/cli-spend-db';
 import { formatUsd } from '../src/lib/cli-spend/format';
@@ -289,11 +290,6 @@ function runClaude(prompt: string, modelId: string, effort: string): Promise<Cli
   });
 }
 
-/** The `judge_verdicts.judge` class a given deliverable class's verdict is stored under. */
-function judgeClassOf(cls: DeliverableClass): 'llm-panel' | 'vlm' {
-  return cls === 'text-config' ? 'llm-panel' : 'vlm';
-}
-
 type Plan =
   | { kind: 'none' }
   | { kind: 'note'; text: string }
@@ -401,7 +397,7 @@ async function judgeOne(catalogId: string, art: Artifact, cls: DeliverableClass,
   const verdict: 'pass' | 'fail' = res.score >= BANDS.shippable ? 'pass' : 'fail';
   const spread = drawn.scores.length > 1 ? ` [median-of-${drawn.scores.length}: ${drawn.scores.join(',')}]` : '';
 
-  const judge = cls === 'text-config' ? 'llm-panel' : 'vlm';
+  const judge = judgeClassOf(cls);
   const canonTag = NO_CANON ? '' : '+canon';
   // Persist the median draw's per-dimension scores (WS2) so the detail views can show WHERE
   // the asset is weak, not just the aggregate. Absent/empty → omitted (column stays NULL).
