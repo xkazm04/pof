@@ -32,3 +32,21 @@ describe('ArchetypeBalanceRadar legend', () => {
     expect(text).not.toContain('≥25%');
   });
 });
+
+describe('ArchetypeBalanceRadar score-delta badge', () => {
+  it('carries a band word and glyph beside the colour, plus a legend line', () => {
+    const { container } = render(
+      <ArchetypeBalanceRadar
+        balanceResults={[result('Hi', 0.59), result('Mid', 0.54), result('Lo', 0.51)]}
+        scoreMean={0.5}
+      />,
+    );
+    const tags = Array.from(container.querySelectorAll('[data-status]'));
+    expect(tags.map(t => t.getAttribute('data-status'))).toEqual(['bad', 'warn', 'ok']);
+    expect(tags.map(t => t.textContent)).toEqual(['Off', 'Drift', 'Even']);
+    expect(tags.every(t => t.querySelector('svg') !== null)).toBe(true);
+    const legend = container.querySelector('[data-testid="score-delta-legend"]');
+    expect(legend?.textContent).toContain('Even (<3 pts)');
+    expect(legend?.textContent).toContain('Off (≥8 pts)');
+  });
+});

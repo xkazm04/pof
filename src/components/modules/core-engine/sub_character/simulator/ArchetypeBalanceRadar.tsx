@@ -10,12 +10,24 @@ import {
   withOpacity,
   OPACITY_8,
 } from '@/lib/chart-colors';
+import { StatusTag } from '@/components/ui/StatusTag';
+import { STATUS_TOKENS, type StatusLevel } from '@/lib/status-token';
 import { RadarChart } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '../_shared/design';
 import { COMPARISON_STATS, DEVIATION_THRESHOLDS, deviationColor, type BalanceResult } from '../_shared/data';
 
 const TOP_N = 5;
 const pctLabel = (fraction: number) => `${+(fraction * 100).toFixed(1)}`;
+
+/** Composite-score delta bands (fraction of the 0-1 score): below `even` is even, below `drift` drifting, else off-mean. */
+export const SCORE_DELTA_BANDS = { even: 0.03, drift: 0.08 } as const;
+
+function scoreDeltaBand(delta: number): { level: StatusLevel; word: string } {
+  const abs = Math.abs(delta);
+  if (abs < SCORE_DELTA_BANDS.even) return { level: 'ok', word: 'Even' };
+  if (abs < SCORE_DELTA_BANDS.drift) return { level: 'warn', word: 'Drift' };
+  return { level: 'bad', word: 'Off' };
+}
 
 interface ArchetypeBalanceRadarProps {
   balanceResults: BalanceResult[];
@@ -56,8 +68,8 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
             {displayResults.map((br, i) => {
               const delta = br.compositeScore - scoreMean;
               const deltaSign = delta >= 0 ? '+' : '';
-              const deltaColor = Math.abs(delta) < 0.03 ? STATUS_SUCCESS
-                : Math.abs(delta) < 0.08 ? STATUS_WARNING : STATUS_ERROR;
+              const band = scoreDeltaBand(delta);
+              const deltaColor = STATUS_TOKENS[band.level].color;
               return (
                 <motion.div
                   key={br.name}
@@ -83,11 +95,16 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
                       <span className="text-xs font-mono font-bold tabular-nums" style={{ color: deltaColor }}>
                         ({deltaSign}{(delta * 100).toFixed(1)})
                       </span>
+                      <StatusTag level={band.level} word={band.word} className="!px-1 !py-0 !tracking-normal" iconClassName="w-2.5 h-2.5" />
                     </div>
                   </div>
                 </motion.div>
               );
             })}
+          </div>
+
+          <div className="text-xs font-mono text-text-muted" data-testid="score-delta-legend">
+            Score vs roster mean: Even (&lt;{pctLabel(SCORE_DELTA_BANDS.even)} pts), Drift (&lt;{pctLabel(SCORE_DELTA_BANDS.drift)} pts), Off (&ge;{pctLabel(SCORE_DELTA_BANDS.drift)} pts)
           </div>
 
           {/* Deviation heatmap */}
