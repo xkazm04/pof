@@ -45,16 +45,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'generate-code') {
-      // Accept either a full simulation result or a config to re-simulate
-      let simResult: SimulationResult;
-
+      // Accept either a full simulation result or a config to re-simulate. A supplied result is
+      // only a carrier for its config: it used to be fed to codegen verbatim, so a malformed one
+      // 500'd and a hand-edited one emitted "calibrated" C++ from numbers no simulation produced.
+      // The engine is seeded, so re-simulating a genuine result's config reproduces it exactly.
+      let rawConfig: unknown = body.config;
       if (body.result) {
-        simResult = body.result;
-      } else {
-        // Same trust boundary as 'simulate' — an unclamped re-simulate here
-        // emits NaN/undefined into "calibrated" UE5 C++.
-        simResult = runSimulation(normalizeSimulationConfig(body.config));
+        const carried = (body.result as { config?: unknown }).config;
+        if (typeof carried !== 'object' || carried === null || Array.isArray(carried)) {
+          return apiError('result.config (the simulated config) is required to generate code', 400);
+        }
+        rawConfig = carried;
       }
+      // Same trust boundary as 'simulate' — an unclamped re-simulate here
+      // emits NaN/undefined into "calibrated" UE5 C++.
+      const simResult = runSimulation(normalizeSimulationConfig(rawConfig));
 
       const codeResult = generateUE5Code(simResult);
       return apiSuccess(codeResult);
