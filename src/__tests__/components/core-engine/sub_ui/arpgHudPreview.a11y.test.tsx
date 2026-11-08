@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { ArpgHudPreview } from '@/components/modules/core-engine/sub_ui/systems/ArpgHudPreview';
 import { arpgPreviewLayout } from '@/components/modules/core-engine/sub_ui/_shared/hudRegistry';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 
 /**
  * scan-sweep night 2026-11-08 game-ui-hud: every ARPG preview widget is a
@@ -26,5 +27,20 @@ describe('ArpgHudPreview widget buttons', () => {
     expect(btn.getAttribute('aria-pressed')).toBe('true');
     expect(btn.className).toContain('focus-ring');
     expect(btn.className).not.toContain('focus:outline-none');
+  });
+});
+
+function rgbOf(hex: string): string {
+  const h = hex.replace('#', '');
+  return `rgb(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)})`;
+}
+
+describe('ArpgHudPreview legend', () => {
+  afterEach(cleanup);
+
+  it('paints the Skill Bar swatch in the colour the skill bar is drawn with', () => {
+    render(<ArpgHudPreview />);
+    const swatch = screen.getByText('Skill Bar').previousElementSibling as HTMLElement;
+    expect(swatch.style.backgroundColor).toBe(rgbOf(STATUS_WARNING));
   });
 });

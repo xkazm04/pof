@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ACCENT_PINK, ACCENT_CYAN, ACCENT_EMERALD, STATUS_ERROR, STATUS_SUCCESS, STATUS_WARNING,
   withOpacity, OPACITY_8, OPACITY_20, OPACITY_30, OPACITY_37, OPACITY_50, OPACITY_90,
-  GLOW_SM, GLOW_MD, GLOW_LG,
+  GLOW_SM, GLOW_MD, GLOW_LG, ACCENT_BLUE_BOLD, OVERLAY_WHITE,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { arpgPreviewLayout } from '@/components/modules/core-engine/sub_ui/_shared/hudRegistry';
@@ -28,6 +28,15 @@ const RENDER_BY_ID: Record<string, HudRender> = {
 /** The ARPG Layout context's placements (one rect per widget, shared with the compositor). */
 const HUD_ELEMENTS = arpgPreviewLayout().map(p => ({ ...p, render: RENDER_BY_ID[p.id] ?? 'rect' }));
 
+/** One palette for the drawn widgets AND the legend, so a swatch can never name a colour the preview does not use. */
+const PREVIEW_COLORS = {
+  health: '#dc2626',
+  force: ACCENT_BLUE_BOLD,
+  skill: STATUS_WARNING,
+  xp: ACCENT_EMERALD,
+  ui: withOpacity(OVERLAY_WHITE, OPACITY_20),
+} as const;
+
 const SKILL_KEYS = ['1', '2', '3', '4', '5', '6', 'Q', 'R'];
 
 function GlobeElement({ color, symbol }: { color: string; symbol: string }) {
@@ -48,8 +57,8 @@ function SkillBarElement() {
     <div className="w-full h-full flex items-center justify-center gap-[3%] px-[4%]">
       {SKILL_KEYS.map(k => (
         <div key={k} className="flex-1 aspect-square rounded border flex items-center justify-center max-h-full"
-          style={{ borderColor: withOpacity(STATUS_WARNING, OPACITY_30), backgroundColor: withOpacity(STATUS_WARNING, OPACITY_20), boxShadow: `${GLOW_SM} ${withOpacity(STATUS_WARNING, OPACITY_20)}` }}>
-          <span className="text-[9px] font-mono font-bold" style={{ color: withOpacity(STATUS_WARNING, OPACITY_90) }}>{k}</span>
+          style={{ borderColor: withOpacity(PREVIEW_COLORS.skill, OPACITY_30), backgroundColor: withOpacity(PREVIEW_COLORS.skill, OPACITY_20), boxShadow: `${GLOW_SM} ${withOpacity(PREVIEW_COLORS.skill, OPACITY_20)}` }}>
+          <span className="text-[9px] font-mono font-bold" style={{ color: withOpacity(PREVIEW_COLORS.skill, OPACITY_90) }}>{k}</span>
         </div>
       ))}
     </div>
@@ -61,7 +70,7 @@ function XpBarElement() {
     <div className="w-full h-full rounded-full overflow-hidden" style={{ background: '#1a1a2e' }}>
       <div className="h-full rounded-full" style={{
         width: '62%',
-        background: `linear-gradient(90deg, ${withOpacity(ACCENT_EMERALD, OPACITY_90)}, ${withOpacity(ACCENT_CYAN, OPACITY_90)})`,
+        background: `linear-gradient(90deg, ${withOpacity(PREVIEW_COLORS.xp, OPACITY_90)}, ${withOpacity(ACCENT_CYAN, OPACITY_90)})`,
         boxShadow: `${GLOW_MD} ${withOpacity(ACCENT_EMERALD, OPACITY_30)}`,
       }} />
     </div>
@@ -145,8 +154,8 @@ export function ArpgHudPreview() {
                 <div className="absolute -inset-1 rounded-lg pointer-events-none"
                   style={{ boxShadow: `0 0 12px ${withOpacity(ACCENT, OPACITY_37)}`, border: `1px solid ${withOpacity(ACCENT, OPACITY_30)}` }} />
               )}
-              {el.render === 'globe-red' && <GlobeElement color="#dc2626" symbol="+" />}
-              {el.render === 'globe-blue' && <GlobeElement color="#2563eb" symbol="*" />}
+              {el.render === 'globe-red' && <GlobeElement color={PREVIEW_COLORS.health} symbol="+" />}
+              {el.render === 'globe-blue' && <GlobeElement color={PREVIEW_COLORS.force} symbol="*" />}
               {el.render === 'skill-bar' && <SkillBarElement />}
               {el.render === 'xp-bar' && <XpBarElement />}
               {el.render === 'minimap' && <MinimapElement />}
@@ -180,11 +189,11 @@ export function ArpgHudPreview() {
 
       <div className="flex flex-wrap gap-2 mt-2.5 pt-2 border-t border-border/30">
         {[
-          { label: 'Health Globe', color: '#dc2626' },
-          { label: 'Force Globe', color: '#2563eb' },
-          { label: 'Skill Bar', color: '#f59e0b' },
-          { label: 'XP Bar', color: ACCENT_EMERALD },
-          { label: 'UI Elements', color: withOpacity('#ffffff', OPACITY_20) },
+          { label: 'Health Globe', color: PREVIEW_COLORS.health },
+          { label: 'Force Globe', color: PREVIEW_COLORS.force },
+          { label: 'Skill Bar', color: PREVIEW_COLORS.skill },
+          { label: 'XP Bar', color: PREVIEW_COLORS.xp },
+          { label: 'UI Elements', color: PREVIEW_COLORS.ui },
         ].map(l => (
           <div key={l.label} className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: l.color }} />
