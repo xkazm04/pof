@@ -32,7 +32,7 @@ export const FEATURES: FeatureDef[] = [
 ];
 
 export const BASE_PARAMS: ParamDef[] = [
-  { name: 'Roughness',  label: 'Roughness',  min: 0, max: 1, defaultValue: 0.5, step: 0.05,
+  { name: 'Roughness',  label: 'Roughness',  min: 0, max: 1, defaultValue: 0.5, step: 0.01,
     plain: { label: 'Polish', explanation: 'How polished or weathered the surface looks. Low = a mirror; high = sandpaper.', cue: 'level', lowLabel: 'Mirror', highLabel: 'Sandpaper' } },
   { name: 'Metallic',   label: 'Metallic',   min: 0, max: 1, defaultValue: 0,   step: 0.1,
     plain: { label: 'Looks like metal', explanation: 'How much the surface behaves like metal (sharp, tinted reflections) vs plastic/cloth/skin.', cue: 'level', lowLabel: 'Plastic', highLabel: 'Steel' } },
