@@ -3,6 +3,11 @@ import {
   ITEM_ATTR_SCHEMA,
   ITEM_ATTR_KEYS,
   ITEMS_BESPOKE_CHECKERS,
+  MIN_ANIM_CLIPS,
+  MIN_SFX_CUES,
+  DEFAULT_TRI_CAP,
+  DEFAULT_VFX_MS_CAP,
+  REQUIRED_PBR_MAPS,
 } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
 import { gradeGallerySelection } from '@/lib/catalog/acceptance/galleryArtifact';
 import { readHistory } from './shared/genHistory';
@@ -322,7 +327,7 @@ function iconCopy(data: Record<string, unknown>): AcceptanceCopy {
 }
 
 function meshCopy(data: Record<string, unknown>): AcceptanceCopy {
-  const tris = Number(data.tris ?? 0), cap = Number(data.cap ?? 6000);
+  const tris = Number(data.tris ?? 0), cap = Number(data.cap ?? DEFAULT_TRI_CAP);
   if (tris === 0) {
     return { why: 'No mesh has been generated yet — the inventory preview will fall back to an icon-only state.',
       suggestion: 'Run Produce to generate a base mesh and auto-LODs.' };
@@ -336,7 +341,7 @@ function meshCopy(data: Record<string, unknown>): AcceptanceCopy {
 
 function materialCopy(data: Record<string, unknown>): AcceptanceCopy {
   const maps = (data.maps ?? []) as string[];
-  const need = ['Albedo', 'Normal', 'ORM'];
+  const need: readonly string[] = REQUIRED_PBR_MAPS;
   const missing = need.filter((m) => !maps.includes(m));
   if (maps.length === 0) {
     return { why: 'No PBR maps yet — the mesh has no surface to render.',
@@ -354,7 +359,7 @@ function animationsCopy(data: Record<string, unknown>): AcceptanceCopy {
   return clips.length === 0
     ? { why: 'No clips retargeted yet — the item cannot be picked up, equipped, or idled.',
         suggestion: 'Run Produce to retarget pickup / equip / idle from SK_Mannequin.' }
-    : { why: `Only ${clips.length} clip(s) present — pickup and equip are required at minimum.`,
+    : { why: `Only ${clips.length} clip(s) present — at least ${MIN_ANIM_CLIPS} (pickup and equip) are required.`,
         suggestion: 'Re-run Produce to add the missing clips.' };
 }
 
@@ -374,7 +379,7 @@ export function formatGpuMs(cost: number, cap: number): string {
 
 function vfxCopy(data: Record<string, unknown>): AcceptanceCopy {
   const variants = (data.variants ?? []) as unknown[];
-  const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? 0.8);
+  const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? DEFAULT_VFX_MS_CAP);
   if (variants.length === 0) {
     return { why: 'No Niagara variants exist — the item has no visual reactions.',
       suggestion: 'Run Produce to author the idle / equip / use variants.' };
@@ -389,7 +394,7 @@ function sfxCopy(data: Record<string, unknown>): AcceptanceCopy {
   return cues.length === 0
     ? { why: 'No SoundCues imported — the item is silent on pickup, equip, and use.',
         suggestion: 'Run Produce to import a randomizing SoundCue set.' }
-    : { why: `Only ${cues.length} cue(s) bound — pickup / equip / use coverage requires three.`,
+    : { why: `Only ${cues.length} cue(s) bound — pickup / equip / use coverage requires ${MIN_SFX_CUES}.`,
         suggestion: 'Re-run Produce to fill the missing cues.' };
 }
 
