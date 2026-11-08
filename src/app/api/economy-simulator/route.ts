@@ -99,6 +99,9 @@ export async function POST(req: NextRequest) {
     if (action === 'set-baseline') {
       const id = body.id === null ? null : typeof body.id === 'string' ? body.id : '';
       if (id === '') return apiError('id (string or null) is required', 400);
+      // setBaseline clears every flag before setting the match, so an unknown id used to wipe
+      // the current baseline and answer 200 { baseline: null }.
+      if (id !== null && !getRun(id)) return apiError('Run not found', 404);
       const baseline = setBaseline(id);
       return apiSuccess({ baseline });
     }
