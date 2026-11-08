@@ -16082,13 +16082,13 @@
       "bundle": "software-engineering",
       "state": "unknown",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T00:13:01.905Z",
+      "evaluatedTs": "2026-11-08T03:14:44.664Z",
       "techniques": [],
       "withdrawn": {
-        "worker": "ec417a80-ef6a-4b8c-ac3d-b81ae7d7c95b",
+        "worker": "9a26dded-241e-4d94-b216-e3a80f9c85c6",
         "state": "not-applicable",
-        "at": "2026-11-08T00:14:20.570538+00:00",
-        "reason": "reviewer (sonnet): The not-applicable anchors are incidental. The audio one is a description paragraph and the materials one is a fetch call for image analysis, and neither shows that no code scanning exists. The grep terms (finding, antiPattern, codebase, detector) are narrow for this subject, and I couldn't confirm "
+        "at": "2026-11-08T03:15:37.120914+00:00",
+        "reason": "reviewer (sonnet): The anchor, SpatialAudioGeneratorPanel/index.tsx:19, is only the `post` fetch helper. It does not show that the context has no codebase-scanning behaviour, so the anchor is incidental."
       }
     },
     "70030182-3a81-467f-979d-7bbad209473b/generative-artifact-gating": {
@@ -22825,16 +22825,11 @@
       "context": "material-style-tools",
       "subject": "codebase-scanning",
       "bundle": "software-engineering",
-      "state": "unknown",
+      "state": "not-applicable",
       "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T00:13:01.905Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "ec417a80-ef6a-4b8c-ac3d-b81ae7d7c95b",
-        "state": "not-applicable",
-        "at": "2026-11-08T00:14:20.571044+00:00",
-        "reason": "reviewer (sonnet): The not-applicable anchors are incidental. The audio one is a description paragraph and the materials one is a fetch call for image analysis, and neither shows that no code scanning exists. The grep terms (finding, antiPattern, codebase, detector) are narrow for this subject, and I couldn't confirm "
-      }
+      "evaluatedTs": "2026-11-08T03:14:44.664Z",
+      "worker": "9a26dded-241e-4d94-b216-e3a80f9c85c6",
+      "techniques": []
     },
     "0b31785f-a922-4da7-ac3f-bcf06c56f97f/docs-sync": {
       "context": "ue5-state-sync",
