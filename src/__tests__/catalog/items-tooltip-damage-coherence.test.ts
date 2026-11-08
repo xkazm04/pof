@@ -64,3 +64,13 @@ describe('items Economy states the ratio it computed', () => {
     expect(data.economy.balanceNote).toContain(`pricePowerRatio(${data.pricePowerRatio})`);
   });
 });
+
+describe('items Economy power follows the entity own Damage step', () => {
+  it.each(entities.map((e) => [e.id, e] as const))('%s: dpsPower is the Damage step baseDPS x 0.8 (one-hand norm)', (_id, e) => {
+    const damageData = step('Damage / Implicit').produce(e).data as { baseDPS?: number };
+    const economy = (step('Economy').produce(e).data as { economy: { powerScore: number; powerBreakdown: { dpsPower: number; implicitAccuracyPower: number; affixPower: number } } }).economy;
+    expect(economy.powerBreakdown.dpsPower).toBe(Math.round((damageData.baseDPS ?? 0) * 0.8 * 100) / 100);
+    const { dpsPower, implicitAccuracyPower, affixPower } = economy.powerBreakdown;
+    expect(economy.powerScore).toBeCloseTo(dpsPower + implicitAccuracyPower + affixPower, 6);
+  });
+});

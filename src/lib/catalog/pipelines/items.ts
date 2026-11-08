@@ -653,18 +653,24 @@ registerCatalogPipeline({
         highlightKey: 'baseValue',
         max: 16,
       },
-      produce: () => {
+      produce: (e: LabEntity) => {
         // Judge-refleet fix 2026-07-07: the old version hardcoded baseValue = powerScore = 12
         // with a justifying comment — a ratio engineered to 1.0, not derived. Power now sums
         // the item's ACTUAL contributions; baseValue stays the plan.md anchor; the ratio is
         // whatever the division yields.
-        // Iron Longsword (Common, tier 1): base DPS 12.5 (avg dmg 10 × APS 1.25, §1 weapon
-        // math) → dpsPower = 12.5 × 0.8 (one-hand norm) = 10.0; implicit +30 accuracy at T8
-        // values ≈ 30 × 0.06 = 1.8 power; Common = 0 explicit affixes (§1) → affixPower 0.
-        const powerBreakdown = { dpsPower: 10.0, implicitAccuracyPower: 1.8, affixPower: 0 };
-        const powerScore = powerBreakdown.dpsPower + powerBreakdown.implicitAccuracyPower + powerBreakdown.affixPower; // 11.8
+        // dpsPower = the Damage / Implicit step's OWN baseDPS (damageStepProduce, one authority
+        // per quantity) x 0.8 (one-hand norm); an item the Damage step derived no weapon DPS for
+        // (armour, trinkets) contributes 0 DPS power. Implicit +30 accuracy at T8 values ≈ 30 x 0.06
+        // = 1.8 power; Common = 0 explicit affixes (§1) → affixPower 0.
+        const baseDPS = (damageStepProduce(e).data as { baseDPS?: number }).baseDPS;
+        const powerBreakdown = {
+          dpsPower: Math.round((baseDPS ?? 0) * 0.8 * 100) / 100,
+          implicitAccuracyPower: 1.8,
+          affixPower: 0,
+        };
+        const powerScore = Math.round((powerBreakdown.dpsPower + powerBreakdown.implicitAccuracyPower + powerBreakdown.affixPower) * 100) / 100; // item-1: 11.8
         const baseValue = 12; // plan.md anchor (vendor gold), independent of the power sum
-        const pricePowerRatio = Math.round((baseValue / powerScore) * 100) / 100; // 1.02 — lands in band, not pinned to it
+        const pricePowerRatio = Math.round((baseValue / powerScore) * 100) / 100; // item-1: 1.02 — derived per item, may fall outside the band
         return {
           data: {
             economy: {
@@ -688,7 +694,7 @@ registerCatalogPipeline({
                 'set of Rare items (one per slot) → receive one Chaos Orb shard (1 sink per full set). ' +
                 'Every currency declares ≥1 sink (canon proj-economy); the set recipe is the item row\'s contribution.',
               balanceNote:
-                `pricePowerRatio(${pricePowerRatio}) is within the 0.8–1.2× canon band (proj-balance). ` +
+                `pricePowerRatio(${pricePowerRatio}) is ${pricePowerRatio >= 0.8 && pricePowerRatio <= 1.2 ? 'within' : 'OUTSIDE'} the 0.8–1.2× canon band (proj-balance). ` +
                 'Rare multiplier (×8) reflects 4–6 affixes with mid-tier rolls at ilvl 45; ' +
                 'the exact vendor value caps to avoid soft-currency inflation (canon proj-economy).',
             },
