@@ -155,6 +155,17 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
   const [receipt, setReceipt] = useState<WriteReceipt | null>(null);
   const [compile, setCompile] = useState<CompileVerdict>({ kind: 'none' });
   const [err, setErr] = useState<string | null>(null);
+  // A receipt and compile verdict describe the code that was written. A new
+  // transpile result (another class, or the same class re-generated) must not
+  // keep showing them beside code they say nothing about. Adjusting state
+  // during render (keyed on the result) avoids an effect round-trip.
+  const resultKey = JSON.stringify([className, header, source]);
+  const [receiptKey, setReceiptKey] = useState(resultKey);
+  if (receiptKey !== resultKey) {
+    setReceiptKey(resultKey);
+    setReceipt(null);
+    setCompile({ kind: 'none' });
+  }
 
   // The Module input lives INSIDE the dry-run modal — a changed module makes
   // the displayed diff stale (it covers paths that will no longer be written).
