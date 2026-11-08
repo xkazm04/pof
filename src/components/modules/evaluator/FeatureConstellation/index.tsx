@@ -145,7 +145,7 @@ export function FeatureConstellation() {
           </select>
           <button
             onClick={refresh}
-            className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
+            className="focus-ring p-1.5 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
             aria-label="Refresh statuses"
             title="Refresh statuses"
           >

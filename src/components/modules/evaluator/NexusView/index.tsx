@@ -208,7 +208,7 @@ function LayerToggle({
           {layer.label}
           <span style={{ color: STATUS_BLOCKER }}>unavailable</span>
         </button>
-        <button onClick={onRetry} aria-label={`Retry ${layer.label}`} className="flex items-center gap-0.5 hover:text-text transition-colors">
+        <button onClick={onRetry} aria-label={`Retry ${layer.label}`} className="focus-ring flex items-center gap-0.5 hover:text-text transition-colors">
           <RefreshCw className="w-2.5 h-2.5" /> Retry
         </button>
       </span>
@@ -219,7 +219,7 @@ function LayerToggle({
       onClick={onToggle}
       aria-pressed={active}
       aria-busy={state === 'loading'}
-      className={`flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
+      className={`focus-ring flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
         active
           ? 'border-border-bright bg-surface text-text'
           : 'border-border bg-surface-deep text-text-muted hover:text-text'
