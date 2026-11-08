@@ -17,3 +17,11 @@ describe('reference conformance: a reply outside the scale is not a verdict', ()
     }
   });
 });
+
+describe('reference conformance: the "none" sentinel', () => {
+  it('reads a punctuated none as no divergences, so severity 0 is a match', () => {
+    const reply = parseConformanceReply('DIVERGENCES=None.; SEVERITY=0');
+    expect(reply.divergences).toEqual([]);
+    expect(scoreConformance(reply).verdict).toBe('match');
+  });
+});

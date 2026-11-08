@@ -123,7 +123,7 @@ export function parseConformanceReply(raw: string): ConformanceReply {
     return { ok: false, error: `SEVERITY ${severityRaw} is below the 0-${SEVERITY_MAX} scale` };
   }
   const body = listMatch[1].trim();
-  const divergences = /^none$/i.test(body)
+  const divergences = /^none[.!]?$/i.test(body)
     ? []
     : body.split(',').map((d) => d.trim()).filter(Boolean);
   return {
