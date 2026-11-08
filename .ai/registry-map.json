@@ -4066,7 +4066,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/draftStore.ts:6 The state-machine editor is a module tool whose only project write is an Apply plan dispatched through the module CLI rail, not a catalog pipeline step. A case-insensitive search of the animations module directory found no CliProduce, StepFrame, useStepAcceptance, pipeline-artifacts or packagingExempt.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "test-input-generation",
@@ -4955,12 +4959,11 @@
           "changedAt": "2026-10-27",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/lib/visual-gen/asset-sources.ts:82 Context and repository searches found no credential configuration in the context directories; the inspected dependencies use public asset APIs, browser-side downloads, and server-mediated SQLite rather than browser-held datastore credentials or server-attached upstream secrets.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:d3eef10e9ed8459f",
-          "evaluatedRevision": 3,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:159 Every upstream (Poly Haven, ambientCG, the library DB, Blender) is reached through a same-origin route with no key held by the browser. A search of both context directories for NEXT_PUBLIC, API_KEY, Authorization, apiKey and process.env found 0 hits, so no browser-held credential decision lives in this context.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:8c4e4cc37445b46c",
+          "evaluatedRevision": 4,
+          "revisionsBehind": 1
         },
         {
           "subject": "render-submission-economy",
@@ -6181,7 +6184,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/audioEventCatalogStore.ts:68 The audio event catalog is a scene-scoped zustand/localStorage module editor, not a catalog pipeline step. A case-insensitive search of the whole audio module directory found no CliProduce, StepFrame, useStepAcceptance, pipeline-artifacts or packagingExempt.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "agent-runtime-assembly",
@@ -6900,7 +6907,11 @@
           "revision": 4,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/ScriptRunner.tsx:78 This context is a client of same-origin routes only (/api/blender-mcp/*, /api/visual-gen/fbx-convert) and holds no credential. A search of its directory for NEXT_PUBLIC, API_KEY, Authorization, apiKey and process.env found 0 hits. The privileged gate for script execution lives in the route, outside this context.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:8c4e4cc37445b46c",
+          "evaluatedRevision": 4
         },
         {
           "subject": "test-harness",
@@ -7925,7 +7936,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/lib/catalog/acceptance/packagingVerify.ts:57 Packaging coverage has exactly two legitimate states: own a packaging step, or declare a non-empty exemption reason. The drain reports exempt pipelines read from the registry, so an exemption reads as a decision rather than as silence.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "generative-artifact-gating",
@@ -8543,7 +8558,11 @@
           "revision": 3,
           "changedAt": "2026-09-20",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:53 The artifact write door lets a client declare only an engine it can honestly claim about itself. Unverifiable engine claims (explicit or smuggled) are recorded as unknown unless the server already recorded them for that row, so provenance cannot be fabricated by a caller.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:882ddb351d358533",
+          "evaluatedRevision": 3
         },
         {
           "subject": "test-harness",
@@ -27895,7 +27914,11 @@
           "revision": 4,
           "changedAt": "2026-10-27",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/visual-gen/ue-import/route.ts:35 This handler launches a UE editor that imports a caller-named local .glb into the person's UE project, and it acts with the machine's ambient authority without first calling any Host/Origin/forwarded-for gate (none of the 10 routes in this context calls requireOperator or a loopback check), so whatever reaches the port, including a rebinding page or a LAN neighbour under the default all-interfaces `next dev` bind, spends that authority.",
+          "evaluatedAt": "2026-11-07",
+          "evaluatedAgainst": "sha256-b2:8c4e4cc37445b46c",
+          "evaluatedRevision": 4
         },
         {
           "subject": "imported-material-conformance",

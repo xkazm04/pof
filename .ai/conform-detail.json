@@ -13033,49 +13033,65 @@
       "subject": "browser-credential-boundary",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-19",
-      "evaluatedTs": "2026-10-19T11:35:35.813Z",
-      "worker": "583d6055-33ec-4707-805f-d96f87fe5ff9",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:42:21.404Z",
+      "worker": "dc250652-98a2-49cc-a5a6-87be9efdd0e8",
       "techniques": [
+        {
+          "technique": "outbound-fetch-destination-validation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:219 The URL is supplied in data (a file listing), but it is fetched in the browser from the user's own network position. The technique exempts this case explicitly ('When the fetch happens in the browser')."
+        },
         {
           "technique": "aggregate-view-not-base-table",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/asset-browser/LibraryPanel.tsx:46 Counts derive from asset records already needed for library browsing, without a public datastore grant exposing identifying participation rows."
+          "evidence": "src/components/modules/visual-gen/asset-browser/LibraryPanel.tsx:46 Counts derive from asset records already needed for library browsing, without a public datastore grant exposing identifying participation rows.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "allowlisted-operator-stream",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:112 This diagnostic reports a browser model-load failure, rather than emitting credential-bearing request records through an operator stream."
+          "evidence": "src/components/modules/visual-gen/asset-viewer/SceneViewer.tsx:112 This diagnostic reports a browser model-load failure, rather than emitting credential-bearing request records through an operator stream.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "broker-proxy-attaches-secret",
           "verdict": "not-applicable",
-          "evidence": "src/lib/visual-gen/asset-sources.ts:153 The inspected public asset API calls attach no privileged credential; Blender imports likewise send asset identifiers as commands without attaching an upstream secret in repository code."
+          "evidence": "src/lib/visual-gen/asset-sources.ts:153 The inspected public asset API calls attach no privileged credential; Blender imports likewise send asset identifiers as commands without attaching an upstream secret in repository code.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "default-deny-plus-defaulted-owner",
           "verdict": "not-applicable",
-          "evidence": "src/app/api/visual-gen/library/route.ts:23 Library reads pass through application code into server-owned SQLite, rather than a browser-facing datastore role subject to row-level policies."
+          "evidence": "src/app/api/visual-gen/library/route.ts:23 Library reads pass through application code into server-owned SQLite, rather than a browser-facing datastore role subject to row-level policies.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "omit-the-column-not-the-value",
           "verdict": "not-applicable",
-          "evidence": "src/lib/visual-gen/asset-library-db.ts:96 The inspected library schema stores asset metadata, contains no credential column, and is accessed through server routes rather than public database grants."
+          "evidence": "src/lib/visual-gen/asset-library-db.ts:96 The inspected library schema stores asset metadata, contains no credential column, and is accessed through server routes rather than public database grants.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "opaque-upstream-errors",
           "verdict": "not-applicable",
-          "evidence": "src/lib/visual-gen/asset-sources.ts:93 The public provider address is deliberately returned as asset metadata, and this context has no inspected secret-attaching broker whose upstream topology must remain opaque."
-        },
-        {
-          "technique": "outbound-fetch-destination-validation",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:219 Dependency-supplied file URLs are fetched in the browser, an explicit exception in the technique; inspected server metadata fetches use fixed provider hosts."
+          "evidence": "src/lib/visual-gen/asset-sources.ts:93 The public provider address is deliberately returned as asset metadata, and this context has no inspected secret-attaching broker whose upstream topology must remain opaque.",
+          "carriedFrom": "2026-10-19"
         },
         {
           "technique": "public-vs-server-env-split",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:159 The client uses a relative same-origin endpoint and has no environment-variable or credential configuration reads in the searched context directories."
+          "evidence": "src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:159 The client uses a relative same-origin endpoint and has no environment-variable or credential configuration reads in the searched context directories.",
+          "carriedFrom": "2026-10-19"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/lib/visual-gen/asset-sources.ts:82 Context and repository searches found no credential configuration in the context directories; the inspected dependencies use public asset APIs, browser-side downloads, and server-mediated SQLite rather than browser-held datastore credentials or server-attached upstream secrets.",
+          "evaluatedAt": "2026-10-19T11:35:35.813Z",
+          "worker": "583d6055-33ec-4707-805f-d96f87fe5ff9",
+          "reason": "replaced by dc250652-98a2-49cc-a5a6-87be9efdd0e8"
         }
       ]
     },
@@ -22589,6 +22605,150 @@
         "at": "2026-11-07T05:42:09.461180+00:00",
         "reason": "reviewer (sonnet): The anchor (index.tsx:5) is only an import line, and the context also holds DialogueView, whose QuestGeneratorPanel calls apiFetch to a backend route the evidence never examines, so a no-agent-memory verdict for the whole context is unconfirmed."
       }
+    },
+    "6f37d3d5-8476-45cf-8598-a7a900cfe93c/browser-credential-boundary": {
+      "context": "visual-gen-mesh",
+      "subject": "browser-credential-boundary",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:42:21.404Z",
+      "worker": "dc250652-98a2-49cc-a5a6-87be9efdd0e8",
+      "techniques": [
+        {
+          "technique": "loopback-addressed-request-gate",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/mesh-finish/route.ts:66 The route reads a caller-chosen local path and writes to one (it also mkdirs it) with no loopback Host/Origin/forwarded-for gate before the work starts. grep found 0 gate calls across all 10 routes."
+        },
+        {
+          "technique": "opaque-upstream-errors",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:97 decomposed.error is the raw thrown message from the vision router (src/lib/vision/router.ts:224 describeTrail names each provider and its detail; ollama.ts:91 embeds up to 200 chars of the upstream body), so provider names and upstream error text reach the browser."
+        },
+        {
+          "technique": "broker-proxy-attaches-secret",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:91 The browser sends only intent (the image and a hint). The metered vision key is read server-side (gemini.ts:93 GEMINI_API_KEY) and never crosses to the client. Caller authentication is judged under the loopback gate, which is a deviation."
+        },
+        {
+          "technique": "outbound-fetch-destination-validation",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:89 The image arrives inline as a data URL and is not fetched from an address. The other routes take local file paths, not URLs. No route here fetches a destination supplied in data."
+        },
+        {
+          "technique": "public-vs-server-env-split",
+          "verdict": "conformant",
+          "evidence": "src/app/api/visual-gen/ue-import/plan/route.ts:139 The server-only value is read under an unprefixed name inside a route handler, and the route states its degraded mode when the value is unset (line 141). No NEXT_PUBLIC_ name exists anywhere in src."
+        },
+        {
+          "technique": "server-sealed-client-roundtrip",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/ue-import/route.ts:20 The import body carries no plan or verdict produced by the server. The job re-derives the shell count and scale itself, and job state is looked up server-side by jobId."
+        }
+      ]
+    },
+    "9f70d5ae-c6d4-4414-8f3c-3aeebc66e756/browser-credential-boundary": {
+      "context": "blender-pipeline",
+      "subject": "browser-credential-boundary",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:42:21.404Z",
+      "worker": "dc250652-98a2-49cc-a5a6-87be9efdd0e8",
+      "techniques": [
+        {
+          "technique": "allowlisted-operator-stream",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/ScriptRunner.tsx:64 The Script History panel is an operator record of the scripts PoF sent. The requests it shows carried no credential, so redaction of credential-bearing fields does not arise."
+        },
+        {
+          "technique": "public-vs-server-env-split",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/FBXConversionTab.tsx:54 No configuration value is read client-side. The endpoint is a relative same-origin constant."
+        }
+      ]
+    },
+    "ad79be14-e4eb-4a67-9f4e-487cfaf20a8c/catalog-pipeline-authoring": {
+      "context": "catalog-acceptance",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:58:04.984Z",
+      "worker": "869ed519-c9ff-48dc-a4b1-e42c475bed9e",
+      "techniques": [
+        {
+          "technique": "packaging-exempt-two-state-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/packagingVerify.ts:57 Pure packagingCoverage returns step/exempt/none; whitespace is not a reason. The summary carries exempt[] (line 142). packaging-coverage.test.ts fails on 'none' and ratchets the exempt list to four."
+        },
+        {
+          "technique": "view-produce-accept-triad",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:16 Produce stub and acceptance live in one module for gallery steps and grade the selected candidate, not a bare index. The allOf empty composition defers instead of passing (combinators.ts:16), and a test pins the selection gate as the last allOf member."
+        },
+        {
+          "technique": "producer-facts-are-observed-not-declared",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/stepGradability.ts:114 A self-reported producer status the server cannot observe is kept but stamped UNGRADED, so it never stands where a verified status is expected."
+        },
+        {
+          "technique": "seed-entities-and-walker-coverage",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:44 The acceptance layer keeps the walker's terminal set (pass, or deferred L3/L4 with a reason) and excludes pending."
+        }
+      ]
+    },
+    "3628b30f-1462-4e6a-a097-c27bd02990f0/catalog-pipeline-authoring": {
+      "context": "catalog-database",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "conformant",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:58:04.984Z",
+      "worker": "869ed519-c9ff-48dc-a4b1-e42c475bed9e",
+      "techniques": [
+        {
+          "technique": "producer-facts-are-observed-not-declared",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:53 Client allow-list for its own engine; a claim the server already recorded for the same row survives the round trip. _provenance is a non-content key and cannot move a verdict."
+        },
+        {
+          "technique": "view-produce-accept-triad",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/route.ts:40 Accept is derived from the persisted data by the step's own checker; the caller's status is discarded for registered steps."
+        },
+        {
+          "technique": "seed-entities-and-walker-coverage",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/seed-materials.ts:8 Seeds are real representative entities with calibration notes, not placeholders. seed.ts:10 also refuses to let a missing server-side entity read as an exemption."
+        },
+        {
+          "technique": "packaging-exempt-two-state-rule",
+          "verdict": "conformant",
+          "evidence": "src/app/api/pipeline-artifacts/package/route.ts:67 The package route reports the declared reason, and reports 'none' separately (line 68), so exempt and omission stay distinguishable to the operator."
+        }
+      ]
+    },
+    "8982772c-2414-4c6a-a49b-0d33e98deaec/catalog-pipeline-authoring": {
+      "context": "audio-view-and-catalog",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:58:04.984Z",
+      "worker": "869ed519-c9ff-48dc-a4b1-e42c475bed9e",
+      "techniques": []
+    },
+    "f2a555f4-1b04-4196-bb1c-71049494f81a/catalog-pipeline-authoring": {
+      "context": "animation-state-machine-editor",
+      "subject": "catalog-pipeline-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-07",
+      "evaluatedTs": "2026-11-07T23:58:04.984Z",
+      "worker": "869ed519-c9ff-48dc-a4b1-e42c475bed9e",
+      "techniques": []
     }
   }
 }
