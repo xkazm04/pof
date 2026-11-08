@@ -35,7 +35,8 @@ export function GoalSeekPanel({ config }: { config: SimulationConfig }) {
   const selectedFlow = useMemo(() => flows.find((f) => f.id === effectiveFlowId), [flows, effectiveFlowId]);
 
   const run = useCallback(async () => {
-    const targetNum = Number(target);
+    // Number('') is 0, so a cleared field would silently solve for a 0 target.
+    const targetNum = target.trim() === '' ? NaN : Number(target);
     if (!Number.isFinite(targetNum)) { setErr('Enter a numeric target'); return; }
     if (!effectiveFlowId) { setErr('No flow selected'); return; }
     setBusy(true); setErr(null);

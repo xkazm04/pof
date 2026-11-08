@@ -45,4 +45,12 @@ describe('GoalSeekPanel', () => {
     expect(container.textContent).not.toContain('/hr0');
     expect(container.textContent).toContain('Solve Monster Gold baseAmount');
   });
+
+  it('refuses an empty target instead of solving for 0', async () => {
+    const { getByText, getByLabelText, container } = render(<GoalSeekPanel config={CONFIG} />);
+    fireEvent.change(getByLabelText(/Target/), { target: { value: '' } });
+    await act(async () => { fireEvent.click(getByText('Auto-balance')); });
+    expect(apiFetchMock).not.toHaveBeenCalled();
+    expect(container.textContent).toMatch(/Enter a numeric target/);
+  });
 });
