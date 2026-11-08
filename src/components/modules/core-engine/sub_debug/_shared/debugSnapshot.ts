@@ -118,6 +118,11 @@ function projectMemory(session: ProfilingSession, budgetMB: number): DebugSnapsh
   return { slices, totalMB, peakMB, budgetMB, headroomMB: round2(budgetMB - totalMB) };
 }
 
+/** CSV stat captures carry no GC timestamps: csv-parser stamps pauses at i * 5000 ms, so any gap derived from them is invented. */
+function hasRealGcTiming(session: ProfilingSession): boolean {
+  return session.source !== 'csv-stats';
+}
+
 function projectGc(session: ProfilingSession, warnMs: number): DebugSnapshot['gc'] {
   const pauses = [...session.gcPauses].sort((a, b) => a.timestampMs - b.timestampMs);
   const gaps = pauses.slice(1).map((p, i) => p.timestampMs - pauses[i].timestampMs);
@@ -127,7 +132,8 @@ function projectGc(session: ProfilingSession, warnMs: number): DebugSnapshot['gc
   }));
   return {
     events,
-    avgIntervalS: gaps.length > 0 ? round1(gaps.reduce((s, g) => s + g, 0) / gaps.length / 1000) : null,
+    avgIntervalS: gaps.length > 0 && hasRealGcTiming(session)
+      ? round1(gaps.reduce((s, g) => s + g, 0) / gaps.length / 1000) : null,
     warnCount: events.filter((e) => e.warn).length,
     warnThresholdMs: warnMs,
   };

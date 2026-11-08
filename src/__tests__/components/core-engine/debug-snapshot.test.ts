@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   projectDebugSnapshot, deriveCrashRisk, DEBUG_BUDGETS,
 } from '@/components/modules/core-engine/sub_debug/_shared/debugSnapshot';
+import { buildSessionFromCSV } from '@/lib/profiling/csv-parser';
 import { SAMPLE_SESSION } from '@/components/modules/core-engine/sub_debug/_shared/sampleSession';
 import type { ProfilingSession, ProfilingSummary, MemoryAllocation } from '@/types/performance-profiling';
 
@@ -86,5 +87,20 @@ describe('deriveCrashRisk', () => {
     expect(risk.factors.length).toBeGreaterThan(0);
     expect(risk.factors.every((f) => f.risk === 'GREEN')).toBe(true);
     expect(risk.overall).toBe('LOW');
+  });
+});
+
+describe('GC interval provenance', () => {
+  it('a CSV capture has no real GC timing, so the interval is n/a, not the parser spacing', () => {
+    const csv = [
+      'Name,Group,InclusiveMs,ExclusiveMs,CallCount',
+      'GC_Mark,GC,2.0,1.0,3',
+      'GC_Sweep,GC,3.0,1.0,2',
+      'GC_Compact,GC,4.0,1.0,1',
+      'FrameTime,Frame,16.0,16.0,1',
+    ].join('\n');
+    const session = buildSessionFromCSV(csv, 'csv', '/p');
+    expect(session.gcPauses.length).toBeGreaterThanOrEqual(2);
+    expect(projectDebugSnapshot(session, null).gc.avgIntervalS).toBeNull();
   });
 });
