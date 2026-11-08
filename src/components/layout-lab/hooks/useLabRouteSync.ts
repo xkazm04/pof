@@ -5,7 +5,8 @@ import { labRouteKey, labUrl, parseLabRoute, withoutLabParams, type LabRoute } f
 import { entityStepList, resolveStepJump, toLabEntity } from '@/components/layout-lab/entityPipeline';
 import { useLabPrefs } from '@/components/layout-lab/hooks/useLabPrefs';
 import type { LabLocation } from '@/components/layout-lab/labLocation';
-import type { LabDetail } from '@/components/layout-lab/useLabCatalogData';
+import { labEntitiesOf, type LabDetail } from '@/components/layout-lab/useLabCatalogData';
+import { useActiveGameStore } from '@/stores/activeGameStore';
 import type { useLabLocation } from '@/components/layout-lab/hooks/useLabLocation';
 
 type LabNav = ReturnType<typeof useLabLocation>['nav'];
@@ -125,7 +126,10 @@ export function useLabAddress(loc: LabLocation, detail: LabDetail | null, nav: L
 
   const apply = useCallback((r: LabRoute) => {
     const { entitiesByCatalog, draftEntitiesByCatalog } = useCatalogStore.getState();
-    const entities = [...Object.values(entitiesByCatalog[r.catalogId] ?? {}), ...Object.values(draftEntitiesByCatalog[r.catalogId] ?? {})].map(toLabEntity);
+    // The ACTIVE game's set — the one the tree lists. Every game's rows used to be searched, so a
+    // step-only address under GTAI jumped to a PoF seed the GTAI tree does not show.
+    const { gameId } = useActiveGameStore.getState();
+    const entities = labEntitiesOf(entitiesByCatalog[r.catalogId], draftEntitiesByCatalog[r.catalogId], gameId).map(toLabEntity);
     if (r.entityId) {
       const idx = r.step ? entityStepList(r.catalogId, entities.find((e) => e.id === r.entityId)).indexOf(r.step) : 0;
       nav.open(r.catalogId, r.entityId, Math.max(0, idx));
