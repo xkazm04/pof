@@ -39,6 +39,32 @@ const PAD = { top: 14, right: 118, bottom: 26, left: 22 };
 const plotW = W - PAD.left - PAD.right;
 const plotH = H - PAD.top - PAD.bottom;
 
+/** Glyph height of the 9.5px end labels, plus breathing room. */
+const LABEL_MIN_GAP = 11;
+
+/**
+ * Pure label layout: spread end-label baselines so no two are closer than
+ * `minGap`, within [top, bottom]. Strand order is preserved; labels already
+ * clear of their neighbours do not move. (When n labels cannot fit, they
+ * pack evenly from `top`.)
+ */
+export function layoutEndLabels(ys: readonly number[], minGap: number, top: number, bottom: number): number[] {
+  const order = ys.map((_, i) => i).sort((a, b) => ys[a] - ys[b] || a - b);
+  const pos = order.map((i) => Math.min(bottom, Math.max(top, ys[i])));
+  for (let k = 1; k < pos.length; k++) pos[k] = Math.max(pos[k], pos[k - 1] + minGap); // push down
+  for (let k = pos.length - 1; k >= 0; k--) {
+    const ceiling = k === pos.length - 1 ? bottom : pos[k + 1] - minGap;
+    pos[k] = Math.min(pos[k], ceiling); // pull back up under the bottom edge
+  }
+  for (let k = 0; k < pos.length; k++) {
+    const floor = k === 0 ? top : pos[k - 1] + minGap;
+    pos[k] = Math.max(pos[k], floor); // an over-full stack packs from the top
+  }
+  const out = new Array<number>(ys.length);
+  order.forEach((orig, k) => { out[orig] = pos[k]; });
+  return out;
+}
+
 function formatPatternName(p: string): string {
   return p.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
@@ -88,6 +114,12 @@ export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) 
   const xFor = (i: number) => PAD.left + (i / (scans.length - 1)) * plotW;
   const yFor = (c: number) => PAD.top + plotH - (c / 100) * plotH;
 
+  const rawLabelYs = patterns.map((pattern) => {
+    const lastConf = scans[scans.length - 1].detectedPatterns.find((p) => p.pattern === pattern)?.confidence ?? 0;
+    return Math.max(PAD.top + 4, Math.min(H - PAD.bottom - 2, yFor(lastConf) + 3));
+  });
+  const labelYs = layoutEndLabels(rawLabelYs, LABEL_MIN_GAP, PAD.top + 4, H - PAD.bottom - 2);
+
   const series = patterns.map((pattern, idx) => {
     const points = scans.map((s, i) => ({
       x: xFor(i),
@@ -99,6 +131,8 @@ export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) 
       points,
       path: buildSmoothPath(points),
       delay: idx * 0.05,
+      labelY: labelYs[idx],
+      moved: Math.abs(labelYs[idx] - rawLabelYs[idx]) > 0.5,
     };
   });
 
@@ -148,10 +182,9 @@ export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) 
             </text>
           ))}
 
-          {series.map(({ pattern, color, path, points, delay }) => {
+          {series.map(({ pattern, color, path, points, delay, labelY, moved }) => {
             const dim = hovered !== null && hovered !== pattern;
             const last = points[points.length - 1];
-            const labelY = Math.max(PAD.top + 4, Math.min(H - PAD.bottom - 2, last.y + 3));
             return (
               <g
                 key={pattern}
@@ -182,6 +215,12 @@ export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) 
                   initial={prefersReduced ? { scale: 1 } : { scale: 0 }} animate={{ scale: 1 }}
                   transition={motionSafe({ duration: 0.3, delay: delay + 0.9 }, prefersReduced)}
                 />
+                {moved && (
+                  <line
+                    x1={last.x + 3} y1={last.y} x2={W - PAD.right + 6} y2={labelY - 3}
+                    stroke={color} strokeWidth={0.75} strokeOpacity={dim ? 0.2 : 0.6}
+                  />
+                )}
                 <text
                   x={W - PAD.right + 8} y={labelY}
                   fill={color} opacity={dim ? 0.35 : 1}
