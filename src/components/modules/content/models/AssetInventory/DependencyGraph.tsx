@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { TYPE_CONFIG } from './constants';
 import type { DependencyGraphProps } from './types';
 import type { ScannedAsset } from '@/app/api/filesystem/scan-assets/route';
@@ -25,6 +26,9 @@ function Swatch({ provenance }: { provenance: EdgeProvenance }) {
 }
 
 export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: DependencyGraphProps) {
+  // Per-instance marker id: a document-global 'arrowhead' collides with other
+  // graphs kept mounted by the module LRU, and url(#id) resolves to the first.
+  const markerId = `asset-dep-arrow-${useId().replace(/:/g, '')}`;
   // Edges are keyed by relativePath (unique), not basename (can collide).
   const outEdges = dependencies.filter(e => e.from === asset.relativePath);
   const inEdges = dependencies.filter(e => e.to === asset.relativePath);
@@ -80,7 +84,7 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
       </div>
       <svg width={svgW} height={svgH} className="block">
         <defs>
-          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <marker id={markerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)" />
           </marker>
         </defs>
@@ -93,7 +97,7 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
           return (
             <g key={`src-${s.key}`}>
               <line x1={160} y1={y} x2={centerX - 60} y2={centerY}
-                stroke={edge.stroke} strokeWidth={1} strokeDasharray={edge.dash} markerEnd="url(#arrowhead)">
+                stroke={edge.stroke} strokeWidth={1} strokeDasharray={edge.dash} markerEnd={`url(#${markerId})`}>
                 <title>{`${edge.label}: ${s.name} ${s.relation} ${asset.name}`}</title>
               </line>
               <rect x={10} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
@@ -119,7 +123,7 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
           return (
             <g key={`tgt-${t.key}`}>
               <line x1={centerX + 55} y1={centerY} x2={svgW - 160} y2={y}
-                stroke={edge.stroke} strokeWidth={1} strokeDasharray={edge.dash} markerEnd="url(#arrowhead)">
+                stroke={edge.stroke} strokeWidth={1} strokeDasharray={edge.dash} markerEnd={`url(#${markerId})`}>
                 <title>{`${edge.label}: ${asset.name} ${t.relation} ${t.name}`}</title>
               </line>
               <rect x={svgW - 160} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
