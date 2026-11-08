@@ -4,7 +4,7 @@
  * Host-side half of the agentic visual-verification step (folder-04 §5 / 2a).
  * The dispatched Claude CLI launches the slice, takes a HighResShot, and POSTs
  * the screenshot path here. This route reads the PNG (same machine), runs a
- * Gemini vision check with a server-owned HUD prompt, records the verdict, and
+ * routed vision check with a server-owned prompt, records the verdict, and
  * emits `eval.visual`. Advisory — the caller does not block on a fail.
  *
  * Returns the standard { success, data } envelope.
@@ -59,14 +59,19 @@ interface CharacterVerdict {
 
 type AnyVerdict = HudVerdict | TextureVerdict | LightingVerdict | CharacterVerdict;
 
+/** A model's JSON is untrusted: what is stored is what the record's types promise. */
+const text = (v: unknown): string => (typeof v === 'string' ? v : '');
+const strings = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+
 function normaliseVerdict(mode: CheckMode, raw: AnyVerdict): NormalisedVerdict {
   if (mode === 'texture') {
     const t = raw as TextureVerdict;
     return {
       verdict: t.verdict,
-      anyEmpty: t.tileable === false || (t.issues?.length ?? 0) > 0,
-      elements: t.issues ?? [],
-      notes: t.notes ?? '',
+      anyEmpty: t.tileable === false || strings(t.issues).length > 0,
+      elements: strings(t.issues),
+      notes: text(t.notes),
     };
   }
   if (mode === 'lighting') {
@@ -76,7 +81,7 @@ function normaliseVerdict(mode: CheckMode, raw: AnyVerdict): NormalisedVerdict {
       // A black / un-lit scene is the flagged defect (mirrors anyEmpty for HUD).
       anyEmpty: l.lit === false,
       elements: [],
-      notes: l.notes ?? '',
+      notes: text(l.notes),
     };
   }
   if (mode === 'character') {
@@ -86,15 +91,15 @@ function normaliseVerdict(mode: CheckMode, raw: AnyVerdict): NormalisedVerdict {
       // A missing humanoid or a T-posed mesh is the flagged defect.
       anyEmpty: c.humanoidVisible === false || c.tPosed === true,
       elements: [],
-      notes: c.notes ?? '',
+      notes: text(c.notes),
     };
   }
   const h = raw as HudVerdict;
   return {
     verdict: h.verdict,
     anyEmpty: !!h.anyEmptyOrZeroWidth,
-    elements: h.visibleElements ?? [],
-    notes: h.notes ?? '',
+    elements: strings(h.visibleElements),
+    notes: text(h.notes),
   };
 }
 
@@ -177,8 +182,10 @@ export async function POST(request: NextRequest) {
     return apiError(e instanceof Error ? e.message : 'visual check returned unparseable JSON', 502);
   }
 
-  if (raw.verdict !== 'pass' && raw.verdict !== 'fail') {
-    return apiError('Gemini returned an invalid verdict shape', 502);
+  // `null` parses fine and has no `.verdict`; a bare `raw.verdict` here was an unenveloped 500.
+  const verdict = (raw as AnyVerdict | null)?.verdict;
+  if (verdict !== 'pass' && verdict !== 'fail') {
+    return apiError(`${routed.provider} returned an invalid verdict shape`, 502);
   }
 
   const norm = normaliseVerdict(mode, raw);

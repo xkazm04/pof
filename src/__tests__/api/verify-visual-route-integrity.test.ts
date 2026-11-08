@@ -61,3 +61,35 @@ describe('refused before the paid call', () => {
     expect(mockRecord).not.toHaveBeenCalled();
   });
 });
+
+describe('what the model answered', () => {
+  it.each(['null', '[1]', '"pass"', '7'])('%s is a 502, not a crash', async (text) => {
+    answers(text);
+    const res = await call(valid);
+    expect(res.status).toBe(502);
+    expect(mockRecord).not.toHaveBeenCalled();
+  });
+
+  it('an invalid verdict names the eye that actually answered', async () => {
+    answers('{"verdict":"maybe"}', 'qwen');
+    const res = await call(valid);
+    expect(res.status).toBe(502);
+    const { error } = await res.json();
+    expect(error).toContain('qwen');
+    expect(error).not.toContain('Gemini');
+  });
+
+  it('coerces wrong-typed notes and elements rather than failing the insert', async () => {
+    answers('{"verdict":"pass","notes":{"x":1},"visibleElements":"hp bar"}');
+    const res = await call(valid);
+    expect(res.status).toBe(200);
+    expect(mockRecord).toHaveBeenCalledWith(expect.objectContaining({ notes: '', elements: [] }));
+  });
+
+  it('keeps only the string entries of a mixed element list', async () => {
+    answers('{"verdict":"pass","visibleElements":["hp",3,null,"mp"]}');
+    await call(valid);
+    expect(mockRecord).toHaveBeenCalledWith(expect.objectContaining({ elements: ['hp', 'mp'] }));
+  });
+
+});
