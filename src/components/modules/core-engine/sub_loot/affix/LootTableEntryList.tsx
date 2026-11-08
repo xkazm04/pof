@@ -11,12 +11,14 @@ interface LootTableEntryListProps {
   editorTotalWeight: number;
   filteredEntries: LootEditorEntryExpanded[];
   onUpdateWeight: (id: string, weight: number) => void;
+  /** Gesture boundary (pointer release / key release / blur): the next change starts a new undo step. */
+  onWeightCommit?: () => void;
   onRemoveEntry: (id: string) => void;
 }
 
 export function LootTableEntryList({
   groupedEntries, sourceFilter, editorTotalWeight, filteredEntries,
-  onUpdateWeight, onRemoveEntry,
+  onUpdateWeight, onWeightCommit, onRemoveEntry,
 }: LootTableEntryListProps) {
   // The slider scale follows the table: an imported DropWeight of 250 (or 2.5) must not be
   // pinned to 100 / rounded to an integer on the first touch.
@@ -45,6 +47,9 @@ export function LootTableEntryList({
                     step={sliderStep}
                     value={entry.weight}
                     onChange={(e) => onUpdateWeight(entry.id, Number(e.target.value))}
+                    onPointerUp={onWeightCommit}
+                    onKeyUp={onWeightCommit}
+                    onBlur={onWeightCommit}
                     aria-label={`Weight for ${entry.name}`}
                     className="flex-1 h-2 rounded-full appearance-none bg-surface-deep cursor-pointer focus-ring
                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:bg-[var(--thumb)] [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer

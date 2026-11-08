@@ -121,6 +121,11 @@ export function LootTableEditor() {
     });
   }, [editorEntries]);
 
+  // End of a slider gesture: the next weight change must push its own undo snapshot.
+  const commitEditorWeight = useCallback(() => {
+    lastWeightEditIdRef.current = null;
+  }, []);
+
   const addEditorEntry = useCallback(() => {
     // crypto.randomUUID() is collision-free even for two "+ Add" clicks within
     // the same millisecond. Raw Date.now() (1ms resolution) produced duplicate
@@ -204,6 +209,7 @@ export function LootTableEditor() {
         editorTotalWeight={editorTotalWeight}
         filteredEntries={filteredEntries}
         onUpdateWeight={updateEditorWeight}
+        onWeightCommit={commitEditorWeight}
         onRemoveEntry={removeEditorEntry}
       />
 
