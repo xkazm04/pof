@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import {
   deriveNormalFromAlbedo,
   deriveHeightFromAlbedo,
@@ -32,13 +33,18 @@ import { logger } from '@/lib/logger';
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const albedoBase64 = body?.albedoBase64;
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+    const albedoBase64 = body.albedoBase64;
     if (!albedoBase64 || typeof albedoBase64 !== 'string') {
       return apiError('Missing or invalid "albedoBase64" field', 400);
     }
-    const strength = typeof body?.strength === 'number' ? body.strength : undefined;
+    const strength = body.strength;
+    if (strength !== undefined && !(typeof strength === 'number' && Number.isFinite(strength) && strength >= 0)) {
+      return apiError('"strength" must be a finite number of at least 0', 400);
+    }
     const albedo = new Uint8Array(Buffer.from(albedoBase64, 'base64'));
+    if (albedo.length === 0) return apiError('"albedoBase64" decodes to no bytes', 400);
     const roughnessInvert = typeof body?.roughnessInvert === 'boolean' ? body.roughnessInvert : true;
     const [normal, height, roughness] = await Promise.all([
       deriveNormalFromAlbedo(albedo, { strength }),
