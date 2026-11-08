@@ -89,3 +89,28 @@ describe('spawnCapture', () => {
     await p;
   });
 });
+
+describe('spawnCapture - timeout is named', () => {
+  it('flags timedOut when the timer killed the child, and not otherwise', async () => {
+    vi.useFakeTimers();
+    try {
+      const child = makeFakeChild();
+      const p = spawnCapture('cmd', [], { spawnFn: (() => child) as unknown as SpawnFn, timeoutMs: 10 });
+      child.stdout.emit('data', 'partial');
+      vi.advanceTimersByTime(10);
+      child.emit('exit', null);
+      expect(await p).toEqual({ output: 'partial', spawnError: null, timedOut: true });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not flag timedOut for an abort kill', async () => {
+    const child = makeFakeChild();
+    const controller = new AbortController();
+    const p = spawnCapture('cmd', [], { spawnFn: (() => child) as unknown as SpawnFn, signal: controller.signal, timeoutMs: 60000 });
+    controller.abort();
+    child.emit('exit', null);
+    expect((await p).timedOut).toBeUndefined();
+  });
+});

@@ -22,6 +22,8 @@ export interface SpawnCaptureResult {
   output: string;
   /** Message if the process could not be launched or errored, else null. */
   spawnError: string | null;
+  /** True only when `timeoutMs` elapsed and the child was killed for it (absent otherwise). */
+  timedOut?: true;
 }
 
 const errMessage = (err: unknown): string => (err instanceof Error ? err.message : String(err));
@@ -54,7 +56,8 @@ export function spawnCapture(
 
     const kill = () => { try { child.kill('SIGTERM'); } catch { /* noop */ } };
 
-    const timer = timeoutMs ? setTimeout(kill, timeoutMs) : undefined;
+    let timedOut = false;
+    const timer = timeoutMs ? setTimeout(() => { timedOut = true; kill(); }, timeoutMs) : undefined;
     const onAbort = () => kill();
     signal?.addEventListener('abort', onAbort);
 
@@ -74,7 +77,7 @@ export function spawnCapture(
     });
     child.once('exit', () => {
       cleanup();
-      resolve({ output, spawnError: null });
+      resolve(timedOut ? { output, spawnError: null, timedOut: true } : { output, spawnError: null });
     });
   });
 }

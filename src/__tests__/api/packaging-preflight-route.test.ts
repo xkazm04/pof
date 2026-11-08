@@ -89,3 +89,17 @@ describe('preflight route - projectName is a UE project identifier', () => {
     },
   );
 });
+
+describe('preflight route - timeouts are named', () => {
+  it.each(['build-verify-editor', 'build-verify-shipping', 'asset-validation'])(
+    'reports a timed-out %s as a timeout, not a generic failure',
+    async (check) => {
+      spawnCapture.mockResolvedValue({ output: 'Result: Succeeded', spawnError: null, timedOut: true });
+      const res = await post({ ...BASE, check });
+      const json = await res.json();
+      const r = json.data.results[0];
+      expect(r.status).toBe('fail');
+      expect(r.detail).toContain('timed out after');
+    },
+  );
+});
