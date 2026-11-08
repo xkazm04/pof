@@ -68,3 +68,24 @@ describe('preflight route — check validation', () => {
     },
   );
 });
+
+describe('preflight route - projectName is a UE project identifier', () => {
+  it.each(['..\\x', '-Mode=Foo', 'a/b', '', 'My Game'])(
+    'rejects crafted projectName %p with 400 and spawns nothing',
+    async (projectName) => {
+      const res = await post({ ...BASE, projectName, check: 'build-verify-editor' });
+      expect(res.status).toBe(400);
+      expect(spawnCapture).not.toHaveBeenCalled();
+      expect(runFastPreflight).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['PoF', 'Jinx_5', 'MyGame2', '_Scratch'])(
+    'accepts real project name %s',
+    async (projectName) => {
+      const res = await post({ ...BASE, projectName, check: 'build-verify-editor' });
+      expect(res.status).toBe(200);
+      expect(spawnCapture).toHaveBeenCalledTimes(1);
+    },
+  );
+});

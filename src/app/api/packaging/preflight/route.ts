@@ -38,11 +38,19 @@ interface PreflightRequest {
   check?: CheckKind;
 }
 
+/**
+ * UE project names are letters, digits and underscore. projectName is spliced into
+ * the .uproject path and the UBT target argument, so anything else (`..\x`, a leading
+ * `-` read by UBT as a flag, a path separator) is refused before a process is spawned.
+ */
+const PROJECT_NAME_RE = /^[A-Za-z0-9_]+$/;
+
 function isPreflightRequest(v: unknown): v is PreflightRequest {
   if (!v || typeof v !== 'object') return false;
   const o = v as Record<string, unknown>;
   return typeof o.projectPath === 'string'
     && typeof o.projectName === 'string'
+    && PROJECT_NAME_RE.test(o.projectName)
     && typeof o.ueVersion === 'string'
     && (o.mapsToInclude === undefined || (Array.isArray(o.mapsToInclude) && o.mapsToInclude.every((m) => typeof m === 'string')));
 }
@@ -95,7 +103,7 @@ export async function POST(req: Request): Promise<Response> {
     return apiError('invalid JSON body', 400);
   }
   if (!isPreflightRequest(body)) {
-    return apiError('missing required fields: projectPath, projectName, ueVersion', 400);
+    return apiError('missing or invalid fields: projectPath, projectName (letters, digits, underscore), ueVersion', 400);
   }
   const request = body as PreflightRequest;
   if (request.check !== undefined && !isCheckKind(request.check)) {
