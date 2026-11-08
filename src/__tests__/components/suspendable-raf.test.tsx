@@ -284,15 +284,15 @@ describe('recursive rAF audit under components/modules', () => {
 
   it('holds the measured callsite inventory (comment- and string-safe)', () => {
     const total = sites.reduce((s, x) => s + x.count, 0);
-    // 7 self-rescheduling loops (kickoff + re-entry = 2 sites each) + 8 one-shots.
+    // 7 self-rescheduling loops (kickoff + re-entry = 2 sites each) + 9 one-shots.
     // (ProjectHealthDashboard's one-shot left 2026-09-28: its regressions are now
     // derived from the scan history, not set from an effect behind a frame.
     // PredictiveBalanceSimulator's left 2026-09-29: the sweep is a yielding job
     // (usePredictiveSweep), not one synchronous block behind a frame.
-    // The unmounted dodge-timeline loop and a one-shot in the deleted surfaces left 2026-11-08.)
-    expect(RECURSIVE_LOOPS.length * 2 + 8).toBe(22);
-    expect(total).toBe(22);
-    expect(sites.length).toBe(13);
+    // The unmounted dodge-timeline loop and a one-shot in the deleted surfaces left 2026-11-08; useCookProgress gained a one-shot log flush the same day.)
+    expect(RECURSIVE_LOOPS.length * 2 + 9).toBe(23);
+    expect(total).toBe(23);
+    expect(sites.length).toBe(14);
   });
 
   it('every file with a recursive loop is accounted for in the classification', () => {
