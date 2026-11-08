@@ -153,46 +153,48 @@ export function BuildHistoryDashboard() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const handleRecord = useCallback(async (data: Record<string, unknown>) => {
+  // A write that did not land says so, with the reason and a Retry that re-runs it —
+  // never a form that stays open or a panel that stays unchanged without a word.
+  const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
+  const runAction = useCallback(async (label: string, run: () => Promise<void>) => {
     try {
-      await apiFetch('/api/packaging/history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Attributed to the same project the reads are scoped to — otherwise a
-        // manual record lands in the legacy `''` bucket and is the only thing the
-        // scoped tab can see, which is how this defect stayed invisible.
-        body: JSON.stringify({ action: 'record', projectPath, ...data }),
-      });
-      setShowForm(false);
-      fetchAll();
+      await run();
+      setActionError(null);
     } catch (e) {
-      console.error('Failed to record build:', e);
+      console.error(`Failed to ${label}:`, e);
+      const reason = e instanceof Error ? e.message : String(e);
+      setActionError({ message: `Could not ${label}: ${reason}`, retry: () => { void runAction(label, run); } });
     }
-  }, [fetchAll, projectPath]);
+  }, []);
 
-  const handleDelete = useCallback(async (id: number) => {
-    try {
-      await apiFetch(`/api/packaging/history?id=${id}`, { method: 'DELETE' });
-      fetchAll();
-    } catch (e) {
-      console.error('Failed to delete build:', e);
-    }
-  }, [fetchAll]);
+  const handleRecord = useCallback((data: Record<string, unknown>) => runAction('record build', async () => {
+    await apiFetch('/api/packaging/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // Attributed to the same project the reads are scoped to — otherwise a
+      // manual record lands in the legacy `''` bucket and is the only thing the
+      // scoped tab can see, which is how this defect stayed invisible.
+      body: JSON.stringify({ action: 'record', projectPath, ...data }),
+    });
+    setShowForm(false);
+    fetchAll();
+  }), [fetchAll, projectPath, runAction]);
 
-  const handleBump = useCallback(async (type: 'major' | 'minor' | 'patch') => {
-    try {
-      // A bump is an intent for THIS project's next green cook — never a global counter.
-      const data = await apiFetch<{ version: string; nextVersion: string }>('/api/packaging/history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bump-version', type, projectPath }),
-      });
-      setVersion(data.version);
-      setNextVersion(data.nextVersion);
-    } catch (e) {
-      console.error('Failed to bump version:', e);
-    }
-  }, [projectPath]);
+  const handleDelete = useCallback((id: number) => runAction('delete build', async () => {
+    await apiFetch(`/api/packaging/history?id=${id}`, { method: 'DELETE' });
+    fetchAll();
+  }), [fetchAll, runAction]);
+
+  const handleBump = useCallback((type: 'major' | 'minor' | 'patch') => runAction('bump version', async () => {
+    // A bump is an intent for THIS project's next green cook — never a global counter.
+    const data = await apiFetch<{ version: string; nextVersion: string }>('/api/packaging/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bump-version', type, projectPath }),
+    });
+    setVersion(data.version);
+    setNextVersion(data.nextVersion);
+  }), [projectPath, runAction]);
 
   // Escalates to `bad` exactly when the tab is BLIND — nothing on screen while builds
   // provably exist under another project.
@@ -246,6 +248,14 @@ export function BuildHistoryDashboard() {
 
       {loadError && (
         <InlineErrorRetry message={`Build history could not be read: ${loadError}`} onRetry={fetchAll} />
+      )}
+
+      {actionError && (
+        <InlineErrorRetry
+          message={actionError.message}
+          onRetry={actionError.retry}
+          onDismiss={() => setActionError(null)}
+        />
       )}
 
       {/* What this project's scope could NOT see — silent only when it hid nothing. */}

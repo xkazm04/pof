@@ -108,31 +108,36 @@ export function BuildConfigSelector() {
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
-  // Save profile
-  const handleSave = useCallback(async (profile: Partial<BuildProfile>) => {
+  // A write that did not land says so, with the reason and a Retry that re-runs it.
+  const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
+  const runAction = useCallback(async (label: string, run: () => Promise<void>) => {
     try {
-      await apiFetch('/api/packaging/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save', profile }),
-      });
-      setShowEditor(false);
-      setEditingProfile(null);
-      fetchProfiles();
+      await run();
+      setActionError(null);
     } catch (e) {
-      console.error('Failed to save profile:', e);
+      console.error(`Failed to ${label}:`, e);
+      const reason = e instanceof Error ? e.message : String(e);
+      setActionError({ message: `Could not ${label}: ${reason}`, retry: () => { void runAction(label, run); } });
     }
-  }, [fetchProfiles]);
+  }, []);
+
+  // Save profile
+  const handleSave = useCallback((profile: Partial<BuildProfile>) => runAction('save profile', async () => {
+    await apiFetch('/api/packaging/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', profile }),
+    });
+    setShowEditor(false);
+    setEditingProfile(null);
+    fetchProfiles();
+  }), [fetchProfiles, runAction]);
 
   // Delete profile
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await apiFetch(`/api/packaging/profiles?id=${id}`, { method: 'DELETE' });
-      fetchProfiles();
-    } catch (e) {
-      console.error('Failed to delete profile:', e);
-    }
-  }, [fetchProfiles]);
+  const handleDelete = useCallback((id: string) => runAction('delete profile', async () => {
+    await apiFetch(`/api/packaging/profiles?id=${id}`, { method: 'DELETE' });
+    fetchProfiles();
+  }), [fetchProfiles, runAction]);
 
   // Set default
   const handleSetDefault = useCallback(async (id: string) => {
@@ -244,6 +249,14 @@ export function BuildConfigSelector() {
 
       {loadError && (
         <InlineErrorRetry message={`Build profiles could not be read: ${loadError}`} onRetry={fetchProfiles} />
+      )}
+
+      {actionError && (
+        <InlineErrorRetry
+          message={actionError.message}
+          onRetry={actionError.retry}
+          onDismiss={() => setActionError(null)}
+        />
       )}
 
       {/* Add platform buttons */}
