@@ -77,6 +77,7 @@ function RigTab() {
               onSelect={() => setSelectedPreset(preset.id)}
               onCreateInBlender={() => handleCreateInBlender(preset)}
               isCreating={creatingPresetId === preset.id}
+              createBusy={creatingPresetId !== null}
               createResult={createResults[preset.id] ?? null}
               check={rigCheck?.rows.find((r) => r.presetId === preset.id) ?? null}
             />

@@ -7,12 +7,14 @@ import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import { MAX_BONE_COUNT, boneComplexityColor } from './helpers';
 
-export function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreating, createResult, check = null }: {
+export function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreating, createResult, createBusy = false, check = null }: {
   preset: RigPreset;
   selected: boolean;
   onSelect: () => void;
   onCreateInBlender: () => void;
   isCreating: boolean;
+  /** Any card's armature is being built; the view tracks one build at a time. */
+  createBusy?: boolean;
   createResult: { status: 'success' | 'error'; message: string } | null;
   /** This target's row from the last "Check a produced rig" — evidence, not a description. */
   check?: RigCheckRow | null;
@@ -76,7 +78,7 @@ export function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, i
       {/* Create in Blender button */}
       <button
         onClick={(e) => { e.stopPropagation(); onCreateInBlender(); }}
-        disabled={!connected || isCreating}
+        disabled={!connected || isCreating || createBusy}
         className="flex items-center gap-1.5 mt-3 px-2 py-1 rounded text-[11px] font-medium transition-colors bg-[var(--visual-gen)]/10 text-[var(--visual-gen)] hover:bg-[var(--visual-gen)]/20 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {isCreating ? (
