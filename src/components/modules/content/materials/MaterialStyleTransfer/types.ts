@@ -24,6 +24,11 @@ export interface AnalyzedProperties {
   suggestions: string[];
 }
 
+/** User refinements on top of an analysis; an absent key means "as analyzed". */
+export type StyleOverrides = Partial<
+  Pick<AnalyzedProperties, 'roughness' | 'metallic' | 'emissiveIntensity' | 'surfaceType'>
+>;
+
 export interface StyleTransferConfig {
   /** Base64 data URL of the reference image */
   imageDataUrl: string | null;
