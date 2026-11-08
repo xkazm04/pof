@@ -30,6 +30,7 @@ interface ScheduleStatus {
 }
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const OUTCOME_COLOR: Record<NonNullable<ScheduleState['lastOutcome']>, string> = {
   success: STATUS_SUCCESS,
   failed: STATUS_ERROR,
@@ -150,6 +151,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
           <Clock className="w-3.5 h-3.5 text-text-muted" />
           <input
             type="time"
+            aria-label="Build time"
             value={schedule.time}
             disabled={busy}
             onChange={(e) => save({ time: e.target.value })}
@@ -166,6 +168,9 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
               <button
                 key={day}
                 data-testid={`pof-nightly-day-${day}`}
+                type="button"
+                aria-label={DAY_NAMES[day]}
+                aria-pressed={on}
                 onClick={() => toggleDay(day)}
                 disabled={busy}
                 title={every ? 'Every day' : undefined}
@@ -182,6 +187,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
 
         <select
           value={schedule.profileId ?? ''}
+          aria-label="Build profile"
           disabled={busy}
           onChange={(e) => save({ profileId: e.target.value || null })}
           className="bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus-ring"

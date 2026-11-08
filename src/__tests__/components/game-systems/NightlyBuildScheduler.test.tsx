@@ -62,6 +62,23 @@ describe('NightlyBuildScheduler', () => {
     });
   });
 
+  it('names every control: full weekday names with pressed state, time and profile labelled', async () => {
+    mockFetchRoutes([{
+      match: '/api/packaging/schedule',
+      response: { body: statusBody({ schedule: { enabled: true, time: '02:00', days: [1, 3], profileId: null, skipIfUnchanged: true, projectPath: '', projectName: '', ueVersion: '' } }) },
+    }]);
+    render(<NightlyBuildScheduler profiles={[profile]} />);
+    await screen.findByText('abc12345');
+    // The visible letters repeat (S/S, T/T) - the accessible names must not.
+    const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    for (const [day, name] of names.entries()) {
+      const btn = screen.getByRole('button', { name });
+      expect(btn.getAttribute('aria-pressed')).toBe(day === 1 || day === 3 ? 'true' : 'false');
+    }
+    expect(screen.getByLabelText('Build time')).toBe(screen.getByTestId('pof-nightly-time'));
+    expect(screen.getByLabelText('Build profile')).toBe(screen.getByTestId('pof-nightly-profile'));
+  });
+
   describe('weekday toggles', () => {
     /** The `days` array of every save POST, in order. */
     function savedDays(fetchMock: ReturnType<typeof mockFetchRoutes>): number[][] {
