@@ -23,13 +23,16 @@ const IR = 4;
 const CX = SIZE / 2;
 const CY = SIZE / 2;
 
-export function CardsMetric() {
+export function CardsMetric({ roleSegments = segments }: { roleSegments?: typeof segments }) {
   return (
     <div className="flex items-center gap-1.5">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
-        {segments.map((seg, i) => {
-          const startAngle = -90 + segments.slice(0, i).reduce((s, s2) => s + (s2.pct / 100) * 360, 0);
+        {roleSegments.map((seg, i) => {
+          const startAngle = -90 + roleSegments.slice(0, i).reduce((s, s2) => s + (s2.pct / 100) * 360, 0);
           const sweep = (seg.pct / 100) * 360;
+          if (sweep >= 359.99) {
+            return <circle key={seg.role} cx={CX} cy={CY} r={(R + IR) / 2} fill="none" stroke={seg.color} strokeWidth={R - IR} opacity={0.85} />;
+          }
           const startRad = (startAngle * Math.PI) / 180;
           const endRad = ((startAngle + sweep) * Math.PI) / 180;
           const largeArc = sweep > 180 ? 1 : 0;
