@@ -128,7 +128,14 @@ export function BatchReviewPanel() {
               </span>
               <span className="text-text-muted-hover">{pct}%</span>
             </div>
-            <div className="h-1.5 bg-border rounded-full overflow-hidden flex">
+            <div
+              role="progressbar"
+              aria-label="Batch review progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={pct}
+              className="h-1.5 bg-border rounded-full overflow-hidden flex"
+            >
               {completed > 0 && (
                 <div
                   className="h-full transition-all duration-slow"

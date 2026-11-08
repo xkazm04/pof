@@ -51,3 +51,17 @@ describe('BatchReviewPanel: one progress rule across header and bar', () => {
     });
   }
 });
+
+describe('BatchReviewPanel: the bar is exposed as a progressbar', () => {
+  it('has one role=progressbar whose aria-valuenow equals the displayed pct', () => {
+    mockBatch = batchOf([...rep(5, 'completed'), ...rep(5, 'error')]);
+    const { container } = render(<BatchReviewPanel />);
+    const bars = container.querySelectorAll('[role="progressbar"]');
+    expect(bars.length).toBe(1);
+    const { pct } = readProgress(container);
+    expect(bars[0].getAttribute('aria-valuenow')).toBe(String(pct));
+    expect(bars[0].getAttribute('aria-valuemin')).toBe('0');
+    expect(bars[0].getAttribute('aria-valuemax')).toBe('100');
+    expect(bars[0].getAttribute('aria-label')).toBe('Batch review progress');
+  });
+});
