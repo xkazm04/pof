@@ -82,3 +82,26 @@ describe('POST/PATCH /api/feature-matrix — moduleId is a closed enum (SUB_MODU
     expect(res.status).toBe(400);
   });
 });
+
+describe('POST /api/feature-matrix — optional row fields are type-checked', () => {
+  // An object nextSteps / lastReviewedAt reached the better-sqlite3 bind and failed as a
+  // 500; qualityScore of the wrong type was silently stored as null. All three are 400s.
+  it.each([
+    ['nextSteps', {}],
+    ['lastReviewedAt', {}],
+    ['qualityScore', 'high'],
+  ])('refuses a wrong-typed %s with a 400 naming it and stores nothing', async (field, value) => {
+    const res = await send('POST', { moduleId: MODULE, features: [row({ [field]: value })] });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(await res.json())).toContain(field);
+    expect(getFeaturesByModule(MODULE)).toHaveLength(0);
+  });
+
+  it('still accepts absent, null and correctly typed optional fields', async () => {
+    const res = await send('POST', {
+      moduleId: MODULE,
+      features: [row({ nextSteps: 'wire it', qualityScore: 4, lastReviewedAt: '2026-01-01T00:00:00.000Z' }), row({ featureName: 'B', nextSteps: null, qualityScore: null, lastReviewedAt: null })],
+    });
+    expect(res.status).toBe(200);
+  });
+});
