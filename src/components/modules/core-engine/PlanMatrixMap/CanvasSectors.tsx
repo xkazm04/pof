@@ -35,17 +35,17 @@ export function CanvasSectors({ pm }: { pm: PlanMatrixState }) {
                       maxY: sector.rect.maxY + 100
                     }, rect.width, rect.height);
                   }}
-                  className="absolute left-3 top-3 px-3 py-1.5 rounded-md text-xs font-bold tracking-wide bg-surface-deep/90 backdrop-blur-md text-gray-200 hover:text-white border border-border/50 shadow-lg transition-all hover:scale-105"
+                  className="absolute left-3 top-3 px-3 py-1.5 rounded-md text-xs font-bold tracking-wide bg-surface-deep/90 backdrop-blur-md text-text-muted hover:text-text border border-border/50 shadow-lg transition-all hover:scale-105"
                   title="Zoom to submodule sector"
                   style={{ transform: `scale(${labelScale})`, transformOrigin: 'top left' }}
                 >
                   {sector.label}
                 </button>
                 <div
-                  className="absolute right-3 top-3 text-xs font-mono text-gray-300 bg-surface-deep/80 backdrop-blur-md border border-border/40 px-2 py-1 rounded-md shadow-lg"
+                  className="absolute right-3 top-3 text-xs font-mono text-text-muted bg-surface-deep/80 backdrop-blur-md border border-border/40 px-2 py-1 rounded-md shadow-lg"
                   style={{ transform: `scale(${labelScale})`, transformOrigin: 'top right' }}
                 >
-                  <span className="text-white font-bold">{sector.count}</span> nodes <span className="opacity-40 mx-1">|</span> <span className="text-green-400 font-bold">{sector.ready}</span> ready
+                  <span className="text-text font-bold">{sector.count}</span> nodes <span className="opacity-40 mx-1">|</span> <span className="text-green-400 font-bold">{sector.ready}</span> ready
                 </div>
               </div>
             );

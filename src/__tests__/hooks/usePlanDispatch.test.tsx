@@ -14,11 +14,12 @@ const cli = vi.hoisted(() => ({
   execute: vi.fn(async () => undefined),
   sendPrompt: vi.fn(),
   onComplete: undefined as undefined | ((success: boolean, status?: CallbackStatus) => void),
+  isRunning: false,
 }));
 vi.mock('@/hooks/useModuleCLI', () => ({
   useModuleCLI: (opts: { onComplete?: (success: boolean, status?: CallbackStatus) => void }) => {
     cli.onComplete = opts.onComplete;
-    return { execute: cli.execute, sendPrompt: cli.sendPrompt, isRunning: false };
+    return { execute: cli.execute, sendPrompt: cli.sendPrompt, isRunning: cli.isRunning };
   },
 }));
 const invalidate = vi.hoisted(() => vi.fn());
@@ -43,6 +44,7 @@ beforeEach(() => {
   cli.sendPrompt.mockClear();
   invalidate.mockClear();
   cli.onComplete = undefined;
+  cli.isRunning = false;
 });
 afterEach(cleanup);
 
@@ -83,6 +85,25 @@ describe('usePlanDispatch — refresh on land', () => {
     act(() => { cli.onComplete?.(false, 'missing'); });
     expect(invalidate).not.toHaveBeenCalled();
     expect(result.current.lastError).toContain(readyItem.featureName);
+  });
+
+  it('a ready item is refused with a named reason while a build is running', () => {
+    cli.isRunning = true;
+    const { result } = setup();
+    let outcome: ReturnType<typeof result.current.dispatch> | undefined;
+    act(() => { outcome = result.current.dispatch(readyItem); });
+    expect(outcome?.ok).toBe(false);
+    expect(cli.execute).not.toHaveBeenCalled();
+    expect(result.current.lastError).toContain('already running');
+  });
+
+  it('dispatches again once the running build has ended', () => {
+    cli.isRunning = true;
+    const { result, rerender } = setup();
+    cli.isRunning = false;
+    rerender();
+    act(() => { result.current.dispatch(readyItem); });
+    expect(cli.execute).toHaveBeenCalledTimes(1);
   });
 
   it('a blocked item is refused with its unmet prerequisites and nothing runs', () => {

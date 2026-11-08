@@ -39,7 +39,7 @@ export function CanvasClusters({ pm }: { pm: PlanMatrixState }) {
               onPointerDown={(e) => e.stopPropagation()}
             >
               <div
-                className="absolute left-6 top-4 px-5 py-2.5 text-2xl font-black tracking-widest text-white uppercase select-none whitespace-nowrap flex items-center gap-3 bg-surface-deep/80 backdrop-blur-md rounded-lg border border-border/40 shadow-lg"
+                className="absolute left-6 top-4 px-5 py-2.5 text-2xl font-black tracking-widest text-text uppercase select-none whitespace-nowrap flex items-center gap-3 bg-surface-deep/80 backdrop-blur-md rounded-lg border border-border/40 shadow-lg"
                 style={{ transform: `scale(${Math.max(1, 1 / transform.zoom)})`, transformOrigin: 'top left' }}
               >
                 <div
@@ -47,7 +47,7 @@ export function CanvasClusters({ pm }: { pm: PlanMatrixState }) {
                   style={{ boxShadow: `0 0 12px ${withOpacity(STATUS_INFO, OPACITY_80)}` }}
                 />
                 {c.label}
-                <span className="ml-3 opacity-80 font-mono text-sm bg-background/80 px-2 py-1 rounded-md text-blue-200">
+                <span className="ml-3 opacity-80 font-mono text-sm bg-background/80 px-2 py-1 rounded-md text-text-muted">
                   {c.nodes.length} NODES
                 </span>
               </div>
@@ -59,7 +59,7 @@ export function CanvasClusters({ pm }: { pm: PlanMatrixState }) {
                     return (
                       <div
                         key={cat.label}
-                        className="absolute text-xs font-bold uppercase text-white border-l-2 border-border/60 pl-3 flex items-center"
+                        className="absolute text-xs font-bold uppercase text-text border-l-2 border-border/60 pl-3 flex items-center"
                         style={{ left: cat.x, top: cat.y - 14, height: 28, width: 140 }}
                       >
                         {cat.label}

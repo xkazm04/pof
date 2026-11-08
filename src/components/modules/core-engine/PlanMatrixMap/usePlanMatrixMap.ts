@@ -39,6 +39,8 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [containerSize, setContainerSize] = useState({ w: 800, h: 560 });
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // --- Computed ---
 
@@ -103,6 +105,13 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
     });
   }, [layout]);
 
+  // Feature-name search: non-matches dim through nodeOpacity (like filterModuleId).
+  const matchKeys = useMemo<Set<string> | null>(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || !plan) return null;
+    return new Set(plan.items.filter((i) => i.featureName.toLowerCase().includes(q)).map((i) => i.key));
+  }, [query, plan]);
+
   const selectedNode = selectedKey && layout ? layout.allNodes.get(selectedKey) ?? null : null;
   const hoveredNode = hoveredKey && layout ? layout.allNodes.get(hoveredKey) ?? null : null;
 
@@ -133,6 +142,22 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
   }, [hasSurface, onWheel]);
+
+  // Cmd/Ctrl+K inside the map focuses the navigator search. Bound on the map root
+  // (not window) and stopped there so the app-level palette's Cmd+K stays out of it.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.key !== 'k' && e.key !== 'K') || !(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setIsSidebarOpen(true);
+      searchRef.current?.focus();
+    };
+    el.addEventListener('keydown', handler);
+    return () => el.removeEventListener('keydown', handler);
+  }, [hasSurface]);
 
   // Dynamic full-height canvas based on viewport and component position
   useEffect(() => {
@@ -211,11 +236,25 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
     if (dispatch(item).ok) setSelectedKey(null);
   }, [dispatch]);
 
+  /** Enter in the search: select the first match and centre the view on it. */
+  const selectFirstMatch = useCallback(() => {
+    if (!matchKeys || !layout) return;
+    const first = [...layout.allNodes.values()].find((n) => matchKeys.has(n.key));
+    if (!first) return;
+    setSelectedKey(first.key);
+    setTransform((prev) => ({
+      ...prev,
+      panX: containerSize.w / 2 - first.x * prev.zoom,
+      panY: containerSize.h / 2 - first.y * prev.zoom,
+    }));
+  }, [matchKeys, layout, containerSize, setTransform]);
+
   const nodeOpacity = useCallback((node: CanvasNode): number => {
+    if (matchKeys && !matchKeys.has(node.key)) return 0.08;
     if (filterModuleId && node.item.moduleId !== filterModuleId) return 0.08;
     if (criticalPathMode && cpSet.size > 0 && !cpSet.has(node.key)) return 0.15;
     return 1;
-  }, [filterModuleId, criticalPathMode, cpSet]);
+  }, [matchKeys, filterModuleId, criticalPathMode, cpSet]);
 
   return {
     // refs
@@ -236,12 +275,13 @@ export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: 
     isSidebarOpen, setIsSidebarOpen,
     expandedModules,
     containerSize,
+    query, setQuery, searchRef, matchKeys,
     // computed
     layout, cpSet, moduleIds, edges, readyCount, visibleNodes, showNodes, labelScale,
     moduleSectors, selectedNode, hoveredNode,
     // handlers
     handleZoomToFit, handleModuleDblClick, handleSectorSelect, toggleModuleExpansion,
-    handleExecute, nodeOpacity,
+    handleExecute, nodeOpacity, selectFirstMatch,
   };
 }
 
