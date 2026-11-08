@@ -16,11 +16,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const spec = (): ProcgenSpec => buildProcgenSpec({
+const spec = (size = 32): ProcgenSpec => buildProcgenSpec({
   algorithm: 'cellular',
   levelType: 'dungeon',
-  gridWidth: 32,
-  gridHeight: 32,
+  gridWidth: size,
+  gridHeight: size,
   roomCountMin: 6,
   roomCountMax: 12,
   corridorWidth: 3,
@@ -31,8 +31,8 @@ const spec = (): ProcgenSpec => buildProcgenSpec({
   },
 });
 
-function renderHandoff() {
-  return render(<ProcgenSpecHandoff spec={spec()} onAdopt={() => {}} />);
+function renderHandoff(size = 32) {
+  return render(<ProcgenSpecHandoff spec={spec(size)} onAdopt={() => {}} />);
 }
 
 describe('ProcgenGridReplayExport in the handoff', () => {
@@ -76,5 +76,17 @@ describe('ProcgenGridReplayExport in the handoff', () => {
     expect(note).toContain('procgen-cellular-32x32-149.json');
     expect(note).toContain('32x32 cells');
     expect(note).toContain('scripts/ue/procgen_replay.py');
+  });
+
+  it('does not claim exact parity with the preview above the preview cap', () => {
+    const { queryByTestId, getByTestId } = renderHandoff(128);
+    expect(queryByTestId('procgen-replay-proven')).toBeNull();
+    expect(getByTestId('procgen-replay-capped').textContent).toContain('Not the grid on screen');
+  });
+
+  it('keeps the exact-parity line at the preview cap itself', () => {
+    const { queryByTestId, getByTestId } = renderHandoff(96);
+    expect(getByTestId('procgen-replay-proven').textContent).toContain('Exact by construction');
+    expect(queryByTestId('procgen-replay-capped')).toBeNull();
   });
 });

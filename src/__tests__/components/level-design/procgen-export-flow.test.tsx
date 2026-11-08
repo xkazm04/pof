@@ -83,6 +83,24 @@ describe('procgenSpecReducer export flow', () => {
     expect(run(p, { type: 'selectLevelType', levelType: p.spec.levelType }).flow.status).toBe('prepared');
   });
 
+  it('Undo back to the prepared spec makes a stale plan prepared again', () => {
+    const p = prepared();
+    const edited = run(p, { type: 'setSeed', seed: 'other' });
+    expect(edited.flow.status).toBe('stale');
+    const undone = run(edited, { type: 'undo' });
+    expect(undone.spec).toEqual(p.spec);
+    expect(undone.flow).toEqual(p.flow);
+  });
+
+  it('a stale plan stays stale while the spec differs, and a failed one recovers as failed', () => {
+    const k = 'k';
+    const failed: ExportFlow = { status: 'failed', pending: PENDING, exportKey: k, message: 'boom' };
+    const stale = exportFlowReducer(failed, { type: 'specChanged', exportKey: 'other' });
+    expect(stale.status).toBe('stale');
+    expect(exportFlowReducer(stale, { type: 'specChanged', exportKey: 'third' })).toBe(stale);
+    expect(exportFlowReducer(stale, { type: 'specChanged', exportKey: k })).toEqual(failed);
+  });
+
   it("'shown' does not reset a sending flow", () => {
     const sending = run(prepared(), flowAction({ type: 'confirm' }));
     expect(sending.flow.status).toBe('sending');

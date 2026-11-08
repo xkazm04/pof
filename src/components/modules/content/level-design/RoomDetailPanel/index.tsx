@@ -116,6 +116,8 @@ export function RoomDetailPanel({
               return (
                 <button
                   key={type}
+                  type="button"
+                  aria-pressed={active}
                   onClick={() => updateField('type', type)}
                   className="flex flex-col items-center justify-center p-2 rounded-lg transition-all group border relative overflow-hidden"
                   style={{
@@ -231,6 +233,8 @@ export function RoomDetailPanel({
         {/* Linked Files */}
         <div className="bg-black/40 border border-violet-900/30 rounded-xl overflow-hidden">
           <button
+            type="button"
+            aria-expanded={showFiles}
             onClick={() => setShowFiles(!showFiles)}
             className="flex items-center justify-between w-full p-3 bg-violet-900/10 hover:bg-violet-900/20 transition-colors border-b border-violet-900/30"
           >
@@ -262,9 +266,10 @@ export function RoomDetailPanel({
 
         {/* Generate Code button */}
         <button
+          type="button"
           onClick={() => onGenerateCode(room)}
           disabled={isGenerating}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 mt-4 group outline-none"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 mt-4 group focus-ring"
           style={{
             backgroundColor: `${accentColor}15`,
             color: accentColor,
