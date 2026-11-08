@@ -306,9 +306,6 @@ export const EXPANDED_ENTRIES: LootEditorEntryExpanded[] = LOOT_ENTRIES_RAW.map(
   color: rc(e.rarity),
 } as LootEditorEntryExpanded));
 
-/** Backwards-compat flat list (LootEditorEntry without source). */
-export const DEFAULT_EDITOR_ENTRIES: LootEditorEntry[] = EXPANDED_ENTRIES;
-
 /** All unique sources for grouping. */
 export const LOOT_SOURCES: LootSource[] = ['enemy', 'chest', 'quest', 'crafting'];
 
