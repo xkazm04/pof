@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_ERROR } from '@/lib/chart-colors';
 
 // ── CSV Import Panel ────────────────────────────────────────────────────────
 
@@ -12,14 +13,21 @@ export function CSVImportPanel({ onImport, isImporting }: {
 }) {
   const [csvText, setCsvText] = useState('');
   const [name, setName] = useState('');
+  const [readError, setReadError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setName(file.name.replace(/\.(csv|txt)$/i, ''));
+    setReadError(null);
     const reader = new FileReader();
     reader.onload = () => setCsvText(reader.result as string);
+    // A failed read must not leave the previous file's text armed under the new name.
+    reader.onerror = () => {
+      setCsvText('');
+      setReadError(`Could not read ${file.name} — pick the file again or export a fresh CSV.`);
+    };
     reader.readAsText(file);
   }, []);
 
@@ -56,6 +64,11 @@ export function CSVImportPanel({ onImport, isImporting }: {
           Import & Analyze
         </button>
       </div>
+      {readError && (
+        <div role="alert" className="text-2xs" style={{ color: STATUS_ERROR }}>
+          {readError}
+        </div>
+      )}
       {csvText && (
         <div className="text-2xs text-text-muted">
           Loaded {csvText.split('\n').length} lines · {(csvText.length / 1024).toFixed(1)}KB
