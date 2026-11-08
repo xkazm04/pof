@@ -93,6 +93,7 @@ export function HudThemeEditor() {
             onClick={() => setPlaying(!playing)}
             className="p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
             title={playing ? 'Pause preview' : 'Play preview'}
+            aria-label={playing ? 'Pause preview' : 'Play preview'}
           >
             {playing ? (
               <Pause className="w-3.5 h-3.5 text-text-muted" />
@@ -104,6 +105,7 @@ export function HudThemeEditor() {
             onClick={handleReset}
             className="p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
             title="Reset to C++ defaults"
+            aria-label="Reset to C++ defaults"
           >
             <RotateCcw className="w-3.5 h-3.5 text-text-muted" />
           </button>

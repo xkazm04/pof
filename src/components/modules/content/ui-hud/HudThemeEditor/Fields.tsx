@@ -16,6 +16,7 @@ export function ColorPickerField({ label, value, onChange }: {
     <div className="flex items-center gap-2">
       <input
         type="color"
+        aria-label={label}
         value={rgbaToHex(value)}
         // <input type="color"> carries no alpha: keep the colour's own A (an imported 0.5 stays 0.5).
         onChange={(e) => onChange({ ...hexToRGBA(e.target.value), a: value.a })}

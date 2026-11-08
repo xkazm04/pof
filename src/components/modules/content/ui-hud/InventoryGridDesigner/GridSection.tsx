@@ -144,6 +144,7 @@ export function GridSection({
             <span className="text-xs font-bold uppercase text-violet-400/80">Stack Limit:</span>
             <input
               type="number"
+              aria-label="Stack limit"
               value={config.maxStackSize}
               onChange={(e) => setConfig((c) => ({ ...c, maxStackSize: Math.max(1, Math.min(9999, Number(e.target.value) || 1)) }))}
               className="w-20 px-3 py-1.5 bg-black/50 border border-violet-900/60 rounded-lg text-[11px] font-mono text-violet-200 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 transition-all shadow-inner text-center"

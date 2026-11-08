@@ -139,3 +139,42 @@ describe('Inventory designer prints a real multiplication sign', () => {
     expect(text.split('×').length - 1).toBe(2);
   });
 });
+
+// Minimal accessible-name read: aria-label, aria-labelledby, a wrapping <label>, or (buttons) own text.
+function accessibleName(el: HTMLElement): string {
+  const aria = el.getAttribute('aria-label');
+  if (aria?.trim()) return aria.trim();
+  const by = el.getAttribute('aria-labelledby');
+  if (by) return by.split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '').join(' ').trim();
+  const wrap = el.closest('label');
+  if (wrap?.textContent?.trim()) return wrap.textContent.trim();
+  return el.tagName === 'BUTTON' ? (el.textContent ?? '').trim() : '';
+}
+// Range inputs come from the shared ui/StyledSlider, whose visible label is not wired to
+// the input — a primitive outside this context, carded rather than patched per consumer.
+const unnamed = (root: HTMLElement) =>
+  Array.from(root.querySelectorAll<HTMLElement>('button, input:not([type="range"]), textarea, select'))
+    .filter((el) => !accessibleName(el));
+
+describe('every HUD designer control has an accessible name', () => {
+  it('Inventory designer: +/- steppers and the stack-limit field are named', async () => {
+    const { InventoryGridDesigner } = await import('@/components/modules/content/ui-hud/InventoryGridDesigner');
+    const { container } = render(<InventoryGridDesigner onGenerate={vi.fn()} isGenerating={false} />);
+    expect(screen.queryByRole('checkbox')).toBeTruthy();
+    if (!(screen.getByRole('checkbox') as HTMLInputElement).checked) fireEvent.click(screen.getByRole('checkbox'));
+    expect(unnamed(container).map((el) => el.outerHTML.slice(0, 60))).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Increase Columns' })).toBeTruthy();
+    expect(screen.getByRole('spinbutton', { name: 'Stack limit' })).toBeTruthy();
+  });
+
+  it('HUD theme editor: every colour swatch is named by its row label', () => {
+    const { container } = render(<HudThemeEditor />);
+    for (const tab of ['Health & Mana', 'Damage Numbers', 'Enemy HP Bar']) {
+      fireEvent.click(screen.getByRole('tab', { name: tab }));
+      expect(unnamed(container).map((el) => el.outerHTML.slice(0, 60))).toEqual([]);
+    }
+    fireEvent.click(screen.getByRole('tab', { name: 'Health & Mana' }));
+    expect(screen.getByLabelText('Healthy Color')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Pause preview' })).toBeTruthy();
+  });
+});
