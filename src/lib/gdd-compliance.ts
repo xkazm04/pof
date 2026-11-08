@@ -204,9 +204,11 @@ function detectFeatureGaps(
     }
   }
 
-  // 2. Low quality features — implemented but quality < 3
+  // 2. Low quality features — done (implemented OR improved) but quality < 3. The
+  //    same DONE_STATUSES set the checklist and conformance arithmetic use, so an
+  //    `improved` row cannot take full credit while dodging the quality check.
   for (const f of features) {
-    if (f.status === 'implemented' && f.qualityScore !== null && f.qualityScore < 3) {
+    if (DONE_STATUSES.has(f.status) && f.qualityScore !== null && f.qualityScore < 3) {
       gaps.push({
         id: `gap-${moduleId}-quality-${f.id}`,
         moduleId,

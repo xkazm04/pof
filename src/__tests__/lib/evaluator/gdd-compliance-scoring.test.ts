@@ -249,3 +249,17 @@ describe('gdd-compliance: report envelope invariants (pof_gdd_compliance consume
     expect(lastMeasured).toBeLessThan(firstUnmeasured);
   });
 });
+
+describe('gdd-compliance: a low-quality DONE row is a quality gap whichever done status it carries', () => {
+  // `improved` is in DONE_STATUSES and earns full conformance credit, but the
+  // quality check read `status === 'implemented'` only — an improved row scored 1/5
+  // raised no gap and took no damping.
+  it('an improved row with quality 1 raises the same critical quality gap as an implemented one', () => {
+    const impl = moduleOf(audit({ 'arpg-combat': [row('arpg-combat', 'implemented', { qualityScore: 1 })] }), 'arpg-combat');
+    const impr = moduleOf(audit({ 'arpg-combat': [row('arpg-combat', 'improved', { qualityScore: 1 })] }), 'arpg-combat');
+    const q = (m: typeof impl) => m.gaps.filter((g) => g.category === 'quality').map((g) => g.severity);
+    expect(q(impl)).toEqual(['critical']);
+    expect(q(impr)).toEqual(['critical']);
+    expect(impr.score).toBe(impl.score);
+  });
+});
