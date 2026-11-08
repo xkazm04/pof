@@ -78,3 +78,14 @@ describe('/api/level-design body shape', () => {
     expect((await res.json()).error).toContain(field);
   });
 });
+
+describe('/api/procgen/zone-pins request shape', () => {
+  it.each(['', '?id=', '?id=%20'])('DELETE without an id (%s) is a 400, not a reported delete of pin 0', async (qs) => {
+    const { DELETE } = await import('@/app/api/procgen/zone-pins/route');
+    await expect400(await DELETE(new NextRequest(`http://localhost/api/procgen/zone-pins${qs}`, { method: 'DELETE' })));
+  });
+  it.each(['{"seed":', 'null'])('POST refuses malformed or non-object JSON %s', async (raw) => {
+    const { POST } = await import('@/app/api/procgen/zone-pins/route');
+    await expect400(await POST(req('/api/procgen/zone-pins', 'POST', raw)));
+  });
+});
