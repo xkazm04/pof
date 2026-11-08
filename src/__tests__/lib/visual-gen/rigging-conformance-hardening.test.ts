@@ -279,3 +279,24 @@ describe('rig gate: a mesh bound to a second skin is named, not silently dropped
     expect(scoreRig(facts).warnings.some((w) => /skin/i.test(w) && /mesh/i.test(w))).toBe(false);
   });
 });
+
+describe('rig gate: weight-sum tolerance follows the weight encoding', () => {
+  const GRUNT_FACTS = parseGlbRig(skinnedGlb([[good]]));
+  const step8 = 1 / 255;
+  const sums = { weightSumMin: 254 / 255, weightSumMax: 1, weightSumMean: 0.999 };
+
+  it('passes 8-bit weights summing 254/255 (one quantization step)', () => {
+    const facts = { ...GRUNT_FACTS, ...sums, weightQuantStep: step8 };
+    expect(scoreRig(facts).pass).toBe(true);
+  });
+
+  it('keeps float weights strict: the same sum still fails', () => {
+    expect(scoreRig({ ...GRUNT_FACTS, ...sums }).pass).toBe(false);
+    expect(scoreRig({ ...GRUNT_FACTS, ...sums, weightQuantStep: 0 }).pass).toBe(false);
+  });
+
+  it('does not wave a sloppy 8-bit rig through (three steps off)', () => {
+    const facts = { ...GRUNT_FACTS, ...sums, weightSumMin: 252 / 255, weightQuantStep: step8 };
+    expect(scoreRig(facts).pass).toBe(false);
+  });
+});
