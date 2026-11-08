@@ -20,6 +20,7 @@ export function CollapsibleGroup({ title, accent, sectionCount, isOpen, onToggle
   return (
     <div className="relative" style={{ borderLeft: `3px solid ${withOpacity(accent, OPACITY_25)}` }}>
       <button
+        aria-expanded={isOpen}
         onClick={onToggle}
         className="w-full flex items-center gap-1.5 px-3 py-2 text-left rounded-r-lg transition-colors hover:bg-surface-hover/30"
         type="button"

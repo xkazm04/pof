@@ -60,6 +60,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange, world }: OverlayPr
         <div className="flex items-center gap-1 bg-surface-deep rounded-full p-0.5 border border-border/40">
           <button
             type="button"
+            aria-pressed={mode === 'critical'}
             onClick={() => onModeChange('critical')}
             className="px-2.5 py-1 text-xs font-mono uppercase tracking-[0.15em] rounded-full transition-all"
             style={mode === 'critical' ? { backgroundColor: withOpacity(ACCENT_ORANGE, OPACITY_15), color: ACCENT_ORANGE, boxShadow: `${GLOW_MD} ${withOpacity(ACCENT_ORANGE, OPACITY_20)}` } : { color: 'var(--text-muted)' }}
@@ -68,6 +69,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange, world }: OverlayPr
           </button>
           <button
             type="button"
+            aria-pressed={mode === 'all'}
             onClick={() => onModeChange('all')}
             className="px-2.5 py-1 text-xs font-mono uppercase tracking-[0.15em] rounded-full transition-all"
             style={mode === 'all' ? { backgroundColor: withOpacity(ACCENT_ORANGE, OPACITY_15), color: ACCENT_ORANGE, boxShadow: `${GLOW_MD} ${withOpacity(ACCENT_ORANGE, OPACITY_20)}` } : { color: 'var(--text-muted)' }}
