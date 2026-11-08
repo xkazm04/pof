@@ -122,7 +122,13 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
       {/* ── Top Stats Row ────────────────────────────────────────── */}
       {summary && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* A failed recompute keeps the previous summary on screen; say the numbers are behind. */}
+          {error && (
+            <p className="text-xs text-amber-400" role="status" data-testid="holistic-stale-summary">
+              Showing the last successful compute &mdash; these numbers predate the failed refresh.
+            </p>
+          )}
+          <div className={`grid grid-cols-2 lg:grid-cols-5 gap-3${error ? ' opacity-70' : ''}`}>
             {/* Overall completion */}
             <SurfaceCard level={2}>
               <div className="flex items-center gap-3">

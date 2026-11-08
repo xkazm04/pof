@@ -97,3 +97,19 @@ describe('Project Health — sub-tab keyboard model', () => {
     expect(tabs()[1].getAttribute('aria-controls')).toBe(panel?.id);
   });
 });
+
+describe('Project Health — stale summary under a refresh error', () => {
+  it('marks the stats as from the last successful compute when error and summary coexist', async () => {
+    setStore([mod('a', 'healthy')], 'HTTP 500');
+    const { container } = render(<HolisticHealthView />);
+    await settle();
+    expect(container.querySelector('[data-testid="holistic-stale-summary"]')).not.toBeNull();
+  });
+
+  it('shows no staleness cue when there is no error', async () => {
+    setStore([mod('a', 'healthy')]);
+    const { container } = render(<HolisticHealthView />);
+    await settle();
+    expect(container.querySelector('[data-testid="holistic-stale-summary"]')).toBeNull();
+  });
+});
