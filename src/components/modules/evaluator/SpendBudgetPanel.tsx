@@ -36,19 +36,26 @@ export function SpendBudgetPanel({ status, daily: history = NO_HISTORY, isSaving
   const [editing, setEditing] = useState(false);
   const [daily, setDaily] = useState(status.config.dailyLimitUsd?.toString() ?? '');
   const [monthly, setMonthly] = useState(status.config.monthlyLimitUsd?.toString() ?? '');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const startEdit = () => {
     setDaily(status.config.dailyLimitUsd?.toString() ?? '');
     setMonthly(status.config.monthlyLimitUsd?.toString() ?? '');
+    setSaveError(null);
     setEditing(true);
   };
 
   const save = async () => {
-    await onSave({
-      dailyLimitUsd: daily.trim() === '' ? null : Number(daily),
-      monthlyLimitUsd: monthly.trim() === '' ? null : Number(monthly),
-    });
-    setEditing(false);
+    setSaveError(null);
+    try {
+      await onSave({
+        dailyLimitUsd: daily.trim() === '' ? null : Number(daily),
+        monthlyLimitUsd: monthly.trim() === '' ? null : Number(monthly),
+      });
+      setEditing(false);
+    } catch (err) {
+      setSaveError(`Could not save limits: ${err instanceof Error ? err.message : 'unknown error'}`);
+    }
   };
 
   return (
@@ -89,6 +96,9 @@ export function SpendBudgetPanel({ status, daily: history = NO_HISTORY, isSaving
           <LimitInput label="Daily limit (USD)" value={daily} onChange={setDaily} />
           <LimitInput label="Monthly limit (USD)" value={monthly} onChange={setMonthly} />
           <BudgetEditPreview history={history} status={status} dailyInput={daily} monthlyInput={monthly} />
+          {saveError && (
+            <p role="alert" className="col-span-2 text-2xs" style={{ color: STATUS_ERROR }}>{saveError}</p>
+          )}
           <p className="col-span-2 text-2xs text-text-muted">
             Leave a field blank for no limit. When a limit is set, expensive task launches that would
             exceed it prompt a confirmation.
