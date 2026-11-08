@@ -1,57 +1,87 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 const STORAGE_PREFIX = 'pof-feature-vis-';
 
-function readStore(moduleId: string): Record<string, boolean> {
-  if (typeof window === 'undefined') return {};
+type Vis = Record<string, boolean>;
+const EMPTY: Vis = {};
+
+function readRaw(moduleId: string): string | null {
+  if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(`${STORAGE_PREFIX}${moduleId}`);
-    return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    return localStorage.getItem(`${STORAGE_PREFIX}${moduleId}`);
   } catch {
-    return {};
+    return null;
   }
 }
 
-function writeStore(moduleId: string, state: Record<string, boolean>) {
+function parse(raw: string | null): Vis {
+  if (!raw) return EMPTY;
+  try {
+    return JSON.parse(raw) as Vis;
+  } catch {
+    return EMPTY;
+  }
+}
+
+function writeStore(moduleId: string, state: Vis) {
   try {
     localStorage.setItem(`${STORAGE_PREFIX}${moduleId}`, JSON.stringify(state));
   } catch { /* quota exceeded — ignore */ }
 }
 
-type VisState = {
-  vis: Record<string, boolean>;
-  /** True once an edit (not a read) produced `vis` — only then is it persisted.
-   *  A mount or module switch merely READ the store; writing that snapshot back
-   *  cost one write per mounted section and could rewrite a stale read over a
-   *  newer one. */
-  edited: boolean;
-};
+/**
+ * ONE state per module, shared by every hook instance (each VisibleSection mounts
+ * its own, and so does the Feature Map). `seenRaw` is the storage value `vis` was
+ * last synced from: a different value in storage (another browser tab, a test)
+ * re-parses, while a write that storage refused (quota) keeps the in-memory edit.
+ */
+const cache = new Map<string, { seenRaw: string | null; vis: Vis }>();
+const listeners = new Set<() => void>();
+
+function snapshot(moduleId: string): Vis {
+  const raw = readRaw(moduleId);
+  const hit = cache.get(moduleId);
+  if (hit && hit.seenRaw === raw) return hit.vis;
+  const vis = parse(raw);
+  cache.set(moduleId, { seenRaw: raw, vis });
+  return vis;
+}
+
+function emit() {
+  for (const l of listeners) l();
+}
+
+let storageBound = false;
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  if (!storageBound && typeof window !== 'undefined') {
+    storageBound = true;
+    // Another tab's write (the event only fires cross-document).
+    window.addEventListener('storage', (e) => {
+      if (e.key === null || e.key.startsWith(STORAGE_PREFIX)) emit();
+    });
+  }
+  return () => { listeners.delete(listener); };
+}
+
+/** Apply an edit to one module's shared state; returning the same map is a no-op
+ *  (no notify, no write). Only edits are persisted — a read never writes. */
+function edit(moduleId: string, fn: (prev: Vis) => Vis) {
+  const prev = snapshot(moduleId);
+  const next = fn(prev);
+  if (next === prev) return;
+  writeStore(moduleId, next);
+  cache.set(moduleId, { seenRaw: readRaw(moduleId), vis: next });
+  emit();
+}
 
 export function useFeatureVisibility(moduleId: string) {
-  const [prevId, setPrevId] = useState(moduleId);
-  const [state, setState] = useState<VisState>(() => ({ vis: readStore(moduleId), edited: false }));
-  const vis = state.vis;
+  const getSnapshot = useCallback(() => snapshot(moduleId), [moduleId]);
+  const vis = useSyncExternalStore(subscribe, getSnapshot, () => EMPTY);
 
-  // Reset during render when moduleId changes (official React pattern)
-  if (prevId !== moduleId) {
-    setPrevId(moduleId);
-    setState({ vis: readStore(moduleId), edited: false });
-  }
-
-  // Persist edits only
-  useEffect(() => {
-    if (state.edited) writeStore(moduleId, state.vis);
-  }, [moduleId, state]);
-
-  /** Apply an edit; returning the same map is a no-op (no re-render, no write). */
-  const setVis = useCallback((fn: (prev: Record<string, boolean>) => Record<string, boolean>) => {
-    setState((prev) => {
-      const next = fn(prev.vis);
-      return next === prev.vis ? prev : { vis: next, edited: true };
-    });
-  }, []);
+  const setVis = useCallback((fn: (prev: Vis) => Vis) => edit(moduleId, fn), [moduleId]);
 
   const isVisible = useCallback(
     (sectionId: string) => vis[sectionId] !== false,
