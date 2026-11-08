@@ -145,7 +145,9 @@ export function sanitizeItemGenome(
     tags: Array.isArray(obj.tags)
       ? (obj.tags as unknown[]).filter((t): t is string => typeof t === 'string')
       : [],
-    isPreset: obj.isPreset === true ? true : undefined,
+    // An import is user data, never a preset (presets are undeletable). The persist
+    // merge in itemGenomeStore restores the flag for real presets itself.
+    isPreset: undefined,
     parents: sanitizeParents(obj.parents),
   };
 
