@@ -11,7 +11,8 @@ import {
   READINESS_MEANING,
   type ReadinessLevel,
 } from '@/lib/status/readiness';
-import type { StepCell, CellGrade } from '@/lib/status/statusModel';
+import { deriveCell, type StepCell, type CellGrade } from '@/lib/status/statusModel';
+import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 
 /** Minimal cell factory — only the fields readiness reads. */
 function cell(grade: CellGrade, extra: Partial<StepCell> = {}): StepCell {
@@ -177,5 +178,24 @@ describe('readinessLabel', () => {
     expect(label).toContain('PROVEN');
     expect(label).toContain('waiting');
     expect(label).toContain('declared');
+  });
+});
+
+describe('readinessOf: a blocked cell keeps the rung its pass earned (engine class included)', () => {
+  const art = (entityId: string) => ({
+    catalogId: 'c', entityId, step: 'S', status: 'pass', tier: 'L0', data: { a: 1 },
+    updatedAt: '2026-01-01 00:00:00',
+  }) as never;
+  const fail = { catalogId: 'c', entityId: 'e', step: 'S', judge: 'vlm', verdict: 'fail', score: 20, findings: 'x', model: 'm', rubricVersion: RUBRIC_VERSION } as never;
+
+  it('a judge-failed generative-media pass would have been R2 ungated, so it reads R2 blocked', () => {
+    const r = readinessOf(deriveCell('S', 'Leonardo', [art('e')], undefined, [fail]));
+    expect(r.state).toBe('blocked');
+    expect(r.level).toBe('R2');
+  });
+
+  it('the seeded control: a trusted engine under the same failure keeps R3', () => {
+    const r = readinessOf(deriveCell('S', 'Claude', [art('e')], undefined, [fail]));
+    expect(r).toMatchObject({ state: 'blocked', level: 'R3' });
   });
 });

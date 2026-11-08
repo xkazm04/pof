@@ -114,7 +114,7 @@ function blockedWouldBeLevel(cell: StepCell): ReadinessLevel {
   if (cell.counts.pass === 0) return 'R1';
   // Something passed — grade it as if the judge verdict were absent, which is exactly
   // the `trusted` / `ungated` split deriveCell applies to a plain pass.
-  return cell.checkerMeaningful === false ? 'R2' : 'R3';
+  return cell.checkerMeaningful === false || cell.passUngated ? 'R2' : 'R3';
 }
 
 /**

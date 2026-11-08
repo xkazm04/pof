@@ -447,6 +447,9 @@ export interface StepCell {
   /** False when the accept checker verifies shape only (field-exists / length),
    *  not content — the benevolence the audit exposed. */
   checkerMeaningful?: boolean;
+  /** Set on a blocked cell whose pass came from an engine class that needs a gate: without the
+   *  failure it would have graded `ungated` (R2), not `trusted` (R3). Display only. */
+  passUngated?: true;
   /** Content-quality judgment (LLM panel / VLM), when one has run. */
   judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string; effort?: string; rubricVersion?: number };
   /**
@@ -641,6 +644,7 @@ export function deriveCell(
     judge: fact?.judge,
     auditNote: fact?.note,
     checkerMeaningful: fact?.checkerMeaningful,
+    ...(grade === 'attention' && counts.pass > 0 && !TRUSTED_CLASSES.has(engineClass(engine)) ? { passUngated: true as const } : {}),
     ...(fact && mirrorSupport(fact.deliverable, fact.step) !== 'none'
       ? { browserMirror: mirrorSupport(fact.deliverable, fact.step) }
       : {}),
