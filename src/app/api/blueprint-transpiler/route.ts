@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { parseBlueprintJson, summarizeBlueprintForPrompt } from '@/lib/blueprint-parser';
 import { generateCppFromBlueprint } from '@/lib/blueprint-cpp-codegen';
 import { computeSemanticDiff } from '@/lib/blueprint-semantic-diff';
@@ -12,18 +13,27 @@ import { computeSemanticDiff } from '@/lib/blueprint-semantic-diff';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const raw = await readJsonObject(request);
+    if (!raw) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = raw as { action?: string; blueprintJson?: unknown; existingCpp: string; projectName?: string; moduleName?: string };
     const action = body.action as string;
+
+    // The parser takes text or an object; anything else "parsed" to an empty Blueprint.
+    const input = body.blueprintJson;
+    if (input !== undefined && typeof input !== 'string' && (typeof input !== 'object' || input === null || Array.isArray(input))) {
+      return apiError('blueprintJson must be a JSON string or object', 400);
+    }
+    const blueprintJson = input as string;
 
     switch (action) {
       case 'parse':
-        return handleParse(body.blueprintJson);
+        return handleParse(blueprintJson);
 
       case 'transpile':
-        return handleTranspile(body.blueprintJson, body.projectName, body.moduleName);
+        return handleTranspile(blueprintJson, body.projectName, body.moduleName);
 
       case 'diff':
-        return handleDiff(body.blueprintJson, body.existingCpp, body.projectName);
+        return handleDiff(blueprintJson, body.existingCpp, body.projectName);
 
       default:
         return apiError(`Unknown action: ${action}`, 400);
