@@ -168,10 +168,9 @@ export async function runQwenImage(spec: QwenImageSpec, deps?: Partial<QwenImage
       }
 
       const url = parseImageUrl(await res.json());
-      if (!url) {
-        lastErr = `no image in the ${model} response`;
-        continue;
-      }
+      // An answered request with no image is not a quota wall: same rule as the non-quota
+      // HTTP error above, so it must not buy the next paid model in the chain.
+      if (!url) return done({ ok: false, error: `no image in the ${model} response`, model });
 
       at = { model, imageUrl: url };
       const img = await d.fetch(url);
