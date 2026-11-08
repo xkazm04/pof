@@ -21,6 +21,9 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCheckedRef = useRef('');
+  /** The prompt currently in the box — a check reply for any other prompt is stale. */
+  const promptRef = useRef(prompt);
+  useEffect(() => { promptRef.current = prompt; }, [prompt]);
 
   // Render-time reset: clear warnings when prompt becomes too short
   const [prevPrompt, setPrevPrompt] = useState(prompt);
@@ -55,6 +58,8 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
         const data = await apiFetch<{ warnings: APWarning[] }>(
           `/api/pattern-library?${params}`,
         );
+        // Typed on, or submitted (input cleared) while the check was in flight: drop it.
+        if (promptRef.current.trim() !== trimmed) { lastCheckedRef.current = ''; return; }
         setWarnings(data.warnings);
       } catch {
         // Silent fail — don't block user workflow
