@@ -121,3 +121,32 @@ describe('after a real store restore', () => {
     expect(filterAdoptSuggestions(suggestions, undone)).toHaveLength(2);
   });
 });
+
+describe('planAdoption — the caution states what the evidence licenses', () => {
+  const plan = (over: Partial<ABTest>) => {
+    const r = planAdoption({ test: test(over), variants });
+    if (!r.ok) throw new Error('plan refused');
+    return r.data;
+  };
+
+  it('a weak-band win is a lead, with its counts and basis', () => {
+    const caution = plan({ variantASuccesses: 5, variantBSuccesses: 8 }).caution;
+    expect(caution).toMatch(/lead, not a result/);
+    expect(caution).toMatch(/10 vs 10/);
+    expect(caution).toMatch(/self-reported/);
+  });
+
+  it('a no-band win says no reliable difference was detected', () => {
+    expect(plan({ variantASuccesses: 5, variantBSuccesses: 6 }).caution).toMatch(/No reliable difference/);
+  });
+
+  it('a strong win carries no caution', () => {
+    expect(plan({ variantASuccesses: 1, variantBSuccesses: 9 }).caution).toBeNull();
+  });
+
+  it('a contested win still leads with the contest', () => {
+    const p = plan({ variantASuccesses: 9, variantBSuccesses: 5 });
+    expect(p.contested).toBe(true);
+    expect(p.caution).toMatch(/favours the other/);
+  });
+});
