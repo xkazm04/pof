@@ -120,4 +120,25 @@ describe('UnifiedSummaryView — own data source hardening', () => {
     const btn = refreshButton(container);
     expect(btn.getAttribute('aria-label')).toBe('Refresh all data');
   });
+
+  it('with no module scored the gauge reads a dash, not a measured 0/100', async () => {
+    h.fetch.mockResolvedValue({ ok: true, data: { totalSessions: 0, moduleStats: [] } });
+    h.aggregates.mockReturnValue({
+      aggregates: [], isLoading: false, loaded: true, failed: false,
+      error: null, scope: null, refresh: vi.fn(),
+    });
+    const { container } = render(<UnifiedSummaryView onNavigateTab={vi.fn()} />);
+    await settle();
+    const denominator = [...container.querySelectorAll('span')].find((s) => s.textContent === '/100');
+    expect(denominator).toBeTruthy();
+    expect(denominator!.previousElementSibling?.textContent).toBe('—');
+  });
+
+  it('with a module scored the gauge shows the number', async () => {
+    h.fetch.mockResolvedValue(OK);
+    const { container } = render(<UnifiedSummaryView onNavigateTab={vi.fn()} />);
+    await settle();
+    const denominator = [...container.querySelectorAll('span')].find((s) => s.textContent === '/100');
+    expect(denominator!.previousElementSibling?.textContent).toMatch(/^\d+$/);
+  });
 });

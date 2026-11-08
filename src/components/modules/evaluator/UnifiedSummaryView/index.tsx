@@ -114,7 +114,8 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       <div className="flex items-start gap-5">
         {/* Radial gauge */}
         <div className="flex-shrink-0">
-          <CombinedHealthGauge score={health.overallScore} />
+          {/* No scored module is "not measured", not a project at 0/100. */}
+          <CombinedHealthGauge score={health.moduleScores.length > 0 ? health.overallScore : null} />
         </div>
 
         <div className="flex-1 min-w-0 py-1">

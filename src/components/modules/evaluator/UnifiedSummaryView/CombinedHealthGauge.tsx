@@ -2,11 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/constants';
+import { STATUS_NEUTRAL } from '@/lib/chart-colors';
 import { healthColor } from './helpers';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-export function CombinedHealthGauge({ score }: { score: number }) {
+/** `score === null` means nothing was scored: an empty track and a dash, never a measured 0. */
+export function CombinedHealthGauge({ score }: { score: number | null }) {
   const size = 120;
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
@@ -28,10 +30,10 @@ export function CombinedHealthGauge({ score }: { score: number }) {
   };
 
   const trackPath = arcPath(startAngle, startAngle + sweepAngle, radius);
-  const clamped = Math.max(0, Math.min(100, score));
+  const clamped = score === null ? 0 : Math.max(0, Math.min(100, score));
   const scoreEndAngle = startAngle + (clamped / 100) * sweepAngle;
   const scorePath = clamped > 0 ? arcPath(startAngle, scoreEndAngle, radius) : '';
-  const color = healthColor(score);
+  const color = score === null ? STATUS_NEUTRAL : healthColor(score);
 
   return (
     <motion.div
@@ -59,7 +61,7 @@ export function CombinedHealthGauge({ score }: { score: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-[28px] font-bold leading-none" style={{ color }}>
-          {score}
+          {score === null ? '—' : score}
         </span>
         <span className="text-2xs text-text-muted font-medium mt-0.5">/100</span>
       </div>
