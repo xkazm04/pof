@@ -149,12 +149,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     if (!entityKey) return;
     const srv = serverArts[step];
     if (!srv) return;
-    adoptServer(entityKey, step, {
-      done: true, data: srv.data, ueAssets: srv.ueAssets, at: srv.updatedAt ?? new Date().toISOString(),
-      status: srv.status,
-      ...(srv.tier ? { tier: srv.tier } : {}),
-      ...(srv.reason ? { reason: srv.reason } : {}),
-    }, opts);
+    adoptServer(entityKey, step, toLabArtifacts([srv])[0].artifact, opts);
   };
 
   // Write-through: register sync bound to the active catalogId so produce() fires
@@ -247,15 +242,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     // The server's VERDICT (status/tier/reason) rides along: a gate drain resolves L3/L4
     // server-side, and `serverVerdictOverlay` lets that outcome reach the step banner
     // (content stays add-only — see `hydrateEntity`).
-    hydrateEntity(entityKey, entityArts.map((a) => ({
-      step: a.step,
-      artifact: {
-        done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString(),
-        status: a.status,
-        ...(a.tier ? { tier: a.tier } : {}),
-        ...(a.reason ? { reason: a.reason } : {}),
-      },
-    })));
+    hydrateEntity(entityKey, toLabArtifacts(entityArts));
   }, [entityKey, entityArts, hydrateEntity]);
 
   // Close an open drawer on Escape (narrow shell only).
