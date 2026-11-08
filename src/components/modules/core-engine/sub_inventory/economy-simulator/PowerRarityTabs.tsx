@@ -39,6 +39,10 @@ function StaggerItem({ index, children }: { index: number; children: ReactNode }
 export function PowerTab({ result, config }: {
   result: ItemEconomyResult; config: ItemEconomyConfig;
 }) {
+  // A level no agent reached is written as power 0 by the engine; plotting it would
+  // draw the curve crashing to zero. Only sampled levels are drawn.
+  const sampledLevels = new Set(result.brackets.filter((b) => b.agents > 0).map((b) => b.level));
+  const sampledCurve = result.powerCurve.filter((p) => sampledLevels.has(p.level));
   return (
     <div className="space-y-3">
       <StaggerItem index={0}>
@@ -48,7 +52,7 @@ export function PowerTab({ result, config }: {
             Average equipped item power per level bracket. Band shows P10-P90 spread.
           </p>
           <div className="min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-            <PowerCurveChart data={result.powerCurve} />
+            <PowerCurveChart data={sampledCurve} />
           </div>
         </BlueprintPanel>
       </StaggerItem>
