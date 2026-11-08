@@ -9,6 +9,8 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { ACCENT } from '../_shared/data';
 import type { DebugSnapshot } from '@/components/modules/core-engine/sub_debug/_shared/debugSnapshot';
 
+const GC_BAR_W = 6;
+
 /** GC pauses of the capture; the interval and warn count derive from them. */
 export function GCTimelineSection({ gc }: { gc: DebugSnapshot['gc'] }) {
   const { events, warnThresholdMs } = gc;
@@ -37,6 +39,8 @@ export function GCTimelineSection({ gc }: { gc: DebugSnapshot['gc'] }) {
           <div className="absolute left-10 right-0 top-0 bottom-0 flex items-end">
             {events.map((evt, i) => {
               const leftPct = (evt.timeS / maxTime) * 100;
+              // Inset by the bar's own width share, so the newest pause (leftPct 100) ends at the edge, not past it.
+              const left = `calc(${leftPct}% - ${(GC_BAR_W * leftPct) / 100}px)`;
               const heightPct = (evt.durationMs / yMax) * 100;
               const isWarning = evt.warn;
               const barColor = isWarning ? STATUS_ERROR : ACCENT_ORANGE;
@@ -44,7 +48,7 @@ export function GCTimelineSection({ gc }: { gc: DebugSnapshot['gc'] }) {
                 <motion.div key={`${evt.timeS}-${i}`} className="absolute bottom-0"
                   initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}
                   transition={{ delay: 0.4 + (evt.timeS / maxTime) * 0.3, duration: 0.3 }}
-                  style={{ left: `${leftPct}%`, width: '6px', transformOrigin: 'bottom' }}
+                  style={{ left, width: `${GC_BAR_W}px`, transformOrigin: 'bottom' }}
                   title={`GC @ ${evt.timeS}s: ${evt.durationMs}ms (${evt.objectsCollected} objects, ${evt.freedMB}MB freed)`}>
                   <div className="w-full rounded-t-sm"
                     style={{
