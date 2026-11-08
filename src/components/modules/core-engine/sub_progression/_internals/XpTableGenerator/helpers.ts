@@ -69,11 +69,11 @@ struct POF_API FProgressionCurveRow : public FTableRowBase
 {
 \tGENERATED_BODY()
 
-\t/** XP required to reach this level from the previous one. */
+\t/** XP required to clear this level (the cost of the next level-up). */
 \tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
 \tint32 XPRequired = 0;
 
-\t/** Cumulative XP needed to reach this level from level 1. */
+\t/** Cumulative XP to clear levels 1 through this one. */
 \tUPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Progression")
 \tint32 XPTotal = 0;
 
