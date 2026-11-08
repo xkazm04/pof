@@ -123,7 +123,7 @@ export function KeyboardVisualization() {
             animate={{ opacity: [0.3, 1, 0.3] }}
             transition={motionSafe({ duration: 2, repeat: Infinity }, prefersReduced)}
           />
-          {resolved.keyMap.size} bindings active
+          {resolved.keyMap.size} keys bound
         </span>
       </div>
     </BlueprintPanel>

@@ -163,3 +163,13 @@ describe('keyboard map shows every rebound key, not only the drawn layout', () =
     expect(getByLabelText(`${key}: IA_Interact`)).toBeTruthy();
   }, 15000);
 });
+
+describe('keyboard legend counts what it says it counts', () => {
+  it('defaults: 16 actions occupy 19 physical keys, and the legend says keys', () => {
+    useCharacterBlueprintStore.getState().resetBindings();
+    const { container } = render(<InputTab moduleId={'arpg-character' as SubModuleId} featureMap={new Map()} />);
+    expect(container.textContent).toContain('16 actions with unique bindings');
+    expect(container.textContent).toContain('19 keys bound');
+    expect(container.textContent).not.toContain('bindings active');
+  }, 15000);
+});
