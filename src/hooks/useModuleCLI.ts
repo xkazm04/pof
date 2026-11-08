@@ -10,6 +10,7 @@ import { composeTaskDispatch, STATIC_VARIANT_ID } from '@/lib/prompt-evolution/d
 import type { SkillId } from '@/components/cli/skills';
 import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
 import { logger } from '@/lib/logger';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import { isExpensiveTaskType } from '@/lib/cli-spend/preflight';
 import { fetchPreflightVerdict } from '@/lib/cli-spend-client';
@@ -23,6 +24,8 @@ interface DispatchMeta {
   variantId?: string;
   /** Module this run is FOR, when it differs from the host the tab is shown in. */
   moduleId?: SubModuleId;
+  /** Skill packs resolved for THIS dispatch; applied to the session before the prompt is sent. */
+  skills?: SkillId[];
 }
 
 interface UseModuleCLIOptions {
@@ -78,6 +81,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   const findSessionByKey = useCLIPanelStore((s) => s.findSessionByKey);
   const setActiveTab = useCLIPanelStore((s) => s.setActiveTab);
   const setSessionTaskMeta = useCLIPanelStore((s) => s.setSessionTaskMeta);
+  const setSessionSkills = useCLIPanelStore((s) => s.setSessionSkills);
 
   const isRunning = useCLIPanelStore((s) => {
     const entry = Object.values(s.sessions).find(
@@ -178,6 +182,9 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
         });
       }
       setActiveTab(tabId);
+      // Applied on the session that exists NOW (new or reused), so the packs are
+      // injected into this run regardless of when the telemetry read finished.
+      if (meta?.skills?.length) setSessionSkills(tabId, meta.skills);
 
       // Attribute spend to the dispatched task type (defaults to a free-typed
       // interactive prompt). The terminal reads this back when the run's cost
@@ -212,7 +219,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // model + effort for this run (Quality Program WS0). See src/lib/cli-dispatch.ts.
       dispatchPromptWhenReady(tabId, prompt, meta?.taskType);
     },
-    [findSessionByKey, createSession, setActiveTab, setSessionTaskMeta, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
+    [findSessionByKey, createSession, setActiveTab, setSessionTaskMeta, setSessionSkills, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
   );
 
   /**
@@ -240,10 +247,12 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       const scanProject = useProjectStore.getState().scanProject;
       await scanProject();
 
-      // Resolve adaptive skills from telemetry patterns (fire-and-forget on failure).
-      // The project is passed EXPLICITLY: these patterns choose which skill packs are
-      // injected into the prompt, and the route no longer serves an unscoped read.
-      resolveAndApplySkills(opts.sessionKey, useProjectStore.getState().projectPath);
+      // Resolve adaptive skills from telemetry patterns. Awaited (bounded, never
+      // rejects) alongside the dispatch composition so the packs ride WITH this
+      // dispatch instead of racing it. The project is passed EXPLICITLY: these
+      // patterns choose which skill packs are injected into the prompt, and the
+      // route no longer serves an unscoped read.
+      const skillsPending = resolveSkills(useProjectStore.getState().projectPath);
 
       const { projectName, projectPath: pp, ueVersion, dynamicContext } = useProjectStore.getState();
       const ctx = { projectName, projectPath: pp, ueVersion, dynamicContext };
@@ -253,47 +262,49 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // `seed: true` — a REAL dispatch with no adopted variant captures the
       // prompt it served as the item's baseline (v1), fire-and-forget, so the
       // A/B rail has an incumbent to challenge. Previews pass no options.
-      const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx, { seed: true });
+      const [{ prompt: enriched, variantId }, skills] = await Promise.all([
+        composeTaskDispatch(task, ctx, { seed: true }),
+        skillsPending,
+      ]);
       if (control?.shouldDispatch && !control.shouldDispatch()) return false;
       sendPrompt(enriched, {
         taskType: task.type,
         label: task.label,
         variantId,
         moduleId: opts.attributeToTaskModule ? task.moduleId : undefined,
+        skills,
       });
       return true;
     },
-    [sendPrompt, opts.sessionKey, opts.attributeToTaskModule],
+    [sendPrompt, opts.attributeToTaskModule],
   );
 
   return { sendPrompt, execute, isRunning };
 }
 
 /**
- * Resolve adaptive skills from telemetry patterns and apply to the session.
- * Non-blocking — silently skips on failure so it never blocks prompt dispatch.
+ * Resolve adaptive skills from telemetry patterns for one dispatch. Bounded by
+ * `terminalReadyFallback` and never rejects: any failure resolves to no packs, so it
+ * never blocks prompt dispatch.
  *
  * `projectPath` is required by the route: the resolved packs come from THIS project's
  * telemetry scan. With no project set the route refuses and no packs are injected —
  * which is the honest outcome, where the previous unscoped read injected whichever
  * project was scanned most recently.
  */
-function resolveAndApplySkills(sessionKey: string, projectPath: string | null): void {
-  if (!projectPath) return;
-  fetch('/api/telemetry', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'resolve-skills', projectPath }),
-  })
-    .then((res) => (res.ok ? res.json() : null))
-    .then((envelope: { success: boolean; data: { skills?: SkillId[] } } | null) => {
-      const json = envelope?.success ? envelope.data : null;
-      if (!json?.skills?.length) return;
-      const { sessions, tabOrder } = useCLIPanelStore.getState();
-      const tabId = tabOrder.find((id) => sessions[id]?.sessionKey === sessionKey);
-      if (tabId) {
-        useCLIPanelStore.getState().setSessionSkills(tabId, json.skills);
-      }
-    })
-    .catch(() => {});
+async function resolveSkills(projectPath: string | null): Promise<SkillId[]> {
+  if (!projectPath) return [];
+  try {
+    const res = await fetch('/api/telemetry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resolve-skills', projectPath }),
+      signal: AbortSignal.timeout(UI_TIMEOUTS.terminalReadyFallback),
+    });
+    if (!res.ok) return [];
+    const envelope = (await res.json()) as { success: boolean; data: { skills?: SkillId[] } } | null;
+    return envelope?.success ? (envelope.data?.skills ?? []) : [];
+  } catch {
+    return [];
+  }
 }
