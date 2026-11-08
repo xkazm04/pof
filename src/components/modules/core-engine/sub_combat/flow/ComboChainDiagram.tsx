@@ -83,6 +83,8 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
           return (
             <button
               key={cat}
+              type="button"
+              aria-pressed={active}
               onClick={() => { setFilterCat(cat); setPage(0); }}
               className="px-2 py-0.5 rounded text-xs font-mono border transition-colors cursor-pointer hover:brightness-110"
               style={{
@@ -133,15 +135,19 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-3">
           <button
+            type="button"
+            aria-label="Previous page"
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={safePages === 0}
             className="p-1 rounded hover:bg-surface-hover/50 transition-colors cursor-pointer disabled:opacity-30"
           >
-            <ChevronLeft className="w-3.5 h-3.5 text-text-muted" />
+            <ChevronLeft className="w-3.5 h-3.5 text-text-muted" aria-hidden />
           </button>
           {Array.from({ length: totalPages }, (_, i) => (
             <button
               key={i}
+              type="button"
+              aria-current={safePages === i ? 'page' : undefined}
               onClick={() => setPage(i)}
               className="w-6 h-6 rounded text-xs font-mono transition-colors cursor-pointer"
               style={safePages === i
@@ -153,11 +159,13 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
             </button>
           ))}
           <button
+            type="button"
+            aria-label="Next page"
             onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
             disabled={safePages === totalPages - 1}
             className="p-1 rounded hover:bg-surface-hover/50 transition-colors cursor-pointer disabled:opacity-30"
           >
-            <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
+            <ChevronRight className="w-3.5 h-3.5 text-text-muted" aria-hidden />
           </button>
         </div>
       )}
