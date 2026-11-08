@@ -129,3 +129,12 @@ describe('deadlines that could not be loaded', () => {
     expect((await findByRole('alert')).textContent).toContain('db locked');
   });
 });
+
+describe('project health that could not be computed', () => {
+  it('reports the store error rather than an empty chart', async () => {
+    state.error = 'health engine down';
+    installFetch();
+    const { findByRole } = render(<CalendarRoadmapView />);
+    expect((await findByRole('alert')).textContent).toContain('health engine down');
+  });
+});

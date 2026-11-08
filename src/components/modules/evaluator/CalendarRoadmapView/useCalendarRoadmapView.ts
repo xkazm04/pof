@@ -17,6 +17,7 @@ export function useCalendarRoadmapView() {
   const milestones = useProjectHealthStore((s) => s.milestones);
   const summary = useProjectHealthStore((s) => s.summary);
   const fetchHealth = useProjectHealthStore((s) => s.fetchHealth);
+  const healthError = useProjectHealthStore((s) => s.error);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
   const completionLedger = useModuleStore((s) => s.checklistCompletedAt);
   const scanHistory = useEvaluatorStore((s) => s.scanHistory);
@@ -237,6 +238,6 @@ export function useCalendarRoadmapView() {
     saveDeadline,
     handleDragStart,
     getVariance,
-    alerts: [loadError, saveError].filter((m): m is string => m !== null),
+    alerts: [healthError ? `Milestones could not be computed: ${healthError}` : null, loadError, saveError].filter((m): m is string => m !== null),
   };
 }
