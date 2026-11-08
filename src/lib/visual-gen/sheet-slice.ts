@@ -36,6 +36,8 @@ export interface SheetImageOps {
     path: string,
     cells: SheetCell[],
     seamXs: number[],
+    /** Row-cut y offsets (column 0, rows > 0): the horizontal cuts, measured like the vertical ones. */
+    seamYs: number[],
   ): Promise<{ cellStdev: number[]; seams: number[]; interior: number }>;
   cut(path: string, cell: SheetCell, outPath: string): Promise<void>;
 }
@@ -125,10 +127,11 @@ export async function runContactSheet(
   // second source of truth for the one mapping that must never drift.
   const cells = width > 0 && height > 0 ? contactSheetCells(spec, width, height) : [];
   const seamXs = cells.filter((c) => c.row === 0 && c.col > 0).map((c) => c.x);
+  const seamYs = cells.filter((c) => c.col === 0 && c.row > 0).map((c) => c.y);
   let measured: { cellStdev: number[]; seams: number[]; interior: number };
   try {
     measured = cells.length
-      ? await deps.image.stats(gen.path, cells, seamXs)
+      ? await deps.image.stats(gen.path, cells, seamXs, seamYs)
       : { cellStdev: [], seams: [], interior: 0 };
   } catch (e) {
     // The credit is spent and the art exists: the url has to survive whatever broke here.
