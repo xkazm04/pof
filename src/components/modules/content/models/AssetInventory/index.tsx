@@ -1,13 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Search, ScanLine, Loader2, FolderOpen, ArrowUpDown,
 } from 'lucide-react';
+import { STATUS_ERROR } from '@/lib/chart-colors';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { AssetType } from '@/app/api/filesystem/scan-assets/route';
 import { ACCENT, TYPE_CONFIG } from './constants';
-import { formatBytes } from './helpers';
+import { formatBytes } from '@/lib/format';
 import { AssetCard } from './AssetCard';
 import { BridgeManifestCard } from './BridgeManifestCard';
 import { FilterChip } from './FilterChip';
@@ -20,6 +22,15 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'size', label: 'Size' },
   { key: 'modified', label: 'Modified' },
 ];
+
+/**
+ * Cards mounted per page. Every card is a framer `layout` node, so an unbounded grid
+ * (a UE Content/ folder holds thousands of assets) costs a layout pass per node on
+ * every search keystroke. The grid mounts one page and grows by one page on demand.
+ */
+export const GRID_PAGE_SIZE = 200;
+
+const PATH_HINT_ID = 'asset-inventory-path-hint';
 
 // ── Main Component ──
 
@@ -54,6 +65,16 @@ export function AssetInventory() {
     edgeCount,
   } = useAssetInventory();
 
+  // Page limit, tagged with the view it was grown for: a new search / filter / sort / scan
+  // starts over at one page (derived, so no reset effect is needed).
+  const viewSig = `${scanResult?.scannedAt ?? ''}|${search}|${typeFilter}|${String(ueFilter)}|${sortKey}|${sortDir}`;
+  const [grown, setGrown] = useState({ sig: '', limit: GRID_PAGE_SIZE });
+  const limit = grown.sig === viewSig ? grown.limit : GRID_PAGE_SIZE;
+  const visibleAssets = displayAssets.length <= limit
+    ? displayAssets
+    : displayAssets.filter((a, i) => i < limit || a.relativePath === expandedAsset);
+  const hiddenCount = displayAssets.length - visibleAssets.length;
+
   // ── Pre-scan state ──
   if (!scanResult && !isScanning && !error) {
     return (
@@ -71,6 +92,7 @@ export function AssetInventory() {
         <button
           onClick={handleScan}
           disabled={!projectPath}
+          aria-describedby={projectPath ? undefined : PATH_HINT_ID}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all hover:brightness-110 disabled:opacity-40"
           style={{ backgroundColor: `${ACCENT}18`, color: ACCENT, border: `1px solid ${ACCENT}35` }}
         >
@@ -81,7 +103,7 @@ export function AssetInventory() {
           <BridgeManifestCard summary={bridgeSummary} className="w-full max-w-sm" />
         )}
         {!projectPath && (
-          <p className="text-xs text-red-400/70">Set your project path in Project Setup first</p>
+          <p id={PATH_HINT_ID} className="text-xs" style={{ color: STATUS_ERROR }}>Set your project path in Project Setup first</p>
         )}
       </div>
     );
@@ -250,7 +272,7 @@ export function AssetInventory() {
               {search || typeFilter !== 'all' || ueFilter === 'not-in-manifest' ? 'No assets match your filters' : 'No assets found in Content/'}
             </div>
           ) : (
-            displayAssets.map(asset => (
+            visibleAssets.map(asset => (
               <AssetCard
                 key={asset.relativePath}
                 asset={asset}
@@ -266,10 +288,22 @@ export function AssetInventory() {
         </AnimatePresence>
       </div>
 
+      {hiddenCount > 0 && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => setGrown({ sig: viewSig, limit: limit + GRID_PAGE_SIZE })}
+            className="focus-ring px-3 py-1.5 rounded-md text-xs font-medium text-text-muted border border-border hover:text-text transition-colors"
+          >
+            Show {Math.min(GRID_PAGE_SIZE, hiddenCount)} more ({hiddenCount} hidden)
+          </button>
+        </div>
+      )}
+
       {/* Showing count */}
       {displayAssets.length > 0 && (
         <div className="text-xs text-text-muted text-right font-mono mt-2 opacity-60">
-          Showing {displayAssets.length} of {scanResult.assets.length} assets
+          Showing {visibleAssets.length} of {scanResult.assets.length} assets
         </div>
       )}
     </div>

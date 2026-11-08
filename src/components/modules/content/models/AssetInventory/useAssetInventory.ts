@@ -100,6 +100,14 @@ export function useAssetInventory() {
     return counts;
   }, [scanResult]);
 
+  // Epoch per asset, parsed once per scan: the 'modified' comparator runs ~2 n log2 n
+  // times per sort (every search keystroke), so it must not construct Dates itself.
+  const modifiedEpoch = useMemo(() => {
+    const epochs: Record<string, number> = {};
+    if (scanResult) for (const a of scanResult.assets) epochs[a.relativePath] = new Date(a.modifiedAt).getTime() || 0;
+    return epochs;
+  }, [scanResult]);
+
   // Filtered + sorted assets
   const displayAssets = useMemo(() => {
     if (!scanResult) return [];
@@ -125,13 +133,13 @@ export function useAssetInventory() {
         case 'name': cmp = a.name.localeCompare(b.name); break;
         case 'type': cmp = a.type.localeCompare(b.type) || a.name.localeCompare(b.name); break;
         case 'size': cmp = a.sizeBytes - b.sizeBytes; break;
-        case 'modified': cmp = new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime(); break;
+        case 'modified': cmp = (modifiedEpoch[a.relativePath] ?? 0) - (modifiedEpoch[b.relativePath] ?? 0); break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
 
     return list;
-  }, [scanResult, reconcile, ueFilter, typeFilter, search, sortKey, sortDir]);
+  }, [scanResult, reconcile, ueFilter, typeFilter, search, sortKey, sortDir, modifiedEpoch]);
 
   // Precompute per-asset dependency edge counts once, so each card reads from
   // the map instead of re-filtering the full edge list on every render.

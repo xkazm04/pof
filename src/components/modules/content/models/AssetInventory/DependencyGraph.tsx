@@ -10,6 +10,9 @@ const EDGE_STYLE: Record<EdgeProvenance, { stroke: string; dash?: string; label:
   inferred: { stroke: 'var(--border)', dash: '4 3', label: 'Guessed from names' },
 };
 
+/** Rows per side. A hub asset (a master material with 300 instances) would otherwise draw a 10k px graph. */
+export const GRAPH_MAX_ROWS = 12;
+
 function emptyMessage(ueListed: boolean | null): string {
   if (ueListed === true) return 'UE declares no references to or from this asset';
   if (ueListed === false) return 'No known dependencies - not in the UE manifest, and name matching found none';
@@ -22,6 +25,15 @@ function Swatch({ provenance }: { provenance: EdgeProvenance }) {
     <svg width={18} height={6} aria-hidden="true" className="inline-block mr-1 align-middle">
       <line x1={0} y1={3} x2={18} y2={3} stroke={s.stroke} strokeWidth={1.5} strokeDasharray={s.dash} />
     </svg>
+  );
+}
+
+function MoreNode({ x, y, count }: { x: number; y: number; count: number }) {
+  return (
+    <g data-testid="dependency-more">
+      <rect x={x} y={y - 12} width={150} height={24} rx={4} fill="none" stroke="var(--border)" strokeWidth={1} strokeDasharray="4 3" />
+      <text x={x + 12} y={y + 3.5} fill="var(--text-muted)" fontSize={10} fontFamily="monospace">{`+${count} more (listed below)`}</text>
+    </g>
   );
 }
 
@@ -53,8 +65,21 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
   const sources = inEdges.map(e => ({ key: e.from, name: assetMap[e.from]?.name ?? e.from, relation: e.relation, provenance: e.provenance, asset: assetMap[e.from] as ScannedAsset | undefined }));
   const targets = outEdges.map(e => ({ key: e.to, name: assetMap[e.to]?.name ?? e.to, relation: e.relation, provenance: e.provenance, asset: assetMap[e.to] as ScannedAsset | undefined }));
 
+  // Past the row cap a side shows (cap - 1) nodes and one '+N more' node; the rest are listed below.
+  const sideShown = <T,>(list: T[]) => (list.length > GRAPH_MAX_ROWS ? list.slice(0, GRAPH_MAX_ROWS - 1) : list);
+  const shownSources = sideShown(sources);
+  const shownTargets = sideShown(targets);
+  const moreSources = sources.length - shownSources.length;
+  const moreTargets = targets.length - shownTargets.length;
+  const overflow = [
+    ...sources.slice(shownSources.length).map(s => ({ ...s, text: `${s.name} ${s.relation} ${asset.name}` })),
+    ...targets.slice(shownTargets.length).map(t => ({ ...t, text: `${asset.name} ${t.relation} ${t.name}` })),
+  ];
+  const leftRows = shownSources.length + (moreSources > 0 ? 1 : 0);
+  const rightRows = shownTargets.length + (moreTargets > 0 ? 1 : 0);
+
   const nodeH = 28;
-  const maxNodes = Math.max(sources.length, targets.length, 1);
+  const maxNodes = Math.max(leftRows, rightRows, 1);
   const svgH = Math.max(maxNodes * (nodeH + 6) + 20, 60);
   const svgW = 520;
   const centerX = svgW / 2;
@@ -82,7 +107,13 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
           </>
         )}
       </div>
-      <svg width={svgW} height={svgH} className="block">
+      <svg
+        width={svgW}
+        height={svgH}
+        className="block"
+        role="img"
+        aria-label={`Dependency graph for ${asset.name}: ${sources.length} used by, ${targets.length} uses. Edges are listed as text below.`}
+      >
         <defs>
           <marker id={markerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)" />
@@ -90,8 +121,8 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
         </defs>
 
         {/* Source nodes (left) */}
-        {sources.map((s, i) => {
-          const y = nodeY(i, sources.length);
+        {shownSources.map((s, i) => {
+          const y = nodeY(i, leftRows);
           const conf = s.asset ? TYPE_CONFIG[s.asset.type] : TYPE_CONFIG.other;
           const edge = EDGE_STYLE[s.provenance];
           return (
@@ -121,8 +152,8 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
         </g>
 
         {/* Target nodes (right) */}
-        {targets.map((t, i) => {
-          const y = nodeY(i, targets.length);
+        {shownTargets.map((t, i) => {
+          const y = nodeY(i, rightRows);
           const conf = t.asset ? TYPE_CONFIG[t.asset.type] : TYPE_CONFIG.other;
           const edge = EDGE_STYLE[t.provenance];
           return (
@@ -138,7 +169,29 @@ export function DependencyGraph({ asset, allAssets, dependencies, ueListed }: De
             </g>
           );
         })}
+
+        {moreSources > 0 && <MoreNode x={10} y={nodeY(shownSources.length, leftRows)} count={moreSources} />}
+        {moreTargets > 0 && <MoreNode x={svgW - 160} y={nodeY(shownTargets.length, rightRows)} count={moreTargets} />}
       </svg>
+      {/* The graph is one image to a screen reader; every edge is also exposed as text with its relation and provenance. */}
+      <ul className="sr-only" aria-label={`Dependencies of ${asset.name}`}>
+        {own.map((e, i) => (
+          <li key={`${i}-${e.from}-${e.to}-${e.relation}`}>
+            {`${assetMap[e.from]?.name ?? e.from} ${e.relation} ${assetMap[e.to]?.name ?? e.to} (${EDGE_STYLE[e.provenance].label})`}
+          </li>
+        ))}
+      </ul>
+      {overflow.length > 0 && (
+        <ul
+          aria-hidden="true"
+          data-testid="dependency-overflow"
+          className="w-full max-w-[520px] max-h-40 overflow-y-auto text-2xs text-text-muted font-mono space-y-0.5 border border-border rounded-md p-2"
+        >
+          {overflow.map(o => (
+            <li key={`${o.key}-${o.relation}-${o.text}`} className="truncate" title={`${EDGE_STYLE[o.provenance].label}: ${o.text}`}>{o.text}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

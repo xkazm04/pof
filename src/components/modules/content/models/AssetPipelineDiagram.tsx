@@ -17,7 +17,7 @@ import {
   Lock,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { ACCENT_VIOLET, ACCENT_CYAN, STATUS_ERROR } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, ACCENT_CYAN, STATUS_ERROR, OPACITY_5, OPACITY_20, OPACITY_40, OPACITY_60, OPACITY_80 } from '@/lib/chart-colors';
 import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 import { MeterBar } from '@/components/ui/MeterBar';
 import { MicroLabel } from '@/components/ui/MicroLabel';
@@ -80,7 +80,10 @@ export function AssetPipelineDiagram({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 bg-[#03030a] rounded-2xl border border-violet-900/30 relative overflow-hidden shadow-[inset_0_0_100px_rgba(167,139,250,0.03)]">
+    <div
+      className="w-full max-w-2xl mx-auto p-6 bg-surface-deep rounded-2xl border border-violet-900/30 relative overflow-hidden"
+      style={{ boxShadow: `inset 0 0 100px ${ACCENT_VIOLET}${OPACITY_5}` }}
+    >
       {/* Schematic Background */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{ backgroundImage: `linear-gradient(${ACCENT} 1px, transparent 1px), linear-gradient(90deg, ${ACCENT} 1px, transparent 1px)`, backgroundSize: '20px 20px' }} />
@@ -89,11 +92,11 @@ export function AssetPipelineDiagram({
 
       <div className="mb-8 relative z-10 border-b border-violet-900/40 pb-4">
         <div className="flex items-center gap-3">
-          <div aria-hidden="true" className="p-2 rounded grid place-items-center bg-violet-950/50 border border-violet-800/50 shadow-[0_0_15px_rgba(167,139,250,0.15)] relative overflow-hidden">
+          <div aria-hidden="true" className="p-2 rounded grid place-items-center bg-violet-950/50 border border-violet-800/50 relative overflow-hidden" style={{ boxShadow: `0 0 15px ${ACCENT_VIOLET}${OPACITY_20}` }}>
             <Layers className="w-5 h-5 text-violet-400" />
           </div>
           <div className="flex flex-col">
-            <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
+            <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase" style={{ textShadow: `0 0 8px ${ACCENT_VIOLET}${OPACITY_40}` }}>
               ASSET_PIPELINE.graph
             </h3>
             <p className="text-xs text-violet-300 font-mono uppercase mt-0.5">
@@ -145,7 +148,7 @@ export function AssetPipelineDiagram({
                   {(pathPending || pathActive) && !prefersReduced && (
                     <motion.div
                       className="absolute w-full h-8 bg-gradient-to-b from-transparent via-cyan-400 to-transparent top-0"
-                      style={{ filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.8))' }}
+                      style={{ filter: `drop-shadow(0 0 8px ${ACCENT_CYAN}${OPACITY_80})` }}
                       animate={{ top: ['-20%', '120%'] }}
                       transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
                     />
@@ -169,7 +172,7 @@ export function AssetPipelineDiagram({
                     }}
                   >
                     {isCompleted ? (
-                      <Check className="w-4 h-4 text-cyan-400 drop-shadow-[0_0_4px_rgba(6,182,212,1)]" />
+                      <Check className="w-4 h-4 text-cyan-400" style={{ filter: `drop-shadow(0 0 4px ${ACCENT_CYAN})` }} />
                     ) : stage.locked ? (
                       <Lock className="w-4 h-4 text-text-muted" />
                     ) : (
@@ -281,7 +284,8 @@ export function AssetPipelineDiagram({
                                         : `Complete ${stage.unmetDeps.join(', ')} first`
                                       : undefined
                                 }
-                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_rgba(139,92,246,0.5)] focus-ring disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
+                                className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all shadow-[0_0_15px_var(--run-glow)] focus-ring disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed"
+                                style={{ '--run-glow': `${ACCENT_VIOLET}${OPACITY_60}` } as React.CSSProperties}
                               >
                                 {isRunning ? (
                                   <>

@@ -7,7 +7,9 @@ import { ScanLine, FolderOpen } from 'lucide-react';
 import type { ScannedAsset } from '@/app/api/filesystem/scan-assets/route';
 import type { InventoryEdge } from '@/lib/asset-inventory/declared-edges';
 import { TYPE_CONFIG } from './constants';
-import { formatBytes, formatDate } from './helpers';
+import { formatBytes } from '@/lib/format';
+import { OVERLAY_BLACK, OPACITY_60 } from '@/lib/chart-colors';
+import { formatDate } from './helpers';
 import { DependencyGraph } from './DependencyGraph';
 
 interface AssetCardProps {
@@ -55,7 +57,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
           borderRadius: '16px',
           overflow: 'hidden',
           borderColor: isExpanded ? `${conf.color}80` : `${conf.color}30`,
-          boxShadow: isExpanded ? `0 0 30px -5px ${conf.color}40, inset 0 0 20px -10px ${conf.color}20` : `0 10px 20px -10px rgba(0,0,0,0.5), inset 0 0 10px -5px ${conf.color}20`,
+          boxShadow: isExpanded ? `0 0 30px -5px ${conf.color}40, inset 0 0 20px -10px ${conf.color}20` : `0 10px 20px -10px ${OVERLAY_BLACK}${OPACITY_60}, inset 0 0 10px -5px ${conf.color}20`,
         }}
         // Collapsed the card IS the expand control, so it carries button
         // semantics (aria-expanded is only valid alongside that role); expanded
@@ -84,8 +86,8 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
         }}
       >
         {/* Glow Effects */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.05)] to-transparent pointer-events-none" />
-        <div className="absolute -inset-[100%] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.08)] to-transparent -rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none z-20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+        <div className="absolute -inset-[100%] bg-gradient-to-r from-transparent via-white/10 to-transparent -rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none z-20" />
         <div className="absolute top-0 right-0 w-32 h-32 blur-3xl rounded-full pointer-events-none transition-opacity duration-300"
           style={{ backgroundColor: `${conf.color}20`, opacity: isExpanded ? 1 : 0.4 }} />
 
@@ -97,7 +99,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
         <div className="p-4 flex flex-col relative z-10 flex-1 border-b" style={{ borderColor: `${conf.color}20`, backgroundColor: `${conf.color}05` }}>
           <div className="flex justify-between items-start mb-3">
             <div className="p-2.5 rounded-xl border shadow-inner overflow-hidden relative" style={{ backgroundColor: `${conf.color}15`, borderColor: `${conf.color}40` }}>
-              <div className="absolute inset-0 bg-gradient-to-b from-[rgba(255,255,255,0.2)] to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
               <Icon className="w-5 h-5 relative z-10" style={{ color: conf.color, filter: `drop-shadow(0 0 4px ${conf.color}80)` }} />
             </div>
             <div className="flex flex-col items-end">
