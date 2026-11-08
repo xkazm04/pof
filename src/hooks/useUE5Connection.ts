@@ -40,6 +40,7 @@ import type { Result } from '@/types/result';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 /** Server-executed console command result (mirrors `RemoteControlClient`). */
 export interface UE5ConsoleCommandResult {
@@ -237,8 +238,11 @@ export function useUE5Connection(): UseUE5ConnectionResult {
     if (connectionState.status !== 'disconnected') return;
 
     autoConnectFired = true;
-    void postQuery({ action: 'connect', host, httpPort });
-    // Failures land on the SSE stream as an 'error' state.
+    // A failed connect lands on the SSE stream as an 'error' state; a rejected
+    // request never reaches the manager, so it is only visible here.
+    void postQuery({ action: 'connect', host, httpPort }).then((result) => {
+      if (!result.ok) logger.warn(`[useUE5Connection] auto-connect request failed: ${result.error}`);
+    });
   }, [autoConnect, isStateLive, connectionState.status, host, httpPort]);
 
   // ── Actions ───────────────────────────────────────────────────────────────

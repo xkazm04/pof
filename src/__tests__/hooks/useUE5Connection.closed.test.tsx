@@ -8,6 +8,7 @@ import { renderHook, act, cleanup } from '@testing-library/react';
 import { useUE5Connection } from '@/hooks/useUE5Connection';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 class FakeES {
   static all: FakeES[] = [];
@@ -52,5 +53,25 @@ describe('useUE5Connection stream recovery', () => {
     unmount();
     act(() => { vi.advanceTimersByTime(UI_TIMEOUTS.ue5ReconnectMax); });
     expect(FakeES.all).toHaveLength(1);
+  });
+});
+
+describe('useUE5Connection auto-connect', () => {
+  it('logs a rejected auto-connect, which never reaches the stream', async () => {
+    vi.useRealTimers();
+    useUE5BridgeStore.setState({ autoConnect: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false, status: 500,
+      json: () => Promise.resolve({ success: false, error: 'boom' }),
+      text: () => Promise.resolve('{"success":false,"error":"boom"}'),
+    }) as unknown as typeof fetch;
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    renderHook(() => useUE5Connection());
+    await act(async () => {
+      FakeES.all[0].onmessage?.({ data: JSON.stringify(DISCONNECTED) });
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(warn.mock.calls.map((c) => c.join(' ')).join('\n')).toContain('boom');
+    warn.mockRestore();
   });
 });
