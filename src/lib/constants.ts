@@ -51,7 +51,7 @@ export { DURATION as MOTION } from './motion';
 /** CLI-specific animation presets — consistent timing for terminal UI. */
 export const CLI_ANIM = {
   /** Fast expand/collapse transitions (120ms). */
-  fast: { duration: 0.12, ease: DURATION.ease } as const,
+  fast: { duration: DURATION.fast, ease: DURATION.ease } as const,
   /** Medium state transitions (200ms). */
   medium: { duration: 0.2, ease: DURATION.ease } as const,
   /** Spring preset for drawer/panel animations. */

@@ -17,10 +17,19 @@ export const WCAG_AA_TEXT = 4.5;
 /** WCAG AA threshold for large/bold text and graphical (non-text) objects. */
 export const WCAG_AA_NON_TEXT = 3;
 
-/** Parse a `#rgb` or `#rrggbb` hex string to an `[r, g, b]` tuple (0–255). */
+/**
+ * Parse a `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa` hex string to an `[r, g, b]`
+ * tuple (0–255); alpha digits are ignored. Anything else (a `var(--x)` token, a
+ * named colour, `rgb()`) cannot be measured and throws, rather than silently
+ * reading as black and producing a confident wrong contrast ratio.
+ */
 export function hexToRgb(hex: string): [number, number, number] {
-  let h = hex.replace('#', '').trim();
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const raw = hex.trim();
+  if (!/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(raw)) {
+    throw new RangeError(`hexToRgb: cannot measure non-hex colour "${hex}"`);
+  }
+  let h = raw.slice(1);
+  if (h.length <= 4) h = h.split('').map((c) => c + c).join('');
   const n = parseInt(h.slice(0, 6), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }

@@ -155,7 +155,7 @@ export const OPACITY_90 = 'e6';
 
 /** Default border opacity — visible but not heavy (20%) */
 export const BORDER_DEFAULT = OPACITY_20;
-/** Hover border opacity — stronger emphasis on interaction (37%) */
+/** Hover border opacity — stronger emphasis on interaction (40%) */
 export const BORDER_HOVER = OPACITY_37;
 /** Subtle border opacity — faint structural hints (10%) */
 export const BORDER_SUBTLE = OPACITY_10;
@@ -628,7 +628,8 @@ export function statusToColor(status: string): { bg: string; text: string; borde
     warn: { color: STATUS_WARNING, label: 'WARN' },
     error: { color: STATUS_ERROR, label: 'FAIL' },
   };
-  const { color, label } = map[status] ?? { color: STATUS_ERROR, label: 'FAIL' };
+  // A status outside ok/warn/error was never measured: render it as unknown, not as a failure.
+  const { color, label } = map[status] ?? { color: STATUS_MUTED, label: 'UNKNOWN' };
   return { bg: statusBg(color), text: color, border: statusBorder(color), label };
 }
 

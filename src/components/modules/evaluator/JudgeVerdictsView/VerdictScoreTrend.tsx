@@ -5,7 +5,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { ChartPanel } from '@/components/layout-lab/steps/shared/ChartPanel';
-import { qualityColor, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { scoreBandToken, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { buildVerdictTrend, trendPointLabel, trendSummary, VERDICT_HISTORY_LIMIT } from '@/lib/judge/verdictTrend';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import type { LabTheme } from '@/components/layout-lab/theme';
@@ -76,7 +76,7 @@ export function VerdictScoreTrend({ verdict }: { verdict: Pick<JudgeVerdict, 'ca
     return {
       label: n > 1 ? `${base} (${n})` : base,
       value: p.score,
-      color: qualityColor(p.score),
+      color: scoreBandToken(p.score).color,
       highlight: i === trend.points.length - 1,
     };
   });
