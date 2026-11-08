@@ -69,6 +69,13 @@ describe('analyzeCatalog facet fallback', () => {
     expect(Object.keys(out.byAttribute).length).toBeGreaterThan(0);
   });
 
+  it('a degenerate-only catalog (loot-tables seed) gets @lifecycle and still reports the degenerate dimension', () => {
+    const out = analyzeCatalog('loot-tables', codeSeededEntities('loot-tables'));
+    expect(out.degenerate).toContain('archetypeName');
+    expect(out.byAttribute['@lifecycle']).toBeDefined();
+    expect(out.byAttribute).not.toHaveProperty('archetypeName');
+  });
+
   it('no plugin and data without usable keys falls back to facets', () => {
     const out = analyzeCatalog('no-such-catalog', [mk('n1', 'no-such-catalog', {}), mk('n2', 'no-such-catalog', {})]);
     expect(out.byAttribute['@lifecycle']).toEqual({ planned: 2 });

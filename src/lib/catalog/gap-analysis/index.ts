@@ -111,10 +111,11 @@ export function analyzeCatalog(
   const dimensions = plugin?.dimensions ?? inferDimensions(entities);
   const expected = plugin?.expectedShare ?? {};
   const { byAttribute, coverage, unmeasured, degenerate } = measureDimensions(dimensions, entities, expected);
-  // Stale or absent plugin: every declared dimension measured nothing. Fall back to the envelope
-  // facets so the catalog still has a histogram; they carry no expected share (no gaps invented).
+  // Stale, absent or degenerate-only plugin: no declared dimension produced a histogram. Fall back to
+  // the envelope facets so the catalog still has one; they carry no expected share (no gaps invented).
+  // `degenerate` is still reported beside them, so an id-list dimension is not mistaken for balance.
   let primary = dimensions[0] ?? '';
-  if (entities.length > 0 && Object.keys(byAttribute).length === 0 && degenerate.length === 0) {
+  if (entities.length > 0 && Object.keys(byAttribute).length === 0) {
     const facets = measureDimensions(FACET_DIMENSIONS, entities);
     Object.assign(byAttribute, facets.byAttribute);
     Object.assign(coverage, facets.coverage);
