@@ -28,8 +28,8 @@ import {
   verdictProvenance,
   judgedContentOf,
   judgedContentFromHash,
-  unverifiedReason,
   pickCondemningFail,
+  provenanceNote,
   type JudgedContent,
 } from '@/lib/catalog/acceptance/judgeBridge';
 import type { JudgeAttribution, VerdictProvenance } from '@/lib/catalog/acceptance/types';
@@ -503,30 +503,6 @@ function contentByEntity(artifacts: ArtifactVerdictRow[]): Map<string, JudgedCon
   const m = new Map<string, JudgedContent>();
   for (const a of artifacts) m.set(a.entityId, judgedContentOfRow(a));
   return m;
-}
-
-/**
- * What a verdict does and does not prove HERE — the same vocabulary `bridgeJudgeVerdict`
- * puts on the per-step Acceptance banner, so an operator reading the map and the drill-down
- * hears one sentence, not two.
- */
-function provenanceNote(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): string {
-  if (p === 'current') return 'Judged the content currently on record.';
-  const kind = v.verdict === 'fail' ? 'FAIL' : 'PASS';
-  if (applied) {
-    return `This verdict cannot be confirmed against the current content — ${unverifiedReason(v)}.`
-      + ' It is still applied, and still needs a re-judge.';
-  }
-  if (p === 'stale') {
-    return `A judge ${kind} is on record but it judged content this step no longer holds`
-      + ' (re-produced since). Not applied — this step is UNJUDGED, not judged-and-passed.';
-  }
-  if (p === 'superseded') {
-    return `A judge ${kind} is on record under a superseded rubric. Not applied — this step`
-      + ' needs a re-judge under the current rubric.';
-  }
-  return `A judge ${kind} is on record but ${unverifiedReason(v)}. Not applied — a binding`
-    + ' nobody can confirm cannot PROVE quality (it can still condemn).';
 }
 
 function attribution(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): JudgeAttribution & { applied: boolean } {
