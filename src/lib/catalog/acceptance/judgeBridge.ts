@@ -126,6 +126,41 @@ export const CONDEMNING_PROVENANCE: ReadonlySet<VerdictProvenance> = new Set<Ver
 /** Does a verdict at this provenance condemn a shape-pass? */
 const CONDEMNS = CONDEMNING_PROVENANCE;
 
+/**
+ * The ONE choice of which condemning fail to REPORT when a step holds several: the confirmed
+ * (`current`) binding first, then the unverifiable (`unknown`). Attribution only - whichever is
+ * picked, the step is condemned. Shared by `bridgeJudgeVerdict` and `/status`'s `deriveCell` so the
+ * lab banner and the map cannot name different verdicts for one step.
+ */
+export function pickCondemningFail<T extends { v: JudgeVerdict; p: VerdictProvenance }>(classified: readonly T[]): T | undefined {
+  const fails = classified.filter((c) => c.v.verdict === 'fail' && CONDEMNS.has(c.p));
+  return fails.find((c) => c.p === 'current') ?? fails[0];
+}
+
+/**
+ * What a verdict does and does not prove HERE, in words. The ONE place these sentences are
+ * written: the per-step Acceptance banner (`bridgeJudgeVerdict`) and `/status` (`deriveCell`)
+ * both call it, so an operator reading the lab and the map hears one sentence, not two.
+ */
+export function provenanceNote(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): string {
+  if (p === 'current') return 'Judged the content currently on record.';
+  const kind = v.verdict === 'fail' ? 'FAIL' : 'PASS';
+  if (applied) {
+    return `This verdict cannot be confirmed against the current content — ${unverifiedReason(v)}.`
+      + ' It is still applied, and still needs a re-judge.';
+  }
+  if (p === 'stale') {
+    return `A judge ${kind} is on record but it judged content this step no longer holds`
+      + ' (re-produced since). Not applied — this step is UNJUDGED, not judged-and-passed.';
+  }
+  if (p === 'superseded') {
+    return `A judge ${kind} is on record under a superseded rubric. Not applied — this step`
+      + ' needs a re-judge under the current rubric.';
+  }
+  return `A judge ${kind} is on record but ${unverifiedReason(v)}. Not applied — a binding`
+    + ' nobody can confirm cannot PROVE quality (it can still condemn).';
+}
+
 function attribute(v: JudgeVerdict, provenance: VerdictProvenance, note: string): JudgeAttribution {
   return {
     provenance, verdict: v.verdict, score: v.score, judge: v.judge,
@@ -155,7 +190,7 @@ export function bridgeJudgeVerdict(
   if (!fails.length) return result;
 
   const classified = fails.map((v) => ({ v, p: verdictProvenance(v, content) }));
-  const binding = classified.find((c) => CONDEMNS.has(c.p));
+  const binding = pickCondemningFail(classified);
 
   // Only a shape-PASS is down-graded: a gate deferral (L3/L4) and an already
   // failing/pending result are left exactly as the checker found them.
@@ -167,9 +202,7 @@ export function bridgeJudgeVerdict(
       ...result,
       status: 'fail',
       reason: `judge ${v.model || v.judge} scored ${v.score} (fail)${excerpt ? `: ${excerpt}` : ''}${caveat}`,
-      judge: attribute(v, p, p === 'current'
-        ? 'Judged the content currently on record.'
-        : `This verdict cannot be confirmed against the current content — ${unverifiedReason(v)}. It is still applied, and still needs a re-judge.`),
+      judge: attribute(v, p, provenanceNote(v, p, true)),
     };
   }
   if (binding) return { ...result, judge: attribute(binding.v, binding.p, 'A judge FAIL is on record; the checker had already not passed.') };
@@ -179,8 +212,6 @@ export function bridgeJudgeVerdict(
   const first = classified[0];
   return {
     ...result,
-    judge: attribute(first.v, first.p, first.p === 'stale'
-      ? 'A judge FAIL is on record but it judged content this step no longer holds (re-produced since). Not applied — this step is UNJUDGED, not judged-and-passed.'
-      : 'A judge FAIL is on record under a superseded rubric. Not applied — this step needs a re-judge under the current rubric.'),
+    judge: attribute(first.v, first.p, provenanceNote(first.v, first.p, false)),
   };
 }
