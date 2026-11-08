@@ -6,6 +6,7 @@ import {
   DEFAULT_EVENTS, PRIORITY_CONFIG, MAX_EVENT_CONCURRENCY, clampEventConcurrency,
 } from '@/components/modules/content/audio/AudioEventCatalog/constants';
 import type { AudioEvent } from '@/components/modules/content/audio/AudioEventCatalog/types';
+import { MAX_EVENT_COOLDOWN_MS, clampEventCooldown } from '@/components/modules/content/audio/AudioEventCatalog/EventEditor';
 import { useAudioSetLibrary } from '@/components/modules/content/audio/AudioPropertyPanel/useAudioSetLibrary';
 import { eventBudget } from '@/lib/audio-runtime-contract';
 import {
@@ -177,9 +178,9 @@ function BudgetRow({ row, event, rate, keepFix, onPatch }: {
               onChange={(e) => onPatch(row.id, { concurrency: clampEventConcurrency(e.target.value) })}
             />
             <input
-              type="number" min={0} step={50} aria-label={`${row.name} cooldown ms`} className={inputCls}
+              type="number" min={0} max={MAX_EVENT_COOLDOWN_MS} step={50} aria-label={`${row.name} cooldown ms`} className={inputCls}
               value={event.cooldownMs}
-              onChange={(e) => onPatch(row.id, { cooldownMs: Math.max(0, Number(e.target.value) || 0) })}
+              onChange={(e) => onPatch(row.id, { cooldownMs: clampEventCooldown(Number(e.target.value)) })}
             />
           </div>
         )}
