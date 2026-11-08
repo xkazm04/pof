@@ -106,3 +106,9 @@ visual-gen-3d-model-runners {"better":3,"unmeasurable":1}
 eqs-squad-combat-spatial {"better":7}
 progression-curves-builds {"better":4}
 cross-module-features {"better":8}
+database-layer {"better":4}
+feature-matrix-tracking {"better":7,"superseded":1}
+visual-gen-mesh-quality-gates {"better":2}
+loot-metrics-designer {"superseded":7,"better":1}
+ui-primitives {"demoted":2,"better":6,"unmeasurable":1}
+state-management {"better":7}
