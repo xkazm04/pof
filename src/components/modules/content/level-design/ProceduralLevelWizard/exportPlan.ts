@@ -60,6 +60,12 @@ export interface ExportPlan {
   seedValue: number;
   /** The bound that produced `width`/`height` when they are not full size. */
   cap: number;
+  /**
+   * Set when the live preview was generated at a smaller size than this export.
+   * Generators read the grid size, so that preview is a different layout, not a
+   * zoomed-out copy; these are the regenerated grid's own measurements.
+   */
+  previewDiffers: { previewMaxSide: number; roomCount: number; regions: number } | null;
 }
 
 /** Count the cells the geometry script emits an object for. */
@@ -82,10 +88,15 @@ export function buildExportPlan(args: {
   seedLabel: string;
   seedValue: number;
   cap?: number;
+  /** The preview's longest side. With `exportStats`, decides `previewDiffers`. */
+  previewMaxSide?: number;
+  exportStats?: { roomCount: number; regions: number };
 }): ExportPlan {
   const height = args.grid.length;
   const width = args.grid[0]?.length ?? 0;
   const objectCount = countExportObjects(args.grid);
+  const { previewMaxSide, exportStats } = args;
+  const capped = previewMaxSide !== undefined && Math.max(args.requestedWidth, args.requestedHeight) > previewMaxSide;
   return {
     algorithm: args.algorithm,
     requestedWidth: args.requestedWidth,
@@ -101,6 +112,7 @@ export function buildExportPlan(args: {
     seedLabel: args.seedLabel,
     seedValue: args.seedValue,
     cap: args.cap ?? MAX_EXPORT_SIZE,
+    previewDiffers: capped && exportStats ? { previewMaxSide, ...exportStats } : null,
   };
 }
 
@@ -116,13 +128,17 @@ export function scalePercent(plan: ExportPlan): string {
  */
 export function describeExportPlan(plan: ExportPlan): string {
   const size = `${plan.width}x${plan.height}`;
-  if (plan.isFullSize) {
-    return `Exports ${size} cells — the full requested size (scale 100%).`;
-  }
+  const line = plan.isFullSize
+    ? `Exports ${size} cells — the full requested size (scale 100%).`
+    : `Exports ${size} cells — DOWNSCALED from the requested ` +
+      `${plan.requestedWidth}x${plan.requestedHeight} (scale ${scalePercent(plan)}), ` +
+      `because the export is bounded to ${plan.cap} cells per side.`;
+  const d = plan.previewDiffers;
+  if (!d) return line;
   return (
-    `Exports ${size} cells — DOWNSCALED from the requested ` +
-    `${plan.requestedWidth}x${plan.requestedHeight} (scale ${scalePercent(plan)}), ` +
-    `because the export is bounded to ${plan.cap} cells per side.`
+    `${line} This is not the layout previewed: the preview was generated at ${d.previewMaxSide} cells ` +
+    `on its longest side, and this grid measures ${d.roomCount} room${d.roomCount === 1 ? '' : 's'}, ` +
+    `${d.regions} region${d.regions === 1 ? '' : 's'}.`
   );
 }
 

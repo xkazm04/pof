@@ -8,7 +8,7 @@ import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-ge
 import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
-import { generatePreview } from '@/lib/level-design/procgen-preview';
+import { generatePreview, DEFAULT_MAX_PREVIEW_SIZE } from '@/lib/level-design/procgen-preview';
 import { previewConfigFromSpec, type ProcgenSpec } from '@/lib/level-design/procgen-spec';
 import type { RemedyPatch } from '@/lib/level-design/layout-remedies';
 import { ALGORITHMS, LEVEL_TYPES } from './constants';
@@ -145,6 +145,8 @@ export function useProceduralLevelWizard({ onGenerate, specStore }: UseProcedura
       scale: full.scale,
       seedLabel: spec.seedLabel,
       seedValue: full.seedValue,
+      previewMaxSide: DEFAULT_MAX_PREVIEW_SIZE,
+      exportStats: { roomCount: full.stats.roomCount, regions: full.stats.regions },
     });
     dispatch({
       type: 'exportFlow',
