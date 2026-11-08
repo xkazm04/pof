@@ -289,3 +289,4 @@ KIND is one of:
 - [2026-11-08] [gtai] DECISION: owner set the city camera to a true 70 degrees after an engine block test (bosses stay 55), walls at half height, grey print kept; this supersedes the 90-degree camera lock in pitch.md.
 - [2026-11-08] [gtai] DELIVERED: night n10 prepared (four lanes, briefs in games/gtai/day/2026-11-08/night/) and scheduled to auto-start 21:00 via the Windows task "GTAI n10 night run"; preflight GO.
 - [2026-11-08] [suspend] DELIVERED: useSuspendableSelector adopted on the rates that pay: useLiveStateSync frame slices and forge jobs (GenerationQueue, UeImportPanel), hidden-pane commits 60 to 0; a selected undefined now stays frozen; when-to-use is in runtime-patterns.md.
+- [2026-11-08] [workflow] DELIVERED: Start Workflow now runs: WorkflowDispatcher (AppShell, outside the module LRU) launches one DAG node at a time through useModuleCLI/TaskFactory and feeds outcomes to the orchestrator; live CLI run not yet verified.
