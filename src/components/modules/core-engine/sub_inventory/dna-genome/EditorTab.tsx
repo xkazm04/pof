@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { Dna, Trash2, Target, FlaskConical } from 'lucide-react';
 import {
   ACCENT_PINK, STATUS_SUCCESS, OPACITY_10, OPACITY_20,
@@ -28,6 +29,13 @@ interface EditorTabProps {
 }
 
 export function EditorTab({ selected, radarData, genomeCount, updateGenome, updateTrait, deleteGenome }: EditorTabProps) {
+  // Visible captions become the controls' programmatic labels (same as RollerTab).
+  const uid = useId();
+  const nameId = `${uid}-name`;
+  const typeId = `${uid}-type`;
+  const rarityId = `${uid}-rarity`;
+  const rateId = `${uid}-rate`;
+  const maxId = `${uid}-max`;
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {/* Left: DNA strand + radar */}
@@ -36,7 +44,10 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
           <SectionHeader label="DNA Strand" color={selected.color} icon={Dna} />
           {genomeCount > 1 && (
             <button
+              type="button"
               onClick={() => deleteGenome(selected.id)}
+              aria-label={`Delete genome ${selected.name}`}
+              title="Delete genome"
               className="text-xs text-text-muted hover:text-red-400 transition-colors p-1"
             >
               <Trash2 className="w-3 h-3" />
@@ -52,16 +63,18 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
         {/* Genome metadata */}
         <div className="space-y-1.5" style={focusRingStyle(selected.color)}>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">Name</span>
+            <label htmlFor={nameId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">Name</label>
             <input
+              id={nameId}
               type="text" value={selected.name}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, name: e.target.value }))}
               className="flex-1 text-xs font-mono font-bold px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">Type</span>
+            <label htmlFor={typeId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">Type</label>
             <select
+              id={typeId}
               value={selected.itemType}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, itemType: e.target.value as ItemGenome['itemType'] }))}
               className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
@@ -72,8 +85,9 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">MinRar</span>
+            <label htmlFor={rarityId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">MinRar</label>
             <select
+              id={rarityId}
               value={selected.minRarity}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, minRarity: e.target.value as ItemGenome['minRarity'] }))}
               className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
@@ -122,8 +136,9 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
           <SectionHeader icon={FlaskConical} label="Mutation Config" color={ACCENT_PINK} />
           <div className="grid grid-cols-3 gap-2" style={focusRingStyle(ACCENT_PINK)}>
             <div>
-              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rate</span>
+              <label htmlFor={rateId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rate</label>
               <input
+                id={rateId}
                 type="number" min={0} max={100} step={1}
                 value={Math.round(selected.mutation.mutationRate * 100)}
                 onChange={(e) => updateGenome(selected.id, (g) => ({
@@ -134,8 +149,9 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
               />
             </div>
             <div>
-              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Max</span>
+              <label htmlFor={maxId} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Max</label>
               <input
+                id={maxId}
                 type="number" min={0} max={6} step={1}
                 value={selected.mutation.maxMutations}
                 onChange={(e) => updateGenome(selected.id, (g) => ({
@@ -146,8 +162,11 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
               />
             </div>
             <div>
-              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Wild</span>
+              <span aria-hidden="true" className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Wild</span>
               <button
+                type="button"
+                aria-label="Wild mutation"
+                aria-pressed={selected.mutation.wildMutation}
                 onClick={() => updateGenome(selected.id, (g) => ({
                   ...g,
                   mutation: { ...g.mutation, wildMutation: !g.mutation.wildMutation },
