@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatBytes, formatDuration, formatDurationBetween } from '@/lib/format';
+import { formatBytes, formatDuration, formatDurationBetween, readoutDecimals } from '@/lib/format';
 
 describe('formatBytes (packaging style)', () => {
   it('formats raw bytes with a space and no decimals below 1 KB', () => {
@@ -80,5 +80,20 @@ describe('formatDurationBetween', () => {
 
   it('clamps a negative span (end before start) to zero', () => {
     expect(formatDurationBetween('2026-01-01T00:00:05Z', '2026-01-01T00:00:00Z')).toBe('0ms');
+  });
+});
+
+describe('readoutDecimals', () => {
+  it('shows whole numbers for a unit-or-larger step', () => {
+    expect(readoutDecimals(1)).toBe(0);
+    expect(readoutDecimals(5)).toBe(0);
+  });
+  it('shows at least two decimals for a fractional step', () => {
+    expect(readoutDecimals(0.1)).toBe(2);
+    expect(readoutDecimals(0.01)).toBe(2);
+  });
+  it('carries as many decimals as the step, capped at six', () => {
+    expect(readoutDecimals(0.0007)).toBe(4);
+    expect(readoutDecimals(0.0000012)).toBe(6);
   });
 });
