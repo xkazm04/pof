@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import {
   GENERATED_IMAGE_DIR,
   defaultImageProvider,
@@ -30,6 +31,24 @@ import { getDb } from '@/lib/db';
  * provider receives the prompt byte-identical and the DB is never opened.
  */
 
+/** Image dimensions a provider is ever asked for; the panels send 512 to 1536. */
+const DIMENSION_MIN = 64;
+const DIMENSION_MAX = 4096;
+
+/** The first wrongly shaped field as a refusal, or null when the body can reach a provider. */
+function bodyShapeRefusal(body: Record<string, unknown>): string | null {
+  for (const field of ['prompt', 'providerId', 'size']) {
+    if (body[field] != null && typeof body[field] !== 'string') return `${field} must be a string`;
+  }
+  for (const field of ['width', 'height']) {
+    const n = body[field];
+    if (n != null && !(Number.isInteger(n) && (n as number) >= DIMENSION_MIN && (n as number) <= DIMENSION_MAX)) {
+      return `${field} must be a whole number from ${DIMENSION_MIN} to ${DIMENSION_MAX}`;
+    }
+  }
+  return null;
+}
+
 function outDir(): string {
   return join(process.cwd(), 'generated', GENERATED_IMAGE_DIR).replace(/\\/g, '/');
 }
@@ -46,7 +65,11 @@ export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const shapeRefusal = bodyShapeRefusal(parsed);
+    if (shapeRefusal) return apiError(shapeRefusal, 400);
+    const body = parsed as {
       prompt?: string;
       providerId?: string;
       size?: string;
