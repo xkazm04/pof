@@ -21568,16 +21568,22 @@
       "context": "ue5-asset-generation-hooks",
       "subject": "agent-runtime-assembly",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T03:10:30.662Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "9508b301-bbfe-41c7-abfa-866e613f797e",
-        "state": "not-applicable",
-        "at": "2026-11-07T03:11:54.030475+00:00",
-        "reason": "reviewer (sonnet): The anchor src/hooks/useGeneration.ts is not one of this context's twelve paths, and the grep was run over all of src/hooks instead of the context's files, so the verdict rests on code outside the context."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:09:14.384Z",
+      "worker": "55ec7a18-f56c-49ca-8566-4e0c25c00488",
+      "techniques": [
+        {
+          "technique": "nested-run-is-not-its-parent",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useGeneration.ts:48 The hook keys a top-level CLI session per entity; it never starts a run from inside another run."
+        },
+        {
+          "technique": "additive-input-at-the-call-boundary",
+          "verdict": "not-applicable",
+          "evidence": "src/hooks/useBlueprintTranspiler.ts:77 This joins duplicate in-flight HTTP transpile requests. It is not mid-loop user input to an agent, so the technique's precondition is absent."
+        }
+      ]
     },
     "80cab220-4eac-4a25-8873-f1c42c257174/agent-runtime-assembly": {
       "context": "core-engine-scan-telemetry",
@@ -23666,6 +23672,42 @@
       "evaluatedAt": "2026-11-08",
       "evaluatedTs": "2026-11-08T04:36:39.036Z",
       "worker": "6560f59b-a950-4add-9035-443cd50f06ac",
+      "techniques": []
+    },
+    "43c8c748-ad7d-4ec7-866f-6049ed660349/agent-runtime-assembly": {
+      "context": "game-director-system",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:09:14.384Z",
+      "worker": "55ec7a18-f56c-49ca-8566-4e0c25c00488",
+      "techniques": [
+        {
+          "technique": "semantic-hook-placement",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/project-health/route.ts:3 The route computes health from posted store data. No model or tool call is wrapped, so there is no chain to order."
+        }
+      ]
+    },
+    "023f8e03-d83d-49d1-b740-04ecdd77362c/agent-runtime-assembly": {
+      "context": "streaming-zone-planner",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:09:14.384Z",
+      "worker": "55ec7a18-f56c-49ca-8566-4e0c25c00488",
+      "techniques": []
+    },
+    "37390a41-d9e6-4037-94d6-8e7df1256a55/agent-runtime-assembly": {
+      "context": "animation-combos-metrics",
+      "subject": "agent-runtime-assembly",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:09:14.384Z",
+      "worker": "55ec7a18-f56c-49ca-8566-4e0c25c00488",
       "techniques": []
     }
   }

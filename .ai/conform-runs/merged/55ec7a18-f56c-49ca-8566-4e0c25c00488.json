@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "55ec7a18-f56c-49ca-8566-4e0c25c00488",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-11-08T05:09:14.384257+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ue5-asset-generation-hooks",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/hooks/useGeneration.ts:65 These React hooks only hand a finished CLITask to useModuleCLI or call app/UE HTTP endpoints, so none of them puts together a hook chain, loads extensions or keeps checkpoints. A search of src/hooks (and all of src) for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing, and the 'plugin' hits are the UE5 PofBridge editor plugin, not runtime extensions.",
+   "techniques": [
+    {
+     "technique": "nested-run-is-not-its-parent",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useGeneration.ts:48 The hook keys a top-level CLI session per entity; it never starts a run from inside another run."
+    },
+    {
+     "technique": "additive-input-at-the-call-boundary",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useBlueprintTranspiler.ts:77 This joins duplicate in-flight HTTP transpile requests. It is not mid-loop user input to an agent, so the technique's precondition is absent."
+    }
+   ],
+   "absenceTerms": [
+    "subagent",
+    "hookChain",
+    "wrapToolCall",
+    "PreToolUse",
+    "loadExtension"
+   ]
+  },
+  {
+   "context": "game-director-system",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/types/session-analytics.ts:3 This context records and aggregates the results of CLI sessions after they run (analytics, health, regression) and never builds the runtime around a model or tool call. A search of its directories and all of src for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing.",
+   "techniques": [
+    {
+     "technique": "semantic-hook-placement",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/project-health/route.ts:3 The route computes health from posted store data. No model or tool call is wrapped, so there is no chain to order."
+    }
+   ],
+   "absenceTerms": [
+    "subagent",
+    "hookChain",
+    "wrapToolCall",
+    "PreToolUse",
+    "loadExtension"
+   ]
+  },
+  {
+   "context": "streaming-zone-planner",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/types.ts:3 This is a grid-painting UI plus a reducer, and the furthest it touches an agent is a prompt builder in lib. It has no hooks around model or tool calls, no extension loading and no conversation state. A search for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing in its directory or in src.",
+   "techniques": [],
+   "absenceTerms": [
+    "subagent",
+    "hookChain",
+    "wrapToolCall",
+    "PreToolUse",
+    "loadExtension"
+   ]
+  },
+  {
+   "context": "animation-combos-metrics",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboLinkDetail.tsx:20 The only agent touchpoint is a button that sends one fix prompt through the shared useModuleCLI hook, and the runtime it assembles lives outside this context. A search for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing under sub_animation or in src.",
+   "techniques": [],
+   "absenceTerms": [
+    "subagent",
+    "hookChain",
+    "wrapToolCall",
+    "PreToolUse",
+    "loadExtension"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:09:14.384257+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "additive-input-at-the-call-boundary",
+    "nested-run-is-not-its-parent"
+   ],
+   "deviations": 0,
+   "context": "ue5-asset-generation-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:09:14.384257+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "semantic-hook-placement"
+   ],
+   "deviations": 0,
+   "context": "game-director-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:09:14.384257+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "streaming-zone-planner",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:09:14.384257+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "animation-combos-metrics",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

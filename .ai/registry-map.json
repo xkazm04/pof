@@ -3542,7 +3542,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/ComboLinkDetail.tsx:20 The only agent touchpoint is a button that sends one fix prompt through the shared useModuleCLI hook, and the runtime it assembles lives outside this context. A search for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing under sub_animation or in src.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "engine-host-contract",
@@ -14753,7 +14757,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/types/session-analytics.ts:3 This context records and aggregates the results of CLI sessions after they run (analytics, health, regression) and never builds the runtime around a model or tool call. A search of its directories and all of src for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "concurrent-vcs",
@@ -25548,7 +25556,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/types.ts:3 This is a grid-painting UI plus a reducer, and the furthest it touches an agent is a prompt builder in lib. It has no hooks around model or tool calls, no extension loading and no conversation state. A search for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing in its directory or in src.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "production-work-prioritization",
@@ -25854,7 +25866,11 @@
           "revision": 28,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/hooks/useGeneration.ts:65 These React hooks only hand a finished CLITask to useModuleCLI or call app/UE HTTP endpoints, so none of them puts together a hook chain, loads extensions or keeps checkpoints. A search of src/hooks (and all of src) for subagent, hookChain, wrapToolCall, PreToolUse and loadExtension found nothing, and the 'plugin' hits are the UE5 PofBridge editor plugin, not runtime extensions.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:c29c78bbbf9eb4fe",
+          "evaluatedRevision": 29
         },
         {
           "subject": "concept-scene-parity",
