@@ -16,10 +16,11 @@ export const EMPTY_ALERTS: BalanceAlert[] = [];
 /** Plain-language Story Mode vs. full numeric Advanced view. */
 export type ViewMode = 'simple' | 'advanced';
 
-export const SEVERITY_STYLE: Record<BalanceAlertSeverity, { bg: string; border: string; text: string }> = {
-  info: { bg: 'bg-blue-400/10', border: 'border-blue-400/20', text: 'text-blue-400' },
-  warning: { bg: 'bg-amber-400/10', border: 'border-amber-400/20', text: 'text-amber-400' },
-  critical: { bg: 'bg-red-400/10', border: 'border-red-400/20', text: 'text-red-400' },
+/** `label` is the non-colour severity cue each alert row prints (WCAG 1.4.1). */
+export const SEVERITY_STYLE: Record<BalanceAlertSeverity, { bg: string; border: string; text: string; label: string }> = {
+  info: { bg: 'bg-blue-400/10', border: 'border-blue-400/20', text: 'text-blue-400', label: 'Info' },
+  warning: { bg: 'bg-amber-400/10', border: 'border-amber-400/20', text: 'text-amber-400', label: 'Warning' },
+  critical: { bg: 'bg-red-400/10', border: 'border-red-400/20', text: 'text-red-400', label: 'Critical' },
 };
 
 /** Difficulty-band styling for the narrated Fight Report Card. */
