@@ -75,18 +75,18 @@ export function DataTable({ t, columns, values, rows, header, missingText = '—
             {caption}
           </div>
         )}
-        <div data-testid={testId} style={{ border: `1px solid ${t.line}`, overflowX: 'auto' }}>
-          <div className={t.fontMono} style={{ display: 'grid', gridTemplateColumns: grid, background: t.accentBg, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.inkDeep, padding: '7px 12px', gap: 12 }}>
-            {showLabels && <span>{header?.[0] ?? ''}</span>}
-            {columns.map((c) => <span key={c.key} style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{breakable(c.label ?? c.key)}</span>)}
+        <div role="table" data-testid={testId} style={{ border: `1px solid ${t.line}`, overflowX: 'auto' }}>
+          <div role="row" className={t.fontMono} style={{ display: 'grid', gridTemplateColumns: grid, background: t.accentBg, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.inkDeep, padding: '7px 12px', gap: 12 }}>
+            {showLabels && <span role="columnheader">{header?.[0] ?? ''}</span>}
+            {columns.map((c) => <span role="columnheader" key={c.key} style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{breakable(c.label ?? c.key)}</span>)}
           </div>
           {rows.map((r, i) => (
-            <div key={r.label ?? i} style={{ display: 'grid', gridTemplateColumns: grid, padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15, gap: 12, alignItems: 'baseline' }}>
-              {showLabels && <span className={t.fontMono} style={{ color: t.text }}>{r.label ?? ''}</span>}
+            <div role="row" key={r.label ?? i} style={{ display: 'grid', gridTemplateColumns: grid, padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15, gap: 12, alignItems: 'baseline' }}>
+              {showLabels && <span role="rowheader" className={t.fontMono} style={{ color: t.text }}>{r.label ?? ''}</span>}
               {columns.map((c) => {
                 const raw = r.values[c.key];
                 return (
-                  <span key={c.key} className={t.fontMono} style={{ color: raw != null ? t.inkDeep : t.warn, fontWeight: raw != null ? 600 : 400, overflowWrap: 'anywhere' }}>
+                  <span role="cell" key={c.key} className={t.fontMono} style={{ color: raw != null ? t.inkDeep : t.warn, fontWeight: raw != null ? 600 : 400, overflowWrap: 'anywhere' }}>
                     {raw != null ? breakable(cellText(raw, c.unit)) : missingText}
                   </span>
                 );
@@ -105,19 +105,19 @@ export function DataTable({ t, columns, values, rows, header, missingText = '—
           {caption}
         </div>
       )}
-      <div data-testid={testId} style={{ border: `1px solid ${t.line}` }}>
+      <div role="table" data-testid={testId} style={{ border: `1px solid ${t.line}` }}>
         {header && (
-          <div className={t.fontMono} style={{ display: 'grid', gridTemplateColumns: '1fr auto', background: t.accentBg, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.inkDeep, padding: '7px 12px' }}>
-            <span>{header[0]}</span><span>{header[1]}</span>
+          <div role="row" className={t.fontMono} style={{ display: 'grid', gridTemplateColumns: '1fr auto', background: t.accentBg, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.inkDeep, padding: '7px 12px' }}>
+            <span role="columnheader">{header[0]}</span><span role="columnheader">{header[1]}</span>
           </div>
         )}
         {columns.map((c) => {
           const raw = flat[c.key];
           const present = raw != null;
           return (
-            <div key={c.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15 }}>
-              <span style={{ color: t.text }}>{c.label ?? c.key}</span>
-              <span className={t.fontMono} style={{ color: present ? t.inkDeep : t.warn, fontWeight: 600 }}>
+            <div role="row" key={c.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15 }}>
+              <span role="rowheader" style={{ color: t.text }}>{c.label ?? c.key}</span>
+              <span role="cell" className={t.fontMono} style={{ color: present ? t.inkDeep : t.warn, fontWeight: 600 }}>
                 {present ? cellText(raw, c.unit) : missingText}
               </span>
             </div>
