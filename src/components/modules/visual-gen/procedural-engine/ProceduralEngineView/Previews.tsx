@@ -64,7 +64,7 @@ export function DungeonPreview({ grid, width, height }: { grid: CellType[][]; wi
   return (
     <canvas
       ref={canvasRef}
-      className="w-full max-w-[512px] aspect-square rounded-lg border border-border"
+      className="w-full h-auto max-w-[512px] rounded-lg border border-border"
       style={{ imageRendering: 'pixelated' }}
     />
   );
@@ -106,7 +106,7 @@ export function VegetationPreview({ points, width, height, species }: {
   return (
     <canvas
       ref={canvasRef}
-      className="w-full max-w-[512px] aspect-square rounded-lg border border-border"
+      className="w-full h-auto max-w-[512px] rounded-lg border border-border"
     />
   );
 }
