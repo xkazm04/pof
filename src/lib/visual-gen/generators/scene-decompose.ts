@@ -155,6 +155,7 @@ function readMaterial(raw: string | undefined): PhysicsMaterial {
 export function parseSceneDecomposeReply(text: string): DecomposeReply {
   const props: DecomposedProp[] = [];
   const seen = new Map<string, number>();
+  const usedIds = new Set<string>();
   let skipped = 0;
   const excluded: string[] = [];
   let sawRow = false;
@@ -180,11 +181,19 @@ export function parseSceneDecomposeReply(text: string): DecomposeReply {
       continue;
     }
 
-    const base = slug(name);
-    const n = (seen.get(base) ?? 0) + 1;
+    // A name with no latin letter or digit slugs to nothing, and a name may itself spell
+    // another row's suffix ("Crate 2" beside two "crate" rows), so the suffix is probed.
+    const base = slug(name) || 'prop';
+    let n = (seen.get(base) ?? 0) + 1;
+    let id = n === 1 ? base : `${base}-${n}`;
+    while (usedIds.has(id)) {
+      n += 1;
+      id = `${base}-${n}`;
+    }
     seen.set(base, n);
+    usedIds.add(id);
     props.push({
-      id: n === 1 ? base : `${base}-${n}`,
+      id,
       name,
       box,
       longestCm,
