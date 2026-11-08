@@ -146,8 +146,9 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
             onClick={fetchAll}
             className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-border transition-colors"
             title="Refresh all data"
+            aria-label="Refresh all data"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
           </button>
           <div className="flex items-center gap-1">
             <SourceBadge label="Q" active={sourceStatus.quality} icon={Activity} />

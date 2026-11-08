@@ -112,4 +112,12 @@ describe('UnifiedSummaryView — own data source hardening', () => {
     expect(container.textContent).not.toContain("couldn't be loaded");
     expect(container.textContent).not.toContain('HTTP 500');
   });
+
+  it('the Detailed-mode Refresh button has an accessible name, as the Brief-mode one does', async () => {
+    h.fetch.mockResolvedValue(OK);
+    const { container } = render(<UnifiedSummaryView onNavigateTab={vi.fn()} />);
+    await settle();
+    const btn = refreshButton(container);
+    expect(btn.getAttribute('aria-label')).toBe('Refresh all data');
+  });
 });
