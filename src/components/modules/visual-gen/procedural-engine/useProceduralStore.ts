@@ -6,6 +6,7 @@ import { DEFAULT_TERRAIN_CONFIG } from '@/lib/visual-gen/generators/terrain';
 import { DEFAULT_DUNGEON_CONFIG } from '@/lib/visual-gen/generators/dungeon';
 import { DEFAULT_VEGETATION_CONFIG } from '@/lib/visual-gen/generators/vegetation';
 import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { RECEIPT_MARKER, readReceipt } from '@/lib/blender-mcp/receipt';
 import { logger } from '@/lib/logger';
 import {
   diffConfigFields,
@@ -122,6 +123,15 @@ export function selectExportFeedback(s: ProceduralState, type: GeneratorType): E
   return s.exports[type];
 }
 
+/** What Blender printed for a person: the output minus the machine-read receipt line. */
+function printedProse(output: string): string {
+  return output
+    .split(/\r?\n/)
+    .filter((line) => !line.trimStart().startsWith(RECEIPT_MARKER))
+    .join('\n')
+    .trim();
+}
+
 /** Let the "Generating..." state paint before the generator blocks the thread. */
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -202,11 +212,27 @@ export const useProceduralStore = create<ProceduralState>((set, get) => {
 
       setExport(type, { isExporting: true, exportResult: null, exportError: null });
       const res = await executeViaMCP(spec.exportName, script.data);
-      if (!res.ok) logger.warn(`[procedural-engine] ${type} export failed:`, res.error);
+      if (!res.ok) {
+        logger.warn(`[procedural-engine] ${type} export failed:`, res.error);
+        setExport(type, { isExporting: false, exportResult: null, exportError: res.error });
+        return;
+      }
+
+      // A 200 only means the addon accepted the script; success is the receipt Blender printed.
+      const receipt = readReceipt(res.data, spec.receiptKind);
+      if (receipt.state !== 'confirmed') {
+        logger.warn(`[procedural-engine] ${type} export not confirmed:`, receipt.reason);
+        setExport(type, {
+          isExporting: false,
+          exportResult: null,
+          exportError: `Export not confirmed: ${receipt.reason}`,
+        });
+        return;
+      }
       setExport(type, {
         isExporting: false,
-        exportResult: res.ok ? res.data.output : null,
-        exportError: res.ok ? null : res.error,
+        exportResult: printedProse(res.data.output) || 'Blender confirmed the export.',
+        exportError: null,
       });
     },
 

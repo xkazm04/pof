@@ -1,3 +1,4 @@
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
 import { pyNum } from '@/lib/blender-mcp/escape';
 
 export type CellType = 'empty' | 'floor' | 'wall' | 'door' | 'corridor';
@@ -110,5 +111,6 @@ for r in range(rows):
             collection.objects.link(obj)
             bpy.context.scene.collection.objects.unlink(obj)
 
-print(f"Created dungeon: {rows}x{cols} grid")`;
+print(f"Created dungeon: {rows}x{cols} grid")
+${pyReceipt('dungeon-geometry', { objects: 'len(collection.objects)' })}`;
 }

@@ -67,6 +67,8 @@ export interface GeneratorSpec<K extends GeneratorType> {
   toExportScript: (data: GeneratorData[K], config: GeneratorConfigs[K]) => Result<string, string>;
   /** The Script History row name. */
   exportName: string;
+  /** The receipt kind this generator's script prints; only that receipt is a success. */
+  receiptKind: string;
 }
 
 /**
@@ -91,6 +93,7 @@ const terrain: GeneratorSpec<'terrain'> = {
   summarize: (data) => `${data.length}x${data[0]?.length ?? 0} heightmap generated`,
   describeSize: (config) => String(config.size),
   exportName: 'Procedural export: terrain',
+  receiptKind: 'terrain-mesh',
   toExportScript: (data, config) => {
     // The vertical scale has ONE authority: the config's declared `verticalRangeM`.
     const basis = resolveTerrainBasis(config);
@@ -115,6 +118,7 @@ const dungeon: GeneratorSpec<'dungeon'> = {
   summarize: (data) => `${data.rooms.length} rooms generated`,
   describeSize: (config) => `${config.width}x${config.height}`,
   exportName: 'Procedural export: dungeon',
+  receiptKind: 'dungeon-geometry',
   toExportScript: (data, config) => {
     const script = dungeonToGeometryScript({
       grid: data.grid,
@@ -142,6 +146,7 @@ const vegetation: GeneratorSpec<'vegetation'> = {
   summarize: (data) => `${data.length} scatter points generated`,
   describeSize: (config) => `${config.width}x${config.height}`,
   exportName: 'Procedural export: vegetation',
+  receiptKind: 'scatter-vegetation',
   toExportScript: (data, config) => {
     const speciesNames: Record<string, string> = {};
     for (const sp of config.species) speciesNames[sp.id] = sp.name;
