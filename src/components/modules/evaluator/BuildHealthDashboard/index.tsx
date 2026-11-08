@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
 import { formatDuration } from '@/lib/format';
+import { logger } from '@/lib/logger';
 import { useProjectStore } from '@/stores/projectStore';
 import { useBuildRun } from '@/hooks/useBuildRun';
 import { isRunActive } from '@/lib/ue5-bridge/build-run';
@@ -56,7 +57,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
       );
       setReport(data);
     } catch (e) {
-      console.error('[BuildHealthDashboard] Failed to fetch build health:', e);
+      logger.error('[BuildHealthDashboard] Failed to fetch build health:', { projectPath, error: e });
       setError(e instanceof Error ? e.message : 'Failed to load build health');
     } finally {
       setLoading(false);
