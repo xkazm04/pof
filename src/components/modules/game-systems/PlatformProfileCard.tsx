@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Monitor, Terminal, Laptop, Smartphone, Tablet,
+  Monitor,
   ChevronDown, ChevronRight, Star, Trash2, Play, Copy,
   AlertCircle, AlertTriangle,
 } from 'lucide-react';
@@ -11,15 +11,8 @@ import type { BuildProfile, PlatformId } from '@/lib/packaging/build-profiles';
 import { PLATFORM_NOTES, unappliedCookSettings } from '@/lib/packaging/uat-command-generator';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { PLATFORM_ICONS } from './BuildConfigSelector/constants';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, STATUS_MUTED, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
-
-const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
-  Win64: Monitor,
-  Linux: Terminal,
-  Mac: Laptop,
-  Android: Smartphone,
-  IOS: Tablet,
-};
 
 // Hex tokens only: the card appends a hex alpha suffix (`${color}30`), which turns a
 // CSS variable into invalid CSS (`var(--x)cc`) that the browser drops.
