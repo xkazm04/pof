@@ -108,8 +108,8 @@ export function CanonView({ t }: { t: LabTheme }) {
           <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: `1px solid ${t.warn}`, borderRadius: t.glass ? 10 : 0, padding: '10px 14px', marginBottom: 16 }}>
             <span className={t.fontBody} style={{ fontSize: 14, color: t.text, flex: 1, minWidth: 220 }}>
               {drifted > 0
-                ? `${drifted} laws changed upstream since this DB was seeded; your produce prompts still cite the old text.`
-                : `Canon matches the shipped laws. ${undoable} adopted law(s) can still be undone.`}
+                ? `${drifted} ${drifted === 1 ? 'law' : 'laws'} changed upstream since this DB was seeded; your produce prompts still cite the old text.`
+                : `Canon matches the shipped laws. ${undoable} adopted ${undoable === 1 ? 'law' : 'laws'} can still be undone.`}
             </span>
             <LabButton t={t} onClick={() => setReviewOpen((o) => !o)}>{reviewOpen ? 'Hide review' : 'Review drift'}</LabButton>
           </div>
