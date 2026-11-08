@@ -53,7 +53,7 @@ export const STYLE_RULES: KeywordRule[] = [
 
   // Metallic modifiers
   { keywords: ['metallic', 'sheen', 'specular'], metallic: 0.8 },
-  { keywords: ['non-metallic', 'dielectric', 'matte'], metallic: 0 },
+  { keywords: ['non-metallic', 'non metallic', 'dielectric', 'matte'], metallic: 0 },
 
   // Style-specific
   { keywords: ['stylized', 'cartoon', 'toon', 'cel'], roughness: 0.6, emissive: 2 },
@@ -63,6 +63,9 @@ export const STYLE_RULES: KeywordRule[] = [
   { keywords: ['hollow knight'], surfaceType: 'emissive', emissive: 6, subsurface: 0.4, colors: ['#e0e0e0', '#b0c0d0', '#6080a0', '#203040', '#ffffff'] },
   { keywords: ['zelda'], surfaceType: 'water', roughness: 0.3, opacity: 0.8, colors: ['#4169e1', '#87ceeb', '#00ced1', '#1e90ff', '#f0f8ff'] },
 ];
+
+/** Words that start with a keyword but mean something else, so the stem match must skip them. */
+const STEM_LOOKALIKES: Record<string, string[]> = { face: ['facet'] };
 
 const isWordChar = (c: string | undefined) => c !== undefined && /[a-z0-9]/.test(c);
 
@@ -74,7 +77,13 @@ const isWordChar = (c: string | undefined) => c !== undefined && /[a-z0-9]/.test
  */
 export function matchesStyleKeyword(text: string, keyword: string): boolean {
   for (let at = text.indexOf(keyword); at !== -1; at = text.indexOf(keyword, at + 1)) {
-    if (!isWordChar(text[at - 1])) return true;
+    if (isWordChar(text[at - 1])) continue;
+    // "non-metallic" / "non metallic" negate the keyword; they are not a hit on it.
+    if (/\bnon[- ]$/.test(text.slice(0, at))) continue;
+    // A different word that merely begins with the keyword ("faceted" is not "face").
+    const word = text.slice(at).match(/^[a-z0-9]+/)?.[0] ?? '';
+    if (STEM_LOOKALIKES[keyword]?.some((w) => word.startsWith(w))) continue;
+    return true;
   }
   return false;
 }

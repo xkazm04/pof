@@ -21,9 +21,8 @@ describe('style keyword matching starts at a word', () => {
   it('no chip fragment reads as skin because it says "surface"', () => {
     const skin = STYLE_RULES.find((r) => r.surfaceType === 'skin')!;
     const wrong = PROMPT_CHIPS.filter((c) => hits(c.fragment).includes(skin)).map((c) => c.id);
-    // mat-crystal says "faceted", where "face" really is a word start: a known residual of
-    // start-of-word matching, carded rather than hidden.
-    expect(wrong).toEqual(['mat-crystal']);
+    // "faceted" begins with "face" but is not it (STEM_LOOKALIKES), so no chip reads as skin.
+    expect(wrong).toEqual([]);
   });
 
   it('every chip keyword still resolves in its own fragment', () => {
