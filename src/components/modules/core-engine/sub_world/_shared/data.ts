@@ -6,11 +6,7 @@ import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD,
 } from '@/lib/chart-colors';
 import type { GraphNode, HeatmapConfig, BudgetBar } from '@/types/unique-tab-improvements';
-import type { EntityMetadata } from '@/types/game-metadata';
-import {
-  computeZonePlaytime, computeCumulativePath,
-  type WorldModel, type ZonePlaytimeEstimate, type CumulativePath,
-} from '@/lib/world/world-model';
+import type { WorldModel } from '@/lib/world/world-model';
 
 /* ── Canonical Zone Names ──────────────────────────────────────────────────── */
 
@@ -70,31 +66,6 @@ export const ZONES: ZoneRecord[] = [
   // Enemy density is keyed by zone id (ENEMY_DENSITY_BY_ZONE_ID), so ZONES order is not load-bearing.
   { id: 'z-ashen', name: ZONE_NAMES.ASHEN_FOREST, displayName: 'Ashen Forest', cx: 58, cy: 16, type: 'combat', status: 'active', levelRange: '3-5', levelMin: 3, levelMax: 5, connections: ['z4'], group: 'combat', color: ACCENT_ORANGE, topoSize: 22, topoX: 300, topoY: 30 },
 ];
-
-/* ── Entity Metadata ─────────────────────────────────────────────────────── */
-
-function zoneTier(z: ZoneRecord): string {
-  if (z.levelMax <= 5) return 'Starter';
-  if (z.levelMax <= 20) return 'Mid';
-  if (z.levelMax <= 35) return 'High';
-  return 'Endgame';
-}
-
-export const ZONE_METADATA: EntityMetadata[] = ZONES.map(z => ({
-  id: z.id,
-  name: z.name,
-  category: z.type === 'hub' ? 'Hub' : z.type === 'boss' ? 'Boss' : 'Combat',
-  tags: [
-    z.type,
-    z.status,
-    z.group,
-    ...(z.type === 'boss' ? ['endgame'] : []),
-    ...(z.levelMin <= 1 ? ['beginner-friendly'] : []),
-  ],
-  level: z.levelMin,
-  levelMax: z.levelMax,
-  tier: zoneTier(z),
-}));
 
 /* ── Canonical Zone Edges ──────────────────────────────────────────────────── */
 
@@ -488,10 +459,3 @@ export const STATIC_WORLD: WorldModel = {
     return boss ? [[z.id, boss.phases]] : [];
   })),
 };
-
-/** Per-zone playtime of the static world (derived from the model; kept for existing consumers). */
-export const ZONE_PLAYTIME: ZonePlaytimeEstimate[] = computeZonePlaytime(STATIC_WORLD);
-
-/** Cumulative paths of the static world for both modes (derived from the model). */
-export const CRITICAL_PATH: CumulativePath = computeCumulativePath(STATIC_WORLD, 'critical');
-export const ALL_PATHS: CumulativePath = computeCumulativePath(STATIC_WORLD, 'all');

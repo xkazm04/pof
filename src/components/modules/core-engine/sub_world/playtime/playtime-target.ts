@@ -17,7 +17,6 @@ import {
   type PlaytimePathMode,
 } from '@/lib/world/world-model';
 import { bindingChain, sameLever, type WorldLever } from '@/lib/world/playtime-scenario';
-import { STATIC_WORLD } from '../_shared/data';
 
 /** Seconds in 6 hours — the recommendation in the requirement. */
 export const DEFAULT_TARGET_SEC = 6 * 3600;
@@ -250,17 +249,12 @@ export interface InterestPoint {
 }
 
 /**
- * Interest points along a world's cumulative path. `buildInterestPoints(mode)`
- * prices the static world; pass any WorldModel (a generated candidate, a what-if
- * scenario) as `buildInterestPoints(world, mode, costs?)`.
+ * Interest points along a world's cumulative path: the static world, a
+ * generated candidate or a what-if scenario.
  */
-export function buildInterestPoints(mode: PlaytimePathMode): InterestPoint[];
-export function buildInterestPoints(world: WorldModel, mode: PlaytimePathMode, costs?: Partial<PlaytimeCosts>): InterestPoint[];
 export function buildInterestPoints(
-  worldOrMode: WorldModel | PlaytimePathMode, modeArg?: PlaytimePathMode, costs?: Partial<PlaytimeCosts>,
+  world: WorldModel, mode: PlaytimePathMode, costs?: Partial<PlaytimeCosts>,
 ): InterestPoint[] {
-  const world = typeof worldOrMode === 'string' ? STATIC_WORLD : worldOrMode;
-  const mode = typeof worldOrMode === 'string' ? worldOrMode : modeArg ?? 'critical';
   const playtimeByZoneId = new Map(computeZonePlaytime(world, costs).map(p => [p.zoneId, p]));
   return computeCumulativePath(world, mode, costs).nodes.map((n) => {
     const zp = playtimeByZoneId.get(n.zoneId);
