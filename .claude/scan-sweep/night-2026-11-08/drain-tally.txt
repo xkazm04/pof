@@ -3,3 +3,13 @@ material-configurator {"better":2,"demoted":1}
 save-system {"unmeasurable":1,"better":2}
 session-analytics-reporting {"better":4}
 prompt-evolution {"better":6,"demoted":1,"unmeasurable":1}
+progression-rewards-internals {"unmeasurable":3,"demoted":2,"better":3}
+visual-gen-mesh {"demoted":1,"better":3}
+combat-choreography {"unmeasurable":1,"better":5,"superseded":1}
+combat-metrics {"superseded":2,"better":3}
+localization-pipeline {"demoted":1,"fp":1,"better":3}
+procedural-scene-tools {"superseded":1,"better":1,"partially_superseded":1}
+module-cli-orchestration-hooks {"demoted":1,"better":4,"partially_superseded":1}
+material-lab {"demoted":2,"better":3}
+feature-design-state-hooks {"demoted":1,"better":6}
+observation-testing {"better":7}
