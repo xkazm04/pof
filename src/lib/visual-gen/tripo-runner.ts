@@ -384,7 +384,8 @@ export function buildMeshSegmentBody(spec: MeshSegmentSpec): Record<string, unkn
  */
 export function parseV3TaskStatus(json: unknown): ParsedStatus {
   const j = json as { code?: number; data?: { status?: string; progress?: number; output?: { model_url?: string; rendered_image_url?: string } } } | undefined;
-  if (!j || j.code !== 0 || !j.data) return { state: 'failed', error: tripoErr(json) };
+  // Same rule as v2's parseTaskStatus: an unreadable poll is not a verdict on the task.
+  if (!j || j.code !== 0 || !j.data) return { state: 'transient', error: tripoErr(json) };
   const status = String(j.data.status ?? '').toLowerCase();
   const out = j.data.output ?? {};
   if (status === 'success') {
