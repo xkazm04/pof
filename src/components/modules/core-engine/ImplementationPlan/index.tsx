@@ -102,6 +102,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
             <button
               onClick={() => setViewMode('table')}
               title="Table view"
+              aria-pressed={viewMode === 'table'}
               className={`p-1 transition-colors ${viewMode === 'table' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'}`}
             >
               <List className="w-3.5 h-3.5" />
@@ -109,6 +110,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
             <button
               onClick={() => setViewMode('map')}
               title="Matrix map"
+              aria-pressed={viewMode === 'map'}
               className={`p-1 transition-colors ${viewMode === 'map' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'}`}
             >
               <Map className="w-3.5 h-3.5" />
@@ -117,6 +119,8 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
           <button
             onClick={refresh}
             disabled={loading}
+            aria-label="Refresh plan"
+            title="Refresh plan"
             className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />

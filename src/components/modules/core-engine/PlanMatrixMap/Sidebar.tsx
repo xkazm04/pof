@@ -25,7 +25,7 @@ export function Sidebar({ pm }: { pm: PlanMatrixState }) {
             <Layers className="w-4 h-4 text-blue-400" />
             Project Map
           </h2>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-1 hover:bg-surface-hover rounded-md text-text-muted hover:text-text transition-colors">
+          <button onClick={() => setIsSidebarOpen(false)} aria-label="Hide navigator" title="Hide navigator" className="p-1 hover:bg-surface-hover rounded-md text-text-muted hover:text-text transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -67,6 +67,8 @@ export function Sidebar({ pm }: { pm: PlanMatrixState }) {
                 <div className={`flex items-center rounded-md transition-colors ${isSelected ? 'bg-surface-hover' : 'hover:bg-surface-hover/50'}`}>
                   <button
                     onClick={() => toggleModuleExpansion(moduleId)}
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${getModuleLabel(moduleId as SubModuleId)} sectors`}
                     className="p-1.5 text-text-muted hover:text-text"
                   >
                     {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}

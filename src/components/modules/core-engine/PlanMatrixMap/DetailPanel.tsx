@@ -31,7 +31,7 @@ export function DetailPanel({
       {/* Header */}
       <div className="sticky top-0 bg-surface-deep/80 backdrop-blur-md border-b border-border/50 px-6 py-5 flex items-center justify-between z-10">
         <h3 className="text-xl font-bold text-white truncate pr-4">{item.featureName}</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-surface-hover transition-colors flex-shrink-0">
+        <button onClick={onClose} aria-label="Close feature details" className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-surface-hover transition-colors flex-shrink-0">
           <X className="w-5 h-5" />
         </button>
       </div>

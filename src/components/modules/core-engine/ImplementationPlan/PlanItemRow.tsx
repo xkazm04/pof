@@ -23,6 +23,7 @@ export function PlanItemRow({
     <div className="border-b border-border/40 last:border-b-0">
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors"
       >
         {/* Rank number */}
