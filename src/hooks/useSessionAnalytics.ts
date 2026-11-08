@@ -5,6 +5,7 @@ import type { AnalyticsDashboard, PromptSuggestion } from '@/types/session-analy
 import { apiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { useIsSuspended } from '@/hooks/useSuspend';
+import { invalidateRunEvidence } from '@/hooks/useModuleRunEvidence';
 import type { SubModuleId } from '@/types/modules';
 
 const EMPTY_DASHBOARD: AnalyticsDashboard = {
@@ -127,6 +128,8 @@ export async function recordSessionOutcome(data: {
         completedAt: new Date().toISOString(),
       }),
     });
+    // The NBA run-evidence cache reads these rows; a new one must reach it.
+    invalidateRunEvidence(data.moduleId);
   } catch (err) {
     console.error('Failed to record session outcome:', err);
   }

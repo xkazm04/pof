@@ -68,6 +68,32 @@ export function __resetRunEvidenceCache() {
   projectCache = {};
 }
 
+/**
+ * A run of `moduleId` was just recorded: drop its entry and the project aggregate
+ * and re-read them for every mounted card. Called by `recordSessionOutcome` (the
+ * one writer of these rows) — without it the odds stayed at the mount-time read
+ * until a page reload, blind to the run the user just finished.
+ */
+export function invalidateRunEvidence(moduleId: string) {
+  const prevModule = moduleCache.get(moduleId);
+  const prevProject = projectCache;
+  moduleCache.delete(moduleId);
+  projectCache = {};
+  // Re-read only what was loaded (a module no card ever mounted issues no request),
+  // and keep the last good figure on screen while the re-read is in flight — the
+  // card must not flash to "no odds" for a refresh.
+  if (prevModule) {
+    void loadModule(moduleId);
+    const entry = moduleCache.get(moduleId);
+    if (prevModule.data && entry && !entry.data && !entry.error) moduleCache.set(moduleId, { ...entry, data: prevModule.data });
+  }
+  if (prevProject.data || prevProject.error || prevProject.inFlight) {
+    void loadProject();
+    if (prevProject.data && !projectCache.data && !projectCache.error) projectCache = { ...projectCache, data: prevProject.data };
+  }
+  notify();
+}
+
 /** One recorded session row, as `?action=module` returns it. */
 interface SessionRow {
   success: boolean;
