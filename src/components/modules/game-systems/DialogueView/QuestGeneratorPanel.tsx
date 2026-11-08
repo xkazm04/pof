@@ -8,6 +8,7 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { apiFetch } from '@/lib/api-utils';
+import { downloadBlob } from '@/lib/download';
 import { useProjectStore } from '@/stores/projectStore';
 import type {
   QuestGenerationResult,
@@ -95,16 +96,7 @@ export function QuestGeneratorPanel() {
   const downloadJson = useCallback(() => {
     if (!batchJson || !result) return;
     const stamp = result.generatedAt.replace(/[:.]/g, '-');
-    // Same transient-anchor shape as CodeViewer's triggerDownload — the anchor
-    // must be in the document before click() for Firefox to honour it.
-    const url = URL.createObjectURL(new Blob([batchJson], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `quests-${stamp}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([batchJson], { type: 'application/json' }), `quests-${stamp}.json`);
   }, [batchJson, result]);
 
   return (

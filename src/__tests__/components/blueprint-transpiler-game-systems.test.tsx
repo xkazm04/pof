@@ -170,3 +170,41 @@ describe('QuestGeneratorPanel - a failed level-doc load is said, not swallowed',
     expect(note.textContent).toContain('db locked');
   });
 });
+
+describe('QuestGeneratorPanel - the JSON export defers the blob revoke', () => {
+  const realCreate = URL.createObjectURL;
+  const realRevoke = URL.revokeObjectURL;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    URL.createObjectURL = realCreate;
+    URL.revokeObjectURL = realRevoke;
+  });
+
+  it('does not revoke the blob URL synchronously after the download click', async () => {
+    const quest = {
+      id: 'q1', name: 'Q', category: 'main', description: 'd', difficulty: 1,
+      objectives: [], roomPath: [], dialogue: [], sourceHint: 's', rewards: [],
+    };
+    const result = {
+      generatedAt: '2026-11-08T00:00:00.000Z',
+      worldScan: { actors: [], enemyClasses: [], npcClasses: [], interactableClasses: [], itemClasses: [] },
+      levelDocId: null, levelDocName: null, quests: [quest], coherenceNotes: [],
+    };
+    vi.stubGlobal('fetch', vi.fn(async (_u: string, init?: RequestInit) => new Response(
+      JSON.stringify({ success: true, data: init?.method === 'POST' ? { result } : { docs: [] } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )));
+    const revoke = vi.fn();
+    URL.createObjectURL = vi.fn(() => 'blob:test');
+    URL.revokeObjectURL = revoke;
+    render(<QuestGeneratorPanel />);
+    fireEvent.click(screen.getByText('Generate Quests'));
+    const btn = await screen.findByText('Download .json');
+    vi.useFakeTimers();
+    fireEvent.click(btn);
+    expect(revoke).toHaveBeenCalledTimes(0);
+    vi.advanceTimersByTime(1000);
+    expect(revoke).toHaveBeenCalledTimes(1);
+  });
+});
