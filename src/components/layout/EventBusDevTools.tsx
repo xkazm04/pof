@@ -26,6 +26,15 @@ function getColor(channel: string): string {
   return NAMESPACE_COLORS[getNamespace(channel)] ?? '#7d82a8';
 }
 
+/** A throw here would be a render throw: one odd payload must not take the shell down. */
+function formatPayload(payload: unknown): string {
+  try {
+    return JSON.stringify(payload, null, 2) ?? String(payload);
+  } catch (err) {
+    return `[payload not serializable: ${err instanceof Error ? err.message : String(err)}]`;
+  }
+}
+
 function formatTime(ts: number): string {
   const d = new Date(ts);
   return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -185,9 +194,10 @@ export function EventBusDevTools() {
           ) : (
             <div className="divide-y divide-border">
               {filteredEvents.map((event) => (
+                <div key={event.id}>
                 <button
-                  key={event.id}
                   onClick={() => setSelectedEvent(selectedEvent?.id === event.id ? null : event)}
+                  aria-expanded={selectedEvent?.id === event.id}
                   className={`w-full text-left px-3 py-2 hover:bg-surface transition-colors ${
                     selectedEvent?.id === event.id ? 'bg-surface' : ''
                   }`}
@@ -209,13 +219,14 @@ export function EventBusDevTools() {
                       from {event.source}
                     </span>
                   )}
-                  {/* Expanded payload */}
-                  {selectedEvent?.id === event.id && (
-                    <pre className="mt-2 ml-3.5 text-2xs text-text-muted bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all font-mono">
-                      {JSON.stringify(event.payload, null, 2)}
-                    </pre>
-                  )}
                 </button>
+                {/* Expanded payload: a sibling, since a <pre> is not valid button content */}
+                {selectedEvent?.id === event.id && (
+                  <pre className="mb-2 ml-6 mr-3 text-2xs text-text-muted bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                    {formatPayload(event.payload)}
+                  </pre>
+                )}
+                </div>
               ))}
             </div>
           )}

@@ -24,3 +24,23 @@ describe('namespace chips', () => {
     expect(screen.queryByText('file.cli-output')).toBeNull();
   });
 });
+
+describe('event rows', () => {
+  it('an unserializable payload renders a note instead of crashing the shell', () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    open([ev('1', 'cli.start', undefined, circular)]);
+    fireEvent.click(screen.getByRole('button', { name: /cli\.start/ }));
+    expect(screen.getByText(/not serializable/i)).toBeTruthy();
+  });
+
+  it('the payload sits beside the toggle, not inside it, and the toggle reports its state', () => {
+    open([ev('1', 'cli.start', undefined, { a: 1 })]);
+    const row = screen.getByRole('button', { name: /cli\.start/ });
+    expect(row.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(row);
+    expect(row.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('pre')).toBeTruthy();
+    expect(row.querySelector('pre')).toBeNull();
+  });
+});
