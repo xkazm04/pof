@@ -80,7 +80,7 @@ describe('composeVisualPrompt', () => {
   });
 
   it('works with chips only (no subject) for image-to-3d style direction', () => {
-    const out = composeVisualPrompt({ chipIds: ['mat-wood'], mode: 'image-to-3d' });
+    const out = composeVisualPrompt({ chipIds: ['mat-wood'] });
     expect(out).toContain('wood');
     expect(out).toContain('game-ready 3D asset');
   });
