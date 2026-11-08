@@ -9,7 +9,7 @@
  * API proxy routes — connection management is client-side).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { pofBridgeConnection } from '@/lib/pof-bridge/connection-manager';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
@@ -36,11 +36,6 @@ export function usePofBridge(): UsePofBridgeResult {
     pofBridgeConnection.getState(),
   );
 
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    return () => { mountedRef.current = false; };
-  }, []);
-
   // ── Subscribe to connection state changes ──────────────────────────────────
 
   useEffect(() => {
@@ -50,8 +45,6 @@ export function usePofBridge(): UsePofBridgeResult {
     let sawLiveUpdate = false;
 
     const unsubscribe = pofBridgeConnection.onStateChange((newState) => {
-      if (!mountedRef.current) return;
-
       sawLiveUpdate = true;
       setState(newState);
 
@@ -64,7 +57,7 @@ export function usePofBridge(): UsePofBridgeResult {
     // Sync initial state after current render cycle — but only if no live
     // update has already arrived (which would be newer than this snapshot).
     const raf = requestAnimationFrame(() => {
-      if (!mountedRef.current || sawLiveUpdate) return;
+      if (sawLiveUpdate) return;
       // Re-read fresh state at apply time rather than a pre-rAF capture, so a
       // connection that resolved during the frame is reflected, not overwritten.
       const initial = pofBridgeConnection.getState();
