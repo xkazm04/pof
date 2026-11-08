@@ -13,6 +13,7 @@ import { UI_TIMEOUTS } from '@/lib/constants';
 import { formatDuration } from '@/lib/format';
 import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE } from '@/lib/chart-colors';
 import { FetchError } from '@/components/modules/shared/FetchError';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import type { CompletionLedger } from '@/lib/roadmap/completion-ledger';
 import { EMPTY_PROGRESS } from './constants';
 import { formatDateRange, formatDigestMarkdown, renderDigestToCanvas } from './helpers';
@@ -144,7 +145,7 @@ export function WeeklyDigestView() {
               </button>
               <p className="text-2xs text-text-muted tabular-nums">
                 {formatDateRange(digest.periodStart, digest.periodEnd)}
-                {weeksAgo > 0 && ` · ${weeksAgo === 1 ? 'last week' : `${weeksAgo} weeks ago`}`}
+                {weeksAgo > 0 && !error && ` · ${weeksAgo === 1 ? 'last week' : `${weeksAgo} weeks ago`}`}
               </p>
               <button
                 onClick={() => setWeeksAgo((w) => Math.max(0, w - 1))}
@@ -183,6 +184,13 @@ export function WeeklyDigestView() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <InlineErrorRetry
+          message={`Could not load that week (${error}). Still showing ${formatDateRange(digest.periodStart, digest.periodEnd)}.`}
+          onRetry={fetchDigest}
+        />
+      )}
 
       {/* Stat cards grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

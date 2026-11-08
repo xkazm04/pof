@@ -15,6 +15,7 @@ import {
 } from '@/lib/chart-colors';
 import type { ProjectWrapped } from '@/types/project-wrapped';
 import { FetchError } from '../../shared/FetchError';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { HeroStat, MiniStat, TimelineRow } from './SubComponents';
 import { monthLabel, spanCaption } from './helpers';
 import { formatWrappedMarkdown } from './markdownExport';
@@ -139,6 +140,13 @@ export function ProjectWrappedView() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <InlineErrorRetry
+          message={`Could not refresh the recap (${error}). Still showing the last one loaded.`}
+          onRetry={fetchWrapped}
+        />
+      )}
 
       {/* Celebratory hero */}
       <div
