@@ -22,9 +22,9 @@ function parseLimit(input: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** `3 Sep` for an instant, on the calendar of `zone`. */
+/** A short date for an instant, on the calendar of `zone`, in the viewer's locale (same as the reset time). */
 function shortDate(iso: string, zone: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: zone });
+  return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short', timeZone: zone });
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
