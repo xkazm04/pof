@@ -90,15 +90,20 @@ export function gapTargetLine(t: GapTargetSpec): string {
   return `${t.attribute}=${t.value}: expected ~${t.expected}, have ${t.count}`;
 }
 
-/** Narrow an untrusted value (a request body) to a target, or `null`. */
+/**
+ * Narrow an untrusted value (a request body) to a target, or `null`. Every target `rankCatalogGaps`
+ * or an under-represented row can produce has integer `count >= 0` and `expected > count` (a gap
+ * is a deficit of at least one), so anything else is refused before a CLI run is spent on it.
+ */
 export function asGapTarget(v: unknown): GapTarget | null {
   if (!v || typeof v !== 'object') return null;
   const t = v as Record<string, unknown>;
   const str = (k: string) => typeof t[k] === 'string' && (t[k] as string).length > 0;
-  const num = (k: string) => typeof t[k] === 'number' && Number.isFinite(t[k]);
-  if (!str('catalogId') || !str('attribute') || !str('value') || !num('count') || !num('expected')) return null;
+  const int = (k: string) => typeof t[k] === 'number' && Number.isInteger(t[k]) && (t[k] as number) >= 0;
+  if (!str('catalogId') || !str('attribute') || !str('value') || !int('count') || !int('expected')) return null;
   const count = t.count as number;
   const expected = t.expected as number;
+  if (expected <= count) return null;
   return {
     catalogId: t.catalogId as string, attribute: t.attribute as string, value: t.value as string,
     count, expected, deficit: expected - count,

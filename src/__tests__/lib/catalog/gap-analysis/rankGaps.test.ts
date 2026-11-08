@@ -5,7 +5,7 @@
  * ranked and never called balanced; the top gap is phrased as the next action.
  */
 import { describe, it, expect } from 'vitest';
-import { rankCatalogGaps, gapTargetAction } from '@/lib/catalog/gap-analysis/rankGaps';
+import { rankCatalogGaps, gapTargetAction, asGapTarget } from '@/lib/catalog/gap-analysis/rankGaps';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 
 const itemsDist: CatalogDistribution = {
@@ -90,5 +90,24 @@ describe('rankCatalogGaps plans (closure plan per catalog)', () => {
   it('a catalog without targets has no plan', () => {
     const r = rankCatalogGaps([{ catalogId: 'quests', total: 1, byAttribute: {}, underrepresented: [], sample: [] }]);
     expect(r.plans).toEqual({});
+  });
+});
+
+describe('asGapTarget — a request-body target must be a real gap', () => {
+  const ok = { catalogId: 'items', attribute: 'rarity', value: 'Common', count: 34, expected: 57 };
+
+  it('accepts a measured gap and recomputes its deficit', () => {
+    expect(asGapTarget({ ...ok, deficit: 999 })).toEqual({ ...ok, deficit: 23 });
+    expect(asGapTarget({ ...ok, count: 0, expected: 1 })).toEqual({ ...ok, count: 0, expected: 1, deficit: 1 });
+  });
+
+  it.each([
+    ['a negative count', { ...ok, count: -3 }],
+    ['a fractional count', { ...ok, count: 1.5 }],
+    ['a fractional expected', { ...ok, expected: 57.2 }],
+    ['no deficit (expected == count)', { ...ok, count: 57 }],
+    ['a surplus (expected < count)', { ...ok, count: 80 }],
+  ])('refuses %s', (_label, v) => {
+    expect(asGapTarget(v)).toBeNull();
   });
 });
