@@ -62,7 +62,6 @@ export function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
         const statusColor = run.status === 'passed' ? STATUS_SUCCESS : run.status === 'failed' ? STATUS_ERROR : STATUS_WARNING;
         const duration = run.finishedAt - run.startedAt;
         const passedCount = run.testResults.filter((r) => r.status === 'passed').length;
-        const totalCount = run.testResults.length;
 
         return (
           <div key={idx} className="rounded border overflow-hidden" style={{ borderColor: `${statusColor}30` }}>
@@ -74,7 +73,7 @@ export function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
               <StatusIcon className="w-3.5 h-3.5" style={{ color: statusColor }} />
               <span className="text-xs font-medium text-text flex-1">{run.suiteName}</span>
               <span className="text-xs font-mono" style={{ color: statusColor }}>
-                {passedCount}/{totalCount} passed
+                {passedCount}/{run.expectedCount} passed
               </span>
               <span className="text-xs text-text-muted">{(duration / 1000).toFixed(1)}s</span>
             </button>

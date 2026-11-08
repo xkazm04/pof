@@ -6,7 +6,7 @@ import type {
 } from '@/types/pof-bridge';
 import type { TestSuite, SuiteRunResult, HarnessTab } from './types';
 import { TEMPLATE_SCENARIO } from './constants';
-import { generateId } from './helpers';
+import { deriveSuiteStatus, generateId } from './helpers';
 
 /** Per-pixel diff threshold (%) every harness capture compares at. */
 const SNAPSHOT_DIFF_THRESHOLD = 0.5;
@@ -181,10 +181,6 @@ export function useTestHarnessPanel() {
     }
 
     const finishedAt = Date.now();
-    const allPassed = runResults.every((r) => r.status === 'passed');
-    const anyFailed = runResults.some((r) => r.status === 'failed' || r.status === 'error');
-    // A suite with presets passes only on a read-back report that passed; a failed capture is not a pass.
-    const snapshotPassed = !snapshotsRan || snapshotReport?.overallStatus === 'passed';
 
     const suiteResult: SuiteRunResult = {
       suiteId: activeSuite.id,
@@ -192,8 +188,15 @@ export function useTestHarnessPanel() {
       startedAt,
       finishedAt,
       testResults: runResults,
+      expectedCount: activeSuite.scenarios.length,
       snapshotReport,
-      status: anyFailed || !snapshotPassed ? 'failed' : allPassed ? 'passed' : 'partial',
+      status: deriveSuiteStatus({
+        results: runResults,
+        expectedCount: activeSuite.scenarios.length,
+        // A suite with presets passes only on a read-back report that passed; a failed capture is not a pass.
+        snapshotsFailed: snapshotsRan && snapshotReport?.overallStatus !== 'passed',
+        snapshotsSkipped: activeSuite.snapshotPresets.length > 0 && !snapshotsRan,
+      }),
     };
 
     setSuiteRunHistory((prev) => [suiteResult, ...prev].slice(0, 20));
