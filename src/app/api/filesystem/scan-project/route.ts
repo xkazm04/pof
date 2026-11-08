@@ -34,6 +34,8 @@ export interface ProjectScanResult {
   plugins: ScannedPlugin[];
   buildDependencies: ScannedDependency[];
   sourceFileCount: number;
+  /** True when the header walk stopped at its file cap, so `classes` may be partial. */
+  truncated?: boolean;
   // Web-app fields
   framework?: string;
   apiRoutes?: string[];
@@ -68,17 +70,18 @@ async function fileExists(filePath: string): Promise<boolean> {
 
 /**
  * Recursively collect all .h files under a directory.
- * Caps at 500 files to avoid scanning massive engine directories.
+ * Caps at 500 files to avoid scanning massive engine directories; `truncated` is true
+ * only when a further header existed past the cap.
  */
-async function collectHeaders(dir: string, maxFiles = 500): Promise<string[]> {
+async function collectHeaders(dir: string, maxFiles = 500): Promise<{ headers: string[]; truncated: boolean }> {
   const results: string[] = [];
 
   async function walk(current: string) {
-    if (results.length >= maxFiles) return;
+    if (results.length > maxFiles) return;
     try {
       const entries = await fs.readdir(current, { withFileTypes: true });
       for (const entry of entries) {
-        if (results.length >= maxFiles) return;
+        if (results.length > maxFiles) return;
         const full = path.join(current, entry.name);
         if (entry.isDirectory() && !entry.name.startsWith('.')) {
           await walk(full);
@@ -92,7 +95,7 @@ async function collectHeaders(dir: string, maxFiles = 500): Promise<string[]> {
   }
 
   await walk(dir);
-  return results;
+  return { headers: results.slice(0, maxFiles), truncated: results.length > maxFiles };
 }
 
 /**
@@ -395,8 +398,8 @@ async function scanUE5Project(projectPath: string, moduleName: string): Promise<
   const sourceExists = await directoryExists(sourceRoot);
 
   // Parallel: scan classes, count files, parse Build.cs, parse plugins
-  const [headers, sourceFileCount, buildDeps, uprojectPlugins, localPlugins] = await Promise.all([
-    sourceExists ? collectHeaders(sourceRoot) : Promise.resolve([]),
+  const [headerScan, sourceFileCount, buildDeps, uprojectPlugins, localPlugins] = await Promise.all([
+    sourceExists ? collectHeaders(sourceRoot) : Promise.resolve({ headers: [] as string[], truncated: false }),
     sourceExists ? countSourceFiles(sourceRoot) : Promise.resolve(0),
     (async () => {
       const buildCsPath = path.join(projectPath, 'Source', moduleName, `${moduleName}.Build.cs`);
@@ -419,6 +422,7 @@ async function scanUE5Project(projectPath: string, moduleName: string): Promise<
     scanLocalPlugins(projectPath),
   ]);
 
+  const { headers, truncated } = headerScan;
   // Extract classes from headers in parallel (batch of 20)
   const allClasses: ScannedClass[] = [];
   const batchSize = 20;
@@ -449,6 +453,7 @@ async function scanUE5Project(projectPath: string, moduleName: string): Promise<
     plugins: mergedPlugins,
     buildDependencies: buildDeps,
     sourceFileCount,
+    truncated,
     scanDurationMs: Date.now() - startTime,
   };
 }
@@ -519,6 +524,7 @@ async function scanWebAppProject(
     plugins: [],
     buildDependencies: [],
     sourceFileCount: 0,
+    truncated: false,
     framework: info.framework,
     apiRoutes,
     databaseType: info.databaseType,
