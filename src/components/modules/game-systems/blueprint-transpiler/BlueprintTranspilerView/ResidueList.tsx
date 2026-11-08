@@ -3,6 +3,7 @@
 import { CircleDashed, CornerDownRight, XCircle } from 'lucide-react';
 import type { ResidueEntry, ResidueFile } from '@/lib/blueprint-transpiler/residue';
 import { DecoratedJargon } from '@/components/ui/TermChip';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 
 // ─── Transpile residue worklist ─────────────────────────────────────────────
 //
@@ -29,7 +30,7 @@ function Group({ title, hint, entries, onLocate }: {
       <ul className="space-y-1">
         {entries.map((e, i) => {
           const icon = e.disposition === 'refused'
-            ? <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5 text-amber-400" aria-hidden />
+            ? <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: STATUS_WARNING }} aria-hidden />
             : <CircleDashed className="w-3 h-3 flex-shrink-0 mt-0.5 text-text-muted" aria-hidden />;
           const body = (
             <>

@@ -275,7 +275,7 @@ export function WriteToProjectButton({ className, header, source, projectPath, m
         </span>
       )}
       {err && (
-        <span className="text-2xs text-red-400 flex items-center gap-1">
+        <span className="text-2xs flex items-center gap-1" style={{ color: STATUS_ERROR }}>
           <XCircle className="w-3 h-3" /> {err}
         </span>
       )}

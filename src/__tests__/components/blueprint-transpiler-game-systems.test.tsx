@@ -246,3 +246,22 @@ describe('WriteToProjectButton - the status banners share one block', () => {
     expect(src.split('OPACITY_10}`').length - 1).toBe(1);
   });
 });
+
+describe('status hues use the STATUS_* tokens, not raw palette classes', () => {
+  it('has no text-(red|amber|green|yellow|blue|purple)-400 in the context files', async () => {
+    const { readFileSync, readdirSync } = await import('node:fs');
+    const roots = [
+      'src/components/modules/game-systems/blueprint-transpiler',
+      'src/components/modules/game-systems/DialogueView',
+      'src/components/modules/game-systems/multiplayer',
+    ];
+    const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? walk(`${d}/${e.name}`) : e.name.endsWith('.tsx') ? [`${d}/${e.name}`] : []);
+    const hits: string[] = [];
+    for (const f of roots.flatMap(walk)) {
+      const code = readFileSync(f, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of code.matchAll(/(?:text|bg|border)-(?:red|amber|green|yellow|blue|purple)-400/g)) hits.push(`${f}: ${m[0]}`);
+    }
+    expect(hits).toEqual([]);
+  });
+});
