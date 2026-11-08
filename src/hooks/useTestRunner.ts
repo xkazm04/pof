@@ -11,17 +11,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { PofTestSpec, PofTestResult } from '@/types/pof-bridge';
-
-/** Polling interval while waiting for test results (ms). */
-const TEST_POLL_INTERVAL = 2_000;
-
-/** Maximum time to wait for a single test before giving up (ms). */
-const TEST_POLL_TIMEOUT = 120_000;
 
 interface UseTestRunnerResult {
   runTest: (spec: PofTestSpec) => Promise<PofTestResult | null>;
-  /** Ends the in-flight poll at its next wake (within one TEST_POLL_INTERVAL); the run resolves null. */
+  /** Ends the in-flight poll at its next wake (within one UI_TIMEOUTS.testPollInterval); the run resolves null. */
   abort: () => void;
   results: PofTestResult[];
   isRunning: boolean;
@@ -50,11 +45,11 @@ export function useTestRunner(): UseTestRunnerResult {
     const startTime = Date.now();
 
     while (!abortRef.current) {
-      if (Date.now() - startTime > TEST_POLL_TIMEOUT) {
+      if (Date.now() - startTime > UI_TIMEOUTS.testPollTimeout) {
         return null; // Timed out waiting
       }
 
-      await new Promise((resolve) => setTimeout(resolve, TEST_POLL_INTERVAL));
+      await new Promise((resolve) => setTimeout(resolve, UI_TIMEOUTS.testPollInterval));
 
       if (abortRef.current) return null;
 

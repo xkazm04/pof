@@ -178,3 +178,37 @@ describe('IconSetPanel — free until the one paid click', () => {
     expect(screen.getByTestId('icon-set-run').hasAttribute('disabled')).toBe(true);
   });
 });
+
+describe('IconSetPanel - a catalog switch never shows the previous catalog rows', () => {
+  it('re-draw ticked, switching catalog with the entities answer held: 0 briefs from the old catalog', async () => {
+    let release: (r: Response) => void = () => {};
+    const held = new Promise<Response>((r) => { release = r; });
+    const fn = vi.fn(async (url: string) => {
+      if (url.startsWith('/api/catalog/pipelines')) {
+        return ok([
+          { catalogId: CAT, label: 'Bestiary', category: 'x', description: '', steps: [STEP], entityCount: 5, registered: true },
+          { catalogId: 'spellbook', label: 'Spellbook', category: 'x', description: '', steps: [STEP], entityCount: 1, registered: true },
+        ]);
+      }
+      if (url.startsWith('/api/catalog/entities')) {
+        if (url.includes('spellbook')) return held;
+        return ok(['a', 'b', 'c'].map((id) => ({ id, name: `${id} beast`, lifecycle: 'planned', ueAssets: [], canonProfile: 'pof' })));
+      }
+      if (url.startsWith('/api/visual-gen/icons')) return ok({ icons: [] });
+      if (url.startsWith('/api/visual-gen/generate-2d')) return ok({ providers: [QWEN_READY], defaultProviderId: 'qwen-image' });
+      throw new Error(`unexpected request ${url}`);
+    });
+    vi.stubGlobal('fetch', fn as unknown as typeof fetch);
+    render(<IconSetPanel />);
+    await screen.findByTestId('icon-set-brief-a');
+    fireEvent.click(screen.getByTestId('icon-set-reroll'));
+    expect(screen.getAllByTestId(/^icon-set-brief-/)).toHaveLength(3);
+
+    fireEvent.change(screen.getByTestId('icon-set-catalog'), { target: { value: 'spellbook' } });
+    await waitFor(() => expect(fn.mock.calls.some((c) => String(c[0]).includes('spellbook'))).toBe(true));
+    expect(screen.queryAllByTestId(/^icon-set-brief-/)).toHaveLength(0);
+
+    release(ok([{ id: 's1', name: 'S one', lifecycle: 'planned', ueAssets: [], canonProfile: 'pof' }]));
+    await screen.findByTestId('icon-set-brief-s1');
+  });
+});

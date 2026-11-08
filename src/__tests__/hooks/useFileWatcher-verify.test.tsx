@@ -9,6 +9,7 @@ import { renderHook, act, cleanup } from '@testing-library/react';
 import { useFileWatcher } from '@/hooks/useFileWatcher';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
+import { logger } from '@/lib/logger';
 import type { FileChangeEvent, ScannedDeclaration } from '@/lib/file-watcher';
 
 afterEach(cleanup);
@@ -116,5 +117,43 @@ describe('useFileWatcher auto-verify — a failure never ticks', () => {
     for (const call of [...setVerification.mock.calls, ...setChecklistItem.mock.calls]) {
       expect(call[0]).not.toBe('ai-behavior');
     }
+  });
+});
+
+describe('useFileWatcher auto-verify - a late verdict never crosses a project switch', () => {
+  it('projectPath switched while verify-semantic is pending: no write lands', async () => {
+    let release: (v: unknown) => void = () => {};
+    fetchMock.mockReturnValue(new Promise((r) => { release = r; }));
+    await emit(changes(decl('UARPGItemDefinition')));
+    expect(verifyCalls()).toHaveLength(1);
+    useProjectStore.setState({ projectPath: 'C:/OtherProj' });
+    await act(async () => {
+      release({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          success: true,
+          data: { results: [{ moduleId: 'arpg-inventory', itemId: 'ai-1', status: 'full', completeness: 1, missingMembers: [] }] },
+        }),
+      });
+      for (let i = 0; i < 5; i++) await Promise.resolve();
+    });
+    expect(setVerification).not.toHaveBeenCalled();
+    expect(setChecklistItem).not.toHaveBeenCalled();
+  });
+});
+
+describe('useFileWatcher - handler faults are not swallowed as bad frames', () => {
+  it('a changes frame whose handling throws logs one warn; an unparsable frame stays quiet', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    useProjectStore.setState({ scanProject: vi.fn(() => { throw new Error('scan exploded'); }) });
+    await emit(changes(decl('UPROPERTY')));
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    warn.mockClear();
+    const es = FakeEventSource.instances.at(-1)!;
+    es.onmessage?.({ data: '{not json' });
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

@@ -7,7 +7,7 @@
  * into the ue5BridgeStore, and exposes connect/disconnect/watch actions.
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSuspendableSelector } from '@/hooks/useSuspend';
 import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
@@ -44,6 +44,26 @@ interface UseLiveStateSyncResult {
   requestSnapshot: () => void;
 }
 
+// One reference-counted bridge for every mounted host: the store diff runs once per client
+// message however many panels use this hook.
+let bridgeHosts = 0;
+let bridgeUnsub: (() => void) | null = null;
+
+function acquireBridge(): () => void {
+  useUE5BridgeStore.getState().setLiveState(ue5LiveState.getState());
+  if (bridgeHosts++ === 0) {
+    bridgeUnsub = ue5LiveState.onStateChange((state) => {
+      useUE5BridgeStore.getState().setLiveState(state);
+    });
+  }
+  return () => {
+    if (--bridgeHosts === 0) {
+      bridgeUnsub?.();
+      bridgeUnsub = null;
+    }
+  };
+}
+
 export function useLiveStateSync(): UseLiveStateSyncResult {
   const host = useUE5BridgeStore((s) => s.host);
   const wsPort = useUE5BridgeStore((s) => s.wsPort);
@@ -54,20 +74,9 @@ export function useLiveStateSync(): UseLiveStateSyncResult {
   const liveSnapshot = useSuspendableSelector(useUE5BridgeStore, (s) => s.liveSnapshot);
   const propertyWatches = useSuspendableSelector(useUE5BridgeStore, (s) => s.propertyWatches);
   const wsFrameRate = useSuspendableSelector(useUE5BridgeStore, (s) => s.wsFrameRate);
-  const setLiveState = useUE5BridgeStore((s) => s.setLiveState);
-
-  const setLiveStateRef = useRef(setLiveState);
-  useEffect(() => { setLiveStateRef.current = setLiveState; }, [setLiveState]);
-
   // Subscribe to the singleton client and bridge into store. The socket outlives this hook,
   // so read its state first: the store is written only here and may predate the last unmount.
-  useEffect(() => {
-    setLiveStateRef.current(ue5LiveState.getState());
-    const unsub = ue5LiveState.onStateChange((state) => {
-      setLiveStateRef.current(state);
-    });
-    return unsub;
-  }, []);
+  useEffect(() => acquireBridge(), []);
 
   const connectWs = useCallback(() => {
     ue5LiveState.connect(host, wsPort);

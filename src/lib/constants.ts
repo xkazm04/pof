@@ -211,6 +211,10 @@ export const UI_TIMEOUTS = {
   decisionsPoll: 10_000,
   /** Interval the Combat lab re-reads the combat tables and arena telemetry (suspend-gated): the arena writes a session file every few minutes. */
   combatLabPoll: 20_000,
+  /** Interval between PoF Bridge test-result polls (useTestRunner). */
+  testPollInterval: 2_000,
+  /** Longest a single PoF Bridge test is awaited before the runner gives up (useTestRunner). */
+  testPollTimeout: 120_000,
 } as const;
 
 /**

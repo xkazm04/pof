@@ -71,6 +71,13 @@ async function semanticVerify(items: VerifyTarget[], projectPath: string): Promi
     logger.warn('[useFileWatcher] verify-semantic could not read', data.data.unreadable);
   }
 
+  // moduleStore holds one project at a time: a verdict for a project the user has
+  // since left would tick same-id items of the new one.
+  if (useProjectStore.getState().projectPath !== projectPath) {
+    logger.warn('[useFileWatcher] project changed while verify-semantic was pending; verdict dropped');
+    return;
+  }
+
   const asked = new Map(items.map((i) => [`${i.moduleId}::${i.itemId}`, i]));
   const { setChecklistItem, setVerification } = useModuleStore.getState();
   for (const result of data.data.results) {
@@ -147,14 +154,21 @@ export function useFileWatcher(): WatcherStatus {
         const es = new EventSource(url);
 
         es.onmessage = (event) => {
+          let data: { type?: string; events?: FileChangeEvent[] };
           try {
-            const data = JSON.parse(event.data);
+            data = JSON.parse(event.data);
+          } catch {
+            return; // a malformed frame is dropped
+          }
+          try {
             if (data.type === 'connected') {
               setStatus((prev) => ({ ...prev, connected: true }));
             } else if (data.type === 'changes') {
               handleChanges(data.events as FileChangeEvent[]);
             }
-          } catch { /* ignore parse errors */ }
+          } catch (err) {
+            logger.warn('[useFileWatcher] handling a changes frame failed', err);
+          }
         };
 
         es.onerror = () => {
