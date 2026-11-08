@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { runnerDispatchFor, runnerRefusal, type RunnerMode } from '@/lib/visual-gen/runner-dispatch';
 import {
   routePromptShape,
@@ -19,6 +20,33 @@ import {
   type InputGateOutcome,
 } from '@/lib/visual-gen/input-gate';
 import { meshPromptFor } from '@/lib/media-prompts/meshPrompts';
+
+/** TripoSR's marching-cubes grid: the default is 256, and the cost grows with the cube of it. */
+const MC_RESOLUTION_MIN = 32;
+const MC_RESOLUTION_MAX = 1024;
+
+/** The first field of a parsed body that has the wrong shape, as a refusal. Null when all fit. */
+function bodyShapeRefusal(body: Record<string, unknown>): string | null {
+  for (const field of ['mode', 'providerId', 'imageDataUrl', 'prompt', 'assetClass', 'topology']) {
+    if (body[field] != null && typeof body[field] !== 'string') return `${field} must be a string`;
+  }
+  const views = body.viewDataUrls;
+  if (views != null) {
+    if (typeof views !== 'object' || Array.isArray(views)) return 'viewDataUrls must be an object of view slot to data URL';
+    if (Object.values(views).some((v) => v != null && typeof v !== 'string')) return 'viewDataUrls entries must be strings';
+  }
+  const { maxAttempts, mcResolution } = body;
+  if (maxAttempts != null && !(Number.isInteger(maxAttempts) && (maxAttempts as number) >= 1)) {
+    return 'maxAttempts must be a whole number of at least 1';
+  }
+  if (
+    mcResolution != null
+    && !(Number.isInteger(mcResolution) && (mcResolution as number) >= MC_RESOLUTION_MIN && (mcResolution as number) <= MC_RESOLUTION_MAX)
+  ) {
+    return `mcResolution must be a whole number from ${MC_RESOLUTION_MIN} to ${MC_RESOLUTION_MAX}`;
+  }
+  return null;
+}
 
 /**
  * POST /api/visual-gen/generate
@@ -45,7 +73,11 @@ export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const shapeRefusal = bodyShapeRefusal(parsed);
+    if (shapeRefusal) return apiError(shapeRefusal, 400);
+    const body = parsed as {
       mode?: string;
       providerId?: string;
       imageDataUrl?: string;
@@ -111,14 +143,14 @@ export async function POST(request: NextRequest) {
     const promptRoute = routePromptShape(prompt);
     let shapeRoute: PromptShapeRoute | undefined =
       promptRoute.route === 'generate' ? undefined : promptRoute;
-    const shapeRefusal = linearPropRefusal(promptRoute);
-    if (shapeRefusal) {
+    const linearRefusal = linearPropRefusal(promptRoute);
+    if (linearRefusal) {
       // The refusal string is for the caller; `details` is the RECORD. This is the one
       // outcome of the four that saves a credit, and it was the only one leaving no
       // structured trace - so nothing downstream could count deliberate diversions, or
       // tell one apart from a malformed request. Same shape the 202 carries in
       // `shapeRoute`, so one reader serves both.
-      if (overrideShapeRoute !== true) return apiError(shapeRefusal, 400, promptRoute);
+      if (overrideShapeRoute !== true) return apiError(linearRefusal, 400, promptRoute);
       shapeRoute = linearPropOverridden(promptRoute);
     }
 
