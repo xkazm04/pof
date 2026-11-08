@@ -16,6 +16,8 @@ export function EmitterLayer({
   paintMode,
   handleEmitterMouseDown,
   deleteEmitter,
+  handleItemKeyDown,
+  handleItemKeyUp,
 }: {
   emitters: SoundEmitter[];
   zoneById: Map<string, AudioZone>;
@@ -25,6 +27,8 @@ export function EmitterLayer({
   paintMode: PaintMode;
   handleEmitterMouseDown: (e: React.MouseEvent, emitterId: string) => void;
   deleteEmitter: (emitterId: string) => void;
+  handleItemKeyDown: (e: React.KeyboardEvent, kind: 'zone' | 'emitter', id: string) => void;
+  handleItemKeyUp: (e: React.KeyboardEvent) => void;
 }) {
   return (
     <>
@@ -74,6 +78,13 @@ export function EmitterLayer({
 
             {/* Emitter body */}
             <circle
+              data-emitter-id={em.id}
+              role="button"
+              tabIndex={paintMode === 'select' ? 0 : -1}
+              aria-label={`Emitter ${em.name}. Enter selects, arrows move, Delete removes.`}
+              aria-pressed={isSelected}
+              onKeyDown={(e) => handleItemKeyDown(e, 'emitter', em.id)}
+              onKeyUp={handleItemKeyUp}
               cx={em.x} cy={em.y}
               r={10}
               fill="var(--surface-deep)"
@@ -144,6 +155,12 @@ export function EmitterLayer({
                 // Own the press: bubbling to the canvas deselects, which unmounts this button before its click.
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); deleteEmitter(em.id); }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Delete emitter ${em.name}`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); deleteEmitter(em.id); }
+                }}
                 style={{ cursor: 'pointer' }}
               >
                 <rect x={0} y={0} width={14} height={14} rx={3} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}50`} />

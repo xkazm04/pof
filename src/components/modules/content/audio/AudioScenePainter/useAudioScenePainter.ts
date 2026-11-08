@@ -354,6 +354,44 @@ export function useAudioScenePainter({
     if (selectedEmitterId === emitterId) onSelectEmitter(null);
   }, [runCommit, selectedEmitterId, onSelectEmitter]);
 
+  // ── Keyboard editing of a focused item ──
+  // Enter/Space selects, Delete/Backspace removes, arrows nudge (Shift = 10). Nudges
+  // stage into the same op buffer a drag uses and commit once, on key release.
+  const nudgeDirty = useRef(false);
+  const handleItemKeyDown = useCallback((e: React.KeyboardEvent, kind: 'zone' | 'emitter', id: string) => {
+    if (paintMode !== 'select') return;
+    const select = () => {
+      if (kind === 'zone') { onSelectZone(id); onSelectEmitter(null); } else { onSelectEmitter(id); onSelectZone(null); }
+    };
+    const step = e.shiftKey ? 10 : 1;
+    const arrows: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
+    };
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); e.stopPropagation(); select();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault(); e.stopPropagation();
+      if (kind === 'zone') deleteZone(id); else deleteEmitter(id);
+      containerRef.current?.focus();
+    } else if (arrows[e.key]) {
+      e.preventDefault(); e.stopPropagation();
+      const item = kind === 'zone' ? baseScene().zones.find((z) => z.id === id) : baseScene().emitters.find((em) => em.id === id);
+      if (!item) return;
+      const [dx, dy] = arrows[e.key];
+      nudgeDirty.current = true;
+      select();
+      stageOps([kind === 'zone'
+        ? { kind: 'moveZone', id, x: item.x + dx, y: item.y + dy }
+        : { kind: 'moveEmitter', id, x: item.x + dx, y: item.y + dy }]);
+    }
+  }, [paintMode, baseScene, stageOps, onSelectZone, onSelectEmitter, deleteZone, deleteEmitter, containerRef]);
+
+  const handleItemKeyUp = useCallback((e: React.KeyboardEvent) => {
+    if (!e.key.startsWith('Arrow') || !nudgeDirty.current) return;
+    nudgeDirty.current = false;
+    runCommit();
+  }, [runCommit]);
+
   // ── Zoom / pan viewport controls ──
   // The painter applies `view` as a `translate … scale` transform on the inner
   // <g>; button/keyboard zooms anchor on the viewport centre, wheel zooms on the
@@ -488,6 +526,8 @@ export function useAudioScenePainter({
     resetView,
     fitToContent,
     handleKeyDown,
+    handleItemKeyDown,
+    handleItemKeyUp,
     minimap,
     handleMinimapDown,
     majorGrid,

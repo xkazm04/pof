@@ -19,6 +19,8 @@ export function ZoneLayer({
   handleZoneMouseDown,
   handleResizeStart,
   deleteZone,
+  handleItemKeyDown,
+  handleItemKeyUp,
 }: {
   zones: AudioZone[];
   selectedZoneId: string | null;
@@ -28,6 +30,8 @@ export function ZoneLayer({
   handleZoneMouseDown: (e: React.MouseEvent, zoneId: string) => void;
   handleResizeStart: (e: React.MouseEvent, zoneId: string, handle: string) => void;
   deleteZone: (zoneId: string) => void;
+  handleItemKeyDown: (e: React.KeyboardEvent, kind: 'zone' | 'emitter', id: string) => void;
+  handleItemKeyUp: (e: React.KeyboardEvent) => void;
 }) {
   return (
     <>
@@ -37,6 +41,15 @@ export function ZoneLayer({
         // CSS variable, and `var(--x)60` is not a color (the fill would fall back to black).
         const zoneColor = resolveZoneColor(zone);
         const isParentOfSelectedEmitter = highlightedParentZoneId === zone.id;
+        // Keyboard parity with the pointer: a body is a focusable button in select mode.
+        const keyProps = {
+          role: 'button' as const,
+          tabIndex: paintMode === 'select' ? 0 : -1,
+          'aria-label': `Zone ${zone.name}. Enter selects, arrows move, Delete removes.`,
+          'aria-pressed': isSelected,
+          onKeyDown: (e: React.KeyboardEvent) => handleItemKeyDown(e, 'zone', zone.id),
+          onKeyUp: handleItemKeyUp,
+        };
 
         return (
           <g key={zone.id}>
@@ -72,6 +85,7 @@ export function ZoneLayer({
             {zone.shape === 'circle' ? (
               <circle
                 data-zone-id={zone.id}
+                {...keyProps}
                 cx={zone.x} cy={zone.y}
                 r={zone.width / 2}
                 fill={zoneColor}
@@ -85,6 +99,7 @@ export function ZoneLayer({
             ) : (
               <rect
                 data-zone-id={zone.id}
+                {...keyProps}
                 x={zone.x} y={zone.y}
                 width={zone.width} height={zone.height}
                 rx={2}
@@ -170,6 +185,12 @@ export function ZoneLayer({
                   // Own the press: bubbling to the canvas deselects, which unmounts this button before its click.
                   onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); deleteZone(zone.id); }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Delete zone ${zone.name}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); deleteZone(zone.id); }
+                  }}
                   style={{ cursor: 'pointer' }}
                 >
                   <rect x={0} y={0} width={16} height={16} rx={4} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}50`} />
