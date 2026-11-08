@@ -1,27 +1,15 @@
-'use client';
-
-import { useState } from 'react';
-import { tryApiFetch } from '@/lib/api-utils';
-import { StatusTag } from '@/components/ui/StatusTag';
 import type { BindIconsSummary } from '@/lib/catalog/acceptance/bindIconsAll';
-import type { LabTheme } from './theme';
-import { Button } from './ui/Button';
 
 /**
- * Matrix header action: run the icon-bind pass from the lab instead of by hand.
+ * The wording of the icon-bind pass, read by `MatrixSettle` (the matrix header's one
+ * preview → confirmed apply over bind-icons / verify-static / verify-packaging).
  *
- * `GET|POST /api/pipeline-artifacts/bind-icons` has always been a real route with no UI —
- * operationally a documented curl that fleet-memory says must be re-run after every
- * campaign. It binds library art from `generated/icons/` onto each stub artifact's selected
- * candidate and RE-GRADES through the server checker, so it cannot manufacture a pass.
- *
- * Two clicks, never one: **Preview** is the route's `GET` dry run (writes nothing) and
- * **Bind** is the `POST`. What the pass NEEDS — generated files on disk — is disclosed
- * before either click, because the honest failure mode here is an empty library, and
- * "0 bound" is rendered as a first-class line WITH its top reason rather than a silent
- * no-op or a bare "done". Every row reports which scope of the library served it
- * (`entity` = art generated for that exact entity, `step` = the catalog-wide icon standing
- * in), so a substitution is stated.
+ * The `MatrixBindIcons` button that once lived here was unmounted when MatrixSettle replaced
+ * it — its Bind POSTed '{}', binding EVERY catalog from inside one catalog's header — and is
+ * gone. What stays is the honest wording: "0 bound" is a first-class line WITH its top reason
+ * rather than a silent no-op or a bare "done", and every bound row reports which scope of the
+ * library served it (`entity` = art generated for that exact entity, `step` = the catalog-wide
+ * icon standing in), so a substitution is stated.
  */
 
 /** A skipped/`0 bound` outcome, explained. Pure so the wording is testable without a fetch. */
@@ -73,82 +61,4 @@ export function describeBindOutcome(s: BindIconsSummary, applied: boolean): Bind
     moved: tally(bound.filter((r) => r.changed), (r) => `${r.from} → ${r.to}`).map(({ k, count }) => ({ label: k, count })),
     noArt,
   };
-}
-
-type Phase = 'idle' | 'previewing' | 'binding';
-
-export function MatrixBindIcons({ t }: { t: LabTheme }) {
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [outcome, setOutcome] = useState<{ lines: BindOutcomeLines; applied: boolean } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function run(applied: boolean) {
-    setPhase(applied ? 'binding' : 'previewing');
-    setError(null);
-    const res = await tryApiFetch<BindIconsSummary>(
-      '/api/pipeline-artifacts/bind-icons',
-      applied ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' } : undefined,
-    );
-    setPhase('idle');
-    if (!res.ok) { setOutcome(null); setError(res.error); return; }
-    setOutcome({ lines: describeBindOutcome(res.data, applied), applied });
-  }
-
-  const busy = phase !== 'idle';
-  return (
-    <div data-testid="bind-icons" className={t.fontMono}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13, color: t.muted }}>
-      <Button mono onClick={() => void run(false)} disabled={busy} data-testid="bind-icons-preview"
-        ariaLabel="Preview the icon bind — a dry run that writes nothing">
-        {phase === 'previewing' ? '⏳ Previewing…' : '👁 Preview icon bind'}
-      </Button>
-      <Button mono variant="accent" onClick={() => void run(true)} disabled={busy} data-testid="bind-icons-run"
-        ariaLabel="Bind generated icons onto stub artifacts and re-grade them on the server">
-        {phase === 'binding' ? '⏳ Binding…' : '🖼 Bind icons'}
-      </Button>
-
-      {/* What the pass NEEDS, before the click. An empty library is the real failure mode. */}
-      <span data-testid="bind-icons-needs" style={{ flexBasis: '100%', fontSize: 12 }}>
-        Binds already-generated art from <code>generated/icons/</code> onto each stub gallery
-        artifact and re-grades it through the server checker — it needs those files on disk and
-        cannot manufacture a pass. Preview is a dry run; Bind writes.
-      </span>
-
-      {error && (
-        <span data-testid="bind-icons-error" role="status" aria-live="polite"
-          style={{ flexBasis: '100%', fontSize: 12, color: t.bad }}>
-          Bind request failed — {error}
-        </span>
-      )}
-
-      {outcome && (
-        <div data-testid="bind-icons-summary" role="status" aria-live="polite"
-          style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-          <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <StatusTag level={outcome.lines.headline.startsWith('0 ') ? 'warn' : 'ok'}
-              word={outcome.applied ? 'BOUND' : 'DRY RUN'} />
-            <span style={{ color: t.text }}>{outcome.lines.headline}</span>
-          </span>
-          {(outcome.lines.scopes.entity > 0 || outcome.lines.scopes.step > 0) && (
-            <span data-testid="bind-icons-scopes">
-              {outcome.lines.scopes.entity} from art made for that entity · {outcome.lines.scopes.step} from
-              {' '}the catalog-wide step icon standing in.
-            </span>
-          )}
-          {outcome.lines.moved.map((m) => (
-            <span key={m.label} data-testid="bind-icons-moved" style={{ color: t.ok }}>{m.count} × {m.label}</span>
-          ))}
-          {outcome.lines.reasons.map((r) => (
-            <span key={r.reason} data-testid="bind-icons-reason" style={{ color: t.warn }}>{r.count} × skipped: {r.reason}</span>
-          ))}
-          {outcome.lines.noArt > 0 && (
-            <span data-testid="bind-icons-no-art">
-              {outcome.lines.noArt} artifact{outcome.lines.noArt > 1 ? 's' : ''} the library holds no matching art for —
-              {' '}generate it, or accept the step stays a swatch.
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }

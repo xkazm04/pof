@@ -1,17 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
-vi.mock('next/font/google', () => { const f = () => ({ className: 'm' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
-import { MatrixBindIcons, describeBindOutcome } from '@/components/layout-lab/MatrixBindIcons';
-import { LIGHT } from '@/components/layout-lab/theme';
+import { describe, it, expect } from 'vitest';
+import { describeBindOutcome } from '@/components/layout-lab/MatrixBindIcons';
 import type { BindIconsSummary } from '@/lib/catalog/acceptance/bindIconsAll';
 
 /**
- * `bind-icons` was a real route with NO affordance — a documented curl fleet-memory says
- * must be re-run by hand after every campaign. The lab button must render the route's OWN
- * counts (bound / skipped with reasons / verdict deltas / which scope bound), never a bare
- * "done", and must report "0 bound" as a first-class line with its top reason.
+ * `describeBindOutcome` words the bind-icons line of MatrixSettle's preview/apply: the route's
+ * OWN counts (bound / skipped with reasons / verdict deltas / which scope bound), never a bare
+ * "done", and "0 bound" as a first-class line with its top reason.
  */
-afterEach(cleanup);
 
 const summary = (over: Partial<BindIconsSummary> = {}): BindIconsSummary => ({
   library: 3, examined: 2, bound: 1, changed: 1, skipped: 1, results: [], ...over,
@@ -59,46 +54,13 @@ describe('describeBindOutcome', () => {
   });
 });
 
-describe('MatrixBindIcons', () => {
-  beforeEach(() => { vi.restoreAllMocks(); });
-
-  it('discloses what the pass needs BEFORE any click', () => {
-    render(<MatrixBindIcons t={LIGHT} />);
-    expect(screen.getByTestId('bind-icons-needs').textContent).toMatch(/generated\/icons\//);
-    expect(screen.getByTestId('bind-icons-needs').textContent).toMatch(/cannot manufacture a pass/);
-  });
-
-  it('previews with GET (writing nothing) and renders the route\'s real counts', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      json: async () => ({ success: true, data: summary({ bound: 2, changed: 1, results: [row({ scope: 'entity' }), row({ scope: 'step', changed: false })] }) }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    render(<MatrixBindIcons t={LIGHT} />);
-    screen.getByTestId('bind-icons-preview').click();
-    await waitFor(() => expect(screen.queryByTestId('bind-icons-summary')).not.toBeNull());
-    expect(fetchMock.mock.calls[0][1]).toBeUndefined(); // GET — no method, no body
-    expect(screen.getByTestId('bind-icons-summary').textContent).toContain('2 would bind');
-    expect(screen.getByTestId('bind-icons-scopes').textContent).toContain('1 from art made for that entity');
-  });
-
-  it('binds with POST and never renders a bare "done"', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      json: async () => ({ success: true, data: summary({ bound: 0, changed: 0, examined: 1, skipped: 1, results: [row({ scope: undefined, changed: false, detail: 'already-real' })] }) }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    render(<MatrixBindIcons t={LIGHT} />);
-    screen.getByTestId('bind-icons-run').click();
-    await waitFor(() => expect(screen.queryByTestId('bind-icons-summary')).not.toBeNull());
-    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
-    expect(screen.getByTestId('bind-icons-summary').textContent).toContain('0 bound — already-real');
-    expect(screen.getByTestId('bind-icons-reason').textContent).toContain('already-real');
-  });
-
-  it('surfaces a failed request instead of an empty panel', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({ success: false, error: 'library unreadable' }) }));
-    render(<MatrixBindIcons t={LIGHT} />);
-    screen.getByTestId('bind-icons-run').click();
-    await waitFor(() => expect(screen.queryByTestId('bind-icons-error')).not.toBeNull());
-    expect(screen.getByTestId('bind-icons-error').textContent).toContain('library unreadable');
+// The MatrixBindIcons COMPONENT was unmounted when MatrixSettle replaced it (1ca344a5): its
+// Bind POSTed '{}' — every catalog — from inside one catalog's header, and nothing rendered it
+// after that. Only the pure wording (`describeBindOutcome`, read by MatrixSettle) remains, so
+// the all-catalog POST cannot be re-mounted by accident.
+describe('MatrixBindIcons module', () => {
+  it('exports the bind wording only, no component', async () => {
+    const mod = await import('@/components/layout-lab/MatrixBindIcons');
+    expect(Object.keys(mod).sort()).toEqual(['describeBindOutcome']);
   });
 });
