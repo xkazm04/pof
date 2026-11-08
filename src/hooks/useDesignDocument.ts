@@ -106,9 +106,15 @@ export function useDesignDocument(): UseDesignDocumentResult {
   // A refresh is only "background" once something has successfully loaded — the
   // first load (and a retry after a hard error) still gets the blocking spinner.
   const hasLoadedRef = useRef(false);
+  // Bumped by every mutation the server ACCEPTED. A list read dispatched before a
+  // mutation landed may predate it; committing that list wholesale would revert the
+  // merged row (a saved edit snapping back, a created doc vanishing, a deleted one
+  // returning), so such a read is discarded and the list re-read.
+  const mutationSeqRef = useRef(0);
 
-  const fetchAll = useCallback(async (background = false) => {
+  const fetchAll = useCallback(async (background = false): Promise<void> => {
     const token = ++fetchTokenRef.current;
+    const seqAtDispatch = mutationSeqRef.current;
     const silent = background && hasLoadedRef.current;
     if (silent) setIsRefreshing(true);
     else setIsLoading(true);
@@ -116,6 +122,9 @@ export function useDesignDocument(): UseDesignDocumentResult {
     try {
       const data = await apiFetch<{ docs: LevelDesignDocument[] }>('/api/level-design');
       if (!isMounted() || token !== fetchTokenRef.current) return;
+      // A mutation landed while this read was in flight: re-read rather than
+      // overwrite it. The re-read takes the token, so it owns the loading flags.
+      if (seqAtDispatch !== mutationSeqRef.current) return fetchAll(background);
       hasLoadedRef.current = true;
       setDocs(data.docs ?? []);
     } catch (e) {
@@ -145,6 +154,7 @@ export function useDesignDocument(): UseDesignDocumentResult {
         body: JSON.stringify(payload),
       });
       if (!data.doc) return err('Server returned no document');
+      mutationSeqRef.current++;
       // The list is ordered by updated_at DESC, so a fresh row belongs at the head.
       // Merging locally beats a full re-GET (which re-parses every doc's blobs).
       if (isMounted()) {
@@ -171,6 +181,7 @@ export function useDesignDocument(): UseDesignDocumentResult {
         body: JSON.stringify(payload),
       });
       if (!data.doc) return err('Server returned no document');
+      mutationSeqRef.current++;
       if (isMounted()) setDocs((cur) => cur.map((d) => (d.id === data.doc.id ? data.doc : d)));
       return ok(data.doc);
     } catch (e) {
@@ -182,6 +193,7 @@ export function useDesignDocument(): UseDesignDocumentResult {
   const remove = useCallback(async (id: number): Promise<Result<true, string>> => {
     try {
       await apiFetch<unknown>(`/api/level-design?id=${id}`, { method: 'DELETE' });
+      mutationSeqRef.current++;
       if (isMounted()) {
         setDocs((cur) => cur.filter((d) => d.id !== id));
         setActiveDocId((cur) => (cur === id ? null : cur));
