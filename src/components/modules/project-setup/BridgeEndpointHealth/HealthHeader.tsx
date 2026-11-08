@@ -40,7 +40,7 @@ export function HealthHeader({
           <h3 className="text-sm font-bold text-text">Bridge Endpoints</h3>
           <ConnectionStatusBadge status={connectionStatus as ConnectionStatus} />
         </div>
-        <p className="text-2xs text-text-muted" aria-live="polite">
+        <p className="text-xs text-text-muted" aria-live="polite">
           <span className="font-mono" style={{ color: ACCENT_EMERALD }}>:{pofPort}</span>
           <span className="mx-1">/pof</span>
           &middot;

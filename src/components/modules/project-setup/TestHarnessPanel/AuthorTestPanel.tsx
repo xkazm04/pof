@@ -27,19 +27,19 @@ function PhaseLine({ state }: { state: AuthorTestPanelProps['state'] }) {
     case 'preview':
       return <p className="text-2xs text-text-muted">Preview only: nothing is sent until you click Send to Claude. Claude writes the file and builds; the app writes no UE file.</p>;
     case 'dispatched':
-      return <p className="text-2xs" style={{ color: STATUS_INFO }}>Sent to Claude: authoring in the terminal below.</p>;
+      return <p className="text-xs" style={{ color: STATUS_INFO }}>Sent to Claude: authoring in the terminal below.</p>;
     case 'authored-unverified':
       return (
-        <p className="text-2xs" role="status" style={{ color: STATUS_WARNING }}>
+        <p className="text-xs" role="status" style={{ color: STATUS_WARNING }}>
           Authored — not verified. The CLI finishing is not a test result: run it and settle its gates (a fresh scaffold fails loud until its body is real).
         </p>
       );
     case 'author-failed':
-      return <p className="text-2xs" role="status" style={{ color: STATUS_ERROR }}>Authoring failed: {state.reason}</p>;
+      return <p className="text-xs" role="status" style={{ color: STATUS_ERROR }}>Authoring failed: {state.reason}</p>;
     case 'verified': {
       const s = state.settle;
       return (
-        <p className="text-2xs" role="status" style={{ color: s.failed > 0 ? STATUS_ERROR : STATUS_SUCCESS }}>
+        <p className="text-xs" role="status" style={{ color: s.failed > 0 ? STATUS_ERROR : STATUS_SUCCESS }}>
           Verified by Run + settle: passed {s.passed} · failed {s.failed} · deferred {s.deferred} (settled {s.settled})
         </p>
       );
