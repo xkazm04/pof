@@ -149,7 +149,7 @@ export const DEFAULT_MAX_ATTEMPTS = 3;
  * again" without being derailed by incidental extras. Pure.
  */
 export function failureShape(critique: CritiqueResult | undefined): string | undefined {
-  const primary = critique?.reasons?.[0];
+  const primary = critique?.reasons?.[0] ?? critique?.error;
   return primary === undefined ? undefined : primary.replace(/\d+(?:\.\d+)?/g, '#');
 }
 
@@ -246,7 +246,10 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
     const result = await roll(n);
     let critique: CritiqueResult | undefined;
     if (result.ok && result.meshPath) {
-      try { critique = await critic(result.meshPath); } catch { /* critique is best-effort */ }
+      // A throw is an error result, so the repeat-failure guard below can see it and stop.
+      try { critique = await critic(result.meshPath); } catch (e) {
+        critique = { ok: false, error: e instanceof Error ? e.message : String(e) };
+      }
     }
     const breakdown = scoreBreakdown(result, critique);
     const entry: RollAttempt<R> = {
@@ -309,6 +312,16 @@ export async function generateUntilAcceptable<R extends MeshRoll>(
     const failure = failureShape(critique);
     if (failure !== undefined && failure === previousFailure) {
       const best = attempts.filter((a) => a.result.ok).sort((a, b) => b.score - a.score)[0];
+      // An erroring critic graded nothing, so this is ungated, not a verdict that reproduced.
+      if (critique?.ok === false) {
+        return {
+          attempts,
+          best,
+          accepted: false,
+          ungated: true,
+          reason: `stopped after ${n} attempts — the critic failed the same way each time, so no roll was graded: ${critique.error ?? 'unknown'} — mesh delivered ungated`,
+        };
+      }
       return {
         attempts,
         best,

@@ -3,7 +3,8 @@
  * pins one way a gate could pass, or go silent, without a measurement behind it.
  */
 import { describe, it, expect } from 'vitest';
-import { parseCritiqueMetrics, scoreMesh } from '@/lib/visual-gen/mesh-critique';
+import { parseCritiqueMetrics, scoreMesh, type CritiqueResult } from '@/lib/visual-gen/mesh-critique';
+import { generateUntilAcceptable, failureShape } from '@/lib/visual-gen/best-of-n';
 
 describe('parseCritiqueMetrics refuses counts it cannot read', () => {
   const block = (over: Record<string, string>) => {
@@ -40,5 +41,42 @@ describe('parseCritiqueMetrics refuses counts it cannot read', () => {
 
   it('still parses an ordinary block', () => {
     expect(parseCritiqueMetrics(block({})).ok).toBe(true);
+  });
+});
+
+describe('generateUntilAcceptable does not pay for rolls a broken critic can never grade', () => {
+  const roll = () => {
+    const calls = { n: 0 };
+    return { calls, fn: async () => { calls.n += 1; return { ok: true, meshPath: `m${calls.n}.glb` }; } };
+  };
+
+  it('stops after the second roll when the critic throws, and says the mesh was ungraded', async () => {
+    const { calls, fn } = roll();
+    const out = await generateUntilAcceptable(fn, { maxAttempts: 5, critic: async () => { throw new Error('trimesh import failed'); } });
+    expect(calls.n).toBe(2);
+    expect(out.accepted).toBe(false);
+    expect(out.ungated).toBe(true);
+    expect(out.reason).toContain('trimesh import failed');
+  });
+
+  it('stops after the second roll when the critic keeps returning the same error', async () => {
+    const { calls, fn } = roll();
+    const critic = async (): Promise<CritiqueResult> => ({ ok: false, error: 'no critique markers in output' });
+    const out = await generateUntilAcceptable(fn, { maxAttempts: 5, critic });
+    expect(calls.n).toBe(2);
+    expect(out.ungated).toBe(true);
+    expect(out.reason).toContain('no critique markers');
+  });
+
+  it('a reproduced failing verdict is still graded, not ungated', async () => {
+    const { calls, fn } = roll();
+    const critic = async (): Promise<CritiqueResult> => ({ ok: true, verdict: 'fail', score: 0, reasons: ['12 bad'] });
+    const out = await generateUntilAcceptable(fn, { maxAttempts: 5, critic });
+    expect(calls.n).toBe(2);
+    expect(out.ungated).toBeUndefined();
+  });
+
+  it('failureShape reads an error when there are no reasons', () => {
+    expect(failureShape({ ok: false, error: 'exit 3' })).toBe('exit #');
   });
 });
