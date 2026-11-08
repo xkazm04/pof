@@ -919,3 +919,28 @@ describe('generateCppFromBlueprint — FunctionResult returns the graph value', 
     expect(result.sourceCode).toContain('// TODO: [K2Node_FunctionResult]');
   });
 });
+
+describe('renderPinLiteral — FText pins', () => {
+  it('does not render a text pin as a bare TEXT() literal (FText has no TCHAR* conversion)', () => {
+    const r = renderPinLiteral({ name: 'T', type: 'text', direction: 'input', defaultValue: 'Hi' });
+    expect(r).toEqual({ ok: true, code: 'FText::FromString(TEXT("Hi"))' });
+  });
+
+  it('keeps string and name pins as TEXT() literals', () => {
+    expect(renderPinLiteral({ name: 'S', type: 'string', direction: 'input', defaultValue: 'Hi' }))
+      .toEqual({ ok: true, code: 'TEXT("Hi")' });
+    expect(renderPinLiteral({ name: 'N', type: 'name', direction: 'input', defaultValue: 'Hi' }))
+      .toEqual({ ok: true, code: 'TEXT("Hi")' });
+  });
+
+  it('still logs a PrintString whose text pin is typed text', () => {
+    const print = node({
+      id: 'p',
+      type: 'K2Node_CallFunction',
+      name: 'PrintString',
+      memberName: 'PrintString',
+      pins: [pin({ name: 'InString', type: 'text', direction: 'input', defaultValue: 'Hi' })],
+    });
+    expect(generateNodeLogic({ nodes: [print] }, print, 'AFoo', [])).toContain('UE_LOG(LogTemp, Log, TEXT("Hi"));');
+  });
+});

@@ -501,6 +501,9 @@ export function renderPinLiteral(pin: BlueprintPin): PinExpression {
     return { ok: false, reason: `pin "${pin.name}" has no literal value` };
   }
   const type = pin.type.toLowerCase();
+  // FText has no constructor from a TCHAR literal; a bare TEXT("...") passed to
+  // an FText parameter does not compile.
+  if (type === 'text') return { ok: true, code: `FText::FromString(${cppStringLiteral(raw)})` };
   if (STRING_PIN_TYPES.has(type)) return { ok: true, code: cppStringLiteral(raw) };
   if (type === 'bool') {
     const v = raw.trim().toLowerCase();
@@ -730,7 +733,9 @@ export function generateNodeLogic(
         (p) => p.direction === 'input' && ['instring', 'string', 'text'].includes(p.name.toLowerCase()),
       );
       const literal = textPin
-        ? renderPinLiteral(textPin)
+        // UE_LOG takes a raw TEXT() format string, so an FText-typed pin is
+        // read as the string it holds (an FText argument would not compile).
+        ? renderPinLiteral({ ...textPin, type: textPin.type.toLowerCase() === 'text' ? 'string' : textPin.type })
         : { ok: false as const, reason: 'no string input pin' };
       if (literal.ok && literal.code.startsWith('TEXT(')) {
         lines.push(`${indent}UE_LOG(LogTemp, Log, ${literal.code});`);
