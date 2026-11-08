@@ -66,3 +66,16 @@ describe('PreflightPanel on an empty plan', () => {
     expect(screen.getByText(/No zones yet/)).toBeTruthy();
   });
 });
+
+describe('TransitionList authoring', () => {
+  it('trigger and condition are editable, so a drawn link can reach the prompt with them', () => {
+    const zones = [ZONE, { ...ZONE, id: 'y', name: 'Forest', gridX: 3 }];
+    const transitions = [{ id: 't', fromId: 'z', toId: 'y', style: 'seamless' as const, triggerType: 'proximity' as const, condition: '' }];
+    const updateTransition = vi.fn();
+    render(<TransitionList transitions={transitions} zones={zones} deleteTransition={() => {}} updateTransition={updateTransition} />);
+    fireEvent.change(screen.getByRole('combobox', { name: /trigger of town to forest/i }), { target: { value: 'interaction' } });
+    expect(updateTransition).toHaveBeenCalledWith('t', { triggerType: 'interaction' });
+    fireEvent.change(screen.getByRole('textbox', { name: /condition of town to forest/i }), { target: { value: 'Defeat Boss' } });
+    expect(updateTransition).toHaveBeenCalledWith('t', { condition: 'Defeat Boss' });
+  });
+});
