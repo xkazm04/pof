@@ -158,6 +158,28 @@ describe('suite verdict', () => {
     expect(hook.current.suiteRunHistory[0].status).toBe('partial');
   });
 
+  describe('with snapshot presets', () => {
+    const passedReport = { overallStatus: 'passed', results: [], summary: {} };
+
+    it('a snapshot-only suite whose comparison passed is passed', async () => {
+      mocks.capture.mockResolvedValue(passedReport);
+      const hook = suiteOf(1);
+      act(() => hook.current.removeScenario(0));
+      act(() => hook.current.updateSuiteField(hook.current.activeSuiteId as string, 'snapshotPresets', ['a']));
+      await act(async () => { await hook.current.runSuite(); });
+      expect(hook.current.suiteRunHistory[0].status).toBe('passed');
+    });
+
+    it('scenarios that all vanished stay partial even when the comparison passed', async () => {
+      mocks.runTest.mockResolvedValue(null);
+      mocks.capture.mockResolvedValue(passedReport);
+      const hook = suiteOf(2);
+      act(() => hook.current.updateSuiteField(hook.current.activeSuiteId as string, 'snapshotPresets', ['a']));
+      await act(async () => { await hook.current.runSuite(); });
+      expect(hook.current.suiteRunHistory[0].status).toBe('partial');
+    });
+  });
+
   it('a scenario the plugin timed out fails the run', async () => {
     mocks.runTest.mockResolvedValue(result('a', 'timeout'));
     const hook = suiteOf(1);

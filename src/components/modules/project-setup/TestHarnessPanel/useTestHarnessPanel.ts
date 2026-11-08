@@ -197,8 +197,9 @@ export function useTestHarnessPanel() {
         results: runResults,
         expectedCount: activeSuite.scenarios.length,
         // A suite with presets passes only on a read-back report that passed; a failed capture is not a pass.
-        snapshotsFailed: snapshotsRan && snapshotReport?.overallStatus !== 'passed',
-        snapshotsSkipped: activeSuite.snapshotPresets.length > 0 && !snapshotsRan,
+        snapshots: activeSuite.snapshotPresets.length === 0
+          ? 'none'
+          : !snapshotsRan ? 'skipped' : snapshotReport?.overallStatus === 'passed' ? 'passed' : 'failed',
       }),
     };
 

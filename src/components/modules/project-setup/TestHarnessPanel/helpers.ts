@@ -16,21 +16,20 @@ export function generateId(): string {
 /**
  * A suite's verdict over what actually ran. `passed` needs every expected scenario back and
  * passing and every configured snapshot compared; a run that observed nothing is `error`.
+ * A suite of presets alone is legitimate: its passing comparison is the observation.
  */
 export function deriveSuiteStatus(run: {
   results: readonly PofTestResult[];
   expectedCount: number;
-  /** Presets were captured and the read-back report did not pass (or never came). */
-  snapshotsFailed: boolean;
-  /** Presets are configured but the run stopped before capturing them. */
-  snapshotsSkipped: boolean;
+  /** `skipped`: presets are configured but the run stopped before capturing them. */
+  snapshots: 'none' | 'passed' | 'failed' | 'skipped';
 }): SuiteRunResult['status'] {
-  const { results, expectedCount, snapshotsFailed, snapshotsSkipped } = run;
-  if (snapshotsFailed || results.some((r) => r.status === 'failed' || r.status === 'error' || r.status === 'timeout')) {
+  const { results, expectedCount, snapshots } = run;
+  if (snapshots === 'failed' || results.some((r) => r.status === 'failed' || r.status === 'error' || r.status === 'timeout')) {
     return 'failed';
   }
-  if (results.length === 0) return 'error';
-  const complete = results.length >= expectedCount && !snapshotsSkipped;
+  if (results.length === 0 && snapshots !== 'passed') return 'error';
+  const complete = results.length >= expectedCount && snapshots !== 'skipped';
   return complete && results.every((r) => r.status === 'passed') ? 'passed' : 'partial';
 }
 
