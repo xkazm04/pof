@@ -25,6 +25,8 @@ export function MigrationPathGraph() {
           {MIGRATION_PATH.map((node, i, arr) => (
             <div key={node.version} className="flex items-center gap-2">
               <motion.button
+                type="button"
+                aria-expanded={expandedMigration === node.version}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.12 }}

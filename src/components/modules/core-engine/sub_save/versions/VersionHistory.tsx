@@ -30,6 +30,8 @@ export function VersionHistory() {
             transition={{ delay: i * 0.08 }}
           >
             <button
+              type="button"
+              aria-expanded={expandedVersion === entry.version}
               onClick={() => setExpandedVersion(expandedVersion === entry.version ? null : entry.version)}
               className={`w-full text-left border rounded-sm font-mono text-xs transition-all ${
                 entry.isCurrent
