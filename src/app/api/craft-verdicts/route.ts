@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   listCraftVerdicts,
   listCraftVerdictHistory,
@@ -153,6 +154,8 @@ const craftVerdictSchema = z.object({
  * and a level above the medium's roof (craft-ceilings.json) is a 400 — not awardable.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const parsed = craftVerdictSchema.safeParse(await req.json().catch(() => undefined));
     if (!parsed.success) return apiError('Invalid craft verdict', 400, parsed.error.issues);
