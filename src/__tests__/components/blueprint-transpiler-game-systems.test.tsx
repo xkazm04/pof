@@ -309,3 +309,20 @@ describe('QuestGeneratorPanel - metric tiles follow CATEGORY_LABELS', () => {
     }
   });
 });
+
+describe('WorldScanSummary - the count grid stacks to two columns on narrow panes', () => {
+  it('uses grid-cols-2 below sm and 4 from sm up', async () => {
+    const { WorldScanSummary } = await import('@/components/modules/game-systems/DialogueView/WorldScanSummary');
+    const { container } = render(
+      <WorldScanSummary
+        scan={{ actors: [], enemyClasses: [], npcClasses: [], interactableClasses: [], itemClasses: [] }}
+        levelDocName={null}
+      />,
+    );
+    const grid = container.querySelector('.grid');
+    const cls = (grid?.getAttribute('class') ?? '').split(/\s+/);
+    expect(cls).toContain('grid-cols-2');
+    expect(cls).toContain('sm:grid-cols-4');
+    expect(cls).not.toContain('grid-cols-4');
+  });
+});

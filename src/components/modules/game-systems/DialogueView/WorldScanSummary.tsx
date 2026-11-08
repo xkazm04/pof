@@ -18,7 +18,7 @@ export function WorldScanSummary({ scan, levelDocName }: { scan: WorldScanResult
           <span className="text-2xs font-mono ml-auto" style={{ color: ACCENT }}>{levelDocName}</span>
         )}
       </div>
-      <div className="grid grid-cols-4 gap-3 text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         <div className="flex items-center gap-1.5">
           <Swords className="w-3 h-3" style={{ color: STATUS_ERROR }} />
           <span className="text-text">{scan.enemyClasses.length}</span>
