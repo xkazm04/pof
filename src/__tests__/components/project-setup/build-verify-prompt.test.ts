@@ -31,4 +31,14 @@ describe('buildBuildVerifyPrompt engine selection', () => {
     const prompt = buildBuildVerifyPrompt({ ...identity, engines: [{ version: '5.7.0', path: 'C:/Epic/UE_5.7' }] });
     expect(prompt).toContain('using engine at "C:/Epic/UE_5.7"');
   });
+
+  it('says so in the prompt when it falls back to a different engine', () => {
+    const prompt = buildBuildVerifyPrompt({ ...identity, engines: [{ version: '5.7.0', path: 'C:/Epic/UE_5.7' }] });
+    expect(prompt).toContain('ENGINE MISMATCH: No installed engine matches UE 5.8; this build uses UE 5.7.0 instead.');
+  });
+
+  it('adds no mismatch line when the engine matches', () => {
+    const prompt = buildBuildVerifyPrompt({ ...identity, engines: [{ version: '5.8.1', path: 'C:/Epic/UE_5.8' }] });
+    expect(prompt).not.toContain('ENGINE MISMATCH');
+  });
 });
