@@ -96,4 +96,14 @@ describe('malformed bodies', () => {
   }
 });
 
+describe('operator guard', () => {
+  for (const [name, handler] of ROUTES) {
+    it(`${name} refuses a cross-site browser request before reading the body`, async () => {
+      const res = await handler(raw('{}', { origin: 'https://evil.example', host: 'localhost' }));
+      expect(res.status).toBe(403);
+      expectNothingStarted();
+    });
+  }
+});
+
 // FINDINGS-APPEND

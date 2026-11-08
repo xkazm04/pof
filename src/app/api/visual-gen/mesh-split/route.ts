@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { runMeshSplit } from '@/lib/visual-gen/mesh-split';
 import { safeAssetDir, safeAssetName, assetUrl } from '@/lib/visual-gen/generated-assets';
@@ -31,6 +32,9 @@ const SPLIT_OUTPUT_DIR = 'mesh-split';
  * is what turns that into "run mesh-finish on it instead" rather than 24 junk assets.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
+
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);

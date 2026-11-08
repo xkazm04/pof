@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { existsSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startViewGateJob, type ViewGateMemberSpec } from '@/lib/visual-gen/view-gate-job-store';
 
@@ -35,6 +36,9 @@ import { startViewGateJob, type ViewGateMemberSpec } from '@/lib/visual-gen/view
 export const MAX_KIT_MEMBERS = 12;
 
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
+
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);

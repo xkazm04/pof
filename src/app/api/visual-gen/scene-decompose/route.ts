@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { parseVisionImage, gateInputImage, summarizeInputGate } from '@/lib/visual-gen/input-gate';
 import {
@@ -83,6 +84,9 @@ async function gateCropsOf(
 }
 
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
+
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);

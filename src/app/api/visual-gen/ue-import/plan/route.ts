@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { critiqueMesh, type CritiqueResult } from '@/lib/visual-gen/mesh-critique';
 import { gateRequestFor } from '@/lib/visual-gen/gate-request';
@@ -43,6 +44,9 @@ const NAMED_FILES = 3;
  * import refuses, and a parity test holds the two together.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
+
   try {
     const parsed = await readJsonObject(req);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);

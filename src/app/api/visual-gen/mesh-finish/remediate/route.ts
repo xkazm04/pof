@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startMeshFinishJob } from '@/lib/visual-gen/mesh-finish-job-store';
 import { planFinishFromCritique } from '@/lib/visual-gen/finish-routing';
@@ -29,6 +30,9 @@ import { assessStage } from '@/lib/visual-gen/critique-stage';
  * floater-only failure is refused rather than run.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
+
   try {
     const parsed = await readJsonObject(request);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);

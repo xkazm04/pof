@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { existsSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startUeImportJob } from '@/lib/visual-gen/ue-import-job-store';
 import type { CollisionUse } from '@/lib/visual-gen/ue-import';
@@ -34,6 +35,9 @@ const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
  * derivable rather than importing at a silent 1.0. The factor is applied at import and read back.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
+
   try {
     const parsed = await readJsonObject(req);
     if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
