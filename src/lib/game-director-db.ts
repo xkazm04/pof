@@ -268,6 +268,25 @@ function ensureTables() {
   initialized = true;
 }
 
+// ─── Timestamps ──────────────────────────────────────────────────────────────
+
+const SQLITE_DATETIME = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d+)?)$/;
+
+/**
+ * `datetime('now')` writes UTC with no zone marker ("2026-11-08 10:00:00"), and
+ * `new Date()` reads that spelling as LOCAL time — every rendered session date,
+ * the fix-dispatched tooltip and the trend forecast's elapsed time were off by
+ * the viewer's UTC offset. Rows leave this module as ISO-8601 `Z`, the spelling
+ * `started_at` and `repro_last_attempted_at` already had. Anything else (already
+ * zoned, or unparseable) passes through untouched. SQL ordering is unaffected:
+ * it reads the stored column, not this projection.
+ */
+export function sqliteUtcToIso<T extends string | null | undefined>(value: T): T {
+  if (typeof value !== 'string') return value;
+  const m = SQLITE_DATETIME.exec(value);
+  return (m ? `${m[1]}T${m[2]}Z` : value) as T;
+}
+
 // ─── Session chronology ──────────────────────────────────────────────────────
 
 /**
@@ -297,8 +316,8 @@ export function sessionChronology(): SessionChronologyEntry[] {
   return rows.map(r => ({
     id: r.id,
     name: r.name,
-    createdAt: r.created_at,
-    regressionAnalyzedAt: r.regression_analyzed_at,
+    createdAt: sqliteUtcToIso(r.created_at),
+    regressionAnalyzedAt: sqliteUtcToIso(r.regression_analyzed_at),
   }));
 }
 
@@ -801,7 +820,7 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
     return {
       sessionId: r.id,
       sessionName: r.name,
-      createdAt: r.created_at,
+      createdAt: sqliteUtcToIso(r.created_at),
       overallScore,
       findingsCount: r.findings_count ?? 0,
       criticalCount: critCounts.get(r.id) ?? 0,
@@ -869,9 +888,9 @@ function rowToSession(row: SessionRow): PlaytestSession {
     name: row.name,
     status: row.status as PlaytestSession['status'],
     buildPath: row.build_path,
-    createdAt: row.created_at,
-    startedAt: row.started_at,
-    completedAt: row.completed_at,
+    createdAt: sqliteUtcToIso(row.created_at),
+    startedAt: sqliteUtcToIso(row.started_at),
+    completedAt: sqliteUtcToIso(row.completed_at),
     durationMs: row.duration_ms,
     config: JSON.parse(row.config || '{}'),
     summary: row.summary ? JSON.parse(row.summary) : null,
@@ -914,11 +933,11 @@ function rowToFinding(row: FindingRow): PlaytestFinding {
     confidenceBasis: row.confidence == null
       ? null
       : (row.confidence_basis === 'observer' ? 'observer' : 'unattributed'),
-    createdAt: row.created_at,
+    createdAt: sqliteUtcToIso(row.created_at),
     triageStatus,
     triageNote: row.triage_note || '',
     snoozedUntil,
-    fixDispatchedAt: row.fix_dispatched_at,
+    fixDispatchedAt: sqliteUtcToIso(row.fix_dispatched_at),
     reproAttempts: typeof row.repro_attempts === 'number' ? row.repro_attempts : null,
     reproBuildId: row.repro_build_id,
     reproLastAttemptedAt: row.repro_last_attempted_at,
@@ -929,7 +948,7 @@ function rowToEvent(row: EventRow): DirectorEvent {
   return {
     id: row.id,
     sessionId: row.session_id,
-    timestamp: row.timestamp,
+    timestamp: sqliteUtcToIso(row.timestamp),
     type: row.type as DirectorEvent['type'],
     message: row.message,
     data: row.data ? JSON.parse(row.data) : undefined,
