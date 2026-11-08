@@ -35,8 +35,10 @@ export function ParameterDetails({ preset }: { preset: FeelPreset }) {
         return (
           <div key={cat}>
             <button
+              type="button"
               onClick={() => setExpandedCat(isExpanded ? null : cat)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface/30 transition-colors"
+              aria-expanded={isExpanded}
+              className="focus-ring w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface/30 transition-colors"
             >
               <motion.div
                 animate={{ rotate: isExpanded ? 90 : 0 }}

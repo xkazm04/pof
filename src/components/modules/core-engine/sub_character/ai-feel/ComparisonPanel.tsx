@@ -31,7 +31,7 @@ export function ComparisonPanel({
 }: ComparisonPanelProps) {
   return (
     <BlueprintPanel color={ACCENT_CYAN} className="p-3">
-      <button onClick={onToggle} className="w-full flex items-center gap-2 mb-2">
+      <button type="button" onClick={onToggle} aria-expanded={showComparison} className="w-full flex items-center gap-2 mb-2 focus-ring rounded">
         <SectionHeader icon={ArrowLeftRight} label="A/B Comparison" color={ACCENT_CYAN} />
         <motion.div animate={{ rotate: showComparison ? 180 : 0 }} className="ml-auto">
           <ChevronDown className="w-4 h-4 text-text-muted" />

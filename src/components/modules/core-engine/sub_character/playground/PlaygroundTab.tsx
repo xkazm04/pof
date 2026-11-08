@@ -111,8 +111,11 @@ export function CharacterFeelPlayground({ moduleId }: CharacterFeelPlaygroundPro
         {/* Preset dropdown */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setPresetOpen(v => !v)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold hover:border-border-bright transition-colors"
+            aria-expanded={presetOpen}
+            aria-haspopup="true"
+            className="focus-ring flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold hover:border-border-bright transition-colors"
             style={{ color: preset.color }}
           >
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: preset.color }} />
