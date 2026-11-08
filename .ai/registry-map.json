@@ -2849,8 +2849,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:11 The context authors and runs AI test scenarios through useAITesting and useModuleCLI, and its 'freshness' logic tracks test-run staleness, not remembered agent knowledge. A search of src/components/modules/game-systems for consolidat/episod/belief/recall/memories found no hits; any memory sits in the shared CLI layer, not here.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "agent-instruction-files",
@@ -6792,8 +6796,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/blender-mcp/service.ts:70 This is a TCP command bridge to Blender with no LLM agent state. A search of src/lib/blender-mcp for consolidat/episod/belief/recall/memories found no hits. The only nearby terms are in generation-ledger.ts ('remembers' jobId/provider, 'in-memory') and mcp-gate.ts ('forget' memoised verdicts in tests); those are job and verdict caches, not agent memory.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         }
       ],
       "governance": "governed"
@@ -7142,7 +7150,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "priorNotApplicable": 4,
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/index.tsx:31 The workbench runs a one-shot Blueprint-to-C++ transpile keyed on project and module, and the game-system views only configure. A search of src/components/modules/game-systems for consolidat/episod/belief/recall/memories found no hits, so no agent memory store, recall or distillation exists in this context.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "quality-gates",

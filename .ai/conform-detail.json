@@ -22650,16 +22650,11 @@
       "context": "blueprint-transpiler-game-systems",
       "subject": "agent-memory",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T05:41:24.845Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "1d3186b6-1854-4e2b-ab99-022f645f0936",
-        "state": "not-applicable",
-        "at": "2026-11-07T05:42:09.461180+00:00",
-        "reason": "reviewer (sonnet): The anchor (index.tsx:5) is only an import line, and the context also holds DialogueView, whose QuestGeneratorPanel calls apiFetch to a backend route the evidence never examines, so a no-agent-memory verdict for the whole context is unconfirmed."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:49:07.083Z",
+      "worker": "ab027b01-1e28-4f4a-b956-30a0cbd5f7db",
+      "techniques": []
     },
     "6f37d3d5-8476-45cf-8598-a7a900cfe93c/browser-credential-boundary": {
       "context": "visual-gen-mesh",
@@ -23126,6 +23121,26 @@
       "evaluatedAt": "2026-11-08",
       "evaluatedTs": "2026-11-08T02:29:13.529Z",
       "worker": "3c323a92-32a1-40a2-b922-cb5e42c811dc",
+      "techniques": []
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/agent-memory": {
+      "context": "ai-behavior-testing",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:49:07.083Z",
+      "worker": "ab027b01-1e28-4f4a-b956-30a0cbd5f7db",
+      "techniques": []
+    },
+    "d6a661e1-369c-4819-85cf-0a6c31282ef6/agent-memory": {
+      "context": "blender-mcp-bridge",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:49:07.083Z",
+      "worker": "ab027b01-1e28-4f4a-b956-30a0cbd5f7db",
       "techniques": []
     }
   }
