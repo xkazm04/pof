@@ -4,8 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Swords, ArrowUp, ArrowDown, Crosshair } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT } from '../_shared/data';
-import { WEAPONS, COMBO_SEQUENCES } from '../_shared/data-metrics';
-import type { WeaponCategory } from '../_shared/data-metrics';
+import { WEAPONS, COMBO_SEQUENCES, WEAPON_CATEGORIES } from '../_shared/data-metrics';
 import {
   MATCHUP_TARGETS, DUMMY_TARGET, rankForTarget, outOfBand, severityTone,
 } from '@/lib/combat/weapon-matchup';
@@ -13,7 +12,6 @@ import { FIGHT_LENGTH_CUTS, type FightLengthBand } from '@/lib/balance/encounter
 import { withOpacity, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
 
 const MAX_COMPARE = 4;
-const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const WEAPONS_BY_CATEGORY = WEAPON_CATEGORIES.map(cat => ({
   category: cat,
   weapons: WEAPONS.filter(w => w.category === cat),

@@ -9,6 +9,9 @@ import { parseDamageRange, weaponRoster } from '@/lib/combat/weapon-throughput';
 /* ── Weapon Categories & Tiers ─────────────────────────────────────────── */
 
 export type WeaponCategory = 'Sword' | 'Axe' | 'Mace' | 'Bow' | 'Staff' | 'Dagger' | 'Polearm';
+
+/** Display order of weapon categories - the one list every selector and grouping reads. */
+export const WEAPON_CATEGORIES: readonly WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 export type WeaponTier = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
 
 const TIER_COLORS: Record<WeaponTier, string> = {
@@ -104,7 +107,7 @@ export const WEAPONS: Weapon[] = [
 ];
 
 export const WEAPON_GROUPINGS: EntityGrouping[] = [
-  { field: 'category', label: 'Category', order: ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'] },
+  { field: 'category', label: 'Category', order: [...WEAPON_CATEGORIES] },
   { field: 'tier', label: 'Tier', order: ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'] },
 ];
 

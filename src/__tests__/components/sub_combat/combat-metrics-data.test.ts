@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import {
   EFFECTIVENESS_DATA, DMG_TYPES, ARMOR_TYPES,
 } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
@@ -48,5 +50,27 @@ describe('data-metrics export surface', () => {
     for (const k of ['WEAPONS', 'WEAPON_GROUPINGS', 'WEAPON_ROSTER', 'COMBO_SEQUENCES', 'KPI_CARDS', 'SANKEY_COLUMNS', 'SANKEY_FLOWS', 'HITSTOP_ABILITIES', 'MAX_HITSTOP', 'STAGGER_CONFIG', 'STAGGER_TIMELINE', 'COMBO_SECTIONS', 'EFFECTIVENESS_DATA']) {
       expect(k in dataMetrics, k).toBe(true);
     }
+  });
+});
+
+describe('weapon category order has one source', () => {
+  const METRICS = path.join(process.cwd(), 'src', 'components', 'modules', 'core-engine', 'sub_combat', 'metrics');
+  const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  it('the shared list covers every weapon and drives the category grouping', () => {
+    const cats = (dataMetrics as Record<string, unknown>).WEAPON_CATEGORIES as readonly string[] | undefined;
+    expect(Array.isArray(cats)).toBe(true);
+    expect(new Set(cats).size).toBe(cats?.length);
+    for (const w of dataMetrics.WEAPONS) expect(cats).toContain(w.category);
+    expect(dataMetrics.WEAPON_GROUPINGS[0].order).toEqual([...(cats ?? [])]);
+  });
+
+  it('no metrics panel re-types the category list', () => {
+    const offenders: string[] = [];
+    for (const f of fs.readdirSync(METRICS).filter((n) => /\.tsx?$/.test(n))) {
+      const src = strip(fs.readFileSync(path.join(METRICS, f), 'utf8'));
+      if (/\[\s*'Sword'\s*,\s*'Axe'/.test(src)) offenders.push(f);
+    }
+    expect(offenders).toEqual([]);
   });
 });

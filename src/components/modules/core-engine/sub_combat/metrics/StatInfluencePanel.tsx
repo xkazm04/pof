@@ -4,13 +4,11 @@ import { useMemo, useState } from 'react';
 import { Sliders } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT } from '../_shared/data';
-import { WEAPONS } from '../_shared/data-metrics';
-import type { WeaponCategory } from '../_shared/data-metrics';
+import { WEAPONS, WEAPON_CATEGORIES } from '../_shared/data-metrics';
 import { weaponRoster, weaponThroughput } from '@/lib/combat/weapon-throughput';
 
 import { OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_15 } from '@/lib/chart-colors';
 
-const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const WEAPONS_BY_CAT = WEAPON_CATEGORIES.map(cat => ({
   category: cat,
   weapons: WEAPONS.map((w, i) => ({ ...w, idx: i })).filter(w => w.category === cat),
