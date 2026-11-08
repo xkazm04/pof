@@ -22,6 +22,26 @@ import '@/lib/catalog/pipelines/registry.generated';
  * The module's return is persisted through the one re-grade door (`acceptance/regrade.ts`), and
  * each entity it wrote gets its lifecycle re-derived once after the run.
  */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * The editor bridge is a LOCAL process: a caller-supplied `bridgeUrl` is fetched by the server,
+ * so only an explicit-port http(s) loopback address is accepted (anything else is an SSRF
+ * pivot to an arbitrary host). Returns the reason it was refused, or null when acceptable.
+ */
+function bridgeUrlProblem(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return 'bridgeUrl is not a valid URL';
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'bridgeUrl must be http(s)';
+  if (!LOOPBACK_HOSTS.has(u.hostname)) return 'bridgeUrl must be a loopback address (localhost, 127.0.0.1 or [::1])';
+  if (!u.port) return 'bridgeUrl must include a port';
+  return null;
+}
+
 function makeDeps(bridgeUrl?: string): PythonDrainDeps & { flushLifecycle: () => void } {
   const touched = createTouched();
   return {
@@ -91,9 +111,16 @@ export async function POST(req: NextRequest) {
     const read = await readSweepBody(req);
     if (!read.ok) return read.error;
     const body = read.data as {
-      catalogId?: string; entityId?: string; force?: boolean; continueOnFail?: boolean; bridgeUrl?: string; apply?: boolean;
+      catalogId?: string; entityId?: string; force?: boolean; continueOnFail?: boolean; bridgeUrl?: unknown; apply?: boolean;
     };
-    const deps = makeDeps(typeof body.bridgeUrl === 'string' ? body.bridgeUrl : undefined);
+    let bridgeUrl: string | undefined;
+    if (body.bridgeUrl !== undefined) {
+      if (typeof body.bridgeUrl !== 'string') return apiError('bridgeUrl must be a string', 400);
+      const problem = bridgeUrlProblem(body.bridgeUrl);
+      if (problem) return apiError(problem, 400);
+      bridgeUrl = body.bridgeUrl;
+    }
+    const deps = makeDeps(bridgeUrl);
     const summary = await drainPythonAll(
       parseSweepFilter(body),
       deps,
