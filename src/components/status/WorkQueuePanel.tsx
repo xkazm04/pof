@@ -31,7 +31,7 @@ export function WorkQueuePanel({ items, onOpen }: { items: readonly WorkItem[]; 
       }}
     >
       <div style={{ color: 'var(--lab-muted)', marginBottom: 'var(--lab-s1)' }}>
-        <strong style={{ color: 'var(--lab-text)' }}>Next up</strong> - {actionable} step{actionable === 1 ? '' : 's'} below R3
+        <strong style={{ color: 'var(--lab-text)' }}>Next up</strong> - {actionable} step{actionable === 1 ? '' : 's'} not yet at R3
         to work, {items.length - actionable} parked (model-blocked: recorded, never attempted). Click one to open its evidence.
       </div>
       <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 2 }}>
