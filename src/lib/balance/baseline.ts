@@ -2,7 +2,7 @@
  * Balance baselines (ECW Phase 10-B, idea 375a9f88). A baseline is a captured
  * snapshot of an archetype's threat score + stats; drift functions compare the
  * current values against it so designers can catch unintended balance changes.
- * Pure model + drift calcs (persistence in baseline-db.ts / baselineStore).
+ * Pure model + drift calcs (persistence in baseline-db.ts).
  */
 
 import type { StatRow } from './threat-score';

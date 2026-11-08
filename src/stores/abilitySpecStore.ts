@@ -27,7 +27,7 @@ export function specKey(catalogId: string, entityId: string): string {
  * Per-entity enriched ability specs. The DB (`ability-spec-db.ts` via
  * /api/ability-spec) is the source of truth; this store is loaded on entity
  * open and updated optimistically on edit. No persist middleware — DB owns it,
- * mirroring baselineStore / pipelineStore / catalogStore.
+ * mirroring pipelineStore / catalogStore.
  */
 export const useAbilitySpecStore = create<AbilitySpecState>()((set, get) => ({
   specByEntity: {},
