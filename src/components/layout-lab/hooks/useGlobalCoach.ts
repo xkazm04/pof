@@ -128,7 +128,13 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
   // same acceptance truth as the rail, the matrix and the step banner.
   const verdicts = useAllJudgeVerdicts();
 
-  const catalogIds = useMemo(() => CATALOG_SECTIONS.map((s) => s.catalogId), []);
+  // The active game's catalogs only: a catalog the game does not show is neither fetched nor
+  // counted toward `loading` (it could hold the Do-next row on its skeleton for nothing).
+  const sections = useMemo(() => {
+    const visible = new Set(scope.visible);
+    return CATALOG_SECTIONS.filter((s) => visible.has(s.catalogId));
+  }, [scope]);
+  const catalogIds = useMemo(() => sections.map((s) => s.catalogId), [sections]);
 
   // Kick off one deduped whole-catalog SUMMARY fetch per catalog (status/tier/reason +
   // content hashes — no produce bodies). `ensureSummary` is a no-op once
@@ -158,16 +164,16 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
     const candidates: CoachCandidate[] = [];
     const failedCatalogs: GlobalCoachResult['failedCatalogs'] = [];
     // Unsettled = neither loaded nor errored: the pre-fetch state on first paint AND
-    // every in-flight fetch. Counted over ALL sections (not just those with entities)
+    // every in-flight fetch. Counted over ALL visible sections (not just those with entities)
     // so an unhydrated catalog store still reads as "still loading", never as "clear".
     // A catalog whose FULL artifacts are already cached counts as settled even if its
     // summary has not landed — the coach can already derive it.
-    const loading = CATALOG_SECTIONS.some((s) => {
+    const loading = sections.some((s) => {
       const sum = getCachedSummary(s.catalogId);
       return !sum.loaded && !sum.error && !getCachedArtifacts(s.catalogId).loaded;
     });
     const live = new Set<string>();
-    for (const section of CATALOG_SECTIONS) {
+    for (const section of sections) {
       const entMap = entitiesByCatalog[section.catalogId];
       if (!entMap || Object.keys(entMap).length === 0) continue;
 
@@ -238,5 +244,5 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
     // list `buildGlobalCoach` would have assembled in one pass.
     return { candidates: rankCoachCandidates(candidates, topN), loading, failedCatalogs };
     // `version` is the "cache changed" signal — recompute as each catalog's fetch resolves.
-  }, [entitiesByCatalog, allEntitiesByCatalog, localByEntity, version, topN, verdictsByCatalog]);
+  }, [entitiesByCatalog, allEntitiesByCatalog, sections, localByEntity, version, topN, verdictsByCatalog]);
 }
