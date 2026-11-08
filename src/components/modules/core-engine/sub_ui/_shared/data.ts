@@ -106,22 +106,18 @@ export const INPUT_MODE_COLORS: Record<InputMode, string> = {
   GameAndUI: MODULE_COLORS.systems,
 };
 
-export const SCREEN_TO_FLOW: Record<string, string> = {
-  'hud-health': 'HUD',
-  'hud-abilities': 'HUD',
-  'inventory': 'Inventory',
-  'char-stats': 'CharStats',
-  'pause': 'Pause',
-  'enemy-bars': 'EnemyBars',
-  'damage-numbers': 'DamageNumbers',
-};
-
 /* ── Screen node definitions ───────────────────────────────────────────────── */
 
 export const HUD_CHILDREN: ScreenNode[] = [
   { id: 'hud-health', featureName: 'GAS attribute binding', inputMode: 'Game', subWidgets: ['WBP_HealthBar', 'WBP_ManaBar'], description: 'Real-time attribute delegates update bar fill percentage', trigger: 'Always visible' },
   { id: 'hud-abilities', featureName: 'Ability cooldown UI', inputMode: 'Game', subWidgets: ['WBP_AbilitySlot x4', 'WBP_CooldownSweep'], description: 'Ability slots with icon, cooldown sweep, keybind label', trigger: 'Always visible' },
 ];
+
+/** Screen-node id -> flow-node id: the two HUD child rows, plus every trigger screen projected from SCREEN_TRIGGERS (one owner). */
+export const SCREEN_TO_FLOW: Record<string, string> = {
+  ...Object.fromEntries(HUD_CHILDREN.map(n => [n.id, 'HUD'])),
+  ...Object.fromEntries(SCREEN_TRIGGERS.map(t => [t.screen, t.flowNode])),
+};
 
 export const HUD_OVERLAYS: ScreenNode[] = [
   { id: 'inventory', featureName: 'Inventory screen', inputMode: 'UI', subWidgets: ['WBP_ItemGrid', 'WBP_Tooltip', 'WBP_EquipPanel'], description: 'Grid inventory with drag-and-drop and equipment panel', trigger: screenTrigger('inventory') },
