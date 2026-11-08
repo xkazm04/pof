@@ -235,9 +235,15 @@ export function HeatmapGrid({
 
               {/* Status counts */}
               <div className="flex items-center gap-2 text-2xs">
-                <span style={{ color: STATUS_SUCCESS }}>{done}</span>
-                <span style={{ color: STATUS_WARNING }}>{cell.partial}</span>
-                <span style={{ color: STATUS_ERROR }}>{cell.missing}</span>
+                <span style={{ color: STATUS_SUCCESS }}>
+                  <span aria-hidden="true">{'✓'} </span><span className="sr-only">Done </span>{done}
+                </span>
+                <span style={{ color: STATUS_WARNING }}>
+                  <span aria-hidden="true">{'◐'} </span><span className="sr-only">Partial </span>{cell.partial}
+                </span>
+                <span style={{ color: STATUS_ERROR }}>
+                  <span aria-hidden="true">{'✕'} </span><span className="sr-only">Missing </span>{cell.missing}
+                </span>
                 <span className="text-text-muted ml-auto">
                   {cell.total} total
                 </span>
