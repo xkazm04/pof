@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Search, ScanLine, Loader2, FolderOpen, ArrowUpDown,
@@ -20,6 +21,13 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'size', label: 'Size' },
   { key: 'modified', label: 'Modified' },
 ];
+
+/**
+ * Cards mounted per page. Every card is a framer `layout` node, so an unbounded grid
+ * (a UE Content/ folder holds thousands of assets) costs a layout pass per node on
+ * every search keystroke. The grid mounts one page and grows by one page on demand.
+ */
+export const GRID_PAGE_SIZE = 200;
 
 // ── Main Component ──
 
@@ -53,6 +61,16 @@ export function AssetInventory() {
     ueListed,
     edgeCount,
   } = useAssetInventory();
+
+  // Page limit, tagged with the view it was grown for: a new search / filter / sort / scan
+  // starts over at one page (derived, so no reset effect is needed).
+  const viewSig = `${scanResult?.scannedAt ?? ''}|${search}|${typeFilter}|${String(ueFilter)}|${sortKey}|${sortDir}`;
+  const [grown, setGrown] = useState({ sig: '', limit: GRID_PAGE_SIZE });
+  const limit = grown.sig === viewSig ? grown.limit : GRID_PAGE_SIZE;
+  const visibleAssets = displayAssets.length <= limit
+    ? displayAssets
+    : displayAssets.filter((a, i) => i < limit || a.relativePath === expandedAsset);
+  const hiddenCount = displayAssets.length - visibleAssets.length;
 
   // ── Pre-scan state ──
   if (!scanResult && !isScanning && !error) {
@@ -250,7 +268,7 @@ export function AssetInventory() {
               {search || typeFilter !== 'all' || ueFilter === 'not-in-manifest' ? 'No assets match your filters' : 'No assets found in Content/'}
             </div>
           ) : (
-            displayAssets.map(asset => (
+            visibleAssets.map(asset => (
               <AssetCard
                 key={asset.relativePath}
                 asset={asset}
@@ -266,10 +284,22 @@ export function AssetInventory() {
         </AnimatePresence>
       </div>
 
+      {hiddenCount > 0 && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => setGrown({ sig: viewSig, limit: limit + GRID_PAGE_SIZE })}
+            className="focus-ring px-3 py-1.5 rounded-md text-xs font-medium text-text-muted border border-border hover:text-text transition-colors"
+          >
+            Show {Math.min(GRID_PAGE_SIZE, hiddenCount)} more ({hiddenCount} hidden)
+          </button>
+        </div>
+      )}
+
       {/* Showing count */}
       {displayAssets.length > 0 && (
         <div className="text-xs text-text-muted text-right font-mono mt-2 opacity-60">
-          Showing {displayAssets.length} of {scanResult.assets.length} assets
+          Showing {visibleAssets.length} of {scanResult.assets.length} assets
         </div>
       )}
     </div>
