@@ -234,20 +234,32 @@ export async function preflightArdy(
   });
 
   const probe = 'import torch;from motion_correction import motion_postprocess;print("POF_ARDY_PREFLIGHT_OK",torch.cuda.is_available())';
-  const { stdout } = await run(resolved.py, ['-c', probe], 120_000);
+  const probeTimeoutMs = 120_000;
+  const outcome = await run(resolved.py, ['-c', probe], probeTimeoutMs);
+  const { stdout } = outcome;
   const line = stdout.match(/^POF_ARDY_PREFLIGHT_OK (True|False)$/m);
+  // The probe must have reached the import before its silence can be read as a verdict on
+  // motion_correction: a python that never started, a timer kill or a broken torch all
+  // print no OK line too, and the pip advice below would send the operator the wrong way.
+  const probeBroke = !line && (
+    !!outcome.spawnError || !!outcome.timedOut || (outcome.code !== 0 && !/motion_correction/i.test(stdout))
+  );
   checks.push({
     name: 'motion_correction',
     ok: !!line,
     detail: line
       ? undefined
-      : 'C++ extension not importable — run `pip install ./MotionCorrection --no-cache-dir --no-build-isolation`. '
-        + 'Note `import MotionCorrection` (capitalised) would have SUCCEEDED here as an empty namespace package.',
+      : probeBroke
+        ? `not checked — ${processFailureReason(outcome, { tool: 'the ARDY preflight probe', timeoutMs: probeTimeoutMs })}`
+        : 'C++ extension not importable — run `pip install ./MotionCorrection --no-cache-dir --no-build-isolation`. '
+          + 'Note `import MotionCorrection` (capitalised) would have SUCCEEDED here as an empty namespace package.',
   });
   checks.push({
     name: 'cuda',
     ok: line?.[1] === 'True',
-    detail: line?.[1] === 'True' ? undefined : 'torch reports no CUDA device — generation would run on CPU or fail',
+    detail: line?.[1] === 'True'
+      ? undefined
+      : line ? 'torch reports no CUDA device — generation would run on CPU or fail' : 'not measured — the probe printed no result',
   });
 
   return { ok: checks.every((c) => c.ok), checks };
