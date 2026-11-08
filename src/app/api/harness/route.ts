@@ -14,6 +14,7 @@
 
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   createHarnessOrchestrator,
   createDefaultConfig,
@@ -266,6 +267,10 @@ export async function GET(request: NextRequest) {
 // ── POST ────────────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
+  // start and resume spawn an autonomous CLI loop that runs with permissions skipped.
+  const denied = requireOperator(request);
+  if (denied) return denied;
+
   const raw: unknown = await request.json().catch(() => undefined);
   // A body that is not a JSON object is the caller's error (400), not a server fault.
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
