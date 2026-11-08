@@ -28,13 +28,15 @@ import { POF_BRIDGE } from './constants';
  * - `auth-rejected`  — the plugin answered 401/403: the auth token is missing or wrong.
  * - `http-error`     — the plugin answered with any other non-2xx status.
  * - `malformed-body` — the plugin answered 2xx but the body could not be read or parsed as JSON.
+ * - `invalid-port`   — the caller's `?port=` is not a TCP port; nothing was sent (HTTP 400).
  */
 export type PofProxyFailureKind =
   | 'unreachable'
   | 'timeout'
   | 'auth-rejected'
   | 'http-error'
-  | 'malformed-body';
+  | 'malformed-body'
+  | 'invalid-port';
 
 /**
  * Outcome of a {@link proxyToPofBridge} call.
@@ -85,6 +87,9 @@ export async function proxyToPofBridge<T>(
   path: string,
   { port, method = 'GET', body, timeoutMs = 10_000 }: ProxyOptions,
 ): Promise<PofProxyResult<T>> {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return { ok: false, reachable: false, kind: 'invalid-port', status: 400, detail: 'port must be an integer in 1-65535' };
+  }
   const result = await bridgeFetch<T>(`http://${POF_BRIDGE.HOST}:${port}/pof/${path}`, {
     method,
     headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
@@ -119,6 +124,7 @@ export function pofProxyError(
   result: Extract<PofProxyResult<unknown>, { ok: false }>,
   label: string,
 ) {
+  if (result.kind === 'invalid-port') return apiError(result.detail, 400);
   if (result.kind === 'auth-rejected') {
     return apiError(
       `${label}: PoF Bridge refused the request (HTTP ${result.status}) - the auth token ` +
