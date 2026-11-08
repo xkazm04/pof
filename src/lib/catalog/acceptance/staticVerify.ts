@@ -10,7 +10,7 @@
  */
 import type { AcceptanceResult } from './types';
 import type { UeChecker } from './ueStaticCheckers';
-import { resolveUeRoot } from './ueStaticCheckers';
+import { resolveUeRoot, withHeaderCorpus } from './ueStaticCheckers';
 import { isPackagingLabel } from './packagingStep';
 import { foldContentHold, holdsBackAtDataTier } from './combineVerdicts';
 import { getCatalogPipeline } from '../pipeline-registry';
@@ -171,6 +171,15 @@ export interface StaticVerifyDeps {
  * so it's unit-tested without a UE project or SQLite.
  */
 export function verifyStaticAll(
+  filter: StaticVerifyFilter,
+  deps: StaticVerifyDeps,
+  opts?: { apply?: boolean },
+): StaticVerifySummary {
+  // One header-corpus read per sweep, dropped when it ends (see `withHeaderCorpus`).
+  return withHeaderCorpus(() => verifyStaticSweep(filter, deps, opts));
+}
+
+function verifyStaticSweep(
   filter: StaticVerifyFilter,
   deps: StaticVerifyDeps,
   opts?: { apply?: boolean },

@@ -80,9 +80,37 @@ function walk(dir: string, ext: string, out: string[] = []): string[] {
   return out;
 }
 
+/** Header text keyed by walked dir + ext, alive only inside {@link withHeaderCorpus} (one sweep). */
+let activeCorpus: Map<string, string> | null = null;
+
+/**
+ * Run `fn` with ONE shared read of each walked source tree: inside it, `cppSymbolExists` tests the
+ * joined text instead of re-walking and re-reading every header per call. Scoped to the call (the
+ * cache is dropped in `finally`), never module-lifetime, so an edited header is seen by the next sweep.
+ */
+export function withHeaderCorpus<T>(fn: () => T): T {
+  if (activeCorpus) return fn();
+  activeCorpus = new Map();
+  try {
+    return fn();
+  } finally {
+    activeCorpus = null;
+  }
+}
+
 function filesContain(root: string, subdir: string, ext: string, needle: RegExp): boolean {
   const { fs, path } = serverModules();
-  return walk(path.join(root, subdir), ext).some((f) => needle.test(fs.readFileSync(f, 'utf8')));
+  const dir = path.join(root, subdir);
+  if (activeCorpus) {
+    const key = `${dir}|${ext}`;
+    let text = activeCorpus.get(key);
+    if (text === undefined) {
+      text = walk(dir, ext).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+      activeCorpus.set(key, text);
+    }
+    return needle.test(text);
+  }
+  return walk(dir, ext).some((f) => needle.test(fs.readFileSync(f, 'utf8')));
 }
 
 /** A name matched LITERALLY: a metacharacter in a row/symbol name must neither throw nor act as a wildcard. */
