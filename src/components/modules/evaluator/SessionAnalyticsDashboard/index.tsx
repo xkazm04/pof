@@ -151,7 +151,7 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
             </p>
           </div>
           <div className="space-y-1">
-            {dashboard.moduleStats
+            {[...dashboard.moduleStats]
               .sort((a, b) => b.totalSessions - a.totalSessions)
               .map((ms, i) => (
                 <ModuleStatsRow
