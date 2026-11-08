@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { ACCENT_RED, STATUS_SUCCESS, STATUS_NEUTRAL, OVERLAY_WHITE,
   withOpacity, OPACITY_15, OPACITY_6, OPACITY_8, OPACITY_30, OPACITY_40, OPACITY_50,
 } from '@/lib/chart-colors';
@@ -23,14 +23,35 @@ const PLOT_H = CHART_H - PAD_B - 10;
 
 function toX(level: number) { return PAD_L + ((level - 1) / 49) * PLOT_W; }
 function toY(value: number) { return 10 + PLOT_H * (1 - value / 100); }
+const SERIES_DASH = ['none', '5 2', '1.5 2.5'];
+const LEVELS = 50;
+const zoneOf = (v: number) => v >= 70 ? 'DANGER' : v >= 40 ? 'SWEET SPOT' : 'TRIVIAL';
+function nearestValue(pts: DifficultyPoint[], level: number): number | null {
+  if (pts.length === 0) return null;
+  return pts.reduce((a, b) => Math.abs(b.level - level) < Math.abs(a.level - level) ? b : a).value;
+}
 function polyline(pts: DifficultyPoint[]) { return pts.map(p => `${toX(p.level)},${toY(p.value)}`).join(' '); }
 
 export function DifficultyChart({ series }: DifficultyChartProps) {
   const [hoverLevel, setHoverLevel] = useState<number | null>(null);
 
+  const onKeyDown = (e: KeyboardEvent<SVGSVGElement>) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); setHoverLevel(l => Math.min(LEVELS, (l ?? 0) + 1)); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); setHoverLevel(l => Math.max(1, (l ?? 2) - 1)); }
+    else if (e.key === 'Home') { e.preventDefault(); setHoverLevel(1); }
+    else if (e.key === 'End') { e.preventDefault(); setHoverLevel(LEVELS); }
+    else if (e.key === 'Escape') setHoverLevel(null);
+  };
+  const summary = hoverLevel === null ? '' : `Level ${hoverLevel}: ` + series.map(s => {
+    const v = nearestValue(s.data, hoverLevel);
+    return v === null ? `${s.label} no data` : `${s.label} ${v} ${zoneOf(v)}`;
+  }).join(', ');
+
   return (
-    <div className="min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-      <svg width={CHART_W} height={200} viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="w-full max-w-[280px]"
+    <div className="min-h-[120px] bg-surface-deep/30 rounded-lg p-2">
+      <svg width={CHART_W} height={CHART_H} viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="w-full h-auto max-w-[280px] focus-ring"
+        role="img" tabIndex={0} onKeyDown={onKeyDown}
+        aria-label={`Enemy difficulty curve, levels 1 to ${LEVELS}: ${series.map(s => s.label).join(', ')}. Use arrow keys to read values.`}
         onMouseLeave={() => setHoverLevel(null)}
       >
         {/* Zones */}
@@ -50,14 +71,16 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
           <text key={l} x={toX(l)} y={CHART_H - 3} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">Lv{l}</text>
         ))}
         {/* Lines */}
-        {series.map(s => (
-          <polyline key={s.label} points={polyline(s.data)} fill="none" stroke={s.color} strokeWidth="1.5" />
+        {series.map((s, i) => (
+          <polyline key={s.label} points={polyline(s.data)} fill="none" stroke={s.color} strokeWidth="1.5" strokeDasharray={SERIES_DASH[i % SERIES_DASH.length]} />
         ))}
         {/* Hover line + floating tooltip */}
         {hoverLevel !== null && (() => {
           const hx = toX(hoverLevel);
-          const nearest = (pts: DifficultyPoint[]) => pts.reduce((a, b) => Math.abs(b.level - hoverLevel) < Math.abs(a.level - hoverLevel) ? b : a).value;
-          const archetypes = series.map(s => ({ label: s.label, value: nearest(s.data), color: s.color }));
+          const archetypes = series.flatMap(s => {
+            const value = nearestValue(s.data, hoverLevel);
+            return value === null ? [] : [{ label: s.label, value, color: s.color }];
+          });
           const getZone = (v: number) => v >= 70 ? { label: 'DANGER', color: ACCENT_RED } : v >= 40 ? { label: 'SWEET SPOT', color: STATUS_SUCCESS } : { label: 'TRIVIAL', color: STATUS_NEUTRAL };
           const tooltipW = 90;
           const flipLeft = hx + tooltipW + 6 > CHART_W - 10;
@@ -88,7 +111,7 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
           );
         })()}
         {/* Invisible hover rects for interaction */}
-        {Array.from({ length: 50 }, (_, i) => i + 1).map(level => (
+        {Array.from({ length: LEVELS }, (_, i) => i + 1).map(level => (
           <rect
             key={level}
             x={toX(level) - (PLOT_W / 49) / 2}
@@ -100,10 +123,11 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
           />
         ))}
       </svg>
+      <div className="sr-only" aria-live="polite" data-testid="difficulty-live">{summary}</div>
       <div className="flex gap-3 mt-2">
-        {series.map(s => (
+        {series.map((s, i) => (
           <span key={s.label} className="flex items-center gap-1 text-xs font-mono text-text-muted">
-            <span className="w-3 h-[2px] flex-shrink-0" style={{ backgroundColor: s.color }} />
+            <svg width="12" height="2" className="flex-shrink-0" aria-hidden="true"><line x1="0" y1="1" x2="12" y2="1" stroke={s.color} strokeWidth="2" strokeDasharray={SERIES_DASH[i % SERIES_DASH.length]} /></svg>
             {s.label}
           </span>
         ))}

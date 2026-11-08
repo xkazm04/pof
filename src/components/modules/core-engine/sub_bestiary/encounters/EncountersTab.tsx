@@ -4,12 +4,12 @@ import { useState, useMemo, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Map as MapIcon } from 'lucide-react';
 import {
-  MODULE_COLORS, ACCENT_RED, ACCENT_PURPLE_BOLD, STATUS_ERROR,
+  MODULE_COLORS, STATUS_ERROR,
   withOpacity, OPACITY_8, OPACITY_25,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
-  DIFFICULTY_GRUNT, DIFFICULTY_CASTER, DIFFICULTY_BRUTE,
+  DIFFICULTY_SERIES,
   SPAWN_POINTS,
   TACTICS_ENEMIES, TACTICS_ROLE_COLORS,
   EXPANDED_WAVES, TIER_GLOW_COLORS, ALL_TIERS,
@@ -57,11 +57,7 @@ export function EncountersTab({ accent }: EncountersTabProps) {
       <BlueprintPanel color={STATUS_ERROR} className="p-3">
         <SectionHeader icon={TrendingUp} label="Enemy Difficulty Curve" color={STATUS_ERROR} />
         <div className="mt-3">
-          <DifficultyChart series={[
-            { label: 'Grunt', data: DIFFICULTY_GRUNT, color: ACCENT_RED },
-            { label: 'Caster', data: DIFFICULTY_CASTER, color: ACCENT_PURPLE_BOLD },
-            { label: 'Brute', data: DIFFICULTY_BRUTE, color: MODULE_COLORS.content },
-          ]} accent={STATUS_ERROR} />
+          <DifficultyChart series={DIFFICULTY_SERIES} accent={STATUS_ERROR} />
         </div>
       </BlueprintPanel>
 
@@ -85,7 +81,7 @@ export function EncountersTab({ accent }: EncountersTabProps) {
                 if (!acc.find(r => r.role === sp.role)) acc.push({ role: sp.role!, color: sp.color! });
                 return acc;
               }, []).map(r => (
-                <span key={r.role} className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase">
+                <span key={r.role} className="flex items-center gap-1 text-xs font-mono text-text-muted uppercase">
                   <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
                   {r.role}
                 </span>
@@ -130,9 +126,9 @@ export function EncountersTab({ accent }: EncountersTabProps) {
                     </span>
                     <span className="text-text-muted font-mono w-10 flex-shrink-0">{wave.delay}</span>
                     <span className="text-text font-medium truncate flex-1">{wave.archetype}</span>
-                    <span className="font-mono font-bold uppercase text-[10px]" style={{ color: TIER_GLOW_COLORS[wave.tier] }}>{wave.tier}</span>
+                    <span className="font-mono font-bold uppercase text-xs" style={{ color: TIER_GLOW_COLORS[wave.tier] }}>{wave.tier}</span>
                     <span className="text-text-muted font-mono text-xs flex-shrink-0">x{wave.count}</span>
-                    <span className="text-text-subtle font-mono text-[10px] truncate max-w-[60px]">{wave.area}</span>
+                    <span className="text-text-subtle font-mono text-xs truncate max-w-[60px]">{wave.area}</span>
                   </div>
                 ))}
               </div>
