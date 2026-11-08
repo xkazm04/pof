@@ -24,6 +24,18 @@ interface DRCodeGeneratorProps {
   onConfigsChange: (next: DRConfig[]) => void;
 }
 
+const clampTo = (v: number, lo: number, hi: number) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo);
+
+/** Pin each field to the range its input declares; the inputs themselves stay free while typing. */
+function toExportConfig(c: DRConfig): DRConfig {
+  return {
+    ...c,
+    softCap: Math.round(clampTo(c.softCap, 10, 100)),
+    baseValuePerPoint: clampTo(c.baseValuePerPoint, 0.001, 100),
+    postCapMultiplier: clampTo(c.postCapMultiplier, 0.05, 1),
+  };
+}
+
 export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeGeneratorProps) {
   const [codeGenTab, setCodeGenTab] = useState<'header' | 'source' | 'csv' | 'datatable'>('header');
 
@@ -31,11 +43,12 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
     onConfigsChange(drConfigs.map((c, i) => (i === idx ? { ...c, [field]: value } : c)));
 
   const generatedCode = useMemo(() => {
+    const exportConfigs = drConfigs.map(toExportConfig);
     switch (codeGenTab) {
-      case 'header': return generateGEHeader(drConfigs);
-      case 'source': return generateGESource(drConfigs);
-      case 'csv': return generateCurveTableCSV(drConfigs);
-      case 'datatable': return generateDataTableJSON(drConfigs);
+      case 'header': return generateGEHeader(exportConfigs);
+      case 'source': return generateGESource(exportConfigs);
+      case 'csv': return generateCurveTableCSV(exportConfigs);
+      case 'datatable': return generateDataTableJSON(exportConfigs);
     }
   }, [codeGenTab, drConfigs]);
 
