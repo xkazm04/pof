@@ -1,0 +1,133 @@
+{
+ "schema": "conform-run/1",
+ "worker": "40635cf6-c6c6-43e9-bd7f-8ebaf80a7055",
+ "subject": "generated-video-motion-extraction",
+ "evaluatedAt": "2026-11-08T05:37:50.715208+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "eqs-squad-combat-spatial",
+   "subject": "generated-video-motion-extraction",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/AttackRingVisualizer/index.tsx:25 This context draws EQS pipelines, squad formations and attack-ring geometry, and nothing in it sources animation from video. A search of its four directories for video, footage, mocap and keypoint found nothing.",
+   "techniques": [
+    {
+     "technique": "motion-source-route-by-action-class",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/EQSPipelineDiagram/index.tsx:15 Diagrams spatial AI queries. No animation is sourced here."
+    },
+    {
+     "technique": "contact-window-travels-with-the-clip",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/game-systems/AttackRingVisualizer/index.tsx:16 An attack distance is a spatial slider, not a contact window measured from extracted motion."
+    }
+   ],
+   "absenceTerms": [
+    "video",
+    "footage",
+    "mocap",
+    "keypoint"
+   ]
+  },
+  {
+   "context": "visual-gen-quality-and-animation",
+   "subject": "generated-video-motion-extraction",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "scripts/visual-gen/ardy/pof_npz_to_bvh.py:1 The motion side of this context is the ARDY text-to-motion route (npz to BVH, loop closure), which skips video entirely, so the subject's precondition of a generated video clip as motion source does not hold. A search of scripts/visual-gen found no footage, mocap, keypoint, panel_sync or contact_window.",
+   "techniques": [
+    {
+     "technique": "motion-source-route-by-action-class",
+     "verdict": "not-applicable",
+     "evidence": "scripts/visual-gen/ardy/pof_loop_closure.py:4 These scripts process text-to-motion output for locomotion; they do not decide the route. The loop-closure check matches the technique's note that a text-to-motion cycle still owes a closure check."
+    },
+    {
+     "technique": "panel-sync-gate",
+     "verdict": "not-applicable",
+     "evidence": "scripts/visual-gen/ardy/pof_npz_to_bvh.py:1 Input is skeletal npz, not a two-panel clip."
+    }
+   ],
+   "absenceTerms": [
+    "footage",
+    "mocap",
+    "keypoint"
+   ]
+  },
+  {
+   "context": "animation-combos-metrics",
+   "subject": "generated-video-motion-extraction",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/useComboChains.ts:37 Combo graphs and montages come from the UE bridge manifest or a template, not from motion extracted from generated video. A search of combos-montages, metrics and AnimTabContent for video, footage, mocap, keypoint and triangulat found nothing.",
+   "techniques": [
+    {
+     "technique": "contact-window-travels-with-the-clip",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/useComboChains.ts:37 Montage timing here is read from UE assets. No extracted clip carries a measured window into this module."
+    }
+   ],
+   "absenceTerms": [
+    "video",
+    "footage",
+    "mocap",
+    "keypoint",
+    "triangulat"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "generated-video-motion-extraction",
+   "context": "visual-gen-core",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:37:50.715208+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generated-video-motion-extraction"
+   ],
+   "techniques": [
+    "contact-window-travels-with-the-clip",
+    "motion-source-route-by-action-class"
+   ],
+   "deviations": 0,
+   "context": "eqs-squad-combat-spatial",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:37:50.715208+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generated-video-motion-extraction"
+   ],
+   "techniques": [
+    "motion-source-route-by-action-class",
+    "panel-sync-gate"
+   ],
+   "deviations": 0,
+   "context": "visual-gen-quality-and-animation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T05:37:50.715208+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generated-video-motion-extraction"
+   ],
+   "techniques": [
+    "contact-window-travels-with-the-clip"
+   ],
+   "deviations": 0,
+   "context": "animation-combos-metrics",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

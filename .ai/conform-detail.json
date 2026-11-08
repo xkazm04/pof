@@ -21759,16 +21759,22 @@
       "context": "eqs-squad-combat-spatial",
       "subject": "generated-video-motion-extraction",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T04:51:57.732Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "28e7cd7a-93a9-43b0-8662-4748491ac241",
-        "state": "not-applicable",
-        "at": "2026-11-07T04:52:36.417426+00:00",
-        "reason": "reviewer (sonnet): The anchor, FormationView.tsx:8, is an import line (ROLE_DEFINITIONS, constants). It doesn't show that animation or motion sourcing is absent; the claim rests only on a grep over the wider game-systems directory, which is broader than this context's files."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:37:50.715Z",
+      "worker": "40635cf6-c6c6-43e9-bd7f-8ebaf80a7055",
+      "techniques": [
+        {
+          "technique": "motion-source-route-by-action-class",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/EQSPipelineDiagram/index.tsx:15 Diagrams spatial AI queries. No animation is sourced here."
+        },
+        {
+          "technique": "contact-window-travels-with-the-clip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/game-systems/AttackRingVisualizer/index.tsx:16 An attack distance is a spatial slider, not a contact window measured from extracted motion."
+        }
+      ]
     },
     "24d18aef-2104-4889-9d67-d20a91d5fdea/generated-video-motion-extraction": {
       "context": "combat-dodge-timeline",
@@ -23699,6 +23705,43 @@
       "evaluatedTs": "2026-11-08T05:09:14.384Z",
       "worker": "55ec7a18-f56c-49ca-8566-4e0c25c00488",
       "techniques": []
+    },
+    "a5282390-b3a3-4015-90c9-7ff9f7481788/generated-video-motion-extraction": {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:37:50.715Z",
+      "worker": "40635cf6-c6c6-43e9-bd7f-8ebaf80a7055",
+      "techniques": [
+        {
+          "technique": "motion-source-route-by-action-class",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/ardy/pof_loop_closure.py:4 These scripts process text-to-motion output for locomotion; they do not decide the route. The loop-closure check matches the technique's note that a text-to-motion cycle still owes a closure check."
+        },
+        {
+          "technique": "panel-sync-gate",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/ardy/pof_npz_to_bvh.py:1 Input is skeletal npz, not a two-panel clip."
+        }
+      ]
+    },
+    "37390a41-d9e6-4037-94d6-8e7df1256a55/generated-video-motion-extraction": {
+      "context": "animation-combos-metrics",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T05:37:50.715Z",
+      "worker": "40635cf6-c6c6-43e9-bd7f-8ebaf80a7055",
+      "techniques": [
+        {
+          "technique": "contact-window-travels-with-the-clip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/useComboChains.ts:37 Montage timing here is read from UE assets. No extracted clip carries a measured window into this module."
+        }
+      ]
     }
   }
 }

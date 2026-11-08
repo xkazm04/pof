@@ -3493,7 +3493,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_animation/combos-montages/useComboChains.ts:37 Combo graphs and montages come from the UE bridge manifest or a template, not from motion extracted from generated video. A search of combos-montages, metrics and AnimTabContent for video, footage, mocap, keypoint and triangulat found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         },
         {
           "subject": "voice-io",
@@ -13943,7 +13947,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/game-systems/AttackRingVisualizer/index.tsx:25 This context draws EQS pipelines, squad formations and attack-ring geometry, and nothing in it sources animation from video. A search of its four directories for video, footage, mocap and keypoint found nothing.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         },
         {
           "subject": "realtime-combat-semantics",
@@ -28550,7 +28558,11 @@
           "revision": 2,
           "changedAt": "2026-10-31",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "scripts/visual-gen/ardy/pof_npz_to_bvh.py:1 The motion side of this context is the ARDY text-to-motion route (npz to BVH, loop closure), which skips video entirely, so the subject's precondition of a generated video clip as motion source does not hold. A search of scripts/visual-gen found no footage, mocap, keypoint, panel_sync or contact_window.",
+          "evaluatedAt": "2026-11-08",
+          "evaluatedAgainst": "sha256-b2:67faf4ed36b6c698",
+          "evaluatedRevision": 2
         },
         {
           "subject": "image-to-3d-input-gating",
