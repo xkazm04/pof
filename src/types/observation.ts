@@ -221,6 +221,9 @@ export function buildPerfCapturePlan(
   if (!Number.isFinite(windowFrames) || windowFrames < 1) {
     throw new RangeError(`perf-capture window must cover at least one frame (totalSeconds=${s.totalSeconds})`);
   }
+  // The baseline and slack feed the same frame cap: a non-finite one would put `NaN` on the launch line.
+  if (!Number.isFinite(baselineFrames)) throw new RangeError(`perf-capture settle must be finite (settle=${s.settle})`);
+  if (!Number.isFinite(slackFrames)) throw new RangeError(`perf-capture slack must be finite (slackFrames=${slackFrames})`);
   return { fps, baselineFrames, windowFrames, captureFrameCap: baselineFrames + windowFrames + Math.max(0, slackFrames) };
 }
 
