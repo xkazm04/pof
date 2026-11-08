@@ -34,6 +34,11 @@ import { audioPromptFor } from '@/lib/media-prompts/audioPrompts';
 import { AUDIO_KINDS, type AudioKind } from '@/lib/audio-gen/types';
 import { isAudioKind, refusalMessage, supportsKind } from '@/lib/audio-gen/capabilities';
 
+/** `null`, arrays and scalars parse as JSON but are not a request body: destructuring `null` was a TypeError 500. */
+function isJsonObject(v: unknown): boolean {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
 /** Start-of-current-month epoch ms — the window the usage meter counts within. */
 function startOfMonth(): number {
   const d = new Date();
@@ -76,6 +81,7 @@ interface PostBody {
 export async function POST(request: NextRequest) {
   let body: PostBody;
   try { body = await request.json() as PostBody; } catch { return apiError('Invalid JSON body', 400); }
+  if (!isJsonObject(body)) return apiError('Body must be a JSON object', 400);
 
   const { provider, kind, prompt } = body;
   if (!provider || !kind || !prompt || (!body.setId && !body.setName)) {
@@ -188,6 +194,7 @@ interface PatchBody { assetId?: string; favorite?: boolean }
 export async function PATCH(request: NextRequest) {
   let body: PatchBody;
   try { body = await request.json() as PatchBody; } catch { return apiError('Invalid JSON body', 400); }
+  if (!isJsonObject(body)) return apiError('Body must be a JSON object', 400);
   if (!body.assetId || typeof body.favorite !== 'boolean') {
     return apiError('Pass assetId + favorite:boolean', 400);
   }
