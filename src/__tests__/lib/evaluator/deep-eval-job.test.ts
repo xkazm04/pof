@@ -26,7 +26,7 @@ vi.mock('@/lib/claude-terminal/cli-service', () => ({
 
 import { runDeepEval, buildDeepEvalPassPrompt } from '@/lib/evaluator/deep-eval-engine';
 import type { PassExecutor } from '@/lib/evaluator/deep-eval-engine';
-import { startDeepEvalJob } from '@/lib/evaluator/deep-eval-job';
+import { startDeepEvalJob, cancelDeepEvalJob } from '@/lib/evaluator/deep-eval-job';
 import { readPassLedger, recordPassOutcome } from '@/lib/evaluator/deep-eval-pass-ledger';
 import type { ProjectContext } from '@/lib/prompt-context';
 import type { EvalFinding } from '@/lib/evaluator/finding-collector';
@@ -183,5 +183,42 @@ describe('deep-eval job — each pass is persisted as it ends, and a resumed job
     expect(second).toEqual({ ok: false, error: 'already-running' });
     release();
     if (first.ok) await first.data.done;
+  });
+});
+
+describe('startDeepEvalJob — a cancel window never admits a second job', () => {
+  it('refuses a start while the cancelled run is still settling; concurrent executor calls stay <= 4', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    // Honours abort one macrotask late, as a CLI kill does.
+    const lateAbortExecutor: PassExecutor = (_prompt, _path, signal) =>
+      new Promise<string>((_resolve, reject) => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        signal.addEventListener('abort', () => {
+          setTimeout(() => {
+            inFlight--;
+            reject(new DOMException('Evaluation cancelled', 'AbortError'));
+          }, 0);
+        });
+      });
+
+    const project = 'C:/cancel-window';
+    const first = startDeepEvalJob({ projectPath: project, projectContext: CTX, moduleIds: ['audio'], executePass: lateAbortExecutor });
+    expect(first.ok).toBe(true);
+    await flush();
+
+    const cancelling = cancelDeepEvalJob(project); // deliberately not awaited
+    const second = startDeepEvalJob({ projectPath: project, projectContext: CTX, moduleIds: ['audio'], executePass: lateAbortExecutor });
+    expect(second.ok).toBe(false);
+
+    await cancelling;
+    await flush();
+    expect(maxInFlight).toBeLessThanOrEqual(4);
+
+    // Once the old run has settled, a fresh start is admitted again.
+    const third = startDeepEvalJob({ projectPath: project, projectContext: CTX, moduleIds: ['audio'], executePass: async () => fencedFinding('x') });
+    expect(third.ok).toBe(true);
+    if (third.ok) await third.data.done;
   });
 });
