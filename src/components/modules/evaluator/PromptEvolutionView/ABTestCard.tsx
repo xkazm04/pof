@@ -15,6 +15,12 @@ import { ACCENT, STATUS_COLORS, type ViewMode } from './constants';
 import type { AdoptionResult } from './adoption';
 import { AdoptionPreview } from './AdoptionPreview';
 
+/**
+ * Stored confidence is a z-test band only from here up (verdict.ts `confidenceFromZ`).
+ * Below it the number is z/2 or a decide-now volume score, capped at 0.7.
+ */
+const WEAKEST_BAND_CONFIDENCE = 0.8;
+
 // ── A/B Test Card ───────────────────────────────────────────────────────────
 
 export function ABTestCard({
@@ -131,7 +137,12 @@ export function ABTestCard({
                   </div>
 
                   {/* Raw confidence (jargon tooltipped) */}
-                  {test.confidence > 0 && (
+                  {test.confidence > 0 && test.confidence < WEAKEST_BAND_CONFIDENCE && (
+                    <p className="text-xs text-text-muted" data-testid="confidence-below-band">
+                      Decided below the weakest confidence band: no significance result.
+                    </p>
+                  )}
+                  {test.confidence >= WEAKEST_BAND_CONFIDENCE && (
                     <div className="flex items-center gap-2 text-xs text-text-muted">
                       <Target className="w-3 h-3" />
                       <span>

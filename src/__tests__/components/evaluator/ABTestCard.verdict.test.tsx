@@ -112,3 +112,21 @@ describe('ABTestCard — a running front-runner is not a winner', () => {
     expect(screen.queryByRole('button', { name: /copy wording/i })).toBeNull();
   });
 });
+
+describe('ABTestCard — stored confidence below the weakest band is not a z-test result', () => {
+  const decided = (confidence: number): ABTest => ({
+    ...runningTest(10, 10), variantASuccesses: 4, variantBSuccesses: 9, status: 'concluded', winnerId: 'vb', confidence,
+  });
+
+  it('a decide-now score is not labelled z-test', () => {
+    render(<ABTestCard test={decided(0.7)} isExpanded onToggle={() => {}} mode="advanced" />);
+    expect(screen.queryByText('z-test')).toBeNull();
+    expect(screen.getByTestId('confidence-below-band').textContent).toMatch(/below the weakest/i);
+  });
+
+  it('a band-level confidence keeps its z-test label', () => {
+    render(<ABTestCard test={decided(0.95)} isExpanded onToggle={() => {}} mode="advanced" />);
+    expect(screen.getByText('z-test')).toBeTruthy();
+    expect(screen.queryByTestId('confidence-below-band')).toBeNull();
+  });
+});
