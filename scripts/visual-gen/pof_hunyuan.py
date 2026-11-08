@@ -19,6 +19,8 @@ def main() -> int:
     ap.add_argument("--hunyuan-root", required=True, help="dir containing the hy3dgen package")
     ap.add_argument("--model", default="tencent/Hunyuan3D-2")
     args = ap.parse_args()
+    # A native crash or a timeout kill must not take the markers already printed with it.
+    sys.stdout.reconfigure(line_buffering=True)
 
     sys.path.insert(0, args.hunyuan_root)
     try:
