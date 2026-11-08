@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { useCRUD } from '@/hooks/useCRUD';
 import type { AudioAsset, AudioSet } from '@/types/audio-asset';
@@ -35,6 +35,29 @@ interface LibraryData {
 const EMPTY: LibraryData = { options: [], clipsBySet: {} };
 
 /**
+ * One library read shared by every mounted consumer (LISTEN's AuditionReadout and the
+ * emitter panel's AssetSetPicker, which remounts per selected emitter). `useCRUD` has
+ * no cache or in-flight dedupe, so each instance used to issue its own two GETs.
+ *
+ * The shared read lives only while a consumer is mounted. When the last one unmounts
+ * the entry is dropped after the commit settles, not synchronously: a keyed remount unmounts
+ * the old consumer and mounts the new one in the same commit, and must reuse the read.
+ * Leaving the painter tab therefore drops the cache, so a set generated meanwhile in
+ * the Sound Forge is read fresh on return, and `retry` always re-reads.
+ */
+const shared: { promise: Promise<LibraryData> | null; refs: number } = { promise: null, refs: 0 };
+
+function acquireShared(): () => void {
+  shared.refs += 1;
+  return () => {
+    shared.refs -= 1;
+    // A microtask, not synchronous: a keyed remount runs the old cleanup and the new
+    // effect in one commit, so by the time this runs the new consumer holds a ref.
+    queueMicrotask(() => { if (shared.refs === 0) shared.promise = null; });
+  };
+}
+
+/**
  * The generated-asset library as an emitter binding sees it: every set, its clip
  * count, and whether UE has ever imported it.
  *
@@ -46,7 +69,10 @@ const EMPTY: LibraryData = { options: [], clipsBySet: {} };
  * costs nothing.
  */
 export function useAudioSetLibrary(enabled: boolean) {
-  const fetcher = useCallback(async (): Promise<LibraryData> => {
+  // Declared before useCRUD so the reference is held before its first fetch runs.
+  useEffect(() => (enabled ? acquireShared() : undefined), [enabled]);
+
+  const read = useCallback(async (): Promise<LibraryData> => {
     const [lib, imports] = await Promise.all([
       apiFetch<{ sets: AudioSet[]; assets: AudioAsset[] }>('/api/audio-gen'),
       apiFetch<{ bySet: Record<string, AudioImportResult> }>('/api/audio/import-result'),
@@ -72,11 +98,23 @@ export function useAudioSetLibrary(enabled: boolean) {
     };
   }, []);
 
-  const { data, isLoading, error, retry } = useCRUD<LibraryData>(
+  const fetcher = useCallback((): Promise<LibraryData> => {
+    if (!shared.promise) {
+      const p = read();
+      shared.promise = p;
+      // A failed read must not be served to the next consumer.
+      p.catch(() => { if (shared.promise === p) shared.promise = null; });
+    }
+    return shared.promise;
+  }, [read]);
+
+  const { data, isLoading, error, refetch } = useCRUD<LibraryData>(
     '/api/audio-gen',
     EMPTY,
     { fetcher, skipInitialFetch: !enabled, errorMessage: 'Could not read the audio library' },
   );
+
+  const retry = useCallback(() => { shared.promise = null; return refetch(); }, [refetch]);
 
   return { options: data.options, clipsBySet: data.clipsBySet, isLoading, error, retry };
 }
