@@ -364,7 +364,8 @@ export const PRUNE_POLICIES: readonly PrunePolicy[] = [
         (f) =>
           /\.preview\.png$/i.test(f.base) &&
           f.refClass !== 'referenced' &&
-          !ctx.present.has(`${f.group}/${f.base.replace(/\.preview\.png$/i, '.glb')}`),
+          f.refClass !== 'unknown' &&
+          !ctx.present.has(sidecarOwnerPath(f.path) ?? ''),
       ),
   },
   {
