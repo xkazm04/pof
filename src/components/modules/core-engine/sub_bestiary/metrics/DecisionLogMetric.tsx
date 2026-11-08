@@ -11,7 +11,7 @@ const throughput = (decisionCount / Math.max(tickSpan, 1)).toFixed(1);
 
 export function DecisionLogMetric() {
   return (
-    <div className="text-[10px] font-mono leading-tight">
+    <div className="text-2xs font-mono leading-tight">
       <span className="font-bold" style={{ color: ACCENT_PURPLE }}>{throughput}</span>
       <span style={{ color: withOpacity(ACCENT_PURPLE, OPACITY_50) }}> decisions/tick</span>
     </div>

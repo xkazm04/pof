@@ -27,7 +27,7 @@ export function DifficultyMetric() {
           strokeLinejoin="round"
         />
       </svg>
-      <div className="text-[10px] font-mono leading-tight">
+      <div className="text-2xs font-mono leading-tight">
         <span style={{ color: withOpacity(STATUS_ERROR, OPACITY_50) }}>L1–L50 brute</span>
       </div>
     </div>

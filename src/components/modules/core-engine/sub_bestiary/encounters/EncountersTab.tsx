@@ -81,7 +81,7 @@ export function EncountersTab({ accent }: EncountersTabProps) {
                 if (!acc.find(r => r.role === sp.role)) acc.push({ role: sp.role!, color: sp.color! });
                 return acc;
               }, []).map(r => (
-                <span key={r.role} className="flex items-center gap-1 text-[10px] font-mono text-text-muted uppercase">
+                <span key={r.role} className="flex items-center gap-1 text-xs font-mono text-text-muted uppercase">
                   <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: r.color }} />
                   {r.role}
                 </span>
@@ -126,9 +126,9 @@ export function EncountersTab({ accent }: EncountersTabProps) {
                     </span>
                     <span className="text-text-muted font-mono w-10 flex-shrink-0">{wave.delay}</span>
                     <span className="text-text font-medium truncate flex-1">{wave.archetype}</span>
-                    <span className="font-mono font-bold uppercase text-[10px]" style={{ color: TIER_GLOW_COLORS[wave.tier] }}>{wave.tier}</span>
+                    <span className="font-mono font-bold uppercase text-xs" style={{ color: TIER_GLOW_COLORS[wave.tier] }}>{wave.tier}</span>
                     <span className="text-text-muted font-mono text-xs flex-shrink-0">x{wave.count}</span>
-                    <span className="text-text-subtle font-mono text-[10px] truncate max-w-[60px]">{wave.area}</span>
+                    <span className="text-text-subtle font-mono text-xs truncate max-w-[60px]">{wave.area}</span>
                   </div>
                 ))}
               </div>

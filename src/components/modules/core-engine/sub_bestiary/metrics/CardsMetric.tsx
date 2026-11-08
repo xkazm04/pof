@@ -43,7 +43,7 @@ export function CardsMetric() {
           return <path key={seg.role} d={d} fill={seg.color} opacity={0.85} />;
         })}
       </svg>
-      <div className="text-[10px] font-mono leading-tight">
+      <div className="text-2xs font-mono leading-tight">
         <span className="font-bold" style={{ color: ACCENT_RED }}>{total}</span>
         <span style={{ color: withOpacity(ACCENT_RED, OPACITY_50) }}> archetypes</span>
       </div>
