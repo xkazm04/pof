@@ -92,39 +92,11 @@ function bootstrap(conn: Database.Database): void {
     )
   `);
 
-  conn.exec(`
-    CREATE TABLE IF NOT EXISTS feature_matrix (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      module_id TEXT NOT NULL,
-      feature_name TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT 'general',
-      status TEXT NOT NULL DEFAULT 'unknown'
-        CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
-      description TEXT NOT NULL DEFAULT '',
-      file_paths TEXT NOT NULL DEFAULT '[]',
-      review_notes TEXT NOT NULL DEFAULT '',
-      quality_score INTEGER,
-      next_steps TEXT NOT NULL DEFAULT '',
-      last_reviewed_at TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      -- Which project owns the row. Existed only as an ALTER migration below, so a
-      -- fresh DB created after a SCHEMA_VERSION bump (which skips the migration
-      -- probes) would have been missing the column every scoped query now reads.
-      -- Declared here in the same position the migration produces, since the
-      -- 'improved' rebuild above copies columns positionally (SELECT *).
-      project_id TEXT NOT NULL DEFAULT '',
-      source TEXT NOT NULL DEFAULT 'unknown',
-      -- The project is PART OF THE KEY. It used to be UNIQUE(module_id, feature_name),
-      -- which made a feature physically ONE row across every project: a full upsert
-      -- under project B REASSIGNED project A's row. Phase 1 made that visible
-      -- (an upsert takenOver count, a 409 naming the owner); this makes it
-      -- impossible. Two projects can now hold the same (module_id, feature_name)
-      -- simultaneously without either overwriting the other. Existing DBs are
-      -- rebuilt into this shape by the migration below, which preserves every row.
-      UNIQUE(project_id, module_id, feature_name)
-    )
-  `);
+  // The project is PART OF THE KEY (`UNIQUE(project_id, module_id, feature_name)`): two
+  // projects can hold the same feature at once without either overwriting the other.
+  // Existing DBs are rebuilt into this shape by `migrateFeatureMatrixProjectKey`, which
+  // preserves every row. The column set is declared once, in `featureMatrixDdl`.
+  conn.exec(featureMatrixDdl('feature_matrix', PROJECT_KEY_MARKER, { ifNotExists: true }));
 
   // Migrate: add columns if missing (table may already exist from earlier schema)
   if (needsMigrations) {
@@ -564,6 +536,37 @@ export const FEATURE_MATRIX_COLUMN_LIST = [
 ];
 const FEATURE_MATRIX_COLUMNS = FEATURE_MATRIX_COLUMN_LIST.join(', ');
 
+/**
+ * The ONE declaration of feature_matrix's columns. The bootstrap CREATE and both rebuild
+ * migrations call it, differing only in the table name and the UNIQUE clause (the key
+ * shape each stage of history legitimately had). `project_id` / `source` keep the position
+ * the ALTER migrations produced, since the copy lists name columns in declared order.
+ * The `improved` status and the CHECK are part of every rebuild target.
+ */
+function featureMatrixDdl(table: string, uniqueClause: string, opts: { ifNotExists?: boolean } = {}): string {
+  return `
+    CREATE TABLE ${opts.ifNotExists ? 'IF NOT EXISTS ' : ''}${table} (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_id TEXT NOT NULL,
+      feature_name TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'general',
+      status TEXT NOT NULL DEFAULT 'unknown'
+        CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
+      description TEXT NOT NULL DEFAULT '',
+      file_paths TEXT NOT NULL DEFAULT '[]',
+      review_notes TEXT NOT NULL DEFAULT '',
+      quality_score INTEGER,
+      next_steps TEXT NOT NULL DEFAULT '',
+      last_reviewed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      project_id TEXT NOT NULL DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'unknown',
+      ${uniqueClause}
+    )
+  `;
+}
+
 /** The marker that says the widened key is already in place. */
 const PROJECT_KEY_MARKER = 'UNIQUE(project_id, module_id, feature_name)';
 
@@ -622,27 +625,7 @@ function migrateFeatureMatrixProjectKey(database: Database.Database): void {
 
     // The backfill cannot collide: the OLD key already made (module_id, feature_name)
     // globally unique, so no two rows can normalize onto the same widened key.
-    database.exec(`
-      CREATE TABLE feature_matrix_projectkey (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        module_id TEXT NOT NULL,
-        feature_name TEXT NOT NULL,
-        category TEXT NOT NULL DEFAULT 'general',
-        status TEXT NOT NULL DEFAULT 'unknown'
-          CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
-        description TEXT NOT NULL DEFAULT '',
-        file_paths TEXT NOT NULL DEFAULT '[]',
-        review_notes TEXT NOT NULL DEFAULT '',
-        quality_score INTEGER,
-        next_steps TEXT NOT NULL DEFAULT '',
-        last_reviewed_at TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        project_id TEXT NOT NULL DEFAULT '',
-        source TEXT NOT NULL DEFAULT 'unknown',
-        ${PROJECT_KEY_MARKER}
-      )
-    `);
+    database.exec(featureMatrixDdl('feature_matrix_projectkey', PROJECT_KEY_MARKER));
     database.exec(
       `INSERT INTO feature_matrix_projectkey (${FEATURE_MATRIX_COLUMNS})
        SELECT ${FEATURE_MATRIX_COLUMNS} FROM feature_matrix`,
@@ -749,27 +732,7 @@ function migrateFeatureMatrixImprovedStatus(database: Database.Database): void {
   const rowsBefore = countRows(database, 'feature_matrix');
 
   const rebuild = database.transaction(() => {
-    database.exec(`
-      CREATE TABLE ${IMPROVED_REBUILD_TABLE} (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        module_id TEXT NOT NULL,
-        feature_name TEXT NOT NULL,
-        category TEXT NOT NULL DEFAULT 'general',
-        status TEXT NOT NULL DEFAULT 'unknown'
-          CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
-        description TEXT NOT NULL DEFAULT '',
-        file_paths TEXT NOT NULL DEFAULT '[]',
-        review_notes TEXT NOT NULL DEFAULT '',
-        quality_score INTEGER,
-        next_steps TEXT NOT NULL DEFAULT '',
-        last_reviewed_at TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-        project_id TEXT NOT NULL DEFAULT '',
-        source TEXT NOT NULL DEFAULT 'unknown',
-        UNIQUE(module_id, feature_name)
-      )
-    `);
+    database.exec(featureMatrixDdl(IMPROVED_REBUILD_TABLE, 'UNIQUE(module_id, feature_name)'));
     database.exec(
       `INSERT INTO ${IMPROVED_REBUILD_TABLE} (${copyList}) SELECT ${copyList} FROM feature_matrix`,
     );
