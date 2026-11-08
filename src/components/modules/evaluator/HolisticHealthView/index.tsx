@@ -212,7 +212,7 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
           </div>
 
           {/* Sub-tabs */}
-          <div className="flex items-center gap-1 border-b border-border">
+          <div role="tablist" aria-label="Project health views" className="flex items-center gap-1 border-b border-border">
             <SubTab label="Overview" active={viewTab === 'overview'} onClick={() => setViewTab('overview')} />
             <SubTab label="Velocity" active={viewTab === 'velocity'} onClick={() => setViewTab('velocity')} />
             <SubTab label="Quality" active={viewTab === 'quality'} onClick={() => setViewTab('quality')} />

@@ -3,7 +3,7 @@
  * Project Health dashboard — a failed crash read is reported, not shown as "Ready".
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, cleanup, act } from '@testing-library/react';
+import { render, cleanup, act, fireEvent } from '@testing-library/react';
 
 afterEach(cleanup);
 
@@ -105,5 +105,17 @@ describe('HolisticHealthView — hardening', () => {
     rerender(tree(false));
     await settle();
     expect(fetchHealth).toHaveBeenCalledTimes(1);
+  });
+
+  it('the four sub-tabs are a tablist whose selected tab is announced', async () => {
+    const { container } = render(<HolisticHealthView />);
+    await settle();
+    const list = container.querySelector('[role="tablist"]');
+    expect(list).not.toBeNull();
+    const tabs = [...list!.querySelectorAll<HTMLElement>('[role="tab"]')];
+    expect(tabs.map((t) => t.textContent)).toEqual(['Overview', 'Velocity', 'Quality', 'Milestones']);
+    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false']);
+    fireEvent.click(tabs[1]);
+    expect(tabs.map((t) => t.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
   });
 });

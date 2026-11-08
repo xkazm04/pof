@@ -1,6 +1,9 @@
 export function SubTab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       className={`flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors relative ${
         active ? 'text-text' : 'text-text-muted hover:text-text'
