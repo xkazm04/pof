@@ -19,7 +19,7 @@ function rowButton(container: HTMLElement, syntax: string): HTMLButtonElement {
   const row = Array.from(container.querySelectorAll('div.group')).find((r) =>
     r.textContent?.includes(`> ${syntax}`));
   if (!row) throw new Error(`no row for ${syntax}`);
-  return row.querySelector('button') as HTMLButtonElement;
+  return Array.from(row.querySelectorAll('button')).find((b) => /^(RUN|FILL)$/.test(b.textContent?.trim() ?? '')) as HTMLButtonElement;
 }
 
 describe('CommandCatalog required parameters', () => {
