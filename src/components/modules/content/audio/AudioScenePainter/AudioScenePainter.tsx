@@ -56,6 +56,8 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
     resetView,
     fitToContent,
     handleKeyDown,
+    handleItemKeyDown,
+    handleItemKeyUp,
     minimap,
     handleMinimapDown,
     majorGrid,
@@ -69,7 +71,7 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
       tabIndex={0}
       onKeyDown={handleKeyDown}
       role="application"
-      aria-label="Audio scene painter canvas. Keyboard: + and − zoom, 0 resets to 100%, F fits to content."
+      aria-label="Audio scene painter canvas. Keyboard: + and − zoom, 0 resets to 100%, F fits to content. Tab to a zone or emitter: Enter selects, arrows nudge (Shift for 10), Delete removes."
       className="relative w-full h-full bg-surface-deep overflow-hidden rounded-2xl border border-border outline-none focus-ring"
     >
       <DesktopCanvasNotice className="absolute top-2 left-1/2 -translate-x-1/2 z-30 max-w-[90%]" />
@@ -108,7 +110,6 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
       >
         {/* Grid and defs — spacing scales with zoom so the grid tracks content. */}
         <defs>
@@ -138,6 +139,8 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
             handleZoneMouseDown={handleZoneMouseDown}
             handleResizeStart={handleResizeStart}
             deleteZone={deleteZone}
+            handleItemKeyDown={handleItemKeyDown}
+            handleItemKeyUp={handleItemKeyUp}
           />
 
           {/* Zone ↔ child-emitter connectors + sound emitters */}
@@ -150,6 +153,8 @@ export function AudioScenePainter(props: AudioScenePainterProps) {
             paintMode={paintMode}
             handleEmitterMouseDown={handleEmitterMouseDown}
             deleteEmitter={deleteEmitter}
+            handleItemKeyDown={handleItemKeyDown}
+            handleItemKeyUp={handleItemKeyUp}
           />
 
           {/* Drawing preview */}

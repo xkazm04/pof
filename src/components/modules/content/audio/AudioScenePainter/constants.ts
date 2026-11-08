@@ -30,6 +30,15 @@ export const ZONE_COLORS: Record<ReverbPreset, string> = {
   'custom': ACCENT_PINK,
 };
 
+/**
+ * Colors a newly drawn zone cycles through: every preset hue EXCEPT `none`, whose
+ * neutral `--text-muted` token means "no reverb preset" and would paint the first
+ * drawn zone as if it were unconfigured.
+ */
+export const NEW_ZONE_PALETTE: string[] = Object.entries(ZONE_COLORS)
+  .filter(([preset]) => preset !== 'none')
+  .map(([, color]) => color);
+
 export const EMITTER_COLORS: Record<EmitterType, string> = {
   ambient: STATUS_SUCCESS,
   point: STATUS_INFO,
