@@ -85,7 +85,7 @@ export function LivePreviewScene({ theme, time }: { theme: HudTheme; time: numbe
           className="absolute top-4 left-1/2 -translate-x-1/2 w-40 space-y-0.5"
           style={{ opacity: enemyBarAlpha }}
         >
-          <div className="text-center text-[11px] font-bold text-text-muted uppercase tracking-wider">
+          <div className="text-center text-xs font-bold text-text-muted uppercase tracking-wider">
             Enemy Target
           </div>
           <div className="relative h-3 rounded bg-black/70 border border-border/50 overflow-hidden">
@@ -137,7 +137,7 @@ export function LivePreviewScene({ theme, time }: { theme: HudTheme; time: numbe
       })}
 
       {/* ── Time indicator ── */}
-      <div className="absolute top-2 right-2 text-[11px] font-mono text-text-muted/50">
+      <div className="absolute top-2 right-2 text-xs font-mono text-text-muted/50">
         {(time % CYCLE_DURATION).toFixed(1)}s / {CYCLE_DURATION}s
       </div>
     </div>

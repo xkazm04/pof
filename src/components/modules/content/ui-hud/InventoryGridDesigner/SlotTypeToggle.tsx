@@ -21,7 +21,7 @@ export function SlotTypeToggle({ slot, onToggle }: { slot: SlotTypeConfig; onTog
         }}
       />
       <span
-        className="text-[11px] font-bold uppercase transition-colors drop-shadow-md"
+        className="text-xs font-bold uppercase transition-colors drop-shadow-md"
         style={{ color: slot.enabled ? 'white' : 'rgba(156,163,175,0.6)', textShadow: slot.enabled ? `0 0 8px ${slot.color}80` : 'none' }}
       >
         {slot.label}

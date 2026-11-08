@@ -29,7 +29,7 @@ export function GridSection({
         <span className="text-violet-500/50 text-xl font-light">×</span>
         <DimensionControl label="Rows" value={config.gridRows} onChange={setRows} min={2} max={8} />
         <div className="ml-4 flex flex-col items-center">
-          <span className="text-[11px] uppercase text-violet-400/60 font-bold mb-1">Total Capacity</span>
+          <span className="text-xs uppercase text-violet-400/60 font-bold mb-1">Total Capacity</span>
           <div className="flex items-center justify-center bg-violet-500/10 border border-violet-500/20 px-4 py-1.5 rounded-lg text-violet-200 font-bold tracking-wider shadow-[inset_0_0_10px_rgba(167,139,250,0.1)]">
             {totalSlots} SLOTS
           </div>
@@ -113,7 +113,7 @@ export function GridSection({
                   }}
                   title={slot.label}
                 >
-                  <span className="text-[11px] text-amber-300 font-bold leading-none select-none uppercase">
+                  <span className="text-xs text-amber-300 font-bold leading-none select-none uppercase">
                     {equipStub(pos, 3)}
                   </span>
                   <div className="absolute inset-0 border border-amber-400/50 rounded-md animate-ping opacity-20 pointer-events-none" />
@@ -136,7 +136,7 @@ export function GridSection({
             />
             <Check className="w-3 h-3 text-violet-400 absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity drop-shadow-[0_0_2px_rgba(167,139,250,0.8)]" />
           </div>
-          <span className="text-[11px] font-bold uppercase text-violet-200 group-hover:text-white transition-colors">Stackable Assets</span>
+          <span className="text-xs font-bold uppercase text-violet-200 group-hover:text-white transition-colors">Stackable Assets</span>
         </label>
 
         {config.stackable && (
@@ -167,7 +167,7 @@ function StackLimitInput({ value, onCommit }: { value: number; onCommit: (v: num
         onCommit(Math.max(1, Math.min(9999, Math.round(Number(draft)) || 1)));
         setDraft(null);
       }}
-      className="w-20 px-3 py-1.5 bg-black/50 border border-violet-900/60 rounded-lg text-[11px] font-mono text-violet-200 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 transition-all shadow-inner text-center"
+      className="w-20 px-3 py-1.5 bg-black/50 border border-violet-900/60 rounded-lg text-xs font-mono text-violet-200 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 transition-all shadow-inner text-center"
     />
   );
 }

@@ -22,7 +22,7 @@ export function SummaryBar({
   return (
     <div className="relative z-10 pt-6 mt-6 border-t border-violet-900/40">
       <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-        <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono uppercase text-violet-400/80">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-mono uppercase text-violet-400/80">
           <span className="bg-violet-950/40 px-2 py-1 rounded border border-violet-900/30">GRID: <span className="text-violet-200 font-bold">{config.gridCols}×{config.gridRows} ({totalSlots})</span></span>
           <span className="bg-violet-950/40 px-2 py-1 rounded border border-violet-900/30">TYPES: <span className="text-violet-200 font-bold">{enabledSlots.length}</span></span>
           <span className="bg-violet-950/40 px-2 py-1 rounded border border-violet-900/30">EQUIP: <span className="text-violet-200 font-bold">{enabledEquip.length}</span></span>

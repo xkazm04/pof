@@ -17,7 +17,7 @@ export function InteractSection({
           <MousePointer2 className="w-4 h-4 text-violet-400" />
         </div>
         <div>
-          <h4 className="text-[11px] font-bold uppercase text-violet-200 mb-1">UMG Interaction Protocol</h4>
+          <h4 className="text-xs font-bold uppercase text-violet-200 mb-1">UMG Interaction Protocol</h4>
           <p className="text-xs font-mono text-violet-400/60 leading-relaxed uppercase tracking-wider">
             Select input handling routines mapped to the inventory grid widget.
           </p>
@@ -52,7 +52,7 @@ export function InteractSection({
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[11px] text-white font-bold uppercase mb-1 group-hover:text-violet-200 transition-colors">{interaction.label}</div>
+                <div className="text-xs text-white font-bold uppercase mb-1 group-hover:text-violet-200 transition-colors">{interaction.label}</div>
                 <div className="text-xs font-mono text-violet-300/50 uppercase tracking-wider">{interaction.description}</div>
               </div>
               <div className={`p-2 rounded-lg border transition-colors ${enabled ? 'bg-violet-500/20 border-violet-500/40' : 'bg-violet-950/20 border-violet-900/30'}`}>
