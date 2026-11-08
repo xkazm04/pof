@@ -5,7 +5,7 @@
 
 import { getDb } from './db';
 import { ensureLevelDesignTable } from './level-design-db';
-import { SUB_MODULE_MAP, CATEGORIES, getCategoryForSubModule } from './module-registry';
+import { SUB_MODULE_MAP, CATEGORIES, getSubModulesForCategory } from './module-registry';
 import { countChecklist, countAllChecklists } from './checklist-progress';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
@@ -342,12 +342,13 @@ function buildCoreSystemsSection(
   for (const cat of Object.values(CATEGORIES)) {
     if (cat.id === 'evaluator' || cat.id === 'project-setup' || cat.id === 'game-director') continue;
 
-    const moduleIds = cat.subModules;
+    // Resolved through the registry, not `cat.subModules`: Core Engine's list is []
+    // by design (membership is CORE_ENGINE_IDS), so reading it directly dropped every
+    // arpg-* module from the document.
     const catFeatures: string[] = [];
 
-    for (const modId of moduleIds) {
-      const mod = SUB_MODULE_MAP[modId];
-      if (!mod) continue;
+    for (const mod of getSubModulesForCategory(cat.id)) {
+      const modId = mod.id;
 
       const modFeatures = byModule.get(modId) ?? [];
       const { done, total } = countChecklist(mod, checklistProgress[modId]);

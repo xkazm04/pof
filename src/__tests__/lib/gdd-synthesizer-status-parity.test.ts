@@ -56,6 +56,17 @@ describe('synthesizeGDD — improved counts as implemented', () => {
     expect(text).toContain('| Combo Chain | ✅ improved |');
   });
 
+  it('lists Core Engine modules in Core Systems (their category subModules is [] by design)', () => {
+    // CATEGORIES['core-engine'].subModules is empty — membership is CORE_ENGINE_IDS,
+    // resolved by getSubModulesForCategory. Iterating subModules directly dropped all
+    // twelve arpg-* modules from the document.
+    insertFeature('Combo Chain', 'implemented');
+    const gdd = synthesizeGDD('PoF', {}, PROJECT);
+    const core = gdd.sections.find((s) => s.id === 'core-systems');
+    const engine = core?.subsections?.find((s) => s.id === 'systems-core-engine');
+    expect(engine?.content ?? '').toContain('| Combo Chain | ✅ implemented |');
+  });
+
   it('plots improved rows in the review trend', () => {
     getDb()
       .prepare(
