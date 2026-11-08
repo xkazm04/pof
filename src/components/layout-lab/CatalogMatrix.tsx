@@ -6,6 +6,7 @@ import { useReducedMotion } from 'framer-motion';
 import { useCachedArtifacts, retryArtifacts } from './labArtifactCache';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useLabPipelineStore } from './labPipelineStore';
+import { useCatalogStore } from '@/stores/catalogStore';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
 import { buildMatrixRows } from './matrixRows';
@@ -88,10 +89,12 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
 
   // Same judge bridge the rail and the step banner apply — one cached fetch per catalog.
   const verdicts = useCatalogJudgeVerdicts(catalogId);
+  // The live entity index the rail's CheckerContext reads, so link-aware cells grade like the rail.
+  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
 
   const rows = useMemo(
-    () => buildMatrixRows(catalogId, detail?.entities ?? [], byEntity, localByEntity, steps, verdicts),
-    [catalogId, detail?.entities, byEntity, localByEntity, steps, verdicts],
+    () => buildMatrixRows(catalogId, detail?.entities ?? [], byEntity, localByEntity, steps, verdicts, entitiesByCatalog),
+    [catalogId, detail?.entities, byEntity, localByEntity, steps, verdicts, entitiesByCatalog],
   );
 
   // Triage: the board is ranked by the coach ladder then entity id (never storage order) and a

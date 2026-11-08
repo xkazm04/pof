@@ -378,15 +378,6 @@ export function CatalogTree({
     else onSelectEntity(item.id);
   });
 
-  // Keep the roving cursor in sync with the selected catalog + visible-list changes.
-  // Render-phase bail-out (guarded by a prev-value) — NOT an effect, so it stays clear
-  // of react-hooks/set-state-in-effect; React de-dupes the extra setState.
-  const [prevActiveIdx, setPrevActiveIdx] = useState(activeIdx);
-  if (activeIdx !== prevActiveIdx) {
-    setPrevActiveIdx(activeIdx);
-    roving.setActive(activeIdx);
-  }
-
   return (<>
     <SeedDriftNotice t={t} />
     <div
