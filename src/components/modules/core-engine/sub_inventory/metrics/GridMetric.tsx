@@ -1,17 +1,23 @@
 'use client';
 
 import { useMemo } from 'react';
-import { EQUIPMENT_SLOTS, ACCENT } from '../_shared/data';
+import { EQUIPMENT_SLOTS, ACCENT, ALL_ITEM_TYPES, type ItemData } from '../_shared/data';
 import { useInventoryItems } from '../_shared/useInventoryItems';
-import { withOpacity, OPACITY_50, STATUS_ERROR, STATUS_INFO, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { withOpacity, OPACITY_50, STATUS_ERROR, STATUS_INFO, STATUS_SUCCESS, STATUS_WARNING, ACCENT_PURPLE, ACCENT_ORANGE } from '@/lib/chart-colors';
 
 const slotCount = EQUIPMENT_SLOTS.length;
 
-const TYPE_COLORS: Record<string, string> = {
+/** One distinct segment colour per item type (every member of ALL_ITEM_TYPES). */
+export const TYPE_COLORS: Record<ItemData['type'], string> = {
   Weapon: STATUS_ERROR,
   Armor: STATUS_INFO,
+  Accessory: ACCENT_PURPLE,
   Consumable: STATUS_SUCCESS,
+  Quest: STATUS_WARNING,
+  Material: ACCENT_ORANGE,
 };
+
+const COLOR_BY_TYPE: Record<string, string> = TYPE_COLORS;
 
 export function GridMetric() {
   // The catalog store is the system of record for which items exist (not the static seed list).
@@ -27,7 +33,7 @@ export function GridMetric() {
       typeSegments: Object.entries(counts).map(([type, count]) => ({
         type,
         pct: (count / Math.max(items.length, 1)) * 100,
-        color: TYPE_COLORS[type] ?? ACCENT,
+        color: COLOR_BY_TYPE[type] ?? ACCENT,
       })),
     };
   }, [items]);

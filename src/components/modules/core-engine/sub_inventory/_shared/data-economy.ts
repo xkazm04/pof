@@ -82,16 +82,14 @@ export const CLEANUP_SUGGESTIONS = [
 export interface RarityDistEntry {
   rarity: string;
   expected: number;
-  actual: number;
   color: string;
 }
 
 export const RARITY_DIST: RarityDistEntry[] = [
-  { rarity: 'Common', expected: 0.40, actual: 0.55, color: RARITY_COLORS.Common },
-  { rarity: 'Uncommon', expected: 0.30, actual: 0.25, color: RARITY_COLORS.Uncommon },
-  { rarity: 'Rare', expected: 0.20, actual: 0.15, color: RARITY_COLORS.Rare },
-  { rarity: 'Epic', expected: 0.08, actual: 0.05, color: RARITY_COLORS.Epic },
-  { rarity: 'Legendary', expected: 0.02, actual: 0.0, color: RARITY_COLORS.Legendary },
+  { rarity: 'Common', expected: 0.40, color: RARITY_COLORS.Common },
+  { rarity: 'Uncommon', expected: 0.30, color: RARITY_COLORS.Uncommon },
+  { rarity: 'Rare', expected: 0.20, color: RARITY_COLORS.Rare },
+  { rarity: 'Epic', expected: 0.08, color: RARITY_COLORS.Epic },
+  { rarity: 'Legendary', expected: 0.02, color: RARITY_COLORS.Legendary },
 ];
 
-export const LUCK_SCORE = 72;

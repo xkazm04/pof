@@ -27,3 +27,29 @@ export function deriveLifecycle(artifacts: PipelineArtifact[]): LifecycleState {
   if (byStep.get(STEP_GENERATE)?.status === 'fail') return 'failed';
   return 'planned';
 }
+
+/** Content hash (FNV-1a, hex) of an exported DataTable json: the identity of what was generated. */
+export function hashExportJson(json: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < json.length; i++) {
+    h ^= json.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+/**
+ * Hash of the json the recorded generate artifact exported (its `jsonHash`, else the hash of its
+ * stored `json` for rows written before the hash existed); null when nothing was generated.
+ */
+export function generatedJsonHash(artifacts: PipelineArtifact[]): string | null {
+  const gen = artifacts.find((a) => a.step === STEP_GENERATE && a.status === 'pass');
+  if (!gen) return null;
+  if (typeof gen.data?.jsonHash === 'string') return gen.data.jsonHash;
+  return typeof gen.data?.json === 'string' ? hashExportJson(gen.data.json) : null;
+}
+
+/** A recorded export is stale when the ruleset's current json no longer hashes to what was generated. */
+export function isExportStale(generatedHash: string | null, currentJson: string): boolean {
+  return generatedHash !== null && generatedHash !== hashExportJson(currentJson);
+}

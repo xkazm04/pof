@@ -2,13 +2,13 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Play, Target, Activity } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   OPACITY_20, OPACITY_25, OPACITY_50,
   GLOW_SM,
   withOpacity,
 } from '@/lib/chart-colors';
-import { EASE_OUT } from '@/lib/motion';
+import { EASE_OUT, motionSafe } from '@/lib/motion';
 import { focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { economyVerdicts, summarizeRun } from '@/lib/economy/item-economy-verdicts';
@@ -32,6 +32,9 @@ export function ItemEconomySimulator({ moduleId }: Props) {
   // the Balance Advisor can quote it; only the sub-tab selection stays local.
   const { config, result, status, error, extendNote, updateConfig, start, execute } = useItemEconomySessionStore();
   const [activeTab, setActiveTab] = useState('power');
+  const prefersReduced = useReducedMotion();
+  const tabTransition = motionSafe(TAB_TRANSITION, prefersReduced);
+  const enterY = prefersReduced ? 0 : 8;
   const isRunning = status === 'running';
 
   // One deferred-work site (the rAF callsite inventory in suspendable-raf.test pins it):
@@ -117,20 +120,20 @@ export function ItemEconomySimulator({ moduleId }: Props) {
         {isRunning ? (
           <motion.div
             key="skeleton"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: enterY }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={TAB_TRANSITION}
+            exit={{ opacity: 0, y: -enterY }}
+            transition={tabTransition}
           >
             <SimulationSkeleton />
           </motion.div>
         ) : summary && result ? (
           <motion.div
             key="results"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: enterY }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={TAB_TRANSITION}
+            exit={{ opacity: 0, y: -enterY }}
+            transition={tabTransition}
           >
             <SimulationResults
               summary={summary}
@@ -146,10 +149,10 @@ export function ItemEconomySimulator({ moduleId }: Props) {
         ) : (
           <motion.div
             key="empty"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: enterY }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={TAB_TRANSITION}
+            exit={{ opacity: 0, y: -enterY }}
+            transition={tabTransition}
           >
             <BlueprintPanel color={ACCENT} className="flex flex-col items-center justify-center py-16">
               <Activity className="w-10 h-10 text-text-muted/20 mb-3" />

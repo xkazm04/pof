@@ -25,3 +25,18 @@ describe('Item Power vs. Level chart', () => {
     expect(points).toHaveLength(6);
   });
 });
+
+describe('Gear cadence and average gold bars', () => {
+  it('draw unreached brackets as unsampled stubs, never as measured zeros', () => {
+    const result = unreachedTop();
+    const { container } = render(<PowerTab result={result} config={result.config} />);
+    const unsampled = container.querySelectorAll('[data-sampled="false"]');
+    const sampled = container.querySelectorAll('[data-sampled="true"]');
+    // 2 unreached brackets x 2 bar charts; 6 sampled x 2.
+    expect(unsampled).toHaveLength(4);
+    expect(sampled).toHaveLength(12);
+    const titles = Array.from(container.querySelectorAll('[title]')).map((e) => e.getAttribute('title') ?? '');
+    expect(titles.filter((t) => /Lv[78]: 0 upgrades|Lv[78]: 0g avg/.test(t))).toHaveLength(0);
+    expect(titles.filter((t) => /Lv[78]: unsampled/.test(t))).toHaveLength(4);
+  });
+});

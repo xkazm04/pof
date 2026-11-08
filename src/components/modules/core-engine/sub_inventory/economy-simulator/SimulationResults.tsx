@@ -1,12 +1,12 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ACCENT_EMERALD, ACCENT_CYAN,
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL,
   OPACITY_10, OPACITY_20, OPACITY_25, withOpacity,
 } from '@/lib/chart-colors';
-import { EASE_OUT } from '@/lib/motion';
+import { EASE_OUT, motionSafe } from '@/lib/motion';
 import { GlowStat } from '../../unique-tabs/_design';
 import { SubTabNavigation } from '../../unique-tabs/_shared';
 import type { ItemEconomyConfig, ItemEconomyResult } from '@/lib/economy/item-economy-engine';
@@ -74,6 +74,8 @@ function CoverageStrip({ result, onExtend, extendNote }: Pick<Props, 'result' | 
 export function SimulationResults({
   summary, result, verdicts, config, activeTab, setActiveTab, onExtend, extendNote,
 }: Props) {
+  const prefersReduced = useReducedMotion();
+  const enterY = prefersReduced ? 0 : 8;
   const inflation = verdicts.find((v) => v.family === 'rarity-inflation')!;
   const saturation = verdicts.find((v) => v.family === 'modifier-saturation')!;
   return (
@@ -105,10 +107,10 @@ export function SimulationResults({
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={activeTab}
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: enterY }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={TAB_TRANSITION}
+          exit={{ opacity: 0, y: -enterY }}
+          transition={motionSafe(TAB_TRANSITION, prefersReduced)}
         >
           {activeTab === 'power' && <PowerTab result={result} config={config} />}
           {activeTab === 'rarity' && <RarityTab result={result} config={config} inflation={inflation} />}
