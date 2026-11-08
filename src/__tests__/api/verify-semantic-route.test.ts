@@ -88,3 +88,22 @@ describe('verify-semantic — input guard', () => {
     expect(readFile).not.toHaveBeenCalled();
   });
 });
+
+describe('verify-semantic - request honesty', () => {
+  it('a project path that does not exist is 404, not every item missing', async () => {
+    const gone = join(tmpdir(), `pof-verify-gone-${process.pid}-${Date.now()}`);
+    const res = await post({ projectPath: gone, items: [{ moduleId: 'arpg-inventory', itemId: 'ai-1' }] });
+    expect(res.status).toBe(404);
+    expect((await res.json()).data).toBeUndefined();
+  });
+
+  it.each([
+    ['a string', 'abc'],
+    ['a null item', [null]],
+    ['a non-string itemId', [{ itemId: 7 }]],
+    ['a non-string moduleId', [{ moduleId: 1, itemId: 'x' }]],
+  ])('refuses items as %s with 400', async (_label, items) => {
+    const root = project({ 'Source/M/A.h': OTHER_H });
+    expect((await post({ projectPath: root, items })).status).toBe(400);
+  });
+});

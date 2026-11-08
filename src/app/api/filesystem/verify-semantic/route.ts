@@ -46,8 +46,14 @@ export async function POST(request: NextRequest) {
     if (!body.projectPath || !body.items?.length) {
       return apiError('projectPath and items[] required', 400);
     }
+    if (!Array.isArray(body.items) || !body.items.every(isVerifyItem)) {
+      return apiError('items must be an array of { itemId, moduleId? } strings', 400);
+    }
     const checked = checkLocalPath(body.projectPath, 'projectPath');
     if (!checked.ok) return apiError(checked.error, 400);
+    // A wrong path must not read as "every item is missing": callers record that verdict.
+    const projectIsDir = await fsPromises.stat(checked.data).then((s) => s.isDirectory(), () => false);
+    if (!projectIsDir) return apiError('Project path does not exist', 404);
 
     const sourceDir = path.join(checked.data, 'Source');
 
@@ -155,6 +161,12 @@ export async function POST(request: NextRequest) {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 import { type SemanticExpectation, type HeaderParseResult } from '@/lib/cpp-semantic-parser';
+
+function isVerifyItem(value: unknown): value is VerifyRequest['items'][number] {
+  if (typeof value !== 'object' || value === null) return false;
+  const { moduleId, itemId } = value as Record<string, unknown>;
+  return typeof itemId === 'string' && (moduleId === undefined || typeof moduleId === 'string');
+}
 
 function findBestMatch(
   parsedHeaders: HeaderParseResult[],
