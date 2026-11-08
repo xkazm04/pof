@@ -15,14 +15,17 @@ interface Props {
   accent: string;
 }
 
-const TYPE_OPTIONS = ['all', 'Weapon', 'Armor', 'Accessory', 'Consumable', 'Material', 'Quest'] as const;
+/** Rows rendered at once; the overflow is announced, never silently dropped. */
+const PALETTE_ROW_CAP = 40;
+
+const TYPE_OPTIONS =['all', 'Weapon', 'Armor', 'Accessory', 'Consumable', 'Material', 'Quest'] as const;
 
 export function SpatialStashPalette({ accent }: Props) {
   const [q, setQ] = useState('');
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>('all');
 
   const catalogItems = useInventoryItems();
-  const items = useMemo(() => {
+  const matches = useMemo(() => {
     let pool: ItemData[] = catalogItems;
     if (type !== 'all') pool = pool.filter((i) => i.type === type);
     if (q) {
@@ -33,8 +36,9 @@ export function SpatialStashPalette({ accent }: Props) {
           i.subtype.toLowerCase().includes(lower),
       );
     }
-    return pool.slice(0, 40);
+    return { shown: pool.slice(0, PALETTE_ROW_CAP), total: pool.length };
   }, [catalogItems, q, type]);
+  const { shown: items, total } = matches;
 
   return (
     <div className="flex flex-col gap-2 w-full max-w-[280px]">
@@ -73,6 +77,11 @@ export function SpatialStashPalette({ accent }: Props) {
         {items.map((item) => (
           <PaletteRow key={item.id} item={item} />
         ))}
+        {total > items.length && (
+          <p role="status" className="text-xs font-mono text-text-muted py-1">
+            Showing {items.length} of {total} — search or filter to reach the rest.
+          </p>
+        )}
         {items.length === 0 && (
           <p className="text-[10px] font-mono text-text-muted py-2">No items match.</p>
         )}
