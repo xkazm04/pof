@@ -13,7 +13,7 @@ export {
   SAMPLE_RECIPE, CRYSTAL_STAFF_SOURCES,
   INVENTORY_GROUPS, INVENTORY_TOTAL, INVENTORY_USED, INVENTORY_GOLD_VALUE,
   INVENTORY_BY_RARITY, CLEANUP_SUGGESTIONS,
-  RARITY_DIST, LUCK_SCORE,
+  RARITY_DIST,
 } from './data-economy';
 export type { CraftMaterial, CraftRecipe, DropSource, InventorySlotGroup, RarityDistEntry } from './data-economy';
 export {
