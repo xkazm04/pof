@@ -24,6 +24,8 @@ import {
   MODULE_PREREQUISITES,
   type FeatureDefinition,
 } from '@/lib/feature-definitions';
+import { SUB_MODULES } from '@/lib/module-registry';
+import { SUB_MODULE_IDS } from '@/types/modules';
 
 type FeatureDefs = Partial<Record<string, FeatureDefinition[]>>;
 type Prereqs = Partial<Record<string, string[]>>;
@@ -133,5 +135,93 @@ describe('module prerequisite graph integrity (MODULE_PREREQUISITES)', () => {
 
   it('the cycle checker bites on a seeded violation', () => {
     expect(cyclesIn({ a: ['b'], b: ['c'], c: ['a'], d: [] })).toEqual(['a > b > c > a']);
+  });
+});
+
+// ─── Checklists and quick actions (module-registry.ts) ──────────────────────
+//
+// - Checklist progress is keyed by item id, so two items sharing an id tick and
+//   untick together and the module's X/Y counts one of them twice.
+// - nba-engine resolves `ChecklistItem.dependsOn` with `checklist.find(...)` and
+//   DROPS a ref that matches no sibling, so a misspelt prerequisite is silently
+//   not enforced; a cycle makes every item in it wait on another forever.
+// - Quick actions render keyed by id (QuickActionsPanel) and the global search
+//   resolves them by id, so a duplicate id runs the wrong prompt.
+
+interface RegistryModule {
+  id: string;
+  checklist?: { id: string; dependsOn?: string[] }[];
+  quickActions: { id: string }[];
+}
+
+function duplicatesOf(ids: string[]): string[] {
+  return ids.filter((id, i) => ids.indexOf(id) !== i);
+}
+
+function duplicateChecklistIds(mods: RegistryModule[]): string[] {
+  return mods.flatMap((m) => duplicatesOf((m.checklist ?? []).map((c) => c.id)).map((id) => `${m.id}:${id}`));
+}
+
+function danglingChecklistDeps(mods: RegistryModule[]): string[] {
+  const out: string[] = [];
+  for (const m of mods) {
+    const ids = new Set((m.checklist ?? []).map((c) => c.id));
+    for (const c of m.checklist ?? []) {
+      for (const dep of c.dependsOn ?? []) if (!ids.has(dep)) out.push(`${m.id}:${c.id} -> ${dep}`);
+    }
+  }
+  return out;
+}
+
+function checklistCycles(mods: RegistryModule[]): string[] {
+  return mods.flatMap((m) => {
+    // Merge deps across duplicate ids so a duplicate can never hide a cycle.
+    const graph: Record<string, string[]> = {};
+    for (const c of m.checklist ?? []) graph[c.id] = [...(graph[c.id] ?? []), ...(c.dependsOn ?? [])];
+    return cyclesIn(graph).map((cycle) => `${m.id}: ${cycle}`);
+  });
+}
+
+function duplicateQuickActionIds(mods: RegistryModule[]): string[] {
+  return mods.flatMap((m) => duplicatesOf(m.quickActions.map((a) => a.id)).map((id) => `${m.id}:${id}`));
+}
+
+describe('registry integrity (SUB_MODULES)', () => {
+  it('declares every SubModuleId exactly once', () => {
+    const ids = SUB_MODULES.map((m) => m.id as string);
+    expect(duplicatesOf(ids)).toEqual([]);
+    expect(SUB_MODULE_IDS.filter((id) => !ids.includes(id))).toEqual([]);
+  });
+
+  it('checklist item ids are unique within each module', () => {
+    expect(duplicateChecklistIds(SUB_MODULES)).toEqual([]);
+  });
+
+  it('every checklist dependsOn names a sibling item', () => {
+    expect(danglingChecklistDeps(SUB_MODULES)).toEqual([]);
+  });
+
+  it('checklist prerequisites are acyclic', () => {
+    expect(checklistCycles(SUB_MODULES)).toEqual([]);
+  });
+
+  it('quick-action ids are unique within each module', () => {
+    expect(duplicateQuickActionIds(SUB_MODULES)).toEqual([]);
+  });
+
+  it('the checkers bite on a seeded violation', () => {
+    const seeded: RegistryModule[] = [{
+      id: 'mod-a',
+      checklist: [
+        { id: 'a-1', dependsOn: ['a-2'] },
+        { id: 'a-2', dependsOn: ['a-1', 'a-9'] },
+        { id: 'a-1' },
+      ],
+      quickActions: [{ id: 'q-1' }, { id: 'q-1' }],
+    }];
+    expect(duplicateChecklistIds(seeded)).toEqual(['mod-a:a-1']);
+    expect(danglingChecklistDeps(seeded)).toEqual(['mod-a:a-2 -> a-9']);
+    expect(checklistCycles(seeded)).toEqual(['mod-a: a-1 > a-2 > a-1']);
+    expect(duplicateQuickActionIds(seeded)).toEqual(['mod-a:q-1']);
   });
 });
