@@ -11,6 +11,7 @@ import ceilingsJson from './craft-ceilings.json';
 import { lensForStep, type DeliverableClass, type LensId } from './lens-map';
 import { LENS_VERSIONS } from './lens-versions';
 import { sameContent } from '@/lib/judge/bindingRule';
+import { comparableWindowStart } from '@/lib/judge/verdictTrend';
 import {
   craftOf,
   craftRank,
@@ -94,6 +95,12 @@ export interface CraftTrend {
   /** Best / worst levels across the kept window (`null` when empty). */
   best: GaugedCraftLevel | null;
   worst: GaugedCraftLevel | null;
+  /**
+   * How many trailing gauges share the newest gauge's lens version AND model. `delta`,
+   * `direction`, `best` and `worst` are drawn from exactly these: a lens bump or a model swap
+   * changes the rubric, so a rung difference across it is not craft movement.
+   */
+  comparable: number;
 }
 
 /**
@@ -133,13 +140,18 @@ export function buildCraftTrend(history: readonly CraftTrendInput[]): CraftTrend
       direction: 'none',
       best: points.length ? points[0].aLevel : null,
       worst: points.length ? points[0].aLevel : null,
+      comparable: points.length,
     };
   }
 
-  const delta = craftRank(points[points.length - 1].aLevel) - craftRank(points[0].aLevel);
-  let best = points[0].aLevel;
-  let worst = points[0].aLevel;
-  for (const p of points) {
+  const window = points.slice(comparableWindowStart(points.map((p) => ({ version: p.lensVersion, model: p.model }))));
+  if (window.length < 2) {
+    return { points, delta: null, direction: 'none', best: window[0].aLevel, worst: window[0].aLevel, comparable: window.length };
+  }
+  const delta = craftRank(window[window.length - 1].aLevel) - craftRank(window[0].aLevel);
+  let best = window[0].aLevel;
+  let worst = window[0].aLevel;
+  for (const p of window) {
     if (craftRank(p.aLevel) > craftRank(best)) best = p.aLevel;
     if (craftRank(p.aLevel) < craftRank(worst)) worst = p.aLevel;
   }
@@ -149,6 +161,7 @@ export function buildCraftTrend(history: readonly CraftTrendInput[]): CraftTrend
     direction: delta > 0 ? 'improved' : delta < 0 ? 'regressed' : 'unchanged',
     best,
     worst,
+    comparable: window.length,
   };
 }
 
@@ -175,14 +188,15 @@ export interface CraftMovement {
  */
 export function craftMovementOf(t: CraftTrend): CraftMovement | undefined {
   if (t.points.length < 2 || t.delta === null) return undefined;
-  const first = t.points[0];
-  const last = t.points[t.points.length - 1];
+  const window = t.points.slice(t.points.length - t.comparable);
+  const first = window[0];
+  const last = window[window.length - 1];
   return {
     from: first.aLevel,
     to: last.aLevel,
     delta: t.delta,
     direction: t.delta > 0 ? 'improved' : t.delta < 0 ? 'regressed' : 'unchanged',
-    gauges: t.points.length,
+    gauges: window.length,
     ...(last.judgedAt ? { at: last.judgedAt } : {}),
   };
 }
@@ -208,9 +222,13 @@ export function craftMovementLabel(m: CraftMovement | undefined): string {
 export function craftTrendSummary(t: CraftTrend): string {
   if (t.points.length === 0) return 'No craft gauge recorded for this step yet.';
   if (t.points.length === 1) return `Gauged once at ${t.points[0].aLevel} — nothing to compare against yet.`;
-  const sign = t.delta! > 0 ? '+' : '';
-  return `${t.points.length} gauges · ${t.direction} ${sign}${t.delta} rungs (${t.points[0].aLevel} → ${
-    t.points[t.points.length - 1].aLevel
+  if (t.delta === null) {
+    return `${t.points.length} gauges, but the lens or model changed since the earlier ones — the latest (${t.points[t.points.length - 1].aLevel}) is not comparable to them yet.`;
+  }
+  const window = t.points.slice(t.points.length - t.comparable);
+  const sign = t.delta > 0 ? '+' : '';
+  return `${window.length} gauges · ${t.direction} ${sign}${t.delta} rungs (${window[0].aLevel} → ${
+    window[window.length - 1].aLevel
   }), best ${t.best} / worst ${t.worst}.`;
 }
 
