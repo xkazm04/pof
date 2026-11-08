@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Loader2,
-  Volume2, Zap,
+  Volume2, Zap, X,
 } from 'lucide-react';
 import {
   ACCENT_EMERALD,
@@ -55,6 +55,8 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   /** The event whose tied suggestions the user asked to pick from. */
   const [pickFor, setPickFor] = useState<string | null>(null);
+  /** The most recently deleted row, kept so Undo can put it back. */
+  const [lastDeleted, setLastDeleted] = useState<{ event: AudioEvent; index: number } | null>(null);
 
   // The generated-audio library — two GETs, no writes, nothing generated or
   // played. `null` while loading or unreadable, so coverage reads UNKNOWN.
@@ -113,9 +115,26 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
   }, []);
 
   const deleteEvent = useCallback((id: string) => {
+    const index = events.findIndex((e) => e.id === id);
+    if (index >= 0) setLastDeleted({ event: events[index], index });
     setEvents((prev) => prev.filter((e) => e.id !== id));
     if (editingEventId === id) setEditingEventId(null);
-  }, [editingEventId]);
+  }, [editingEventId, events]);
+
+  // Delete is one click on a hover-revealed X beside the row target, so it is
+  // recoverable: Undo re-inserts the exact row (id, tags, bound sound set) at
+  // its old position.
+  const undoDelete = useCallback(() => {
+    if (!lastDeleted) return;
+    const { event, index } = lastDeleted;
+    setEvents((prev) => {
+      if (prev.some((e) => e.id === event.id)) return prev;
+      const next = [...prev];
+      next.splice(Math.min(index, next.length), 0, event);
+      return next;
+    });
+    setLastDeleted(null);
+  }, [lastDeleted]);
 
   const updateEvent = useCallback((id: string, patch: Partial<AudioEvent>) => {
     setEvents((prev) => prev.map((e) => e.id === id ? { ...e, ...patch } : e));
@@ -251,6 +270,33 @@ export function AudioEventCatalog({ sceneId, onGenerate, isGenerating }: AudioEv
             );
           })}
         </div>
+
+        {lastDeleted && (
+          <div
+            role="status"
+            className="flex items-center justify-between gap-3 px-4 py-2 rounded-lg border border-border bg-surface text-sm text-text"
+          >
+            <span>Deleted event &ldquo;{lastDeleted.event.name}&rdquo;.</span>
+            <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={undoDelete}
+                className="px-3 py-1 rounded-md font-semibold border border-border hover:bg-surface-hover focus-ring"
+                style={{ color: ACCENT }}
+              >
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={() => setLastDeleted(null)}
+                aria-label="Dismiss undo"
+                className="px-2 py-1 rounded-md text-text-muted hover:text-text focus-ring"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            </span>
+          </div>
+        )}
 
         {/* Category groups */}
         <div className="space-y-6">
