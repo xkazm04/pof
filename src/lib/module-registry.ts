@@ -16,6 +16,7 @@ import {
   UserPlus, Users, Volume2, Workflow, Wrench, Zap,
 } from 'lucide-react';
 import type { CategoryDefinition, SubModuleDefinition, SubModuleId, ChecklistItem, QuickAction } from '@/types/modules';
+import { MODULE_COLORS, ACCENT_ORANGE } from '@/lib/chart-colors';
 import {
   SAVE_GAME_CLASS, SAVE_SCHEMA_VERSION, SAVE_VERSION_FIELD, SAVE_PERSISTED_FIELDS, SAVE_EPHEMERAL_FIELDS,
   saveGamePropertyDeclarations,
@@ -398,7 +399,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     id: 'project-setup',
     label: 'Project Setup',
     icon: Rocket,
-    accentColor: '#00ff88',
+    accentColor: MODULE_COLORS.setup,
     accentColorVar: 'var(--setup)',
     subModules: [],
   },
@@ -406,7 +407,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     id: 'core-engine',
     label: 'Core Engine',
     icon: Code,
-    accentColor: '#3b82f6',
+    accentColor: MODULE_COLORS.core,
     accentColorVar: 'var(--core)',
     // Declared like every other category, so every reader of subModules (search
     // index, search intents, getSubModulesForCategory) sees the arpg-* modules.
@@ -416,7 +417,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     id: 'content',
     label: 'Content',
     icon: Palette,
-    accentColor: '#f59e0b',
+    accentColor: MODULE_COLORS.content,
     accentColorVar: 'var(--content)',
     subModules: ['models', 'animations', 'materials', 'level-design', 'ui-hud', 'audio'],
   },
@@ -424,7 +425,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     id: 'game-systems',
     label: 'Game Systems',
     icon: Gamepad2,
-    accentColor: '#8b5cf6',
+    accentColor: MODULE_COLORS.systems,
     accentColorVar: 'var(--systems)',
     subModules: ['ai-behavior', 'physics', 'multiplayer', 'save-load', 'input-handling', 'dialogue-quests', 'packaging', 'blueprint-transpiler'],
   },
@@ -432,7 +433,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     id: 'evaluator',
     label: 'Evaluator',
     icon: Radar,
-    accentColor: '#ef4444',
+    accentColor: MODULE_COLORS.evaluator,
     accentColorVar: 'var(--evaluator)',
     subModules: ['game-design-doc'],
   },
@@ -440,7 +441,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     id: 'game-director',
     label: 'Game Director',
     icon: Clapperboard,
-    accentColor: '#f97316',
+    accentColor: ACCENT_ORANGE,
     accentColorVar: 'var(--director)',
     subModules: [],
   },
@@ -448,7 +449,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     id: 'visual-gen',
     label: 'Asset Studio',
     icon: Shapes,
-    accentColor: '#06b6d4',
+    accentColor: MODULE_COLORS['visual-gen'],
     accentColorVar: 'var(--visual-gen)',
     subModules: ['asset-viewer', 'asset-forge', 'material-lab', 'blender-pipeline', 'asset-browser', 'import-automation', 'auto-rig', 'procedural-engine', 'scene-composer'],
   },
