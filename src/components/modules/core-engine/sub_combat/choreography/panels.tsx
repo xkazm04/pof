@@ -9,6 +9,7 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
   withOpacity, OPACITY_37, OPACITY_8, OPACITY_25,
 } from '@/lib/chart-colors';
+import { downloadBlob } from '@/lib/download';
 import type { WaveDef, ChoreographySimResult } from '@/lib/combat/choreography-sim';
 import type { TuningOverrides } from '@/types/combat-simulator';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
@@ -171,13 +172,7 @@ export function ExportPanel({ exportConfig, onCopy, copied }: {
             {copied ? <Check className="w-2.5 h-2.5" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-2.5 h-2.5 text-text-muted" />}
             <span className="text-text-muted">{copied ? 'Copied' : 'Copy'}</span>
           </button>
-          <button onClick={() => {
-            const blob = new Blob([exportConfig], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'EncounterConfig.h'; a.click();
-            URL.revokeObjectURL(url);
-          }}
+          <button onClick={() => downloadBlob(new Blob([exportConfig], { type: 'text/plain' }), 'EncounterConfig.h')}
             className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
             <Download className="w-2.5 h-2.5 text-text-muted" />
             <span className="text-text-muted">.h</span>
