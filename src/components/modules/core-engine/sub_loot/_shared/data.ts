@@ -86,13 +86,21 @@ export interface TreemapRect {
   affixes: string[];
 }
 
-export const TREEMAP_DATA: TreemapRect[] = [
-  { name: 'Common', probability: 50, color: RARITY_COLOR_MAP.Common, affixes: ['Sturdy', 'Worn', 'Basic', 'Plain'] },
-  { name: 'Uncommon', probability: 25, color: RARITY_COLOR_MAP.Uncommon, affixes: ['Keen', 'Swift', 'Reinforced'] },
-  { name: 'Rare', probability: 15, color: RARITY_COLOR_MAP.Rare, affixes: ['Blazing', 'Frozen', 'Vampiric'] },
-  { name: 'Epic', probability: 8, color: RARITY_COLOR_MAP.Epic, affixes: ['Celestial', 'Void-touched'] },
-  { name: 'Legendary', probability: 2, color: RARITY_COLOR_MAP.Legendary, affixes: ['Godslayer'] },
-];
+const TREEMAP_AFFIXES: Record<string, string[]> = {
+  Common: ['Sturdy', 'Worn', 'Basic', 'Plain'],
+  Uncommon: ['Keen', 'Swift', 'Reinforced'],
+  Rare: ['Blazing', 'Frozen', 'Vampiric'],
+  Epic: ['Celestial', 'Void-touched'],
+  Legendary: ['Godslayer'],
+};
+
+/** Probability per tier is derived from RARITY_TIERS (the one authority); only the affix names live here. */
+export const TREEMAP_DATA: TreemapRect[] = RARITY_TIERS.map((t) => ({
+  name: t.name,
+  probability: (t.weight / TOTAL_WEIGHT) * 100,
+  color: t.color,
+  affixes: TREEMAP_AFFIXES[t.name] ?? [],
+}));
 
 /* -- 7.3 Loot Table Diff data --------------------------------------------- */
 
