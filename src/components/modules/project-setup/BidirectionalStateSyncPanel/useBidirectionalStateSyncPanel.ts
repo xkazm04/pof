@@ -6,7 +6,7 @@ import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
 import { appendLog, deriveConflicts, sameLedger, type Ledger } from '@/lib/ue5-bridge/sync-ledger';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { MAX_LOG_ENTRIES } from './constants';
-import { nextLogId, truncate } from './helpers';
+import { nextLogId, parseViewTarget, truncate } from './helpers';
 import { diffSyncState, tallyEvents, EMPTY_TOTALS, type SyncView, type SyncTotals } from './syncEvents';
 import { planResolution, type ConflictChoice } from './conflictResolution';
 import type { WriteReceipt } from '@/types/ue5-bridge';
@@ -104,9 +104,9 @@ export function useBidirectionalStateSyncPanel() {
   });
 
   const handleViewportPush = useCallback(() => {
-    const loc = { x: parseFloat(viewTarget.x) || 0, y: parseFloat(viewTarget.y) || 0, z: parseFloat(viewTarget.z) || 0 };
-    const rot = { pitch: parseFloat(viewTarget.pitch) || 0, yaw: parseFloat(viewTarget.yaw) || 0, roll: parseFloat(viewTarget.roll) || 0 };
-    const fov = parseFloat(viewTarget.fov) || 90;
+    const target = parseViewTarget(viewTarget);
+    if (!target) return; // the button is disabled; a blank field must never mean "go to 0"
+    const { loc, rot, fov } = target;
 
     const receipts = [
       setProperty('/Editor/ViewportClient', 'CameraLocation', loc),

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, MapPin, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { ACCENT_CYAN, OPACITY_8 } from '@/lib/chart-colors';
 import type { UE5EditorSnapshot } from '@/types/ue5-bridge';
+import { parseViewTarget } from './helpers';
 import type { ViewportTarget } from './types';
 
 export function ViewportTeleportSection({
@@ -83,7 +84,9 @@ export function ViewportTeleportSection({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleViewportPush}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors"
+                  disabled={parseViewTarget(viewTarget) === null}
+                  title={parseViewTarget(viewTarget) === null ? 'Every field needs a number, and FOV must be between 0 and 180' : undefined}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors disabled:opacity-40"
                   style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}${OPACITY_8}`, color: ACCENT_CYAN }}
                 >
                   <MapPin className="w-3 h-3" /> Teleport Camera

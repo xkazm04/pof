@@ -150,3 +150,34 @@ describe('Take UE5 clears the row chip as well as the conflict list', () => {
     expect(outcomeFor(result.current.rowWrites, '/Game/A', 'Health')).toBeNull();
   });
 });
+
+describe('viewport teleport refuses incomplete targets', () => {
+  const setFrames = (ws: FakeWebSocket) => ws.sent.filter((f) => f.includes('set.property'));
+
+  function openTeleport() {
+    const live = renderLivePanel();
+    fireEvent.click(screen.getByRole('button', { name: /Viewport Teleport/ }));
+    return { ...live, inputs: live.container.querySelectorAll<HTMLInputElement>('input[type="number"]') };
+  }
+
+  it('a cleared axis disables Teleport and sends no frame', () => {
+    const { ws, inputs } = openTeleport();
+    fireEvent.change(inputs[0], { target: { value: '' } });
+    const go = screen.getByRole('button', { name: /Teleport Camera/ }) as HTMLButtonElement;
+    expect(go.disabled).toBe(true);
+    fireEvent.click(go);
+    expect(setFrames(ws)).toEqual([]);
+  });
+
+  it('a FOV of 0 is refused rather than replaced', () => {
+    const { inputs } = openTeleport();
+    fireEvent.change(inputs[6], { target: { value: '0' } });
+    expect((screen.getByRole('button', { name: /Teleport Camera/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('control: the default target sends its three frames', () => {
+    const { ws } = openTeleport();
+    fireEvent.click(screen.getByRole('button', { name: /Teleport Camera/ }));
+    expect(setFrames(ws)).toHaveLength(3);
+  });
+});
