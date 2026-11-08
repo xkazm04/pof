@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, act } from '@testing-library/react';
 import type { ChecklistItem, ScanState } from '@/components/modules/project-setup/useProjectScan';
 import type { UE5EditorSnapshot } from '@/types/ue5-bridge';
 import { mockFetchRoutes } from '@/__tests__/setup';
@@ -132,8 +132,8 @@ describe('Project Setup mounts Live State Sync', () => {
 
 describe('the header never offers an action that would undo the handshake', () => {
   it('while connecting: a disabled "Connecting…" and no enabled Connect', () => {
-    useUE5BridgeStore.setState({ wsStatus: 'connecting' });
-    render(<LiveStateSyncPanel />);
+    render(<LiveStateSyncPanel />); // the mount reads the client, so set the store after it
+    act(() => useUE5BridgeStore.setState({ wsStatus: 'connecting' }));
 
     const busy = screen.getByRole('button', { name: 'Connecting…' });
     expect((busy as HTMLButtonElement).disabled).toBe(true);
@@ -144,8 +144,8 @@ describe('the header never offers an action that would undo the handshake', () =
 
 describe('a retained snapshot is not presented as live', () => {
   it('reconnecting with the last frame kept: sections render beside a stale note', () => {
-    useUE5BridgeStore.setState({ wsStatus: 'reconnecting', liveSnapshot: SNAPSHOT });
-    render(<LiveStateSyncPanel />);
+    render(<LiveStateSyncPanel />); // the mount reads the client, so set the store after it
+    act(() => useUE5BridgeStore.setState({ wsStatus: 'reconnecting', liveSnapshot: SNAPSHOT }));
 
     // The last frame is still worth showing…
     expect(screen.getByRole('region', { name: 'Selected Actors' }).textContent).toContain('BP_VSEnemy');
@@ -156,8 +156,8 @@ describe('a retained snapshot is not presented as live', () => {
   });
 
   it('connected: no stale note', () => {
-    useUE5BridgeStore.setState({ wsStatus: 'connected', liveSnapshot: SNAPSHOT });
-    render(<LiveStateSyncPanel />);
+    render(<LiveStateSyncPanel />); // the mount reads the client, so set the store after it
+    act(() => useUE5BridgeStore.setState({ wsStatus: 'connected', liveSnapshot: SNAPSHOT }));
     expect(screen.queryByTestId('live-state-stale')).toBeNull();
   });
 });

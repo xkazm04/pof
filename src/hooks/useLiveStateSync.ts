@@ -55,8 +55,10 @@ export function useLiveStateSync(): UseLiveStateSyncResult {
   const setLiveStateRef = useRef(setLiveState);
   useEffect(() => { setLiveStateRef.current = setLiveState; }, [setLiveState]);
 
-  // Subscribe to the singleton client and bridge into store
+  // Subscribe to the singleton client and bridge into store. The socket outlives this hook,
+  // so read its state first: the store is written only here and may predate the last unmount.
   useEffect(() => {
+    setLiveStateRef.current(ue5LiveState.getState());
     const unsub = ue5LiveState.onStateChange((state) => {
       setLiveStateRef.current(state);
     });
