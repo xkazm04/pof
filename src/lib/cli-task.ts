@@ -228,12 +228,18 @@ export function mergeCallbackBody(
   staticFields: Record<string, unknown>,
   rawPayload: string,
 ): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(rawPayload) as Record<string, unknown>;
-    return { ok: true, body: { ...parsed, ...staticFields } };
+    parsed = JSON.parse(rawPayload);
   } catch {
     return { ok: false, error: 'Invalid JSON in callback payload' };
   }
+  // The contract is a JSON OBJECT: null / an array / a primitive would spread into
+  // the static fields alone (or index keys) and post as if Claude had reported.
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { ok: false, error: 'Callback payload must be a JSON object' };
+  }
+  return { ok: true, body: { ...(parsed as Record<string, unknown>), ...staticFields } };
 }
 
 /** POST (or PATCH) one merged callback body and read the `{ success }` API envelope. */
