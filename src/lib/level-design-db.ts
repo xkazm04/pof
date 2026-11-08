@@ -7,8 +7,6 @@ import type {
   CreateDocPayload,
   UpdateDocPayload,
   RoomNode,
-  DifficultyLevel,
-  RoomType,
 } from '@/types/level-design';
 
 // ── Schema bootstrap ──
@@ -64,6 +62,21 @@ function parseBlob<T>(raw: unknown, field: string, broken: string[]): T[] {
 }
 
 /**
+ * A stored room may come from a CLI run or an older schema and omit the array
+ * fields every consumer indexes unguarded. Default them on read so one thin room
+ * cannot crash the flow editor, the detail panel or the pacing linter.
+ */
+function normalizeRoom(room: RoomNode): RoomNode {
+  if (room === null || typeof room !== 'object') return room;
+  return {
+    ...room,
+    spawnEntries: Array.isArray(room.spawnEntries) ? room.spawnEntries : [],
+    linkedFiles: Array.isArray(room.linkedFiles) ? room.linkedFiles : [],
+    tags: Array.isArray(room.tags) ? room.tags : [],
+  };
+}
+
+/**
  * Marker appended to a document whose stored data could not be read, so a
  * damaged row is loudly identifiable in the sidebar rather than silently
  * appearing as an empty (and therefore over-writable) level.
@@ -83,7 +96,7 @@ export function rowToDoc(row: Record<string, unknown>): LevelDesignDocument {
     name,
     description: (row.description as string) ?? '',
     designNarrative: (row.design_narrative as string) ?? '',
-    rooms: parseBlob<RoomNode>(row.rooms, 'rooms', broken),
+    rooms: parseBlob<RoomNode>(row.rooms, 'rooms', broken).map(normalizeRoom),
     connections: parseBlob<LevelDesignDocument['connections'][number]>(row.connections, 'connections', broken),
     difficultyArc: parseBlob<string>(row.difficulty_arc, 'difficultyArc', broken),
     pacingNotes: (row.pacing_notes as string) ?? '',
@@ -171,14 +184,8 @@ export function getSummary(): LevelDesignSummary {
   // Only `rooms` and `sync_status` feed the summary — skip parsing the heavy
   // `connections` / `difficulty_arc` / `sync_report` blobs that getAllDocs() would.
   const rows = getDb()
-    .prepare('SELECT rooms, sync_status FROM level_design_docs')
-    .all() as { rooms: string; sync_status: LevelDesignDocument['syncStatus'] }[];
-
-  const diffDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<DifficultyLevel, number>;
-  const typeDist = {
-    combat: 0, puzzle: 0, exploration: 0, boss: 0,
-    safe: 0, transition: 0, cutscene: 0, hub: 0,
-  } as Record<RoomType, number>;
+    .prepare('SELECT rooms, sync_status, last_code_hash FROM level_design_docs')
+    .all() as { rooms: string; sync_status: LevelDesignDocument['syncStatus']; last_code_hash: string | null }[];
 
   let totalRooms = 0;
   let syncedCount = 0;
@@ -187,7 +194,8 @@ export function getSummary(): LevelDesignSummary {
 
   for (const row of rows) {
     const status = row.sync_status;
-    if (status === 'synced') syncedCount++;
+    // Same rule as the client twin: `synced` with no lastCodeHash is "Never checked", not synced.
+    if (status === 'synced') { if (row.last_code_hash) syncedCount++; }
     else if (status === 'diverged' || status === 'doc-ahead' || status === 'code-ahead') divergedCount++;
     else if (status === 'unlinked') unlinkedCount++;
 
@@ -195,10 +203,6 @@ export function getSummary(): LevelDesignSummary {
     // (and with it the whole document list) for every other level.
     const rooms = parseBlob<RoomNode>(row.rooms, 'rooms', []);
     totalRooms += rooms.length;
-    for (const room of rooms) {
-      if (room.difficulty >= 1 && room.difficulty <= 5) diffDist[room.difficulty]++;
-      if (room.type in typeDist) typeDist[room.type]++;
-    }
   }
 
   return {
@@ -207,7 +211,5 @@ export function getSummary(): LevelDesignSummary {
     syncedCount,
     divergedCount,
     unlinkedCount,
-    difficultyDistribution: diffDist,
-    roomTypeDistribution: typeDist,
   };
 }

@@ -18,7 +18,7 @@ vi.mock('@/lib/db', () => ({
     exec: () => {},
     prepare: (sql: string) => ({
       all: () => (sql.includes('SELECT rooms')
-        ? docRows.map((r) => ({ rooms: r.rooms, sync_status: r.sync_status }))
+        ? docRows.map((r) => ({ rooms: r.rooms, sync_status: r.sync_status, last_code_hash: r.last_code_hash }))
         : docRows),
       get: () => docRows[0],
       run: () => ({ changes: 1, lastInsertRowid: 1 }),
@@ -104,7 +104,7 @@ describe('getAllDocs', () => {
 describe('getSummary', () => {
   it('counts the healthy rows instead of throwing on the damaged one', () => {
     docRows = [
-      row({ id: 1, rooms: ONE_ROOM, sync_status: 'synced' }),
+      row({ id: 1, rooms: ONE_ROOM, sync_status: 'synced', last_code_hash: 'h1' }),
       row({ id: 2, rooms: 'not json at all', sync_status: 'unlinked' }),
     ];
 
@@ -114,7 +114,5 @@ describe('getSummary', () => {
     expect(summary.totalRooms).toBe(1);
     expect(summary.syncedCount).toBe(1);
     expect(summary.unlinkedCount).toBe(1);
-    expect(summary.difficultyDistribution[3]).toBe(1);
-    expect(summary.roomTypeDistribution.combat).toBe(1);
   });
 });

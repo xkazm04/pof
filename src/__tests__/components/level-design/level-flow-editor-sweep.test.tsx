@@ -171,7 +171,7 @@ describe('the narrative tab names its fields', () => {
   it('each textarea is reachable by its visible label', async () => {
     installApi();
     await openDoc();
-    fireEvent.click(screen.getByRole('button', { name: /Narrative/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /Narrative/ }));
     for (const name of ['Level Description', 'Design Narrative', 'Pacing Notes']) {
       expect(screen.getByRole('textbox', { name }).tagName).toBe('TEXTAREA');
     }

@@ -102,15 +102,25 @@ export function useLevelDesignView() {
 
   // ── Document CLI sessions ──
 
+  // Document id the in-flight codegen run was dispatched for.
+  const codegenDocIdRef = useRef<number | null>(null);
   const codegenCli = useModuleCLI({
     moduleId: 'level-design',
     sessionKey: 'level-design-codegen',
     label: 'Level Code Gen',
     accentColor: MODULE_COLORS.content,
     onComplete: (success) => {
-      if (success && activeDoc) {
+      // The run was dispatched FOR one document; the user may have opened another
+      // since. Stamp the dispatched doc, never whichever one is open now.
+      const target = codegenDocIdRef.current;
+      codegenDocIdRef.current = null;
+      if (!success || target === null) return;
+      const stamp = { syncStatus: 'synced' as const, lastGeneratedAt: new Date().toISOString() };
+      if (activeDoc && activeDoc.id === target) {
         // An explicit syncStatus wins over the buffer's doc-ahead escalation.
-        commit({ syncStatus: 'synced', lastGeneratedAt: new Date().toISOString() });
+        commit(stamp);
+      } else {
+        void updateDoc({ id: target, ...stamp });
       }
     },
   });
@@ -321,12 +331,14 @@ export function useLevelDesignView() {
   const handleGenerateRoomCode = useCallback((room: RoomNode) => {
     if (!activeDoc) return;
     const prompt = buildRoomCodegenPrompt(room, activeDoc, ctx);
+    codegenDocIdRef.current = activeDoc.id;
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
 
   const handleGenerateAllCode = useCallback(() => {
     if (!activeDoc) return;
     const prompt = buildNarrativeCodegenPrompt(activeDoc, ctx);
+    codegenDocIdRef.current = activeDoc.id;
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
 
@@ -349,6 +361,7 @@ export function useLevelDesignView() {
       return;
     }
     const prompt = buildReconcilePrompt(divergence, activeDoc, ctx);
+    codegenDocIdRef.current = activeDoc.id;
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
 

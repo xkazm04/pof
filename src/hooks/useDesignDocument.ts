@@ -6,8 +6,6 @@ import type {
   LevelDesignSummary,
   CreateDocPayload,
   UpdateDocPayload,
-  DifficultyLevel,
-  RoomType,
 } from '@/types/level-design';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
@@ -38,11 +36,6 @@ const EMPTY_SUMMARY: LevelDesignSummary = {
   syncedCount: 0,
   divergedCount: 0,
   unlinkedCount: 0,
-  difficultyDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-  roomTypeDistribution: {
-    combat: 0, puzzle: 0, exploration: 0, boss: 0,
-    safe: 0, transition: 0, cutscene: 0, hub: 0,
-  },
 };
 
 /**
@@ -54,28 +47,18 @@ const EMPTY_SUMMARY: LevelDesignSummary = {
  * derivation cannot.
  */
 export function deriveSummary(docs: LevelDesignDocument[]): LevelDesignSummary {
-  const difficultyDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<DifficultyLevel, number>;
-  const roomTypeDistribution = {
-    combat: 0, puzzle: 0, exploration: 0, boss: 0,
-    safe: 0, transition: 0, cutscene: 0, hub: 0,
-  } as Record<RoomType, number>;
-
   let totalRooms = 0;
   let syncedCount = 0;
   let divergedCount = 0;
   let unlinkedCount = 0;
 
   for (const doc of docs) {
-    if (doc.syncStatus === 'synced') syncedCount++;
+    // A `synced` doc with no lastCodeHash is shown as "Never checked" by SyncDot, so it is not counted as synced.
+    if (doc.syncStatus === 'synced') { if (doc.lastCodeHash) syncedCount++; }
     else if (doc.syncStatus === 'diverged' || doc.syncStatus === 'doc-ahead' || doc.syncStatus === 'code-ahead') divergedCount++;
     else if (doc.syncStatus === 'unlinked') unlinkedCount++;
 
-    const rooms = doc.rooms ?? [];
-    totalRooms += rooms.length;
-    for (const room of rooms) {
-      if (room.difficulty >= 1 && room.difficulty <= 5) difficultyDistribution[room.difficulty]++;
-      if (room.type in roomTypeDistribution) roomTypeDistribution[room.type]++;
-    }
+    totalRooms += (doc.rooms ?? []).length;
   }
 
   return {
@@ -84,8 +67,6 @@ export function deriveSummary(docs: LevelDesignDocument[]): LevelDesignSummary {
     syncedCount,
     divergedCount,
     unlinkedCount,
-    difficultyDistribution,
-    roomTypeDistribution,
   };
 }
 
