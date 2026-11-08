@@ -41,6 +41,9 @@ const EMPTY_STATS: EvolutionStats = {
 // commits its result if it is still the latest request for that loader.
 let variantsRequestSeq = 0;
 let suggestionsRequestSeq = 0;
+// Same rule for the per-item history: picking items fast must not let an older
+// item's history land last (startChallenge plans against whatever is held).
+let historyRequestSeq = 0;
 
 /**
  * What a decide-now press came to. A refusal (409 "not enough trials") is an
@@ -400,6 +403,7 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   },
 
   loadVersionHistory: async (moduleId, checklistItemId) => {
+    const requestSeq = ++historyRequestSeq;
     set({ isLoadingHistory: true, error: null });
     try {
       const history = await apiFetch<VariantVersionHistory>('/api/prompt-evolution', {
@@ -407,8 +411,10 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get-version-history', moduleId, checklistItemId }),
       });
+      if (requestSeq !== historyRequestSeq) return;
       set({ versionHistory: history, isLoadingHistory: false });
     } catch (err) {
+      if (requestSeq !== historyRequestSeq) return;
       set({ error: err instanceof Error ? err.message : 'Failed to load version history', isLoadingHistory: false });
     }
   },
