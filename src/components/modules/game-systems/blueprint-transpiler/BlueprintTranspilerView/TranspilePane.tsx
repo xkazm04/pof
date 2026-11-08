@@ -120,7 +120,10 @@ export function TranspilePane({
           </div>
         )}
 
-        {isLoading && (
+        {/* First run only: a re-transpile (e.g. a module change) keeps the
+            previous code on screen and the Transpile button shows the spinner,
+            instead of a second flex-1 region halving the code view. */}
+        {isLoading && !result && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: ACCENT }} />
             <span className="text-xs text-text-muted">Transpiling Blueprint graph...</span>

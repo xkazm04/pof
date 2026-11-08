@@ -117,3 +117,23 @@ describe('quest difficulty pips use chart-colors tokens, not hex', () => {
     expect(new Set(DIFFICULTY_COLORS).size).toBe(5);
   });
 });
+
+describe('TranspilePane - a re-transpile does not stack a full-height spinner over the code', () => {
+  it('keeps the previous code as the only flex-1 region while a new run is in flight', () => {
+    const noop = () => {};
+    render(
+      <TranspilePane
+        blueprintJson="{}" setBlueprintJson={noop} onTranspile={noop} onLoadSample={noop}
+        isLoading error={null} asset={null} summary={null}
+        result={{
+          headerCode: '#pragma once', sourceCode: '// body', className: 'AHero', parentClass: 'ACharacter',
+          includes: [], warnings: [], nodeCount: 1, functionCount: 0,
+          replication: { hasReplication: false, properties: [] },
+        }}
+        showCode="header" setShowCode={noop} moduleName="P" onModuleChange={noop} projectPath=""
+      />,
+    );
+    expect(screen.getByTestId('transpile-fidelity')).not.toBeNull();
+    expect(screen.queryByText('Transpiling Blueprint graph...')).toBeNull();
+  });
+});
