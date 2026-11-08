@@ -77,7 +77,7 @@ function TargetRow({ t, landing, refineDisabled, onRefineToTarget }: Props) {
           type="button"
           onClick={onRefineToTarget}
           disabled={refineDisabled}
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{
             fontSize: 'var(--lab-fs-xs)', padding: '4px 10px', background: 'transparent', color: t.warn,
             border: `1px solid ${t.warn}`, cursor: refineDisabled ? 'not-allowed' : 'pointer', opacity: refineDisabled ? 0.5 : 1,

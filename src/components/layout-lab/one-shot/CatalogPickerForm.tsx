@@ -75,7 +75,7 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
               type="button"
               data-testid="one-shot-gap-target"
               onClick={() => onPickGap(g)}
-              className={t.fontMono}
+              className={`focus-ring ${t.fontMono}`}
               style={{
                 textAlign: 'left', fontSize: 'var(--lab-fs-xs)', padding: '7px 10px', cursor: 'pointer',
                 background: 'transparent', color: t.text, border: `1px solid ${t.warn}`,
@@ -111,9 +111,9 @@ export function CatalogPickerForm({ t, catalogInput, onCatalogChange, onStart, o
           <option key={s.catalogId} value={s.catalogId}>{s.label}</option>
         ))}
       </select>
-      <button
+      <button type="button"
         onClick={onStart}
-        className={t.fontMono}
+        className={`focus-ring ${t.fontMono}`}
         style={{
           width: '100%', fontSize: 14, padding: '8px 16px', cursor: 'pointer',
           background: t.ink, color: t.onAccent, border: `1px solid ${t.ink}`, fontWeight: 600,

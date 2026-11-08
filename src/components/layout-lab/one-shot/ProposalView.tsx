@@ -146,10 +146,10 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
       <RunPlanView t={t} plan={plan} onSetMode={setStepMode} costCopy={costCopy} />
 
       <div style={{ display: 'flex', gap: 8 }}>
-        <button
+        <button type="button"
           onClick={handleRefine}
           disabled={refineDisabled || !refineInput.trim()}
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{
             fontSize: 'var(--lab-fs-xs)',
             padding: '7px 14px',
@@ -162,9 +162,9 @@ export function ProposalView({ t, proposal, refinementTurns, onRefine, onApprove
         >
           Refine
         </button>
-        <button
+        <button type="button"
           onClick={onApprove}
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{
             fontSize: 'var(--lab-fs-xs)',
             padding: '7px 16px',

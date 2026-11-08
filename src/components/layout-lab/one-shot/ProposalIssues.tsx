@@ -32,10 +32,10 @@ export function ProposalIssues({ t, issues, refineDisabled, forceMore, onRefine 
           </div>
         ))}
       </div>
-      <button
+      <button type="button"
         onClick={() => onRefine(direction, forceMore)}
         disabled={refineDisabled}
-        className={t.fontMono}
+        className={`focus-ring ${t.fontMono}`}
         style={{
           fontSize: 'var(--lab-fs-xs)',
           padding: '5px 12px',

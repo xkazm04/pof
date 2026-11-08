@@ -50,7 +50,7 @@ export function RunPlanView({ t, plan, onSetMode, costCopy }: Props) {
               {r.authorable && (
                 <button type="button" aria-pressed={onModel} aria-label={`Author with model: ${r.label}`}
                   onClick={() => onSetMode(r.label, onModel ? 'deterministic' : 'cli')}
-                  className={t.fontMono}
+                  className={`focus-ring ${t.fontMono}`}
                   style={{ fontSize: 'var(--lab-fs-xs)', padding: '2px 8px', cursor: 'pointer', background: 'transparent',
                     color: onModel ? t.warn : t.muted, border: `1px solid ${onModel ? t.warn : t.line}` }}>
                   {onModel ? '✓ ' : ''}Author with model

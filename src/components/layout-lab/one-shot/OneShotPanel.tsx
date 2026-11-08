@@ -136,10 +136,10 @@ export function OneShotPanel({ t }: Props) {
         <span className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.ink, fontWeight: 700 }}>
           One-shot · {phase}
         </span>
-        <button
+        <button type="button"
           onClick={() => setPanelOpen(false)}
           aria-label="close panel"
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{ fontSize: 16, background: 'transparent', border: 'none', color: t.muted, cursor: 'pointer', padding: '2px 6px' }}
         >
           ×

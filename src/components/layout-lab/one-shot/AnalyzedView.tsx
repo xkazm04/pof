@@ -102,7 +102,7 @@ export function AnalyzedView({ t, distribution, onPick, onPropose, onBack }: Ana
         <button
           type="button"
           onClick={() => onPropose(hint.trim() || undefined)}
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{ ...btn, flex: 1, background: t.ink, color: t.onAccent, border: `1px solid ${t.ink}` }}
         >
           Propose (model picks the gap)
@@ -110,7 +110,7 @@ export function AnalyzedView({ t, distribution, onPick, onPropose, onBack }: Ana
         <button
           type="button"
           onClick={onBack}
-          className={t.fontMono}
+          className={`focus-ring ${t.fontMono}`}
           style={{ ...btn, background: 'transparent', color: t.muted, border: `1px solid ${t.line}` }}
         >
           Back

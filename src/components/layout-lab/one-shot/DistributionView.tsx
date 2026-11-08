@@ -68,6 +68,7 @@ export function DistributionView({ t, buckets, total, attribute, onPick }: Props
           <button
             key={b.label}
             type="button"
+            className="focus-ring"
             onClick={() => onPick(b)}
             aria-label={`Propose ${attribute ?? ''}=${b.label} (have ${b.count}, expected ~${b.expected ?? '?'})`}
             style={{ ...rowStyle, width: '100%', padding: 0, cursor: 'pointer', background: 'transparent', border: `1px dashed ${t.warn}` }}
