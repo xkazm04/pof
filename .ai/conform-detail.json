@@ -23142,6 +23142,21 @@
       "evaluatedTs": "2026-11-08T02:49:07.083Z",
       "worker": "ab027b01-1e28-4f4a-b956-30a0cbd5f7db",
       "techniques": []
+    },
+    "0550cd65-c2cd-4171-9401-8a64dfe09656/supply-chain": {
+      "context": "animation-state-graph",
+      "subject": "supply-chain",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-08",
+      "evaluatedTs": "2026-11-08T02:59:47.233Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "2a009a27-13f4-467c-9031-394c7b874d78",
+        "state": "not-applicable",
+        "at": "2026-11-08T03:00:15.971047+00:00",
+        "reason": "reviewer (sonnet): The anchor data.ts:8 is a type-only import line that does not show any supply-chain precondition is absent (incidental), and the claim that no crossing exists is contradicted by AnimationRealityLedger.tsx, which fetches /api/animation-ledger with a projectPath via tryApiFetch, so the context reads a"
+      }
     }
   }
 }
