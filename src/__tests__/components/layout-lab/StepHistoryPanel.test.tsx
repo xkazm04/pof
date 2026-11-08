@@ -155,3 +155,25 @@ describe('<StepHistoryPanel /> — compare before restore', () => {
     expect(posts(f)).toEqual([{ revisionId: 1 }]);
   });
 });
+
+describe('<StepHistoryPanel /> compare retry', () => {
+  it('Retry after a failed compare re-runs the dry run instead of closing the row', async () => {
+    let posts = 0;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: async () => {
+        if (init?.method !== 'POST') return { success: true, data: [rev(1)] };
+        posts += 1;
+        return posts === 1
+          ? { success: false, error: 'dry run down' }
+          : { success: true, data: { regraded: true, wouldStatus: 'pass', archivedStatus: 'pass' } };
+      },
+    })) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-compare'));
+    fireEvent.click(await screen.findByRole('button', { name: /retry/i }));
+    await screen.findByTestId('step-history-compare-panel');
+    expect(posts).toBe(2);
+  });
+});

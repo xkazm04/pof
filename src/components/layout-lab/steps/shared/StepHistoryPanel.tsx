@@ -74,6 +74,12 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   async function compare(rev: ArtifactRevision) {
     if (comparing === rev.id) { setComparing(null); return; }
     setComparing(rev.id);
+    await runDryRun(rev);
+  }
+
+  // Split from `compare` because that one TOGGLES: a Retry calling it from the open row
+  // reads `comparing === rev.id` in its own closure and only closes the row.
+  async function runDryRun(rev: ArtifactRevision) {
     setCompareError(null);
     if (dryRuns[rev.id]) return;
     const res = await tryApiFetch<RevisionDryRun>(REVISIONS_URL, postJson({ revisionId: rev.id, dryRun: true }));
@@ -170,7 +176,7 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
                   ↺ Restore
                 </button>
                 {comparing === r.id && compareError && (
-                  <InlineErrorRetry dense message={`Couldn’t compare this version: ${compareError}`} onRetry={() => { setComparing(null); void compare(r); }} />
+                  <InlineErrorRetry dense message={`Couldn’t compare this version: ${compareError}`} onRetry={() => void runDryRun(r)} />
                 )}
                 {comparing === r.id && dry && (
                   <RevisionCompare
