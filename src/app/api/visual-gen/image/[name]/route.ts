@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { readFile, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiError } from '@/lib/api-utils';
+import { decodeRouteName } from '@/app/api/visual-gen/_lib/decodeName';
 import { GENERATED_IMAGE_DIR, safeGeneratedImageName } from '@/lib/visual-gen/image-providers';
 
 const MIME: Record<string, string> = {
@@ -28,7 +29,9 @@ const MIME: Record<string, string> = {
  */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const safe = safeGeneratedImageName(decodeURIComponent(name));
+  const decoded = decodeRouteName(name);
+  if (decoded === null) return apiError('invalid image name', 400);
+  const safe = safeGeneratedImageName(decoded);
   if (!safe) return apiError('invalid image name', 400);
   const ext = (safe.split('.').pop() ?? '').toLowerCase();
   const dir = join(process.cwd(), 'generated', GENERATED_IMAGE_DIR);

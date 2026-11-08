@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiError } from '@/lib/api-utils';
+import { decodeRouteName } from '@/app/api/visual-gen/_lib/decodeName';
 import {
   safeAssetName,
   safeAssetDir,
@@ -38,7 +39,9 @@ const MIME: Record<string, string> = {
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const safe = safeAssetName(decodeURIComponent(name));
+  const decoded = decodeRouteName(name);
+  if (decoded === null) return apiError('invalid asset name', 400);
+  const safe = safeAssetName(decoded);
   if (!safe) return apiError('invalid asset name', 400);
   const spec = safeAssetDir(req.nextUrl.searchParams.get('dir'));
   if (!spec) return apiError('invalid asset dir', 400);

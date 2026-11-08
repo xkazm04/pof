@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiError } from '@/lib/api-utils';
+import { decodeRouteName } from '@/app/api/visual-gen/_lib/decodeName';
 import { safeIconName } from '@/lib/visual-gen/generated-icons';
 import { GENERATED_FILE_CACHE_CONTROL, etagMatches, fileEtag } from '@/lib/visual-gen/generated-assets';
 
@@ -30,7 +31,9 @@ const MIME: Record<string, string> = {
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const safe = safeIconName(decodeURIComponent(name));
+  const decoded = decodeRouteName(name);
+  if (decoded === null) return apiError('invalid icon name', 400);
+  const safe = safeIconName(decoded);
   if (!safe) return apiError('invalid icon name', 400);
   const ext = (safe.split('.').pop() ?? '').toLowerCase();
   const dir = join(process.cwd(), 'generated', 'icons');
