@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getDb } from '@/lib/db';
+import { requireOperator } from '@/lib/api-auth';
 
 interface DeadlineRow {
   milestone_id: string;
@@ -26,6 +27,8 @@ export async function GET() {
 
 /** PUT — upsert a single milestone deadline */
 export async function PUT(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
   try {
     const body = await req.json().catch(() => undefined);
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
