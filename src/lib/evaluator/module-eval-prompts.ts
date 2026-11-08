@@ -415,9 +415,17 @@ export interface EvalPromptParams {
   sourcePath: string;
 }
 
+/**
+ * A module's eval context by OWN property only — module ids arrive as request strings,
+ * and `MODULE_CONTEXTS['constructor']` would otherwise be Object's constructor.
+ */
+function contextOf(moduleId: string): ModuleEvalContext | undefined {
+  return Object.prototype.hasOwnProperty.call(MODULE_CONTEXTS, moduleId) ? MODULE_CONTEXTS[moduleId] : undefined;
+}
+
 export function buildEvalPrompt(params: EvalPromptParams): string {
   const { moduleId, pass, projectName, moduleName, sourcePath } = params;
-  const ctx = MODULE_CONTEXTS[moduleId];
+  const ctx = contextOf(moduleId);
 
   // For modules without specific context, use generic checks
   const focus = ctx?.focus ?? `${moduleId} game system implementation`;
@@ -498,7 +506,7 @@ export function getEvaluableModuleIds(): SubModuleId[] {
  * extra pass (e.g. arpg-combat's combat-trace). Non-combat modules are unchanged.
  */
 export function getPassesForModule(moduleId: string): EvalPass[] {
-  const extra: EvalPass[] = MODULE_CONTEXTS[moduleId]?.tracePass ? ['combat-trace'] : [];
+  const extra: EvalPass[] = contextOf(moduleId)?.tracePass ? ['combat-trace'] : [];
   return [...EVAL_PASSES, ...extra];
 }
 
@@ -506,5 +514,5 @@ export function getPassesForModule(moduleId: string): EvalPass[] {
  * Check if a module has specialized evaluation prompts.
  */
 export function hasModuleContext(moduleId: SubModuleId): boolean {
-  return moduleId in MODULE_CONTEXTS;
+  return contextOf(moduleId) !== undefined;
 }
