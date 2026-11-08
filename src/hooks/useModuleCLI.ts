@@ -21,6 +21,8 @@ interface DispatchMeta {
   label?: string;
   /** Prompt-evolution variant this dispatch resolved to (or 'static'). */
   variantId?: string;
+  /** Module this run is FOR, when it differs from the host the tab is shown in. */
+  moduleId?: SubModuleId;
 }
 
 interface UseModuleCLIOptions {
@@ -40,6 +42,13 @@ interface UseModuleCLIOptions {
    * unaffected.
    */
   onComplete?: (success: boolean, callbackStatus?: CallbackStatus) => void;
+  /**
+   * Attribute each execute()d run to its TASK's module (session analytics + the
+   * anti-pattern check) instead of the host `moduleId`. For a host mounted once that
+   * dispatches work for many modules (the Unified Summary's lift-plan Review): the
+   * tab stays in the host module, the outcome credits the module the run was for.
+   */
+  attributeToTaskModule?: boolean;
 }
 
 export interface UseModuleCLIResult {
@@ -74,6 +83,8 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   // The prompt-evolution variant the last dispatch resolved to (or 'static') —
   // recorded with the outcome so A/B attribution can close the loop.
   const lastVariantIdRef = useRef<string>(STATIC_VARIANT_ID);
+  // The module the last dispatch was FOR (null = the host module).
+  const lastRunModuleRef = useRef<SubModuleId | null>(null);
 
   // Fire onComplete from the run door's endRun transition (cliPanelStore). endRun
   // releases isRunning AND records THIS run's outcome in one store write, so the
@@ -116,7 +127,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
             || lastPromptRef.current.includes('## Build Command');
 
           recordSessionOutcome({
-            moduleId: moduleIdRef.current,
+            moduleId: lastRunModuleRef.current ?? moduleIdRef.current,
             sessionKey: key,
             prompt: lastPromptRef.current,
             hadProjectContext,
@@ -144,6 +155,8 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       lastPromptRef.current = prompt;
       taskStartRef.current = new Date().toISOString();
       lastVariantIdRef.current = meta?.variantId ?? STATIC_VARIANT_ID;
+      const runModuleId = meta?.moduleId ?? opts.moduleId;
+      lastRunModuleRef.current = meta?.moduleId ?? null;
 
       let tabId = findSessionByKey(opts.sessionKey);
       if (!tabId) {
@@ -169,11 +182,11 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // this; the user gets the warning post-hoc just like an ESLint warning.
       void usePatternLibraryStore
         .getState()
-        .checkPromptBeforeDispatch(prompt, opts.moduleId)
+        .checkPromptBeforeDispatch(prompt, runModuleId)
         .then((warnings) => {
           if (warnings.length > 0) {
             logger.warn(
-              `[anti-pattern] dispatched ${opts.moduleId} prompt matched ${warnings.length} known-failure pattern${warnings.length === 1 ? '' : 's'}:`,
+              `[anti-pattern] dispatched ${runModuleId} prompt matched ${warnings.length} known-failure pattern${warnings.length === 1 ? '' : 's'}:`,
               warnings.map((w) => ({
                 id: w.antiPattern.id,
                 severity: w.antiPattern.severity,
@@ -229,9 +242,14 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // prompt it served as the item's baseline (v1), fire-and-forget, so the
       // A/B rail has an incumbent to challenge. Previews pass no options.
       const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx, { seed: true });
-      sendPrompt(enriched, { taskType: task.type, label: task.label, variantId });
+      sendPrompt(enriched, {
+        taskType: task.type,
+        label: task.label,
+        variantId,
+        moduleId: opts.attributeToTaskModule ? task.moduleId : undefined,
+      });
     },
-    [sendPrompt, opts.sessionKey],
+    [sendPrompt, opts.sessionKey, opts.attributeToTaskModule],
   );
 
   return { sendPrompt, execute, isRunning };

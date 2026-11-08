@@ -148,6 +148,9 @@ export function useUnifiedSummaryView(onNavigateTab?: (tab: TabId) => void) {
     sessionKey: 'unified-summary-review',
     label: 'Health Review',
     accentColor: MODULE_COLORS.evaluator,
+    // One door reviews every module: credit each run (session analytics, which the
+    // Summary's Activity dimension reads) to the module it reviewed.
+    attributeToTaskModule: true,
   });
 
   const actOnLift = useCallback((lift: HealthLift) => {
