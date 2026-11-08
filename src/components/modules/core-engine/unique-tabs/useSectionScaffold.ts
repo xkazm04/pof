@@ -7,7 +7,7 @@ import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { TaskFactory } from '@/lib/cli-task';
 import { useProjectStore } from '@/stores/projectStore';
 import { getFeatureInitPrompt } from '@/components/modules/core-engine/unique-tabs/feature-init-prompts';
-import type { SectionId } from '@/components/modules/core-engine/unique-tabs/feature-map-config';
+import { getSections, type SectionId } from '@/components/modules/core-engine/unique-tabs/feature-map-config';
 import {
   sectionScaffoldState,
   scaffoldQueue,
@@ -78,9 +78,16 @@ export function useSectionScaffold(moduleId: SubModuleId) {
 
   const queue: SectionId[] = useMemo(() => scaffoldQueue(moduleId, classes), [moduleId, classes]);
 
+  // The queue spans every tab group, so a label lookup must too (not just the active group).
+  const labelOf = useCallback(
+    (sectionId: string) => getSections(moduleId).find((s) => s.id === sectionId)?.label ?? sectionId,
+    [moduleId],
+  );
+
   return {
     stateOf,
     queue,
+    labelOf,
     scaffold,
     scan,
     /** The section whose run (or post-run rescan) is in flight, else null. */

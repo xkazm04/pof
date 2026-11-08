@@ -55,7 +55,6 @@ export function ScaffoldPanel({ scaffold: s, sections }: { scaffold: SectionScaf
       </div>
     );
   }
-  const labelOf = (id: string) => sections.find((x) => x.id === id)?.label ?? id;
   const next = s.queue[0];
   const rows = sections.flatMap((sec) => {
     const view = s.stateOf(sec.id);
@@ -74,7 +73,7 @@ export function ScaffoldPanel({ scaffold: s, sections }: { scaffold: SectionScaf
           <PanelBtn label="Rescan" onClick={s.scan} disabled={s.isScanning || s.busy} icon={s.isScanning ? 'busy' : 'scan'} />
           {next && (
             <PanelBtn
-              label={`Scaffold next: ${labelOf(next)}`}
+              label={`Scaffold next: ${s.labelOf(next)}`}
               onClick={() => s.scaffold(next)}
               disabled={s.busy}
               icon={s.running === next ? 'busy' : 'build'}
