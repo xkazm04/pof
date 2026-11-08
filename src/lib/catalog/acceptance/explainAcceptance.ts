@@ -1,6 +1,6 @@
 import type { AcceptanceResult, AcceptanceStatus, AcceptanceTier, Checker, CheckerContext } from './types';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { allOfMembers } from './combinators';
+import { allOfMembers, spokeIndex } from './combinators';
 import { serverVerdictOverlay, type PersistedVerdict } from './resolveStepAcceptance';
 import { bridgeJudgeVerdict, judgedContentOf, type JudgedContent } from './judgeBridge';
 import { getStepFact } from '@/lib/status/statusModel';
@@ -14,7 +14,7 @@ import { getStepFact } from '@/lib/status/statusModel';
  *
  *  - the server overlay wins ONLY over a local `deferred` — a server pass/fail never
  *    silently overrides a checker that could decide for itself;
- *  - `allOf` reports the FIRST non-pass, so the tier and reason on screen belong to whichever
+ *  - `allOf` reports the first fail/pending (else the first deferral), so the tier and reason on screen belong to whichever
  *    composed member spoke, and nothing named it;
  *  - the judge bridge can condemn a shape-pass outright, and attaches its verdict's
  *    PROVENANCE even when it does not apply.
@@ -39,7 +39,7 @@ export interface AcceptanceMember {
   status: AcceptanceStatus;
   tier: AcceptanceTier;
   reason?: string;
-  /** This member's result IS the one `allOf` reported (the first non-pass, else the first). */
+  /** This member's result IS the one `allOf` reported (`spokeIndex`: first fail/pending, else first non-pass, else the first). */
   spoke: boolean;
 }
 
@@ -77,9 +77,8 @@ function explainMembers(checker: Checker, data: Record<string, unknown>, ctx?: C
   const members = allOfMembers(checker);
   if (!members?.length) return undefined;
   const results = members.map((c) => c(data, ctx));
-  // `allOf` returns the first non-pass, else the first result.
-  const spokeAt = results.findIndex((r) => r.status !== 'pass');
-  const decided = spokeAt === -1 ? 0 : spokeAt;
+  // The same rule `allOf` reports by — one function, so the explanation cannot drift from it.
+  const decided = spokeIndex(results);
   return results.map((r, index) => ({
     index,
     label: r.label,
