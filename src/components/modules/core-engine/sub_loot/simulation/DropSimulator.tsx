@@ -33,10 +33,17 @@ const SELECTABLE_BINDINGS: SelectableBinding[] = DEFAULT_ENEMY_LOOT_BINDINGS.map
 /** The global rarity table as a binding: every kill drops, tiers by RARITY_TIERS weight. */
 const GLOBAL_BINDING = { dropChance: 1, rarityWeights: RARITY_TIERS.map(t => t.weight) };
 
+interface RollRun {
+  n: number;
+  counts: number[];
+  binding: Pick<EnemyLootBinding, 'dropChance' | 'rarityWeights'>;
+  perEnemy: boolean;
+}
+
 export function DropSimulator() {
   const tunedBindings = useLootTuningStore((s) => s.bindings);
-  const [rollCount, setRollCount] = useState<number | null>(null);
-  const [rollResults, setRollResults] = useState<Record<string, number>>({});
+  /** The last roll WITH the binding it ran against: deviations judge the counts on screen, not the live picker. */
+  const [roll, setRoll] = useState<RollRun | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEnemyId, setSelectedEnemyId] = useState<string | null>(null);
 
@@ -48,19 +55,16 @@ export function DropSimulator() {
   const activeBinding = selectedBinding ?? GLOBAL_BINDING;
 
   const rollDrops = useCallback((n: number) => {
-    setRollCount(n);
-    const tally: Record<string, number> = {};
-    for (const t of RARITY_TIERS) tally[t.name] = 0;
+    const binding = { dropChance: activeBinding.dropChance, rarityWeights: [...activeBinding.rarityWeights] };
+    const raw = runBatch(binding, n, (Date.now() ^ (n * 0x9e3779b1)) >>> 0);
+    setRoll({ n, counts: RARITY_TIERS.map((_, i) => raw[i] ?? 0), binding, perEnemy: selectedBinding != null });
+  }, [activeBinding, selectedBinding]);
 
-    const counts = runBatch(activeBinding, n, (Date.now() ^ (n * 0x9e3779b1)) >>> 0);
-    RARITY_TIERS.forEach((t, i) => { tally[t.name] = counts[i] ?? 0; });
-    setRollResults(tally);
-  }, [activeBinding]);
+  const rollCount = roll?.n ?? null;
 
   const getDeviation = (tierIdx: number) => {
-    if (rollCount === null) return null;
-    const counts = RARITY_TIERS.map(t => rollResults[t.name] ?? 0);
-    const d = deviationFor(activeBinding, tierIdx, rollCount, counts);
+    if (!roll) return null;
+    const d = deviationFor(roll.binding, tierIdx, roll.n, roll.counts);
     const color = d.severity === 'error' ? STATUS_ERROR : d.severity === 'warn' ? STATUS_WARNING : STATUS_SUCCESS;
     return { label: d.label, color };
   };
@@ -85,7 +89,7 @@ export function DropSimulator() {
     </div>
   ), []);
 
-  const totalDropped = Object.values(rollResults).reduce((s, v) => s + v, 0);
+  const totalDropped = roll ? roll.counts.reduce((s, v) => s + v, 0) : 0;
 
   return (
     <BlueprintPanel className="p-3">
@@ -137,7 +141,7 @@ export function DropSimulator() {
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color }} />
                   <span className="text-xs text-text">{tier.name}</span>
                   <span className="text-xs font-mono font-semibold" style={{ color: tier.color }}>
-                    {rollResults[tier.name] ?? 0}
+                    {roll?.counts[tierIdx] ?? 0}
                   </span>
                   {dev && (
                     <span className="text-2xs font-mono" style={{ color: dev.color }}>
@@ -150,7 +154,7 @@ export function DropSimulator() {
           </div>
           <div className="flex items-center gap-2 text-2xs text-text-muted">
             <span>/ {rollCount} kills</span>
-            {selectedBinding && <span>&middot; {totalDropped} drops ({((totalDropped / rollCount) * 100).toFixed(1)}% drop rate)</span>}
+            {roll?.perEnemy && <span>&middot; {totalDropped} drops ({((totalDropped / rollCount) * 100).toFixed(1)}% drop rate)</span>}
           </div>
         </div>
       ) : (
