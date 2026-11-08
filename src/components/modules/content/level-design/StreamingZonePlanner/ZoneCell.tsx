@@ -30,8 +30,8 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
         <g>
           {/* Inner fill area */}
           <rect
-            x={cx - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
-            y={cy - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
+            x={cx - zone.preloadRadius * CELL_SIZE + 4}
+            y={cy - zone.preloadRadius * CELL_SIZE + 4}
             width={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             height={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             rx={12}
@@ -40,8 +40,8 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
           />
           {/* Pulsing border */}
           <rect
-            x={cx - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
-            y={cy - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
+            x={cx - zone.preloadRadius * CELL_SIZE + 4}
+            y={cy - zone.preloadRadius * CELL_SIZE + 4}
             width={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             height={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             rx={12}
