@@ -146,33 +146,44 @@ export async function runQwenImage(spec: QwenImageSpec, deps?: Partial<QwenImage
   const models = [primary, ...fallbacks.filter((m) => m !== primary)];
 
   let lastErr = '';
-  for (const model of models) {
-    const res = await d.fetch(QWEN_IMAGE_ENDPOINT, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildQwenImageBody(spec, model)),
-    });
+  // Where the attempt was when something THREW (a rejected fetch, a non-JSON body, a failed
+  // write): reported with the reason, and the chain stops there — a transport or disk fault
+  // is not a quota wall, so it must not buy the next paid model.
+  let at: { model?: string; imageUrl?: string } = {};
+  try {
+    for (const model of models) {
+      at = { model };
+      const res = await d.fetch(QWEN_IMAGE_ENDPOINT, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildQwenImageBody(spec, model)),
+      });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      lastErr = `Qwen-Image ${model} HTTP ${res.status}: ${body.slice(0, 200)}`;
-      // A real error must not burn the rest of the chain; only quota falls through.
-      if (!isQuotaError(res.status, body)) return done({ ok: false, error: lastErr });
-      continue;
-    }
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        lastErr = `Qwen-Image ${model} HTTP ${res.status}: ${body.slice(0, 200)}`;
+        // A real error must not burn the rest of the chain; only quota falls through.
+        if (!isQuotaError(res.status, body)) return done({ ok: false, error: lastErr });
+        continue;
+      }
 
-    const url = parseImageUrl(await res.json());
-    if (!url) {
-      lastErr = `no image in the ${model} response`;
-      continue;
-    }
+      const url = parseImageUrl(await res.json());
+      if (!url) {
+        lastErr = `no image in the ${model} response`;
+        continue;
+      }
 
-    const img = await d.fetch(url);
-    if (!img.ok) {
-      return done({ ok: false, error: `image download failed: HTTP ${img.status}`, imageUrl: url, model });
+      at = { model, imageUrl: url };
+      const img = await d.fetch(url);
+      if (!img.ok) {
+        return done({ ok: false, error: `image download failed: HTTP ${img.status}`, imageUrl: url, model });
+      }
+      await d.writeFile(spec.outputPath, new Uint8Array(await img.arrayBuffer()));
+      return done({ ok: true, imagePath: spec.outputPath, imageUrl: url, model });
     }
-    await d.writeFile(spec.outputPath, new Uint8Array(await img.arrayBuffer()));
-    return done({ ok: true, imagePath: spec.outputPath, imageUrl: url, model });
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    return done({ ok: false, error: `Qwen-Image ${at.model ?? ''} failed: ${reason}`, ...at });
   }
 
   return done({ ok: false, error: `all Qwen-Image models exhausted. last: ${lastErr}` });
