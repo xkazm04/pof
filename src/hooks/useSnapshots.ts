@@ -72,6 +72,8 @@ export function useSnapshots(): UseSnapshotsResult {
   const reportRef = useRef<PofSnapshotDiffReport | null>(null);
   const readbackRef = useRef<Readback | null>(null);
   const mountedRef = useRef(true);
+  /** Id of the newest capture: only it owns `isCapturing` and `error`; a superseded one settles silently. */
+  const captureSeqRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -139,10 +141,10 @@ export function useSnapshots(): UseSnapshotsResult {
     return awaitReadback({ since, presetIds: req.presetIds });
   }, [awaitReadback]);
 
-  /** Show a settled outcome and release the busy flag; returns the report or null. */
-  const conclude = useCallback((outcome: Outcome): PofSnapshotDiffReport | null => {
+  /** Show a settled outcome and release the busy flag (newest capture only); returns the report or null. */
+  const conclude = useCallback((outcome: Outcome, seq: number): PofSnapshotDiffReport | null => {
     if (outcome.ok) reportRef.current = outcome.data;
-    if (mountedRef.current) {
+    if (mountedRef.current && seq === captureSeqRef.current) {
       if (outcome.ok) setDiffReport(outcome.data);
       else setError(outcome.error);
       setIsCapturing(false);
@@ -153,9 +155,10 @@ export function useSnapshots(): UseSnapshotsResult {
   // ── Capture snapshots ──────────────────────────────────────────────────────
 
   const capture = useCallback(async (req: PofSnapshotCaptureRequest) => {
+    const seq = ++captureSeqRef.current;
     setIsCapturing(true);
     setError(null);
-    return conclude(await captureAndRead(req));
+    return conclude(await captureAndRead(req), seq);
   }, [captureAndRead, conclude]);
 
   // ── Accept baselines (verified by a fresh compare) ─────────────────────────
@@ -171,17 +174,18 @@ export function useSnapshots(): UseSnapshotsResult {
       setError('Nothing to accept: only presets the shown report did not pass can become a baseline');
       return null;
     }
+    const seq = ++captureSeqRef.current;
     setIsCapturing(true);
     setError(null);
 
     const saved = await tryApiFetch<unknown>(snapshotUrl(), postJson({ action: 'baseline', presetIds: plan }));
-    if (!saved.ok) return conclude(err(saved.error));
+    if (!saved.ok) return conclude(err(saved.error), seq);
 
     const report = conclude(await captureAndRead({
       presetIds: plan, compareToBaseline: true, diffThreshold: seen.diffThreshold,
-    }));
+    }), seq);
     const still = report ? unverifiedAccepts(report, plan) : [];
-    if (still.length > 0 && mountedRef.current) {
+    if (still.length > 0 && mountedRef.current && seq === captureSeqRef.current) {
       setError(`Baseline saved, but the re-compare still differs for: ${still.join(', ')}`);
     }
     return report;
