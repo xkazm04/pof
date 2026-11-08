@@ -43,6 +43,8 @@ export interface StaticVerifySummary {
   ueRoot: string | null;
   verified: number;
   passed: number;
+  /** A content hold (`foldContentHold`) outranked the static verdict — author-owed work. */
+  pending: number;
   deferred: number;
   failed: number;
   skipped: number;
@@ -176,7 +178,7 @@ export function verifyStaticAll(
   const ueRoot = deps.resolveUeRoot();
   const apply = opts?.apply !== false;
   const results: StaticVerifyRow[] = [];
-  let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, delegated = 0, changed = 0;
+  let verified = 0, passed = 0, pending = 0, deferred = 0, failed = 0, skipped = 0, delegated = 0, changed = 0;
   const touched = createTouched();
   // One binding lookup per non-PoF game per sweep (a ue5 root is an fs probe).
   const gameRoots = new Map<GameId, string | null>();
@@ -220,6 +222,7 @@ export function verifyStaticAll(
 
     verified++;
     if (verdict.status === 'pass') passed++;
+    else if (verdict.status === 'pending') pending++;
     else if (verdict.status === 'deferred') deferred++;
     else if (verdict.status === 'fail') failed++;
 
@@ -229,7 +232,7 @@ export function verifyStaticAll(
   }
   touched.flush(deps.syncLifecycle);
 
-  return { ueRoot, verified, passed, deferred, failed, skipped, delegated, changed, results };
+  return { ueRoot, verified, passed, pending, deferred, failed, skipped, delegated, changed, results };
 }
 
 // ── default (server) deps — wire the real registry / seed / UE root / artifacts db ──
