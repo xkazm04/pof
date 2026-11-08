@@ -63,9 +63,16 @@ export function ensureHeadlessBuildsTable(): void {
       warning_count INTEGER NOT NULL DEFAULT 0,
       output TEXT NOT NULL DEFAULT '',
       diagnostics_json TEXT NOT NULL DEFAULT '[]',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      additional_args_json TEXT
     )
   `);
+
+  // Tables created before `additional_args_json` existed gain it in place.
+  const have = db.prepare('PRAGMA table_info(headless_builds)').all() as { name: string }[];
+  if (!have.some((c) => c.name === 'additional_args_json')) {
+    db.exec('ALTER TABLE headless_builds ADD COLUMN additional_args_json TEXT');
+  }
 
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_headless_builds_project
@@ -467,11 +474,12 @@ export function recordQueuedBuild(buildId: string, request: BuildRequest, queued
   ensureHeadlessBuildsTable();
   getDb().prepare(`
     INSERT INTO headless_builds
-      (build_id, project_path, target_name, ue_version, platform, configuration, target_type, status, started_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?)
+      (build_id, project_path, target_name, ue_version, platform, configuration, target_type, status, started_at, additional_args_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)
   `).run(
     buildId, request.projectPath, request.targetName, request.ueVersion,
     request.platform, request.configuration, request.targetType, queuedAt,
+    request.additionalArgs?.length ? JSON.stringify(request.additionalArgs) : null,
   );
 }
 
@@ -564,19 +572,26 @@ export function getBuildHistory(projectPath: string, limit = 20): BuildResult[] 
 /**
  * The request that produced a recorded build — what `rebuild` re-enqueues so the
  * identical lane (target, type, configuration, platform, engine) runs again.
- * `additionalArgs` are not persisted, so a rebuild runs without them. Null when
- * no build was recorded under that id.
+ * `additionalArgs` ride along (`additional_args_json`), so a rebuild repeats the build
+ * exactly. Null when no build was recorded under that id.
  */
 export function getBuildRequestById(buildId: string): BuildRequest | null {
   ensureHeadlessBuildsTable();
   const row = getDb().prepare(
-    `SELECT project_path, target_name, ue_version, platform, configuration, target_type
+    `SELECT project_path, target_name, ue_version, platform, configuration, target_type, additional_args_json
      FROM headless_builds WHERE build_id = ?`,
-  ).get(buildId) as Pick<
+  ).get(buildId) as (Pick<
     HeadlessBuildRow,
     'project_path' | 'target_name' | 'ue_version' | 'platform' | 'configuration' | 'target_type'
-  > | undefined;
+  > & { additional_args_json: string | null }) | undefined;
   if (!row) return null;
+  let additionalArgs: string[] | undefined;
+  if (row.additional_args_json) {
+    try {
+      const parsed: unknown = JSON.parse(row.additional_args_json);
+      if (Array.isArray(parsed) && parsed.every((a) => typeof a === 'string')) additionalArgs = parsed;
+    } catch { /* unreadable args: rebuild without them rather than fail */ }
+  }
   return {
     projectPath: row.project_path,
     targetName: row.target_name,
@@ -584,6 +599,7 @@ export function getBuildRequestById(buildId: string): BuildRequest | null {
     configuration: row.configuration as BuildRequest['configuration'],
     platform: row.platform as BuildRequest['platform'],
     ueVersion: row.ue_version,
+    ...(additionalArgs ? { additionalArgs } : {}),
   };
 }
 

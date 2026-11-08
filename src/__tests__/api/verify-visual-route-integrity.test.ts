@@ -24,8 +24,14 @@ import { POST } from '@/app/api/verify/visual/route';
 
 const shot = join(tmpdir(), `pof-visual-integrity-${process.pid}.png`);
 const emptyShot = join(tmpdir(), `pof-visual-integrity-${process.pid}-empty.png`);
-beforeAll(() => { writeFileSync(shot, Buffer.from('bytes')); writeFileSync(emptyShot, ''); });
-afterAll(() => { for (const f of [shot, emptyShot]) { try { rmSync(f); } catch { /* noop */ } } });
+const textShot = join(tmpdir(), `pof-visual-integrity-${process.pid}-text.png`);
+const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+beforeAll(() => {
+  writeFileSync(shot, Buffer.concat([PNG_HEADER, Buffer.from('bytes')]));
+  writeFileSync(emptyShot, '');
+  writeFileSync(textShot, 'not an image, just text');
+});
+afterAll(() => { for (const f of [shot, emptyShot, textShot]) { try { rmSync(f); } catch { /* noop */ } } });
 
 const valid = { moduleId: 'arpg-ui', itemId: 'au-1', screenshotPath: shot };
 const req = (body: unknown) =>
@@ -57,6 +63,16 @@ describe('refused before the paid call', () => {
   it('a zero-byte screenshot (capture still flushing) is refused, not judged', async () => {
     const res = await call({ ...valid, screenshotPath: emptyShot });
     expect(res.status).toBe(422);
+    expect(mockRecognize).not.toHaveBeenCalled();
+    expect(mockRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe('a non-PNG file is refused before the paid call', () => {
+  it('a text file named .png is a 422 and never reaches the provider', async () => {
+    const res = await call({ ...valid, screenshotPath: textShot });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toContain('not a PNG');
     expect(mockRecognize).not.toHaveBeenCalled();
     expect(mockRecord).not.toHaveBeenCalled();
   });

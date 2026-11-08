@@ -23,6 +23,9 @@ interface UsePofBridgeResult {
   disconnect: () => void;
 }
 
+/** Target (host|port|token) the shared connection was last pointed at; dedupes retargets across mounts. */
+let lastTargetKey: string | null = null;
+
 export function usePofBridge(): UsePofBridgeResult {
   const host = useUE5BridgeStore((s) => s.host);
   const pofPort = usePofBridgeStore((s) => s.pofPort);
@@ -75,14 +78,28 @@ export function usePofBridge(): UsePofBridgeResult {
   useEffect(() => {
     if (!autoDetect) return;
     const current = pofBridgeConnection.getState();
+    const key = `${host}|${pofPort}|${pofAuthToken}`;
     if (current.status === 'disconnected') {
+      lastTargetKey = key;
       pofBridgeConnection.connect(host, pofPort, pofAuthToken || undefined);
+    } else if (
+      (current.status === 'error' || current.status === 'reconnecting') &&
+      lastTargetKey !== null &&
+      lastTargetKey !== key
+    ) {
+      // A settings edit while retrying: retarget once. The module-level key makes the
+      // first mounted instance win, so N mounts never fire N connects.
+      lastTargetKey = key;
+      pofBridgeConnection.connect(host, pofPort, pofAuthToken || undefined);
+    } else if (lastTargetKey === null) {
+      lastTargetKey = key;
     }
   }, [autoDetect, host, pofPort, pofAuthToken]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
   const connect = useCallback(async () => {
+    lastTargetKey = `${host}|${pofPort}|${pofAuthToken}`;
     await pofBridgeConnection.connect(
       host,
       pofPort,
