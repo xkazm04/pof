@@ -22,6 +22,7 @@ vi.mock('@/components/shared/ScalableSelector', () => ({
 
 import { EXPANDED_ENTRIES } from '@/components/modules/core-engine/sub_loot/_shared/data';
 import { ECONOMY_KILLS_PER_HOUR } from '@/components/modules/core-engine/sub_loot/simulation/lootSimEngine';
+import { DropTreemap } from '@/components/modules/core-engine/sub_loot/simulation/DropTreemap';
 import { MonteCarloSim } from '@/components/modules/core-engine/sub_loot/simulation/MonteCarloSim';
 import { SmartLoot } from '@/components/modules/core-engine/sub_loot/economy/SmartLoot';
 import { EconomyImpact } from '@/components/modules/core-engine/sub_loot/economy/EconomyImpact';
@@ -191,5 +192,19 @@ describe('MonteCarloSim histogram rarity picker', () => {
     expect(group.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
     fireEvent.click(group[2]);
     expect(group.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'false', 'true']);
+  });
+});
+
+describe('DropTreemap', () => {
+  it('each tier cell is a focusable, named button that drills in from the keyboard', () => {
+    const { container } = render(<DropTreemap />);
+    const cells = [...container.querySelectorAll('svg [role="button"]')];
+    expect(cells.length).toBe(5);
+    expect(cells.every((c) => c.getAttribute('tabindex') === '0')).toBe(true);
+    const common = cells.find((c) => c.getAttribute('aria-label')?.startsWith('Common'))!;
+    expect(common.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.keyDown(common, { key: 'Enter' });
+    expect(common.getAttribute('aria-expanded')).toBe('true');
+    expect(container.textContent).toContain('Common Affix Outcomes');
   });
 });
