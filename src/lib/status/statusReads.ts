@@ -12,7 +12,7 @@ import type { CatalogArtifacts } from '@/components/status/statusArtifactSource'
 import type { StatusVerdictRead } from '@/components/status/statusVerdictSource';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { unknownRead, type SwimlaneCtx } from '@/lib/status/itemFocusModel';
-import { buildSwimlane, sortLanes, judgedContentOfRow, type Swimlane, type StepMeta } from '@/lib/status/statusModel';
+import { buildSwimlane, sortLanes, judgedContentOfRow, isSyntheticEntity, type Swimlane, type StepMeta } from '@/lib/status/statusModel';
 import type { JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
 import { craftForCell, type CellCraft, type CraftVerdictView } from '@/lib/craft/craftCell';
 
@@ -109,8 +109,12 @@ export function assembleLanes({
     const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
     if (craft && craftByCatalog) {
       // Per-step entity -> what the artifact holds NOW, via THE row-hash rule the judge path uses.
+      // Fixtures (`isSyntheticEntity`) are excluded here as on the rest of the map: a gauge on a
+      // test-harness entity is not a gauge of a deliverable and must not floor the step.
+      const realGauges = (craftByCatalog.get(c.catalogId) ?? []).filter((v) => !isSyntheticEntity(v.entityId));
       const contentByStep = new Map<string, Map<string, JudgedContent>>();
       for (const a of c.rows) {
+        if (isSyntheticEntity(a.entityId)) continue;
         const m = contentByStep.get(a.step) ?? new Map<string, JudgedContent>();
         m.set(a.entityId, judgedContentOfRow(a));
         contentByStep.set(a.step, m);
@@ -119,7 +123,7 @@ export function assembleLanes({
         const cc = craftForCell(
           c.catalogId,
           s.label,
-          craftByCatalog.get(c.catalogId) ?? [],
+          realGauges,
           contentByStep.get(s.label) ?? new Map(),
         );
         if (cc) craft.set(`${c.catalogId} ${s.label}`, cc);
