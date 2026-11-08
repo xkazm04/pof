@@ -7,6 +7,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { formatUsd } from '@/lib/cli-spend/format';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { BudgetEditPreview, BudgetPace } from '@/components/modules/evaluator/SpendBudgetPreview';
+import type { BudgetLoadState } from '@/hooks/useCliSpend';
 import type { BudgetStatus, BudgetConfig, DailySpend } from '@/types/cli-spend';
 
 const NO_HISTORY: DailySpend[] = [];
@@ -26,7 +27,12 @@ function parseLimit(raw: string): number | null | 'invalid' {
 }
 
 interface SpendBudgetPanelProps {
-  status: BudgetStatus;
+  /**
+   * Live budget status. When it carries `isLoaded` / `loadError` (from `useBudget`),
+   * limits are treated as unknown until a load succeeds: the failure is shown and
+   * editing is blocked, so a failed load is never read as "no limit" nor saved over.
+   */
+  status: BudgetStatus & Partial<BudgetLoadState>;
   /** Recorded daily spend (the dashboard's rollup) — replayed to preview a typed daily limit. */
   daily?: DailySpend[];
   isSaving: boolean;
@@ -45,7 +51,10 @@ export function SpendBudgetPanel({ status, daily: history = NO_HISTORY, isSaving
   const [monthly, setMonthly] = useState(status.config.monthlyLimitUsd?.toString() ?? '');
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const limitsUnknown = status.loadError != null || status.isLoaded === false;
+
   const startEdit = () => {
+    if (limitsUnknown) return;
     setDaily(status.config.dailyLimitUsd?.toString() ?? '');
     setMonthly(status.config.monthlyLimitUsd?.toString() ?? '');
     setSaveError(null);
@@ -78,7 +87,8 @@ export function SpendBudgetPanel({ status, daily: history = NO_HISTORY, isSaving
         {!editing ? (
           <button
             onClick={startEdit}
-            className="flex items-center gap-1 text-2xs text-text-muted hover:text-text transition-colors focus-ring rounded px-1.5 py-0.5"
+            disabled={limitsUnknown}
+            className="flex items-center gap-1 text-2xs text-text-muted hover:text-text transition-colors focus-ring rounded px-1.5 py-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Pencil className="w-2.5 h-2.5" /> Edit limits
           </button>
@@ -114,6 +124,17 @@ export function SpendBudgetPanel({ status, daily: history = NO_HISTORY, isSaving
             exceed it prompt a confirmation.
           </p>
         </div>
+      ) : status.loadError != null ? (
+        <div role="alert" className="flex items-center justify-between gap-3 text-2xs" style={{ color: STATUS_ERROR }}>
+          <span>Could not load budget limits: {status.loadError}</span>
+          {status.retry && (
+            <button onClick={status.retry} className="text-text-muted hover:text-text focus-ring rounded px-1.5 py-0.5 underline">
+              Retry
+            </button>
+          )}
+        </div>
+      ) : status.isLoaded === false ? (
+        <p className="text-2xs text-text-muted">Loading budget limits...</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <BudgetMeter
