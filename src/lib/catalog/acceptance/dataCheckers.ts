@@ -326,8 +326,14 @@ export function maxWordsPerEntry(field: string, label: string, max: number): Che
 export function minCount(field: string, label: string, n: number): Checker {
   // Tagged so the produce prompt NAMES the list it counts (`requiredFields.ts`).
   return tagRequiredFields((data) => {
-    const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
-    const ok = arr.length >= n;
-    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${arr.length} / ${n}`, ...(ok ? {} : { reason: `field "${field}" has ${arr.length} item(s), needs ≥ ${n}` }) };
+    const all = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
+    // A declared-gap ITEM is no item (as fieldsPopulated / entriesHaveFields read it). Only the bare marker or a
+    // `{ value: marker }` wrapper: a row with real fields beside a gap note is still a row, so isDeclaredGap's
+    // any-own-property rule does not apply to list items.
+    const real = all.filter((v) => !((typeof v === 'string' || (v != null && typeof v === 'object' && 'value' in v)) && isDeclaredGap(v)));
+    const ok = real.length >= n;
+    const gaps = all.length - real.length;
+    const note = gaps ? ` (${gaps} declared gap${gaps === 1 ? '' : 's'} not counted — "${REFERENCE_GAP}")` : '';
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${real.length} / ${n}`, ...(ok ? {} : { reason: `field "${field}" has ${real.length} item(s), needs ≥ ${n}${note}` }) };
   }, { field, minItems: n });
 }
