@@ -11,7 +11,7 @@ import { ACCENT, RARITY_TIERS } from '../_shared/data';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { useLootTuningStore } from '../_shared/lootTuningStore';
 import {
-  findBinding, goalSeekWeights, killsToLegendary, rosterFindings, tunedSummary, type TunerField,
+  bindingFindings, findBinding, goalSeekWeights, killsToLegendary, tunedSummary, type TunerField,
 } from '../_shared/bindingTuner';
 
 const INPUT = 'w-16 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-current/50';
@@ -38,14 +38,24 @@ function NumField({ label, value, was, step, onChange }: {
  * kills-to-first-Legendary shift update live; every Core panel reads the same store.
  */
 export function BindingTuner() {
-  const state = useLootTuningStore();
-  const { dispatch, selectedId, rarityGold, history } = state;
+  // Per-field selectors: the tuner re-renders only for its own inputs, not for every store
+  // write (e.g. the Pity tab's threshold slider).
+  const dispatch = useLootTuningStore((s) => s.dispatch);
+  const selectedId = useLootTuningStore((s) => s.selectedId);
+  const rarityGold = useLootTuningStore((s) => s.rarityGold);
+  const history = useLootTuningStore((s) => s.history);
+  const bindings = useLootTuningStore((s) => s.bindings);
+  const baseline = useLootTuningStore((s) => s.baseline);
   const [target, setTarget] = useState('');
 
-  const tuned = findBinding(state.bindings, selectedId);
-  const base = findBinding(state.baseline, selectedId);
-  const summary = selectedId ? tunedSummary(state, selectedId) : null;
-  const findings = useMemo(() => (selectedId ? rosterFindings(state)[selectedId] ?? [] : []), [state, selectedId]);
+  const tuned = findBinding(bindings, selectedId);
+  const base = findBinding(baseline, selectedId);
+  const summary = selectedId ? tunedSummary({ baseline, bindings, rarityGold }, selectedId) : null;
+  // Lint just the selected binding (against its peers), not all of the roster.
+  const findings = useMemo(
+    () => (selectedId ? bindingFindings({ baseline, bindings, rarityGold }, selectedId) : []),
+    [baseline, bindings, rarityGold, selectedId],
+  );
 
   const targetEV = Number(target);
   const proposal = useMemo(() => {
