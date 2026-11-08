@@ -25,7 +25,8 @@ export function AskTab() {
 
   const submit = useCallback(() => {
     const text = draft.trim();
-    if (!text) return;
+    // Same gate as every other Materials dispatch: never into a busy session.
+    if (!text || cli.isRunning) return;
     void cli.execute(TaskFactory.askClaude('materials', text, 'Materials'));
     setDraft('');
   }, [draft, cli]);
@@ -49,7 +50,7 @@ export function AskTab() {
         <button
           type="button"
           onClick={submit}
-          disabled={!draft.trim()}
+          disabled={!draft.trim() || cli.isRunning}
           className="focus-ring px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
           style={{
             backgroundColor: `${MODULE_COLORS.content}15`,
