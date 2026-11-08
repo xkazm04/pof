@@ -107,3 +107,24 @@ describe('sync log SNAP events', () => {
     expect(diffSyncState(view(1), view(2, 'Editing', '/Game/M'))).toHaveLength(1);
   });
 });
+
+describe('watched property editor keeps the value type', () => {
+  function push(currentValue: unknown, typed: string) {
+    const onPush = vi.fn();
+    render(<PropertyEditorRow objectPath="/Game/A" propertyName="P" currentValue={currentValue} onPush={onPush} />);
+    fireEvent.click(screen.getByTitle('Edit & push to UE5'));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: typed } });
+    fireEvent.click(screen.getByTitle('Push to UE5'));
+    return onPush;
+  }
+
+  it('a string property stays a string even when the text looks like JSON', () => {
+    expect(push('100', '200')).toHaveBeenCalledWith('/Game/A', 'P', '200');
+    cleanup();
+    expect(push('off', 'true')).toHaveBeenCalledWith('/Game/A', 'P', 'true');
+  });
+
+  it('control: a number property is still parsed', () => {
+    expect(push(5, '7')).toHaveBeenCalledWith('/Game/A', 'P', 7);
+  });
+});
