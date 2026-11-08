@@ -66,6 +66,7 @@ export function PropertyEditorRow({
             <div className="flex items-center gap-1">
               <input
                 ref={inputRef}
+                aria-label={`New value for ${propertyName}`}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleKeyDown}

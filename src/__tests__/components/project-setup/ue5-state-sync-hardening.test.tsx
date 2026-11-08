@@ -241,3 +241,19 @@ describe('section toggles point at real panels', () => {
     expect(dangling(container)).toEqual([]);
   });
 });
+
+describe('teleport and row inputs are named', () => {
+  it('each teleport field is reachable by its label', () => {
+    renderLivePanel();
+    fireEvent.click(screen.getByRole('button', { name: /Viewport Teleport/ }));
+    for (const name of ['x', 'y', 'z', 'pitch', 'yaw', 'roll', 'FOV']) {
+      expect(screen.getByLabelText(name).tagName).toBe('INPUT');
+    }
+  });
+
+  it('the row editor names the property it edits', () => {
+    render(<PropertyEditorRow objectPath="/Game/A" propertyName="Health" currentValue={5} onPush={() => {}} />);
+    fireEvent.click(screen.getByTitle('Edit & push to UE5'));
+    expect(screen.getByRole('textbox', { name: 'New value for Health' })).not.toBeNull();
+  });
+});

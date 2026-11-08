@@ -50,8 +50,9 @@ export function ViewportTeleportSection({
               <div className="grid grid-cols-3 gap-1.5">
                 {(['x', 'y', 'z'] as const).map((axis) => (
                   <div key={axis}>
-                    <label className="text-2xs font-bold text-text-muted uppercase">{axis}</label>
+                    <label htmlFor={`bss-view-${axis}`} className="text-2xs font-bold text-text-muted uppercase">{axis}</label>
                     <input
+                      id={`bss-view-${axis}`}
                       type="number"
                       value={viewTarget[axis]}
                       onChange={(e) => setViewTarget((v) => ({ ...v, [axis]: e.target.value }))}
@@ -63,8 +64,9 @@ export function ViewportTeleportSection({
               <div className="grid grid-cols-4 gap-1.5">
                 {(['pitch', 'yaw', 'roll'] as const).map((r) => (
                   <div key={r}>
-                    <label className="text-2xs font-bold text-text-muted uppercase">{r}</label>
+                    <label htmlFor={`bss-view-${r}`} className="text-2xs font-bold text-text-muted uppercase">{r}</label>
                     <input
+                      id={`bss-view-${r}`}
                       type="number"
                       value={viewTarget[r]}
                       onChange={(e) => setViewTarget((v) => ({ ...v, [r]: e.target.value }))}
@@ -73,8 +75,9 @@ export function ViewportTeleportSection({
                   </div>
                 ))}
                 <div>
-                  <label className="text-2xs font-bold text-text-muted uppercase">FOV</label>
+                  <label htmlFor="bss-view-fov" className="text-2xs font-bold text-text-muted uppercase">FOV</label>
                   <input
+                    id="bss-view-fov"
                     type="number"
                     value={viewTarget.fov}
                     onChange={(e) => setViewTarget((v) => ({ ...v, fov: e.target.value }))}
