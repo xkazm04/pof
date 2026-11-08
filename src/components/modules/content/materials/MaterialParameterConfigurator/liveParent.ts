@@ -36,7 +36,9 @@ function scalarOf(p: MaterialParameter): ParentScalar {
     max = Math.max(max, d);
   }
   if (max <= min) max = min + 1;
-  return { name: p.name, min, max, defaultValue: d, step: (max - min) / 100 };
+  // Round away binary noise (2.2 / 100 = 0.022000000000000002): the step is
+  // printed verbatim into the prompt's `step=` and the ClampMin/UI metadata.
+  return { name: p.name, min, max, defaultValue: d, step: Number(((max - min) / 100).toPrecision(6)) };
 }
 
 function namesOf(entry: MaterialEntry, type: MaterialParameter['type']): string[] {
