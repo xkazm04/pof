@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { PLATFORM_IDS, platformLabel } from '@/lib/packaging/build-profiles';
 import { MODULE_COLORS, STATUS_ERROR } from '@/lib/chart-colors';
@@ -26,6 +26,8 @@ export function RecordBuildForm({ onSubmit, nextVersion }: { onSubmit: (data: Re
   const [sizeGb, setSizeGb] = useState('');
   const [durationMin, setDurationMin] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const uid = useId();
+  const fid = (k: string) => `${uid}-${k}`;
 
   const handleSubmit = () => {
     const size = parseAmount(sizeGb);
@@ -56,16 +58,16 @@ export function RecordBuildForm({ onSubmit, nextVersion }: { onSubmit: (data: Re
       </div>
       <div className="grid grid-cols-5 gap-2">
         <div>
-          <label className="text-2xs text-text-muted uppercase tracking-wider">Platform</label>
-          <select value={platform} onChange={(e) => setPlatform(e.target.value)} className={selectClass}>
+          <label className="text-2xs text-text-muted uppercase tracking-wider" htmlFor={fid('platform')}>Platform</label>
+          <select id={fid('platform')} value={platform} onChange={(e) => setPlatform(e.target.value)} className={selectClass}>
             {PLATFORM_IDS.map((id) => (
               <option key={id} value={id}>{platformLabel(id)}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="text-2xs text-text-muted uppercase tracking-wider">Config</label>
-          <select value={config} onChange={(e) => setConfig(e.target.value)} className={selectClass}>
+          <label className="text-2xs text-text-muted uppercase tracking-wider" htmlFor={fid('config')}>Config</label>
+          <select id={fid('config')} value={config} onChange={(e) => setConfig(e.target.value)} className={selectClass}>
             <option>Development</option>
             <option>DebugGame</option>
             <option>Shipping</option>
@@ -73,19 +75,19 @@ export function RecordBuildForm({ onSubmit, nextVersion }: { onSubmit: (data: Re
           </select>
         </div>
         <div>
-          <label className="text-2xs text-text-muted uppercase tracking-wider">Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value as 'success' | 'failed')} className={selectClass}>
+          <label className="text-2xs text-text-muted uppercase tracking-wider" htmlFor={fid('status')}>Status</label>
+          <select id={fid('status')} value={status} onChange={(e) => setStatus(e.target.value as 'success' | 'failed')} className={selectClass}>
             <option value="success">Success</option>
             <option value="failed">Failed</option>
           </select>
         </div>
         <div>
-          <label className="text-2xs text-text-muted uppercase tracking-wider">Size (GB)</label>
-          <input value={sizeGb} onChange={(e) => setSizeGb(e.target.value)} placeholder="0.0" className={inputClass} />
+          <label className="text-2xs text-text-muted uppercase tracking-wider" htmlFor={fid('size')}>Size (GB)</label>
+          <input id={fid('size')} value={sizeGb} onChange={(e) => setSizeGb(e.target.value)} placeholder="0.0" className={inputClass} />
         </div>
         <div>
-          <label className="text-2xs text-text-muted uppercase tracking-wider">Duration (min)</label>
-          <input value={durationMin} onChange={(e) => setDurationMin(e.target.value)} placeholder="0" className={inputClass} />
+          <label className="text-2xs text-text-muted uppercase tracking-wider" htmlFor={fid('duration')}>Duration (min)</label>
+          <input id={fid('duration')} value={durationMin} onChange={(e) => setDurationMin(e.target.value)} placeholder="0" className={inputClass} />
         </div>
       </div>
       <button
