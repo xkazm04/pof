@@ -184,10 +184,12 @@ export function gradeKitCoherence(
   let worstPair: { a: string; b: string; deltaE: number } | undefined;
   let total = 0;
   let pairs = 0;
-  const perMember = new Map<string, { sum: number; n: number }>();
-  const bump = (name: string, d: number) => {
-    const e = perMember.get(name) ?? { sum: 0, n: 0 };
-    perMember.set(name, { sum: e.sum + d, n: e.n + 1 });
+  // Keyed by position, not name: two parts may share a name, and pooling them would
+  // average a real outlier into its typical namesake.
+  const perMember = new Map<number, { sum: number; n: number }>();
+  const bump = (index: number, d: number) => {
+    const e = perMember.get(index) ?? { sum: 0, n: 0 };
+    perMember.set(index, { sum: e.sum + d, n: e.n + 1 });
   };
 
   for (let i = 0; i < usable.length; i++) {
@@ -196,8 +198,8 @@ export function gradeKitCoherence(
       if (d === undefined) continue;
       total += d;
       pairs += 1;
-      bump(usable[i].name, d);
-      bump(usable[j].name, d);
+      bump(i, d);
+      bump(j, d);
       if (!worstPair || d > worstPair.deltaE) {
         worstPair = { a: usable[i].name, b: usable[j].name, deltaE: d };
       }
@@ -206,7 +208,7 @@ export function gradeKitCoherence(
 
   const meanDeltaE = pairs > 0 ? total / pairs : undefined;
   const outlier = [...perMember.entries()]
-    .map(([name, e]) => ({ name, mean: e.sum / e.n }))
+    .map(([index, e]) => ({ name: usable[index].name, mean: e.sum / e.n }))
     .sort((x, y) => y.mean - x.mean)[0]?.name;
   const drifting = worstPair !== undefined && worstPair.deltaE >= driftThreshold;
   const note = unmeasured ? ` Not compared (no palette): ${unmeasured.join(', ')}.` : '';
