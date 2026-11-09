@@ -14909,12 +14909,11 @@
           "changedAt": "2026-10-25",
           "confidence": "probable",
           "state": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:201 The accessibility score card displays a fixed score rather than measured verification results, so its favorable rating cannot establish accessibility.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:5e30485ee0c7c123",
-          "evaluatedRevision": 7,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:62 Selecting a flow-graph node always smooth-scrolls the matching row because this explicit API option is not gated on the reduced-motion signal and is not overridden by the global CSS scroll-behavior reset, one of several realized gaps in this context alongside a selection state the pill primitive never exposes and a Scaffold button that silently does nothing.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d839f62eac6007da",
+          "evaluatedRevision": 8,
+          "revisionsBehind": 1
         },
         {
           "subject": "module-design",

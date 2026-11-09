@@ -11469,39 +11469,58 @@
       "subject": "accessibility",
       "bundle": "software-engineering",
       "state": "deviation",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T23:55:42.382Z",
-      "worker": "a9849fd6-b30f-486c-888b-a557023a55fe",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:28:34.252Z",
+      "worker": "d0937cff-d9a9-4514-a2fe-0610a65e92b3",
       "techniques": [
-        {
-          "technique": "a11y-verification",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:201 AccessibilityTab renders this constant as its score without measurement scope or provenance."
-        },
-        {
-          "technique": "hidden-but-mounted-inertness",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:116 AnimatePresence retains the collapsing subtree, including lifecycle controls, during exit without closing its focus and accessibility channels."
-        },
-        {
-          "technique": "keyboard-navigation-models",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenLifecycle.tsx:74 When no runnable step remains, static text replaces NextActionButton without a focus handoff if that button was focused."
-        },
-        {
-          "technique": "name-and-description-wiring",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ui/systems/ArpgHudPreview.tsx:148 The enclosing preview button has no explicit accessible name, and XpBarElement supplies only empty divs."
-        },
         {
           "technique": "preference-respect",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:96 Screen names truncate inside a fixed pixel maximum instead of reflowing as text scales."
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:62 An explicit behavior:'smooth' wins over the globals.css scroll-behavior:auto reset, and this file reads no reduced-motion signal, so the scroll still animates under the preference. The looping edge and pulse animations in FlowGraph and WidgetRect do honor the signal via motionSafe."
         },
         {
           "technique": "primitive-level-a11y",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:86 The reusable disclosure row owns expansion but does not expose aria-expanded on its button."
+          "evidence": "src/components/modules/core-engine/sub_ui/accessibility/AccessibilityTab.tsx:38 The single-select InteractivePill (src/components/ui/InteractivePill.tsx:128-135) renders plain buttons with no aria-pressed, aria-selected or group role, and the selection is only an animated background and colour. The language, HUD context and breakpoint selectors in this context all inherit that gap."
+        },
+        {
+          "technique": "keyboard-navigation-models",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:44 The Scaffold button is disabled only while isRunning (line 112), so with an empty class it stays focusable and enabled, activation does nothing, and no message appears: a false affordance. The tablist itself does rove correctly through SubTabNavigation."
+        },
+        {
+          "technique": "name-and-description-wiring",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:101 The visible text is node.label, but the name begins with 'Select', so it neither equals nor begins with the visible label; UIBindingsTab.tsx:106 repeats this. Separately, the WBP input (WBPStarterPanel.tsx:68-83) has no aria-invalid or aria-describedby tying it to its error text."
+        },
+        {
+          "technique": "live-region-architecture",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:85 A feature-owned alert region is created together with its text instead of the component requesting an announcement from a region that already exists."
+        },
+        {
+          "technique": "assistive-tech-divergence",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:84 The conditional mount makes the region arrive already populated, the case the technique says leaves each reader to interpret. This is the same construct as the live-region finding seen from the delivery-layer rule, with no recorded pairing at the site."
+        },
+        {
+          "technique": "hidden-but-mounted-inertness",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:116 The hide is an unmount, which is the preferred rung, but AnimatePresence keeps the subtree mounted through a visual-only exit with no inert on it, so its run button stays tabbable while collapsing. The leak is limited to the exit window."
+        },
+        {
+          "technique": "a11y-verification",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:197 The score card renders this constant as a grade and picks its success colour from it (AccessibilityTab.tsx:78-85) with no measured source, rules or surfaces, so an unmeasured value reads as an audit result. The sub_ui tests do query by role and name, but the focus check is a className proxy and none asserts where focus lands."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:201 The accessibility score card displays a fixed score rather than measured verification results, so its favorable rating cannot establish accessibility.",
+          "evaluatedAt": "2026-10-18T23:55:42.382Z",
+          "worker": "a9849fd6-b30f-486c-888b-a557023a55fe",
+          "reason": "replaced by d0937cff-d9a9-4514-a2fe-0610a65e92b3"
         }
       ]
     },

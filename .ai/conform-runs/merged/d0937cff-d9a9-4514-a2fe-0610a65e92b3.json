@@ -1,0 +1,83 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d0937cff-d9a9-4514-a2fe-0610a65e92b3",
+ "subject": "accessibility",
+ "evaluatedAt": "2026-11-09T04:28:34.252838+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "game-ui-hud",
+   "subject": "accessibility",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:62 Selecting a flow-graph node always smooth-scrolls the matching row because this explicit API option is not gated on the reduced-motion signal and is not overridden by the global CSS scroll-behavior reset, one of several realized gaps in this context alongside a selection state the pill primitive never exposes and a Scaffold button that silently does nothing.",
+   "techniques": [
+    {
+     "technique": "preference-respect",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:62 An explicit behavior:'smooth' wins over the globals.css scroll-behavior:auto reset, and this file reads no reduced-motion signal, so the scroll still animates under the preference. The looping edge and pulse animations in FlowGraph and WidgetRect do honor the signal via motionSafe."
+    },
+    {
+     "technique": "primitive-level-a11y",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/accessibility/AccessibilityTab.tsx:38 The single-select InteractivePill (src/components/ui/InteractivePill.tsx:128-135) renders plain buttons with no aria-pressed, aria-selected or group role, and the selection is only an animated background and colour. The language, HUD context and breakpoint selectors in this context all inherit that gap."
+    },
+    {
+     "technique": "keyboard-navigation-models",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:44 The Scaffold button is disabled only while isRunning (line 112), so with an empty class it stays focusable and enabled, activation does nothing, and no message appears: a false affordance. The tablist itself does rove correctly through SubTabNavigation."
+    },
+    {
+     "technique": "name-and-description-wiring",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/FlowGraph.tsx:101 The visible text is node.label, but the name begins with 'Select', so it neither equals nor begins with the visible label; UIBindingsTab.tsx:106 repeats this. Separately, the WBP input (WBPStarterPanel.tsx:68-83) has no aria-invalid or aria-describedby tying it to its error text."
+    },
+    {
+     "technique": "live-region-architecture",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:85 A feature-owned alert region is created together with its text instead of the component requesting an announcement from a region that already exists."
+    },
+    {
+     "technique": "assistive-tech-divergence",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel.tsx:84 The conditional mount makes the region arrive already populated, the case the technique says leaves each reader to interpret. This is the same construct as the live-region finding seen from the delivery-layer rule, with no recorded pairing at the site."
+    },
+    {
+     "technique": "hidden-but-mounted-inertness",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/flow/ScreenNodeRow.tsx:116 The hide is an unmount, which is the preferred rung, but AnimatePresence keeps the subtree mounted through a visual-only exit with no inert on it, so its run button stays tabbable while collapsing. The leak is limited to the exit window."
+    },
+    {
+     "technique": "a11y-verification",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/_shared/data.ts:197 The score card renders this constant as a grade and picks its success colour from it (AccessibilityTab.tsx:78-85) with no measured source, rules or surfaces, so an unmeasured value reads as an audit result. The sub_ui tests do query by role and name, but the focus check is a className proxy and none asserts where focus lands."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:28:34.252838+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "accessibility"
+   ],
+   "techniques": [
+    "a11y-verification",
+    "assistive-tech-divergence",
+    "hidden-but-mounted-inertness",
+    "keyboard-navigation-models",
+    "live-region-architecture",
+    "name-and-description-wiring",
+    "preference-respect",
+    "primitive-level-a11y"
+   ],
+   "deviations": 1,
+   "context": "game-ui-hud",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
