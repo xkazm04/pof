@@ -42,6 +42,33 @@ Three things limit how far this goes:
 
 The misses show where it breaks. Examples: nested modals, where effect order made the outer modal topmost; relabelling a fidelity rung instead of building the missing detection; a skin-binding edge case. **It handles local logic well and misses behaviour that depends on framework order or on intent the bug report doesn't state.** Larger fixes missed more often: 4 of 12 against 1 of 8.
 
+### GDScript backtest (n=10, 2026-11-09)
+
+Same method on real fixes from the game repo: GPT-6.1 medium, one attempt, about 1.5-3.5 minutes each, landed test hidden, each test confirmed red on the unfixed code. The bug report was the original commit subject, and some subjects name a constant or function the fix added, so this leans in Codex's favour.
+
+| Result | Count | Which |
+|---|---|---|
+| Passed the hidden test | **6** | `bb7077f5`, `59584b62`, `d561498d`, `d61f48bc`, `035643c7`, `90e9a69c` |
+| Correct, but the test calls the original's function name | 1 | `3cf3ffdc` (`core_drawn`) |
+| Undetermined | 2 | `6438394e` (poses with `drive(0.0)`, test expects a pose that advances); `5c77021f` (gate placed in the caller, test reads `fires_drawn`) |
+| Real miss | **1** | `988c0329` (revived every corpse: "a cop's corpse stays down" was intent the report did not state) |
+
+The same pattern as PoF TypeScript: local logic holds, unstated intent does not. The middle rows are my reading of the diffs. n=10 is small and there is still no Claude baseline.
+
+### Tests and tools pilot in the game repo (n=8, 2026-11-09)
+
+Six GUT test files for classes with no tests, graded by `tools/mutate` (bar 70 %, 15 sampled mutants), and two gate tools, graded by hidden tests Claude wrote. One repair round allowed.
+
+| Result | Count | Notes |
+|---|---|---|
+| Passed the machine grader | **8 of 8** | 6 on the first try; 2 needed the repair round, both for lint |
+| Mutation score | 77.8-100 % | `save_meta` lowest, 2 survivors on one line |
+| Time per task | 2-15 minutes | mostly grading |
+
+**Claude's review still found what the grader could not.** Five tests pinned accidental behaviour, for example a 180 degree boss cone that excludes its exact edge, and one assertion hardcoded the length of a real voice file. A mutation score rewards exactly that kind of over-fitting. Those were removed or loosened before landing, so the review is not optional.
+
+Possible real defects those pins exposed, not fixed: `BossZone` cone at 180 degrees excludes its exact edge; a default `QuestFailRule` matches any text. All of it is in rtai main (`bc2726b4`). Claude tokens per accepted task were not measured.
+
 ### Blind review: can it find bugs with no bug report? (n=12)
 
 It named the known defect in **4 of 12** files, and in one more only partly. It also reported many other defects with concrete triggers, some marked "reproduced". **Those are unverified, so precision is unknown.** On its own this output would just add unverified work to the queue.
@@ -111,4 +138,6 @@ If Phase 2 misses its bar, stop at migrations and the test-writing classes that 
 
 1. **Run Phase 1 next, unattended?** Recommended. It costs Claude usage for the baseline, and it is the only way to get a fair comparison.
 2. **May Codex write game code in rtai?** Today it only makes art there. Recommended: yes, for tests and tools first, gameplay code only after the GDScript backtest.
-3. **Keep a share of the weekly window for images?** Recommended: cap Codex text work at 60 % of the week.
+3. **Keep a share of the weekly window for images?** Decided 2026-11-09 (c-1): the dispatcher stops starting text tasks when the total meter reaches 75 %, because the meter cannot separate text from images.
+
+Decision 2 was also answered on 2026-11-09: tests and tools first, under Claude's control. Gameplay code stays out until a further decision. The Claude baseline in Phase 1 has not run.
