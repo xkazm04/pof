@@ -5898,7 +5898,11 @@
           "revision": 2,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:105 The painter is a mouse-driven 2D SVG canvas in a browser panel, and a search of AudioScenePainter and AudioPropertyPanel found no webxr, immersive-vr, headset, arcminute or diopter, so no head-worn seated reading exists for the subject to govern.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d682144e96d737d9",
+          "evaluatedRevision": 2
         },
         {
           "subject": "media-playback",
@@ -16272,7 +16276,11 @@
           "revision": 2,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:29 Both tools author and preview a flat screen-space HUD and inventory in DOM elements, and a search of HudThemeEditor and InventoryGridDesigner found no webxr, immersive-vr, headset, arcminute or diopter, so in-headset reading rules have nothing to bind to.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d682144e96d737d9",
+          "evaluatedRevision": 2
         }
       ],
       "governance": "governed"
@@ -25564,7 +25572,11 @@
           "revision": 2,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:67 The planner is a keyboard-and-mouse 2D SVG grid for authoring streaming zones, and a search of its directory found no webxr, immersive-vr, headset, arcminute or diopter, so nothing here is read inside a head-worn display.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d682144e96d737d9",
+          "evaluatedRevision": 2
         },
         {
           "subject": "spatial-audio-scene-authoring",
@@ -29176,7 +29188,11 @@
           "revision": 2,
           "changedAt": "2026-11-03",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:89 The world module draws its map as a flat SVG in tabbed browser panels, and a search of sub_world found no webxr, immersive-vr, headset, arcminute or diopter, so the subject's head-worn precondition does not hold.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:d682144e96d737d9",
+          "evaluatedRevision": 2
         },
         {
           "subject": "generated-asset-world-scale",
