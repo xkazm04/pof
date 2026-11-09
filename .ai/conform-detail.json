@@ -24266,6 +24266,21 @@
           "evidence": "src/components/modules/game-systems/SmokeTest.tsx:12 The smoke run takes only a build id, and the server reads the exe from the recorded row, so the client cannot supply what gets judged."
         }
       ]
+    },
+    "7041e335-744f-454d-9814-b474b9f31c37/quality-gates": {
+      "context": "level-flow-editor",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:10:05.360Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "fb97a396-4782-45f2-85d4-c10225453c47",
+        "state": "not-applicable",
+        "at": "2026-11-09T02:10:30.061311+00:00",
+        "reason": "reviewer (sonnet): Each not-applicable rests on an anchor that does not itself show the absence of a blocking mechanism, plus a keyword search whose terms (process.exit, exitCode, pre-commit, --no-verify) are CLI/git-hook terms that cannot detect UI-level gating; for level-flow-editor the 'gate means in-game door lock"
+      }
     }
   }
 }

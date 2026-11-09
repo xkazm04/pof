@@ -1,0 +1,93 @@
+{
+  "schema": "conform-run/1",
+  "worker": "fb97a396-4782-45f2-85d4-c10225453c47",
+  "subject": "quality-gates",
+  "evaluatedAt": "2026-11-09T02:10:05.360153+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "gdd-compliance",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/GDDComplianceView/constants.ts:23 These views only render an already-computed compliance report, and a search of src/components/modules/evaluator for process.exit, exitCode, pre-commit and --no-verify found nothing, so no input here can make anything refuse and the subject's precondition of a mechanism that can block does not hold.",
+      "techniques": [],
+      "absenceTerms": [
+        "process.exit",
+        "exitCode",
+        "pre-commit",
+        "--no-verify"
+      ]
+    },
+    {
+      "context": "crash-analysis",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:57 The crash views load and display triage data, where severity describes a crash rather than a check, and searches for process.exit, exitCode, pre-commit and --no-verify across the evaluator directory, plus gate, blocking, refuse and verdict across the crash views, found nothing, so nothing here can refuse.",
+      "techniques": [],
+      "absenceTerms": [
+        "process.exit",
+        "exitCode",
+        "pre-commit",
+        "--no-verify"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "quality-gates",
+      "context": "blender-mcp-bridge",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "catalog-acceptance",
+      "reason": "evidence leans on verify-static/route.ts, which is not a tracked file"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "level-flow-editor",
+      "reason": "withdrawn after review: reviewer (sonnet): Each not-applicable rests on an anchor that does not itself show the absence of a blocking mechanism, plus a keyword search whose terms (process.exit, exitCode, pre-commit, --no-verify) are CLI/git-hook terms that cannot detect UI-level gating; for level-flow-editor the 'gate means in-game door lock"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-09T02:10:05.360153+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "gdd-compliance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T02:10:05.360153+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "crash-analysis",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T02:10:05.360153+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "level-flow-editor",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}
