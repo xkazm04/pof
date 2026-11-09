@@ -30,6 +30,12 @@ export interface CodexTask {
   base?: string;
   /** Overrides the routed model, for measuring a model before the routing table adopts it. */
   model?: string;
+  /** Absolute path of another git repository to work in. Absent means PoF. */
+  repo?: string;
+  /** Repository laws for the brief. Required in practice with `repo`: `REPO_LAWS` describes PoF. */
+  laws?: string[];
+  /** Git-ignored paths the task needs in its fresh worktree, copied from `from` (another checkout of the same repo). */
+  copyIgnored?: { from: string; paths: string[] };
   /**
    * A task-specific result shape (a proposal, a critique) in place of `CODEX_REPORT_SCHEMA`.
    * Must be a strict JSON Schema object (additionalProperties false, every property required).
@@ -101,7 +107,7 @@ Touching anything outside this list is allowed only if unavoidable — then list
 ${list(t.acceptance)}
 
 ## Constraints
-${list([...(t.constraints ?? []), ...REPO_LAWS])}
+${list([...(t.constraints ?? []), ...(t.laws ?? REPO_LAWS)])}
 
 ## Out of scope
 ${list(t.outOfScope)}
