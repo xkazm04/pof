@@ -8519,7 +8519,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/ue-schema.ts:61 ueSchema() serves a committed JSON snapshot of UE headers that records no fingerprint of the headers it came from, and ue-schema-parity checks step fields against it with only a manual refresh note, so a UE header change leaves the parity suite green against yesterday's schema.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "hitl-approval",

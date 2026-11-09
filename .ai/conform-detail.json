@@ -25579,6 +25579,37 @@
           "evidence": "src/lib/visual-gen/asset-library-db.ts:70 The schema bootstrap that both the :memory: fixtures and getLibraryDb() call sets the FK pragma itself, so the test store does not fork from production on the mode that the cascade tests depend on."
         }
       ]
+    },
+    "dd77b824-917c-4270-8a4b-6aafc4affa37/test-harness": {
+      "context": "catalog-core-infrastructure",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:31:43.575Z",
+      "worker": "581211b0-3021-42fa-92cd-70cb58e7e419",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/ue-schema.ts:61 The derived fixture names no inputs and nothing checks whether it is fresh; the rebuild is the manual `npm run snapshot:ue-schema` (ue-schema-parity.test.ts:3)."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/ue-schema-parity.test.ts:14 Floors on the snapshot size and on the declared-step count stop the parity loop from selecting zero cases (the snapshot had been `{}` for four months)."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/headless.test.ts:10 The suite that persists declares its own per-process throwaway DB instead of silently inheriting the operator's ~/.pof/pof.db."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/headless-submit-query-count.test.ts:28 The read counter wraps and delegates to the real listVerdicts over a real SQLite file, so the count measures the shipped path."
+        }
+      ]
     }
   }
 }
