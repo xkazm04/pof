@@ -3907,7 +3907,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachineSvg.tsx:19 This read-only generated diagram has correct shared anchor geometry and a deterministic layout, but the SVG has no role, accessible name or aria-hidden, so assistive technology gets loose text fragments and the only neighbourhood highlight is pointer-only.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         }
       ],
       "governance": "governed"
@@ -16736,7 +16740,11 @@
           "revision": 6,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:214 The spatial stash is a bounded CSS grid of fixed-pixel cells with no topology, and a case-insensitive search of the catalog directory for panX, zoom, screenToWorld, setPointerCapture and reactflow found zero hits, so no pan/zoom node surface exists here and the HTML5 drag belongs to the drag-drop subject.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:98dcec8d04236b95",
+          "evaluatedRevision": 6
         },
         {
           "subject": "retrieval",
