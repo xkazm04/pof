@@ -10891,7 +10891,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/cli/no-literal-timer-delays.test.ts:33 The structural pin claims no cli shell setTimeout takes a literal delay but walks only top-level .tsx files with no floor, so the real offender at src/components/cli/useScrollSync.ts:64 stays outside its population and the check is green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         }
       ],
       "governance": "governed"
@@ -17220,7 +17224,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:70 The validate guard only checks catalog ids against a committed record from 2026-11-02, so catalog-pipeline commits from 2026-11-08 and any walk that now fails stay green, and items itself is excluded because its reference spec records nothing.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",
@@ -26020,7 +26028,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/hooks/useUE5Connection.test.tsx:89 The refcounted stream hook is exercised only without StrictMode, while the App Router default runs mount, cleanup, mount in dev, so the last-holder teardown that resets auto-connect state is tested in a mode the running app does not use.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "canvas-graph",

@@ -25101,6 +25101,139 @@
         }
       ],
       "registryProposal": "The golden path keeps 'memoization wherever hover or selection re-renders' in full for read-only renderers, while render-budget says its ladder is climbed only as far as measurement forces; a fixed diagram of a handful of nodes has to break one of these, so the standard should state a population floor or say which rule wins."
+    },
+    "3f0f619b-52a3-4238-b72a-8df88fd452fd/test-harness": {
+      "context": "item-catalog-pipeline",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:26:49.689Z",
+      "worker": "51fea22c-6cf8-4e6c-a6b8-f1298188fbc2",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "e2e/helpers/walk-status.ts:14 The record holds ids, a timestamp and the skip map, with no fingerprint of its inputs and no age check, so only an added pipeline turns red, not a changed one. A failed walk leaves the old file in place."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/catalog/acceptance/hold-fold.test.ts:51 The only assertion is typeof function at line 53. Other suites inject their own reader, and the real-deps dry run is env-gated and does not assert the fold."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "deviation",
+          "evidence": "e2e/catalog-items-reference.spec.ts:62 Repeated rail steps are located by index (PipelineRail.tsx:296). A step inserted ahead moves the target, and the deferred assertion could then pass on the wrong step. Readback polling elsewhere in the lane is sound."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:24 The registry-derived population carries a floor, so zero selected is red in the guard."
+        },
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "conformant",
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:40 Judged on the closed-set half only: the case population is enumerated from the registry, not a hand-written list."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:44 The walker scopes steps with the same product function the lab rail uses."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/acceptance/template-guard.test.ts:60 The guard is read back through real registration, so the composition under test is the one production performs."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "e2e/helpers/e2e-db.ts:25 The lane builds its own database and reaps leftovers at startup, failing loudly if a previous server still holds the file."
+        }
+      ]
+    },
+    "fd7a2f11-0208-4ec9-9abc-192a14a0171b/test-harness": {
+      "context": "ue5-asset-generation-hooks",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:26:49.689Z",
+      "worker": "51fea22c-6cf8-4e6c-a6b8-f1298188fbc2",
+      "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/hooks/useUE5Connection.test.tsx:89 A fork on the mode axis, found by reading and not by running. The suite's only reactStrictMode setting is in usePofBridge.strict.test.tsx, written after a StrictMode-only bug hid from default-mode tests."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/hooks/useUE5Connection.closed.test.tsx:39 Reconnect timing is driven by fake time and judged by the count of streams opened."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/hooks/useBlueprintTranspiler.test.tsx:31 The hook's requests are routed into the shipped route handler, so the data path is not one the test composed."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/hooks/useBlueprintTranspiler.test.tsx:40 Shows a red-first design for this file only; it does not record a specific mutation."
+        }
+      ]
+    },
+    "5d7501be-122c-46a1-8d33-a35dc76215b9/test-harness": {
+      "context": "cli-terminal-shell",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:26:49.689Z",
+      "worker": "51fea22c-6cf8-4e6c-a6b8-f1298188fbc2",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/cli/no-literal-timer-delays.test.ts:33 The population excludes .ts files and store/, and no minimum file count is declared, so an empty walk would also pass."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/cli/no-literal-timer-delays.test.ts:25 The needle is proved able to fire; the gap is in the population it walks, not in the matcher."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/cli/useTaskQueue-stream-drop.test.tsx:61 The decisive status reply has no default. This covers that reply only; the taskRegistry mock in the same file still answers success by default."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/cli/useTaskQueue-stream-drop.test.tsx:88 The arbitration rule has a pure unit test, and this file asserts its adoption through the real hook."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/InlineTerminal.tsx:36 The handlers driven by session-run-door.test.tsx are the ones production builds here."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/cli/session-run-door.test.tsx:103 The settle window runs on fake timers and the claim is the order and count of completion calls."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "e2e/helpers/single-dispatch.ts:13 The shared-session collision is written into the lane as one fresh page per dispatch, with the incident attached."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "e2e/helpers/harness-mode.ts:290 A session that never started is reported differently from a timeout, which the harness flags separately at line 323."
+        }
+      ]
     }
   }
 }
