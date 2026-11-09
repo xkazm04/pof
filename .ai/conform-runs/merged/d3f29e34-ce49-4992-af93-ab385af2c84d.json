@@ -1,0 +1,150 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d3f29e34-ce49-4992-af93-ab385af2c84d",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T02:54:00.044291+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "quality-evaluation-api",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/api/evaluator-results-route.test.ts:5 The evaluator-results route suite replaces getDb with a bare in-memory connection that skips the shipped bootstrap (WAL, foreign_keys) and never says what it leaves out, so its green is a claim about a store mode production does not run, although a sibling suite in this context uses the real db.ts on a throwaway path.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/evaluator-results-route.test.ts:5 Forks on the mode axis: src/lib/db.ts sets journal_mode=WAL and foreign_keys=ON; this fixture sets neither and neither its name nor a comment declares the cheaper variant."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/regression-tracker-miss.test.ts:26 Seeds by raw INSERT although the product has its own writer (src/lib/regression-tracker.ts:448), inserts the alert before its fingerprint exists, and asserts no invariant afterwards."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/regression-tracker-miss.test.ts:11 Private scratch directory with a named reaper at line 35. Pid-keyed siblings such as judge-verdicts-plan have no per-file reaper and rely on the startup sweep in the global setup."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/verify-visual-route-integrity.test.ts:89 The answer names its producer and the test asserts it (contains qwen, not Gemini); the same file uses not.toHaveBeenCalled as a witness of non-reach before the paid call."
+    }
+   ]
+  },
+  {
+   "context": "build-history-config",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/packaging/build-row-truth.test.tsx:27 The suite pinning build-row truth, including the cancelled state, runs on a hand-copied build_history table that has dropped production's CHECK on status (src/lib/db.ts:218), so it can store and assert rows the real schema refuses and will not notice schema changes.",
+   "techniques": [
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/packaging/build-row-truth.test.tsx:27 The table is restated by hand with no fingerprint or rebuild link to db.ts, and has already drifted: the status CHECK is gone and config lost its default."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/packaging/build-row-truth.test.tsx:20 The store is built by a different route from the boot path, in a different mode, and the fixture does not declare what it omits."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "e2e/infra-testids.spec.ts:144 Covers only the test-identifier contract for BuildConfigSelector in the running app, not a cook or a recorded build."
+    }
+   ]
+  },
+  {
+   "context": "ue5-state-sync",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/project-setup/ue5-state-sync-hardening.test.tsx:3 The panel's claim is that a write landed in the UE editor, yet every test here scripts the plugin's reply on a fake socket and no e2e spec drives either panel, so the wire contract with the real plugin has no oracle on the side where the effect lands.",
+   "techniques": [
+    {
+     "technique": "far-side-oracle",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/project-setup/ue5-state-sync-hardening.test.tsx:3 Search found set.ack and set.property only in the TS client, types, docs and fake-socket tests in this repo, plus the plugin source in the UE project; e2e has no spec naming either panel."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/project-setup/ue5-state-sync-hardening.test.tsx:57 The module-level live-state singleton is torn down after every test."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/a11y/legibility-floor-guard.test.ts:144 This context's exemption entries sit in a per-file ceiling list that is checked in both directions; line 259 fails a stale entry."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "ai-behavior-testing",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T02:54:00.044291+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "isolation-lanes",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "quality-evaluation-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:54:00.044291+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "fixture-economics",
+    "live-app-harness"
+   ],
+   "deviations": 1,
+   "context": "build-history-config",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:54:00.044291+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "far-side-oracle",
+    "isolation-lanes",
+    "pin-the-call-not-the-name"
+   ],
+   "deviations": 1,
+   "context": "ue5-state-sync",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

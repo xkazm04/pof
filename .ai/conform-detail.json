@@ -599,27 +599,44 @@
       "context": "quality-evaluation-api",
       "subject": "test-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-12",
-      "evaluatedTs": "2026-10-12T21:08:44.326Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:54:00.044Z",
+      "worker": "d3f29e34-ce49-4992-af93-ab385af2c84d",
       "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/evaluator-results-route.test.ts:5 Forks on the mode axis: src/lib/db.ts sets journal_mode=WAL and foreign_keys=ON; this fixture sets neither and neither its name nor a comment declares the cheaper variant."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/regression-tracker-miss.test.ts:26 Seeds by raw INSERT although the product has its own writer (src/lib/regression-tracker.ts:448), inserts the alert before its fingerprint exists, and asserts no invariant afterwards."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/regression-tracker-miss.test.ts:11 Private scratch directory with a named reaper at line 35. Pid-keyed siblings such as judge-verdicts-plan have no per-file reaper and rely on the startup sweep in the global setup."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/verify-visual-route-integrity.test.ts:89 The answer names its producer and the test asserts it (contains qwen, not Gemini); the same file uses not.toHaveBeenCalled as a witness of non-reach before the paid call."
+        },
         {
           "technique": "approval-snapshots-with-guarded-update",
           "verdict": "deviation",
-          "evidence": "src/lib/harness/visual-gate.ts:309 Normal verification defaults to recording missing golden images; the generated suite has no integrity assertion requiring recording to be off."
+          "evidence": "src/lib/harness/visual-gate.ts:309 Normal verification defaults to recording missing golden images; the generated suite has no integrity assertion requiring recording to be off.",
+          "carriedFrom": "2026-10-12"
         },
         {
           "technique": "live-app-harness",
           "verdict": "deviation",
-          "evidence": "src/lib/harness/visual-gate.ts:352 The missing/unparseable result-file branch substitutes subprocess success for observed product results; verifier.ts:365 invokes this gate."
+          "evidence": "src/lib/harness/visual-gate.ts:352 The missing/unparseable result-file branch substitutes subprocess success for observed product results; verifier.ts:365 invokes this gate.",
+          "carriedFrom": "2026-10-12"
         }
-      ],
-      "withdrawn": {
-        "worker": "40b4e7e0-253f-41c0-9006-af05a498d492",
-        "state": "deviation",
-        "at": "2026-10-12T21:09:57.172755+00:00",
-        "reason": "reviewer (sonnet): The evidence says verifier.ts:365 invokes executeVisualGate, but verifier.ts has no such call (the only caller outside visual-gate.ts is change-router.ts). The visual-gate.ts file is also outside this API-route context."
-      }
+      ]
     },
     "89b3215f-69e9-4aa4-8c8b-27316cccc59d/test-harness": {
       "context": "observation-testing",
@@ -18857,31 +18874,53 @@
       "context": "build-history-config",
       "subject": "test-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-03",
-      "evaluatedTs": "2026-11-03T10:56:44.847Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "c75301ec-c28b-46de-943e-ce429fcaa89d",
-        "state": "not-applicable",
-        "at": "2026-11-03T10:57:07.275112+00:00",
-        "reason": "reviewer (sonnet): The anchor (BuildHistoryDashboard/index.tsx:8) is an import line, so it doesn't show that a test harness is absent; the repo has vitest.config.ts and playwright.config.ts, and the claim rests on an absence search with arbitrary terms."
-      }
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:54:00.044Z",
+      "worker": "d3f29e34-ce49-4992-af93-ab385af2c84d",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/packaging/build-row-truth.test.tsx:27 The table is restated by hand with no fingerprint or rebuild link to db.ts, and has already drifted: the status CHECK is gone and config lost its default."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/packaging/build-row-truth.test.tsx:20 The store is built by a different route from the boot path, in a different mode, and the fixture does not declare what it omits."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "e2e/infra-testids.spec.ts:144 Covers only the test-identifier contract for BuildConfigSelector in the running app, not a cook or a recorded build."
+        }
+      ]
     },
     "0b31785f-a922-4da7-ac3f-bcf06c56f97f/test-harness": {
       "context": "ue5-state-sync",
       "subject": "test-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-03",
-      "evaluatedTs": "2026-11-03T10:56:44.847Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "c75301ec-c28b-46de-943e-ce429fcaa89d",
-        "state": "not-applicable",
-        "at": "2026-11-03T10:57:07.431602+00:00",
-        "reason": "reviewer (sonnet): The anchor (LiveStateSyncPanel/index.tsx:4) is a doc-comment line and is in a directory that isn't among the context's listed files (BidirectionalStateSyncPanel/*). It doesn't show that test infrastructure is absent, and the repo has vitest and playwright configs."
-      }
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:54:00.044Z",
+      "worker": "d3f29e34-ce49-4992-af93-ab385af2c84d",
+      "techniques": [
+        {
+          "technique": "far-side-oracle",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/project-setup/ue5-state-sync-hardening.test.tsx:3 Search found set.ack and set.property only in the TS client, types, docs and fake-socket tests in this repo, plus the plugin source in the UE project; e2e has no spec naming either panel."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/project-setup/ue5-state-sync-hardening.test.tsx:57 The module-level live-state singleton is torn down after every test."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/a11y/legibility-floor-guard.test.ts:144 This context's exemption entries sit in a per-file ceiling list that is checked in both directions; line 259 fails a stale entry."
+        }
+      ]
     },
     "0b9d7bd9-5cbd-4356-be07-da0b79eb7e23/mcp-tools": {
       "context": "catalog-pipeline-state",

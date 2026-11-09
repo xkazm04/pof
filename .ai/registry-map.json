@@ -7329,7 +7329,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/packaging/build-row-truth.test.tsx:27 The suite pinning build-row truth, including the cancelled state, runs on a hand-copied build_history table that has dropped production's CHECK on status (src/lib/db.ts:218), so it can store and assert rows the real schema refuses and will not notice schema changes.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "deployment-contract",
@@ -23754,7 +23758,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/api/evaluator-results-route.test.ts:5 The evaluator-results route suite replaces getDb with a bare in-memory connection that skips the shipped bootstrap (WAL, foreign_keys) and never says what it leaves out, so its green is a claim about a store mode production does not run, although a sibling suite in this context uses the real db.ts on a throwaway path.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "eval-harness",
@@ -27084,7 +27092,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/project-setup/ue5-state-sync-hardening.test.tsx:3 The panel's claim is that a write landed in the UE editor, yet every test here scripts the plugin's reply on a fake socket and no e2e spec drives either panel, so the wire contract with the real plugin has no oracle on the side where the effect lands.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",
