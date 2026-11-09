@@ -7798,7 +7798,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/evaluator/PerformanceProfilingCompare.test.tsx:69 The profiling-compare fetch fake answers any unrouted action with `{ success: true, data: {} }`. So a new or renamed request from the view gets a pass-shaped reply instead of failing the test.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "deployment-contract",
@@ -11408,7 +11412,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/hooks/useDeepEvalResults-git-attribution.test.tsx:65 The fetch fake used by the useDeepEvalResults hook test answers every URL it was not told about with a success envelope `{ ok: true }`. So any endpoint the hook starts calling passes silently instead of failing the test, which is the passing-default fake the standard forbids.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "concept-scene-parity",
@@ -21120,7 +21128,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:27 The mock of the context's own labAcceptance checker returns 'pass' for any step whose data has no seeded status. A surface that reaches an unseeded step therefore reads green with no diagnostic. Today's seeded steps don't hit the default, so the gap is latent.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",
