@@ -1,0 +1,180 @@
+{
+ "schema": "conform-run/1",
+ "worker": "aeaf05d4-0c0d-4b62-b177-459960ac523b",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T05:09:08.165741+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 The ImportPanel no-diagnosis test swaps the store's importCrashLog for a test-written version that claims only the HTTP hop is bypassed, yet it also drops the route's recordCrashSighting re-identification and the store's merge and pattern/stats recompute, and it sets selectedCrashId, which the real action never does.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 The helper's comment says it seeds the store the way the real one ends up, but it replaces reports wholesale and sets selectedCrashId, unlike crashAnalyzerStore.importCrashLog. CrashAnalyzerHistory.test.tsx does drive the real action, so the fork is limited to this UI path."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:77 The engine test names the producer of the null diagnosis (origin none, nearest similarity below the floor) instead of accepting a null that any path could return."
+    }
+   ]
+  },
+  {
+   "context": "build-packaging",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/instrumentation-hooks.test.ts:37 The describe claims independent hook failure, but only the gate-notifier throw is arranged and the drain hook is stubbed off, so the cron-tick, purge-tick and drain-worker catch arms in instrumentation.ts could be deleted with this file still green.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/instrumentation-hooks.test.ts:37 The name overstates what is reached: line 23 sets POF_DRAIN_WORKER_AUTOSTART empty and no other test imports register(). The preflight route test's timeout fixture, by contrast, is discriminating because it pairs timedOut with a success-looking output."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/instrumentation-hooks.test.ts:42 The cron is proved by advancing fake timers and counting exact ticks, so machine load cannot change the result."
+    },
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/packaging/preflight/route.ts:78 The reader is UnrealBuildTool, and running it performs a compile of up to 10 minutes, which the technique excludes. No test asserts this argv either; the route test only counts spawnCapture calls."
+    }
+   ],
+   "registryProposal": "assert-through-the-reader excludes readers that cannot run in the lane or whose run performs the effect, but it names no minimum for that case; a whole-argv anchored pin could be stated as the floor when the reader has no cheap parse-only verb."
+  },
+  {
+   "context": "module-topology-graph",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/evaluator/NexusView.signals.test.tsx:143 The Nexus source ratchet matches bare identifiers line by line with comments left in, so a comment naming a removed store turns the suite red, and the three topology source walks declare no floor on the files they must visit.",
+   "techniques": [
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/evaluator/NexusView.signals.test.tsx:143 The needle is a bare name that prose can spell, while the sibling no-hex pin strips comments first. The walks in topology-focus-ring and no-hex have no floor either, though focus-ring's KNOWN_GAPS exemption list is correctly checked in both directions."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/evaluator/module-topology-graph-no-hex.test.ts:37 The pin's matcher is proved against seeded offenders and seeded comments in the same suite, so an empty offender list comes from an instrument shown able to fire."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/evaluator/NexusView.signals.test.tsx:100 The competing producers (the client stores) are emptied before the test, so the overlay values it asserts can only have come from the API routes."
+    }
+   ]
+  },
+  {
+   "context": "cook-packaging-pipeline",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/game-systems/smoke-test-verdict.test.tsx:38 This test's name says the smoke request carries projectPath while its assertion requires exactly { buildId: 42 }, so the string a later reader searches for states the opposite of what is pinned.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/game-systems/smoke-test-verdict.test.tsx:38 The technique treats a test's name as its highest-leverage claim and requires renaming one that overstates; this name contradicts line 44 and the file header, which says the request carries only buildId."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/game-systems/PreflightCoverage.test.tsx:105 A bare identifier is searched in raw source with comments included, so a note about the removed prop would fail it. Its title also claims no prop drives no check, while it bans only this one name."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/game-systems/PreflightCoverage.test.tsx:139 The preflight stub is held at a barrier and the test asserts no cook request exists until release, so the ordering claim does not depend on elapsed time."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/cook-stream-terminal-event.test.tsx:47 The fake sits at the transport, so the real useCookProgress and stream parsing run over actual SSE bytes."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "code-quality-evaluation",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T05:09:08.165741+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:09:08.165741+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "assert-the-schedule-not-the-stopwatch",
+    "assert-through-the-reader",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "build-packaging",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:09:08.165741+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "module-topology-graph",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:09:08.165741+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "pin-the-call-not-the-name",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "cook-packaging-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

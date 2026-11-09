@@ -7566,7 +7566,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/instrumentation-hooks.test.ts:37 The describe claims independent hook failure, but only the gate-notifier throw is arranged and the drain hook is stubbed off, so the cron-tick, purge-tick and drain-worker catch arms in instrumentation.ts could be deleted with this file still green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",
@@ -12203,7 +12207,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/game-systems/smoke-test-verdict.test.tsx:38 This test's name says the smoke request carries projectPath while its assertion requires exactly { buildId: 42 }, so the string a later reader searches for states the opposite of what is pinned.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "voice-io",
@@ -20744,7 +20752,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/evaluator/NexusView.signals.test.tsx:143 The Nexus source ratchet matches bare identifiers line by line with comments left in, so a comment naming a removed store turns the suite red, and the three topology source walks declare no floor on the files they must visit.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "pipeline-dag",
