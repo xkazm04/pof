@@ -12702,7 +12702,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/index.tsx:7 The plan matrix maps implementation plan items, and a case-insensitive search of the 25 listed files for judge, rubric, eval, evaluat, scenario, benchmark, trial, pass rate, win rate, holdout, arena and verdict found nothing, while judge and rubric hits exist only in sibling core-engine folders outside this context, so no agent or model is run against scenarios and scored here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "ending-first-narrative-structure",
@@ -21754,7 +21758,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/useProceduralLevelWizard.ts:103 The wizard previews a seeded algorithm deterministically and dispatches a generation task without scoring its output; a search of the 25 listed files found only the English verb judge, the arena level type, the evaluator color token and a connectivity readout, and no scenarios, trials, judge calls or score aggregation.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "quality-gates",

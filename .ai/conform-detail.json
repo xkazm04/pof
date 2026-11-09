@@ -23932,6 +23932,48 @@
           "evidence": "src/lib/harness/orchestrator.ts:195 Runs have a default spend ceiling checked before more sessions fire. Only the budget control was judged; the model-pinning rule is not satisfied by buildClaudeArgs, which passes no --model flag."
         }
       ]
+    },
+    "053712f7-2f1c-480e-823a-008c73ffb6ae/eval-harness": {
+      "context": "core-engine-planning-shell",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:13:34.486Z",
+      "worker": "c7bc0fab-f22f-4c48-bfc1-31cf5a631a6c",
+      "techniques": [
+        {
+          "technique": "comparison-modes",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/PlanMatrixMap/index.tsx:7 The word matrix here means a 2-D map of plan items, with no compared candidates."
+        },
+        {
+          "technique": "metric-role-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/ImplementationPlan/constants.ts:2 The levels shown are planning effort estimates, not eval metrics with optimized or threshold roles."
+        }
+      ]
+    },
+    "781544e4-d4e7-4f67-8118-e5f903f0fb23/eval-harness": {
+      "context": "procedural-level-generation",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:13:34.486Z",
+      "worker": "c7bc0fab-f22f-4c48-bfc1-31cf5a631a6c",
+      "techniques": [
+        {
+          "technique": "assertion-vs-judgment",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/ProcgenPreviewCanvas.tsx:123 This verdict is a computed connectivity statistic over a deterministic preview grid, with no non-deterministic output to score."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/useProceduralLevelWizard.ts:104 The word judges is descriptive here; no model judge exists in this context."
+        }
+      ]
     }
   }
 }
