@@ -8613,34 +8613,43 @@
       "subject": "accumulate-then-aggregate-metrics",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-17",
-      "evaluatedTs": "2026-10-17T02:30:56.353Z",
-      "worker": "391184c7-709d-43f2-989a-4c2eef755e04",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:56:24.655Z",
+      "worker": "49a0958c-fa90-42d8-ac01-89b817fe854d",
       "techniques": [
         {
           "technique": "per-iteration-buffering",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_combat/metrics/StatsMetric.tsx:7 Glyph prints one finished roster mean; no batch loop appends rows."
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:187 The whole finite table is evaluated in one call at module load, with no per-batch append or aggregate seam; the technique says a set evaluated in one call needs no buffer."
         },
         {
           "technique": "nan-as-undefined-not-zero",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:189 Null is a parse miss for a damage string, not an empty per-class reference mask."
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:196 This is an empty-denominator 0 in form, but it averages authored catalog rows per weapon category, not per-sample scores with undefined cells. Every category in the static table has rows, so the branch is not reached with current data."
         },
         {
           "technique": "lazy-rank-synchronization",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_combat/metrics/DpsMetric.tsx:6 Bars are a local top slice of one roster; no multi-process gather."
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/KpisMetric.tsx:8 A module-scope computation in one client process over the full table; there are no shards and nothing to gather."
         },
         {
           "technique": "reduction-axis-vocabulary",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_combat/metrics/EffectivenessMetric.tsx:7 The view takes a prechosen best row, not a named reduction axis."
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/GroupedDpsBarChart.tsx:10 The chart reads ready-made category groups; there is no samples-by-classes table and no caller-selected reduction."
         },
         {
           "technique": "detached-buffer-reads",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:191 DPS is a pure table law, not a graph-backed accumulator buffer."
+          "evidence": "src/components/modules/core-engine/sub_combat/metrics/WeaponMatchupPanel.tsx:32 The ranking is memoized from the static catalog; no accumulator storage exists to detach at append or clone at read."
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:199 The weapon catalog is reduced in one call, and a search of sub_combat for mean_over_batch, all_reduce, nanmean, world_size, and detach found no validation-batch accumulator.",
+          "evaluatedAt": "2026-10-17T02:30:56.353Z",
+          "worker": "391184c7-709d-43f2-989a-4c2eef755e04",
+          "reason": "replaced by 49a0958c-fa90-42d8-ac01-89b817fe854d"
         }
       ]
     },

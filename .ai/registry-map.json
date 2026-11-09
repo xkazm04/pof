@@ -11994,12 +11994,11 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:199 The weapon catalog is reduced in one call, and a search of sub_combat for mean_over_batch, all_reduce, nanmean, world_size, and detach found no validation-batch accumulator.",
-          "evaluatedAt": "2026-10-17",
-          "evaluatedAgainst": "sha256-b2:ea4763c3df4dd4c8",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:187 The DPS read-outs come from one synchronous reduction over a static authored weapon table, with no model, validation set, batch loop or process sharding; a case-insensitive search of sub_combat/_shared and sub_combat/metrics for mean_over_batch, all_reduce, nanmean, world_size, .detach(, buffer, accumulat and reduction found nothing, so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a9ddc355691fe12f",
+          "evaluatedRevision": 2,
+          "revisionsBehind": 1
         },
         {
           "subject": "data-viz",
