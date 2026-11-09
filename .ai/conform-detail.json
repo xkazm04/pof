@@ -7142,32 +7142,42 @@
       "context": "ability-gas-balance",
       "subject": "ability-authoring-to-engine",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T01:36:17.788Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:47:21.258Z",
+      "worker": "69004523-1cc3-48c0-9940-22bf34f7e4a6",
       "techniques": [
         {
           "technique": "declared-vs-referenced-tag-audit",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:42 Done right: symmetric matched/undeclared/orphaned cards with named lists (lines 25-29, 64-74). Missing: no per-surface attribution line. `appReferenced` is computed in src/lib/ability/tag-audit.ts:127 and fed into an 'App-authored' category (data.ts:686), but TagAuditSection never renders TAG_AUDIT_CATEGORIES. Also, computeTagAudit returns 100 when the union is empty (tag-audit.ts:118) and hands the guard to callers (spellbookView.ts:74 and the line-130 check). If live tags parse but no ability references any tag, the audit scores 0 instead of 'unmeasured'."
+          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:42 Both directions and the named lists are shown, but the totals carry no per-surface attribution: appReferenced is never read by this panel, and its only consumer (the data.ts:687 category) feeds TAG_AUDIT_CATEGORIES, which no .tsx renders. Losing the app-spec source would just improve the score with nothing going visibly empty. The unmeasured guard also sits in the caller and misses the referenced-empty case (spellbookView.ts:74 tests only live.tags.length)."
         },
         {
           "technique": "few-shot-reference-plus-tag-registry",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/index.tsx:15 The context is a deterministic Monte-Carlo plus tag views. A search for prompt/useModuleCLI/TaskFactory/codegen in gas-balance/ and tags/ found no generator to brief."
+          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:127 The tag surface reads out a reconciliation and briefs no generator; grep of gas-balance/ and tags/ for prompt, buildPrompt, TaskFactory and useModuleCLI found nothing."
+        },
+        {
+          "technique": "tag-dialect-normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:14 This context consumes an already-normalized breakdown; the cross-dialect comparison happens upstream in src/lib/ability and is judged under ability-design."
         },
         {
           "technique": "server-derived-codegen-report",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:130 No codegen run in this context. The panel shows an observed live-parse audit, or an honest NOT SYNCED state."
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/GASBalanceHeader.tsx:26 The only export is a scenario code copied to the clipboard; no code generation run exists to report on."
+        },
+        {
+          "technique": "refinement-mode-minimal-diff",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/balanceFixes.ts:2 Scenario changes are deterministic solved levers, which the technique excludes as mechanical; no model edits an artifact here."
+        },
+        {
+          "technique": "strict-output-schema-with-derived-dependents",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_ability/gas-balance/data.ts:255 The validated input is a scenario code pasted by a person, not a generator's return shape."
         }
-      ],
-      "withdrawn": {
-        "worker": "faeb8c21-883b-41b2-9287-771435259a0a",
-        "state": "deviation",
-        "at": "2026-10-25T01:37:06.220431+00:00",
-        "reason": "reviewer (sonnet): The verdict is about TagAuditSection.tsx, tag-audit.ts and spellbookView.ts, and none of those are among this context's gas-balance files. The 'scores 0 instead of unmeasured' claim is also speculation that the code doesn't back up."
-      }
+      ]
     },
     "624dbc02-2484-441d-a200-9aa65fa41eab/ability-authoring-to-engine": {
       "context": "ability-blueprint",
@@ -17339,36 +17349,41 @@
       "subject": "ability-authoring-to-engine",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T01:36:17.788Z",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:47:21.258Z",
       "techniques": [
         {
           "technique": "few-shot-reference-plus-tag-registry",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/helpers.ts:81 Plausible invention: the new tag name enters the artifact looking exactly like an existing one, and is not marked as a pending declaration (step 5). Verified: a search of the UE Source tree for _Bonus and .Bonus found no tag declarations."
-        },
-        {
-          "technique": "strict-output-schema-with-derived-dependents",
-          "verdict": "conformant",
-          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:27 The cumulative XP column is derived from the primary per-level xpRequired (overrides included), not authored separately, so there is one authority per quantity."
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/helpers.ts:81 This is a deterministic template rather than a briefed model, but it fails the rule that a new name must never enter the artifact indistinguishable from an existing one. A grep for Data_*_Bonus across the UE Source tree returned 0 hits, and the UI integration note never mentions adding the tags. The emitted code was not compiled in this review."
         },
         {
           "technique": "server-derived-codegen-report",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/index.tsx:67 The generators only produce text the user downloads or copies. Nothing is written to the engine, which is the technique's 'nothing external changed' exclusion."
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/index.tsx:55 Generated text is only copied out by a person; the tool writes, builds and registers nothing, so there is no run to report."
         },
         {
           "technique": "refinement-mode-minimal-diff",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/index.tsx:31 Edits are deterministic one-field updates and the output is regenerated by code. This is the technique's 'change is mechanical' exclusion; there is no probabilistic editor."
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/index.tsx:46 Output is re-rendered deterministically from config, so no probabilistic editor can drift untouched fields."
+        },
+        {
+          "technique": "strict-output-schema-with-derived-dependents",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:27 No generator response schema exists here; the one dependent column is computed from its primaries."
+        },
+        {
+          "technique": "tag-dialect-normalization",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/DRCodeGenerator/helpers.ts:88 Only the C++ spelling appears in this context and no identifier is compared across a boundary; grep found just these two tag lines."
         }
       ],
-      "registryProposal": "The techniques are framed around briefing a model generator. Deterministic template code generators also mint vocabulary (tag symbols written into templates by hand) and fail the same 'agreement with the vocabulary' rule. A decision rule saying template generators must resolve emitted identifiers against the declared registry, or mark them pending, would cover this case explicitly.",
+      "registryProposal": "The subject and few-shot-reference-plus-tag-registry frame invented names as a briefing problem for a model, but deterministic code templates mint vocabulary references too and no technique covers them; a clause requiring template-emitted identifiers to resolve against the declared registry would close that gap.",
       "withdrawn": {
-        "worker": "faeb8c21-883b-41b2-9287-771435259a0a",
+        "worker": "69004523-1cc3-48c0-9940-22bf34f7e4a6",
         "state": "deviation",
-        "at": "2026-10-25T01:37:06.290245+00:00",
-        "reason": "reviewer (sonnet): helpers.ts:81 does emit ARPGGameplayTags::Data_${attribute}_Bonus. I couldn't confirm the central claim that UE's ARPGGameplayTags.cpp declares no *_Bonus tags: that file is not in the pof repo and a search found no copy. The only _Bonus match in the repo is that generator line."
+        "at": "2026-11-09T03:50:07.077463+00:00",
+        "reason": "reviewer (sonnet): helpers.ts:81 does emit ARPGGameplayTags::Data_${attribute}_Bonus, and the integration note at index.tsx:231 never mentions adding the tags. But the claim that the UE source declares no such tag rests on a grep of a UE Source tree. I found no UE tree or ARPGGameplayTags .h/.cpp under C:/Users/kazda/"
       }
     },
     "a2e69711-c5de-469c-8672-5863ff80ba72/concurrency-guards": {

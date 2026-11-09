@@ -2360,7 +2360,11 @@
           "revision": 7,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_ability/tags/TagAuditSection.tsx:130 The tag audit panel gates only on a live parse with declared tags, so an empty referenced set still renders as a 0/100 score with every tag orphaned instead of as unmeasured, and the panel never shows which authoring surface contributed each reference.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:5830c3752f48cc16",
+          "evaluatedRevision": 7
         },
         {
           "subject": "realtime-combat-semantics",
