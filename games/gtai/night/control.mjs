@@ -23,18 +23,26 @@ export function writeControl(file, patch) {
 }
 
 /** Should this lane stop? `stop: true` is the whole night; `stopLanes` names lanes. */
-export const stopRequested = (control, laneId) => control.stop === true || (Array.isArray(control.stopLanes) && control.stopLanes.includes(laneId));
+export const stopRequested = (control, laneId) => control?.stop === true || (Array.isArray(control.stopLanes) && control.stopLanes.includes(laneId));
 
 /** True when the running sessions must be killed rather than allowed to end. */
-export const stopNow = (control) => control.now === true && (control.stop === true || (control.stopLanes?.length ?? 0) > 0);
+export const stopNow = (control) => control?.now === true && (control.stop === true || (Array.isArray(control.stopLanes) && control.stopLanes.length > 0));
+
+/** The lanes whose running sessions `stop --now` kills: only the stopped ones, never a sibling's (n11 review). */
+export const lanesToKill = (control, laneIds) => (stopNow(control) ? laneIds.filter((id) => stopRequested(control, id)) : []);
 
 /** The times with any control change applied: {t, changed} or {error}. A bad value leaves the night alone. */
 export function scheduleWith(t, control, now = new Date()) {
-  if (!control.until && !control.freeze && !control.reportAt) return { t, changed: false };
+  // Named means present: "", 0 or false is a bad value to report, not an absent one (Codex's tester, n11).
+  const named = (k) => control?.[k] !== undefined && control[k] !== null;
+  if (!named('until') && !named('freeze') && !named('reportAt')) return { t, changed: false };
   try {
-    const next = planTimes({ until: control.until ?? ts(t.until), freeze: control.freeze ?? ts(t.freeze), reportAt: control.reportAt ?? ts(t.report) }, now);
-    for (const [name, value, when] of [['freeze', control.freeze, next.freeze], ['report-at', control.reportAt, next.report]]) {
-      if (value && when <= now) return { error: `${name} ${value} has already passed` };
+    const pick = (k, cur) => (named(k) ? control[k] : ts(cur));
+    const next = planTimes({ until: pick('until', t.until), freeze: pick('freeze', t.freeze), reportAt: pick('reportAt', t.report) }, now);
+    for (const [name, key, when, cur] of [['freeze', 'freeze', next.freeze, t.freeze], ['report-at', 'reportAt', next.report, t.report]]) {
+      if (named(key) && when <= now) return { error: `${name} ${control[key]} has already passed` };
+      // An earlier until re-anchors the unnamed times: one moved into the past would start REPORT at once.
+      if (!named(key) && when <= now && when.getTime() !== cur.getTime()) return { error: `that change moves ${name} to ${ts(when)}, already passed (give --freeze and --report-at before the new --until)` };
     }
     const changed = next.until.getTime() !== t.until.getTime() || next.freeze.getTime() !== t.freeze.getTime() || next.report.getTime() !== t.report.getTime();
     return { t: next, changed };
@@ -84,5 +92,7 @@ export function runnerStart(logText) {
   lines.forEach((l, i) => { if (/\] run: billing /.test(l)) start = i; });
   if (start < 0) return { runnerStartMs: null, finished: false };
   const iso = /^\[([^\]]+)\]/.exec(lines[start])?.[1];
-  return { runnerStartMs: Date.parse(iso), finished: lines.slice(start).some((l) => /run: all lanes finished/.test(l)) };
+  const ms = Date.parse(iso);
+  // A damaged stamp is no usable start: null reads as never-started instead of NaN's "starting" forever.
+  return { runnerStartMs: Number.isFinite(ms) ? ms : null, finished: lines.slice(start).some((l) => /run: all lanes finished/.test(l)) };
 }

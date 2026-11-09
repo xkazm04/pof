@@ -21,7 +21,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import { CONTROL_FILE, holdForReserve, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopNow, stopRequested, writeControl } from './control.mjs';
+import { CONTROL_FILE, holdForReserve, lanesToKill, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopRequested, writeControl } from './control.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, queueEmpty, requestsFor, ts } from './lib.mjs';
@@ -81,7 +81,7 @@ function init() {
 }
 
 // ---------------------------------------------------------------- run
-const children = new Set();
+const children = new Map(); // child process -> lane id, so `stop --lane x --now` kills only x's session
 function killTree(p) {
   if (!p?.pid) return;
   if (process.platform === 'win32') spawnSync('taskkill', ['/F', '/T', '/PID', String(p.pid)], { windowsHide: true });
@@ -99,7 +99,7 @@ function runClaude(lane, text, timeoutMs, n, mode) {
       ...lane.addDirs.flatMap((d) => ['--add-dir', d])];
     const started = Date.now();
     const p = spawn('claude', args, { cwd: lane.cwd, windowsHide: true, env: billing.env({ ...process.env, CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: '0' }, mode) });
-    children.add(p);
+    children.set(p, lane.id);
     let tail = '', head = '', timedOut = false;
     p.stdout.on('data', (b) => { out.write(b); tail = (tail + b.toString()).slice(-200_000); if (head.length < 20_000) head += b.toString(); });
     p.stderr.on('data', (b) => err.write(b));
@@ -228,14 +228,19 @@ async function runAll() {
   }
   loadBilling();
   log(`run: billing ${billing.order().filter((m) => billing.usable(m)).join(' -> ')} (now ${billing.pick() ?? 'all blocked'}) | lanes ${lanes.map((l) => `${l.id}:${l.model}@${l.effort}`).join(', ')} | freeze ${t.freeze.toLocaleString()} | report ${t.report.toLocaleString()} | deadline ${t.until.toLocaleString()}`);
-  const stop = () => { log('interrupted - stopping own child sessions'); for (const c of children) killTree(c); process.exit(130); };
+  const stop = () => { log('interrupted - stopping own child sessions'); for (const c of children.keys()) killTree(c); process.exit(130); };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
   // A lane must never take the night down with it: log and keep the other lanes running.
   process.on('uncaughtException', (e) => log(`runner: uncaught ${String(e?.stack ?? e).slice(0, 300)}`));
   process.on('unhandledRejection', (e) => log(`runner: unhandled ${String(e?.stack ?? e).slice(0, 300)}`));
   // `stop --now` kills this runner's own sessions; a plain stop lets the session in flight end.
-  const nowPoll = setInterval(() => { if (stopNow(readControl(CONTROL_PATH))) { log('control: stop --now - killing own sessions'); for (const c of children) killTree(c); } }, 15_000);
+  const nowPoll = setInterval(() => {
+    const kill = new Set(lanesToKill(readControl(CONTROL_PATH), [...new Set(children.values())]));
+    if (!kill.size) return;
+    log(`control: stop --now - killing own sessions of ${[...kill].join(', ')}`);
+    for (const [c, id] of children) if (kill.has(id)) killTree(c);
+  }, 15_000);
   nowPoll.unref();
   // Stagger the starts so cold sessions do not hit the CLI and the disk in the same second.
   await Promise.all(lanes.map(async (l, i) => {
