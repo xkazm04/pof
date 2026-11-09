@@ -6541,7 +6541,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:630 The Kill/Death Statistics panel shows typed constant counts and a hand-assigned dangerRank as though they were measured kill attribution, with no denominator, run count or 'not measured' state; ranged-caster has more player kills (31) than melee-grunt (23) but a lower typed rank (4 vs 3), so the ranking contradicts its own numbers.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         },
         {
           "subject": "agent-instruction-files",
@@ -14584,7 +14588,11 @@
           "revision": 5,
           "changedAt": "2026-10-07",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/app/api/combat-simulator/route.ts:88 When the caller sends no seed, the combat-simulator route draws a fresh random one, ignoring DEFAULT_CONFIG.seed (42), so re-running the same scenario gives different numbers by default; the standard's 'keep the base constant by default; make re-rolling an explicit action' is inverted, though the seed is echoed back in result.config so a run can be reconstructed afterwards.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:78f678997e50b919",
+          "evaluatedRevision": 5
         },
         {
           "subject": "eval-harness",

@@ -5566,24 +5566,25 @@
       "context": "game-design-studio-api",
       "subject": "encounter-balance-simulation",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T22:58:36.196Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:53:10.730Z",
+      "worker": "d8736d71-a575-441d-9378-def60382360c",
       "techniques": [
-        {
-          "technique": "monte-carlo-scenario-presets",
-          "verdict": "deviation",
-          "evidence": "src/app/api/combat-simulator/route.ts:48 The iteration count is a per-request knob that accepts 1 to 5000, not a property of a versioned preset."
-        },
         {
           "technique": "per-cell-seed-derivation-for-order-independence",
           "verdict": "deviation",
-          "evidence": "src/app/api/combat-simulator/route.ts:49 Unseeded calls get a random seed rather than one derived from scenario identity, so re-rolling is the default instead of an explicit action."
+          "evidence": "src/app/api/combat-simulator/route.ts:88 Seed is not derived from scenario identity; an omitted seed re-rolls the run with Math.random, which the technique names as the re-roll-until-nice failure."
+        },
+        {
+          "technique": "monte-carlo-scenario-presets",
+          "verdict": "deviation",
+          "evidence": "src/app/api/combat-simulator/route.ts:87 The caller picks the iteration count (1-5000) per request, and the fallback is a literal 1000 rather than a preset's count; a 1-iteration run comes back in the same shape as a full run with no reduced-resolution label."
         },
         {
           "technique": "goal-seek-on-a-seeded-monotonic-lever",
           "verdict": "conformant",
-          "evidence": "src/app/api/economy-simulator/goal-seek/route.ts:11 The solver endpoint refuses to run without a fixed seed and caps the bisection at 40 iterations; there is no sweep-before-solve monotonicity guard at this layer."
+          "evidence": "src/app/api/economy-simulator/goal-seek/route.ts:15 The goal-seek route refuses to solve without a numeric seed, so metric(v) is deterministic; bisection is capped at maxIterations: 40 (line 32)."
         },
         {
           "technique": "kill-share-and-damage-share-attribution",
@@ -5597,13 +5598,7 @@
           "evidence": "src/lib/combat/simulation-engine.ts:744 Here n is fights.length; the technique defines empirical one-shot rate as a share of deaths.",
           "carriedFrom": "2026-10-15"
         }
-      ],
-      "withdrawn": {
-        "worker": "c1010a28-8f32-48b6-ace3-783954e7e9c8",
-        "state": "deviation",
-        "at": "2026-10-24T22:59:59.266084+00:00",
-        "reason": "reviewer (sonnet): The anchors (combat-simulator/route.ts:48-49 and economy-simulator/goal-seek/route.ts:11) say what is claimed, but neither file is in this context. Its files are only the ability-spec and feature-matrix routes, so the verdict is about the simulation-tools context."
-      }
+      ]
     },
     "ca5add2a-febe-405e-a1dc-2597c8e9d14a/encounter-balance-simulation": {
       "context": "economy-simulator",
@@ -25619,6 +25614,27 @@
           "technique": "a-test-helper-is-a-fork-of-the-driver",
           "verdict": "conformant",
           "evidence": "src/__tests__/catalog/headless-submit-query-count.test.ts:28 The read counter wraps and delegates to the real listVerdicts over a real SQLite file, so the count measures the shipped path."
+        }
+      ]
+    },
+    "a6e26c61-c43a-4155-871a-2fe81c3dd8c1/encounter-balance-simulation": {
+      "context": "bestiary-encounters-metrics",
+      "subject": "encounter-balance-simulation",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:53:10.730Z",
+      "worker": "d8736d71-a575-441d-9378-def60382360c",
+      "techniques": [
+        {
+          "technique": "kill-share-and-damage-share-attribution",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:138 Danger Ranking sorts by a typed rank, not by a kill share taken from an event log; there is no dominance threshold, no diffuse-danger state and no denominator label, and absent measurement is rendered as data."
+        },
+        {
+          "technique": "monte-carlo-scenario-presets",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:47 Rates and counts are shown with no stated sample basis (no preset, no iteration or run count, no cast version), so 'a rate without its sample size' is rendered throughout."
         }
       ]
     }

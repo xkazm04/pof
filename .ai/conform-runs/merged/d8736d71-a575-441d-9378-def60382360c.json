@@ -1,0 +1,93 @@
+{
+ "schema": "conform-run/1",
+ "worker": "d8736d71-a575-441d-9378-def60382360c",
+ "subject": "encounter-balance-simulation",
+ "evaluatedAt": "2026-11-09T23:53:10.730461+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "game-design-studio-api",
+   "subject": "encounter-balance-simulation",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/app/api/combat-simulator/route.ts:88 When the caller sends no seed, the combat-simulator route draws a fresh random one, ignoring DEFAULT_CONFIG.seed (42), so re-running the same scenario gives different numbers by default; the standard's 'keep the base constant by default; make re-rolling an explicit action' is inverted, though the seed is echoed back in result.config so a run can be reconstructed afterwards.",
+   "techniques": [
+    {
+     "technique": "per-cell-seed-derivation-for-order-independence",
+     "verdict": "deviation",
+     "evidence": "src/app/api/combat-simulator/route.ts:88 Seed is not derived from scenario identity; an omitted seed re-rolls the run with Math.random, which the technique names as the re-roll-until-nice failure."
+    },
+    {
+     "technique": "monte-carlo-scenario-presets",
+     "verdict": "deviation",
+     "evidence": "src/app/api/combat-simulator/route.ts:87 The caller picks the iteration count (1-5000) per request, and the fallback is a literal 1000 rather than a preset's count; a 1-iteration run comes back in the same shape as a full run with no reduced-resolution label."
+    },
+    {
+     "technique": "goal-seek-on-a-seeded-monotonic-lever",
+     "verdict": "conformant",
+     "evidence": "src/app/api/economy-simulator/goal-seek/route.ts:15 The goal-seek route refuses to solve without a numeric seed, so metric(v) is deterministic; bisection is capped at maxIterations: 40 (line 32)."
+    }
+   ]
+  },
+  {
+   "context": "bestiary-encounters-metrics",
+   "subject": "encounter-balance-simulation",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:630 The Kill/Death Statistics panel shows typed constant counts and a hand-assigned dangerRank as though they were measured kill attribution, with no denominator, run count or 'not measured' state; ranged-caster has more player kills (31) than melee-grunt (23) but a lower typed rank (4 vs 3), so the ranking contradicts its own numbers.",
+   "techniques": [
+    {
+     "technique": "kill-share-and-damage-share-attribution",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:138 Danger Ranking sorts by a typed rank, not by a kill share taken from an event log; there is no dominance threshold, no diffuse-danger state and no denominator label, and absent measurement is rendered as data."
+    },
+    {
+     "technique": "monte-carlo-scenario-presets",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:47 Rates and counts are shown with no stated sample basis (no preset, no iteration or run count, no cast version), so 'a rate without its sample size' is rendered throughout."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "encounter-balance-simulation",
+   "context": "catalog-seed-data",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:53:10.730461+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "encounter-balance-simulation"
+   ],
+   "techniques": [
+    "goal-seek-on-a-seeded-monotonic-lever",
+    "monte-carlo-scenario-presets",
+    "per-cell-seed-derivation-for-order-independence"
+   ],
+   "deviations": 1,
+   "context": "game-design-studio-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:53:10.730461+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "encounter-balance-simulation"
+   ],
+   "techniques": [
+    "kill-share-and-damage-share-attribution",
+    "monte-carlo-scenario-presets"
+   ],
+   "deviations": 1,
+   "context": "bestiary-encounters-metrics",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}
