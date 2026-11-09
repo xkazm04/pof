@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   readControl, writeControl, stopRequested, stopNow, scheduleWith,
-  holdForReserve, laneHealth, runnerStart, lastActivity, lanesToKill,
+  holdForReserve, laneHealth, runnerStart, lastActivity, lanesToKill, readTimes, writeTimes,
 } from './control.mjs';
 import { planTimes, ts } from './lib.mjs';
 
@@ -264,4 +264,16 @@ attack('stop --lane x --now kills only lane x, a whole-night --now kills all, a 
   assert.deepEqual(lanesToKill({ stop: true, now: true }, lanes), lanes);
   assert.deepEqual(lanesToKill({ stopLanes: ['hero'] }, lanes), []);
   assert.deepEqual(lanesToKill({ stopLanes: 'hero', now: true }, lanes), []);
+});
+
+attack('published times round-trip, and absent, damaged or past-deadline times read as null', (t) => {
+  const file = path.join(temp(t), 'times.json');
+  const now = at(10, 0, 30);
+  const night = planTimes({ until: '08:00', freeze: '07:30', reportAt: '07:40' }, now);
+  assert.equal(readTimes(file, now), null);
+  writeTimes(file, night);
+  assert.deepEqual(readTimes(file, now), night);
+  assert.equal(readTimes(file, at(10, 8, 1)), null, 'a finished night is no running night');
+  fs.writeFileSync(file, '{"until":"x","freeze":"y","report":"z"}');
+  assert.equal(readTimes(file, now), null);
 });

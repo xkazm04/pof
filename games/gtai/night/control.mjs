@@ -22,6 +22,23 @@ export function writeControl(file, patch) {
   return next;
 }
 
+export const TIMES_FILE = 'times.json';
+
+/** The running night publishes its times so `schedule` checks a change against them, not a made-up night. */
+export function writeTimes(file, t) {
+  fs.writeFileSync(file, `${JSON.stringify({ until: t.until.toISOString(), freeze: t.freeze.toISOString(), report: t.report.toISOString() }, null, 2)}\n`);
+}
+
+/** The published times, or null when absent, damaged, or from a night whose deadline has passed. */
+export function readTimes(file, now = new Date()) {
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const t = { until: new Date(raw.until), freeze: new Date(raw.freeze), report: new Date(raw.report) };
+    if (Object.values(t).some((d) => !Number.isFinite(d.getTime()))) return null;
+    return t.until > now ? t : null;
+  } catch { return null; }
+}
+
 /** Should this lane stop? `stop: true` is the whole night; `stopLanes` names lanes. */
 export const stopRequested = (control, laneId) => control?.stop === true || (Array.isArray(control.stopLanes) && control.stopLanes.includes(laneId));
 

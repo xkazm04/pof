@@ -21,7 +21,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import { CONTROL_FILE, holdForReserve, lanesToKill, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopRequested, writeControl } from './control.mjs';
+import { CONTROL_FILE, TIMES_FILE, holdForReserve, lanesToKill, readTimes, writeTimes, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopRequested, writeControl } from './control.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, queueEmpty, requestsFor, ts } from './lib.mjs';
@@ -129,6 +129,7 @@ function runClaude(lane, text, timeoutMs, n, mode) {
 }
 
 const CONTROL_PATH = path.join(ROOT, CONTROL_FILE);
+const TIMES_PATH = path.join(ROOT, TIMES_FILE);
 const RESERVE_MIN = Number(opts['reserve-min'] ?? 90);
 
 /** Re-reads control.json and moves `t` in place, so every lane sees a new schedule at its next step. */
@@ -138,6 +139,7 @@ function applyControl(t) {
   if (error) { log(`control: bad schedule ignored (${error})`); return control; }
   if (changed) {
     Object.assign(t, next);
+    writeTimes(TIMES_PATH, t);
     log(`control: schedule is now freeze ${ts(t.freeze)}, report ${ts(t.report)}, until ${ts(t.until)}`);
   }
   return control;
@@ -217,6 +219,7 @@ async function runAll() {
   let t;
   try { t = planTimes({ until: String(opts.until ?? '09:00'), freeze: String(opts.freeze ?? '07:30'), reportAt: String(opts['report-at'] ?? '08:15') }); }
   catch (e) { die(e.message); }
+  writeTimes(TIMES_PATH, t);
   const iterMin = Number(opts['iter-min'] ?? 90);
   if (!(iterMin >= 5)) die('--iter-min must be a number >= 5');
   const lanes = picked.map((l) => ({ ...l, model: String(opts[`model-${l.id}`] ?? l.model ?? opts.model ?? 'claude-opus-5-5'), effort: l.effort ?? String(opts.effort ?? 'high'), iterMin: l.iterMin ?? iterMin }));
@@ -308,9 +311,12 @@ function scheduleCmd() {
   if (typeof opts.freeze === 'string') patch.freeze = opts.freeze;
   if (typeof opts['report-at'] === 'string') patch.reportAt = opts['report-at'];
   if (!Object.keys(patch).length) die('schedule needs --until, --freeze or --report-at');
-  const t = { until: new Date(Date.now() + 24 * 3600_000), freeze: new Date(Date.now() + 2 * 3600_000), report: new Date(Date.now() + 3 * 3600_000) };
+  const running = readTimes(TIMES_PATH);
+  // Without a running night's times the check can only catch a bad value or order, not a time already passed.
+  const t = running ?? { until: new Date(Date.now() + 24 * 3600_000), freeze: new Date(Date.now() + 2 * 3600_000), report: new Date(Date.now() + 3 * 3600_000) };
   const planned = scheduleWith(t, { ...readControl(CONTROL_PATH), ...patch });
-  if (planned.error) die(planned.error);
+  if (planned.error) die(`${planned.error}${running ? ' (checked against the running night)' : ''}`);
+  if (!running) process.stdout.write(`no running night's times in ${TIMES_PATH}: checked the values and their order only\n`);
   writeControl(CONTROL_PATH, patch);
   process.stdout.write(`schedule written to ${CONTROL_PATH}: a running night takes it at each lane's next step\n`);
 }
