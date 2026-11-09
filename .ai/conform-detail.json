@@ -15430,16 +15430,22 @@
       "context": "character-movement-playground",
       "subject": "spatial-audio-scene-authoring",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T05:11:57.517Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
-        "state": "not-applicable",
-        "at": "2026-11-07T05:12:41.743307+00:00",
-        "reason": "reviewer (sonnet): The anchor, MovementTab.tsx:10, is only the component's function signature. It doesn't show that audio is absent, and the dodge-cooldown claim in the evidence rests on files I didn't trace."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:05.055Z",
+      "worker": "830cd087-67a6-490f-96ca-9dd6d72ea27b",
+      "techniques": [
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt.ts:32 This cooldown is a dodge ability UPROPERTY, not a minimum gap between starts of an audio event class; the context has no audio event catalog."
+        },
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/playground/types.ts:20 The curve editor's channels are accel, dodge and camera feel curves, not distance attenuation curves; 'attenuation' has 0 hits."
+        }
+      ]
     },
     "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/combat-pacing-and-dramatic-arc": {
       "context": "hud-damage-and-navigation",
@@ -22496,16 +22502,17 @@
       "context": "inventory-catalog",
       "subject": "spatial-audio-scene-authoring",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-07",
-      "evaluatedTs": "2026-11-07T05:11:57.517Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "6b126e6d-47d1-4230-b00c-56ed6f2efae8",
-        "state": "not-applicable",
-        "at": "2026-11-07T05:12:41.826289+00:00",
-        "reason": "reviewer (sonnet): The anchor, CatalogGearTab.tsx:42, is an incidental line (the function declaration and ITEMS_PER_PAGE). It doesn't show a 2-D stash grid or that audio is absent, so the claim about the context's 'spatial' code is unconfirmed."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:05.055Z",
+      "worker": "830cd087-67a6-490f-96ca-9dd6d72ea27b",
+      "techniques": [
+        {
+          "technique": "two-d-vs-three-d-spatialization-choice",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/spatialDragState.ts:13 Position here is an item footprint on a stash grid, not a positioned-or-positionless choice for a sound class."
+        }
+      ]
     },
     "efa54d5b-69d9-4e56-a504-4ce0ebe76461/table": {
       "context": "loot-affix-workbench",
@@ -24281,6 +24288,53 @@
         "at": "2026-11-09T02:10:30.061311+00:00",
         "reason": "reviewer (sonnet): Each not-applicable rests on an anchor that does not itself show the absence of a blocking mechanism, plus a keyword search whose terms (process.exit, exitCode, pre-commit, --no-verify) are CLI/git-hook terms that cannot detect UI-level gating; for level-flow-editor the 'gate means in-game door lock"
       }
+    },
+    "dadc026b-804a-4632-ad7f-0c8254660f2c/spatial-audio-scene-authoring": {
+      "context": "combat-choreography",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:05.055Z",
+      "worker": "830cd087-67a6-490f-96ca-9dd6d72ea27b",
+      "techniques": [
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/ue5-export.ts:45 The export section under this header carries only damage, health, armor and crit multipliers (lines 46-52); no sound event class leaves this context, so it has no catalog row to budget."
+        },
+        {
+          "technique": "two-d-vs-three-d-spatialization-choice",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/types.ts:141 SFX exists only as a per-channel scrub slot for the tooltip; it is display state and makes no world-position decision."
+        }
+      ]
+    },
+    "023f8e03-d83d-49d1-b740-04ecdd77362c/spatial-audio-scene-authoring": {
+      "context": "streaming-zone-planner",
+      "subject": "spatial-audio-scene-authoring",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:22:05.055Z",
+      "worker": "830cd087-67a6-490f-96ca-9dd6d72ea27b",
+      "techniques": [
+        {
+          "technique": "room-type-to-acoustic-profile",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/constants.ts:9 Zone types are streaming-paint categories; the golden path says the audio subject consumes the room graph and leaves shaping it upstream, and /api/spatial-audio-generate reads levelDoc.rooms, not the streaming plan."
+        },
+        {
+          "technique": "attenuation-falloff-and-distance-filtering",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:100 This radius is a level-streaming preload distance in grid cells, not an audio falloff distance."
+        },
+        {
+          "technique": "event-priority-concurrency-cooldown",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:72 This priority orders zone loading and does not decide which voice survives a playback limit."
+        }
+      ]
     }
   }
 }

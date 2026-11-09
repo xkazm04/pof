@@ -1,0 +1,177 @@
+{
+ "schema": "conform-run/1",
+ "worker": "830cd087-67a6-490f-96ca-9dd6d72ea27b",
+ "subject": "spatial-audio-scene-authoring",
+ "evaluatedAt": "2026-11-09T02:22:05.055478+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "character-movement-playground",
+   "subject": "spatial-audio-scene-authoring",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt.ts:32 A case-insensitive search of all of sub_character for audio, sound, sfx, reverb, attenuation, occlusion, spatialization, emitter and acoustic found 0 hits, and the only 'cooldown' in the context's three directories is this gameplay dodge timer, so the context authors no audio scene, zone or event class for the techniques to govern.",
+   "techniques": [
+    {
+     "technique": "event-priority-concurrency-cooldown",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt.ts:32 This cooldown is a dodge ability UPROPERTY, not a minimum gap between starts of an audio event class; the context has no audio event catalog."
+    },
+    {
+     "technique": "attenuation-falloff-and-distance-filtering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/playground/types.ts:20 The curve editor's channels are accel, dodge and camera feel curves, not distance attenuation curves; 'attenuation' has 0 hits."
+    }
+   ],
+   "absenceTerms": [
+    "audio",
+    "sound",
+    "reverb",
+    "attenuation",
+    "occlusion"
+   ]
+  },
+  {
+   "context": "inventory-catalog",
+   "subject": "spatial-audio-scene-authoring",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/spatialDragState.ts:2 'Spatial' in this context names a drag-and-drop 2-D stash grid; a case-insensitive search of sub_inventory/catalog for audio, sound, sfx, reverb, attenuation, occlusion, spatialization, emitter and acoustic found 0 hits, so the context has no audio scene or event class for the techniques to govern.",
+   "techniques": [
+    {
+     "technique": "two-d-vs-three-d-spatialization-choice",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/spatialDragState.ts:13 Position here is an item footprint on a stash grid, not a positioned-or-positionless choice for a sound class."
+    }
+   ],
+   "absenceTerms": [
+    "audio",
+    "reverb",
+    "attenuation",
+    "occlusion",
+    "spatialization"
+   ]
+  },
+  {
+   "context": "combat-choreography",
+   "subject": "spatial-audio-scene-authoring",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_combat/choreography/types.ts:43 The context's only audio concept is this coloured SFX lane on the pacing timeline (a simulated timing chart); a search of all of sub_combat for audio, reverb, attenuation, occlusion, spatialization and acoustic found 0 hits and its only 'sfx' hits outside the lane are polish-tab sliders in another context, so nothing here defines or places a sound.",
+   "techniques": [
+    {
+     "technique": "event-priority-concurrency-cooldown",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/ue5-export.ts:45 The export section under this header carries only damage, health, armor and crit multipliers (lines 46-52); no sound event class leaves this context, so it has no catalog row to budget."
+    },
+    {
+     "technique": "two-d-vs-three-d-spatialization-choice",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/choreography/types.ts:141 SFX exists only as a per-channel scrub slot for the tooltip; it is display state and makes no world-position decision."
+    }
+   ],
+   "absenceTerms": [
+    "audio",
+    "reverb",
+    "attenuation",
+    "occlusion",
+    "spatialization"
+   ]
+  },
+  {
+   "context": "streaming-zone-planner",
+   "subject": "spatial-audio-scene-authoring",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/constants.ts:9 The zone-type table maps only colour, label and letter, a search of level-design for audio, sound, sfx, reverb, attenuation, occlusion, spatialization, emitter and acoustic found 0 hits, and the audio scene derives from level-document rooms rather than this plan, so the planner is an upstream World Partition tool outside the subject.",
+   "techniques": [
+    {
+     "technique": "room-type-to-acoustic-profile",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/constants.ts:9 Zone types are streaming-paint categories; the golden path says the audio subject consumes the room graph and leaves shaping it upstream, and /api/spatial-audio-generate reads levelDoc.rooms, not the streaming plan."
+    },
+    {
+     "technique": "attenuation-falloff-and-distance-filtering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:100 This radius is a level-streaming preload distance in grid cells, not an audio falloff distance."
+    },
+    {
+     "technique": "event-priority-concurrency-cooldown",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:72 This priority orders zone loading and does not decide which voice survives a playback limit."
+    }
+   ],
+   "absenceTerms": [
+    "audio",
+    "sound",
+    "reverb",
+    "attenuation",
+    "occlusion"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T02:22:05.055478+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "spatial-audio-scene-authoring"
+   ],
+   "techniques": [
+    "attenuation-falloff-and-distance-filtering",
+    "event-priority-concurrency-cooldown"
+   ],
+   "deviations": 0,
+   "context": "character-movement-playground",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:22:05.055478+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "spatial-audio-scene-authoring"
+   ],
+   "techniques": [
+    "two-d-vs-three-d-spatialization-choice"
+   ],
+   "deviations": 0,
+   "context": "inventory-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:22:05.055478+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "spatial-audio-scene-authoring"
+   ],
+   "techniques": [
+    "event-priority-concurrency-cooldown",
+    "two-d-vs-three-d-spatialization-choice"
+   ],
+   "deviations": 0,
+   "context": "combat-choreography",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T02:22:05.055478+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "spatial-audio-scene-authoring"
+   ],
+   "techniques": [
+    "attenuation-falloff-and-distance-filtering",
+    "event-priority-concurrency-cooldown",
+    "room-type-to-acoustic-profile"
+   ],
+   "deviations": 0,
+   "context": "streaming-zone-planner",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

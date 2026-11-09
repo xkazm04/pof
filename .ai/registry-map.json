@@ -9911,7 +9911,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt.ts:32 A case-insensitive search of all of sub_character for audio, sound, sfx, reverb, attenuation, occlusion, spatialization, emitter and acoustic found 0 hits, and the only 'cooldown' in the context's three directories is this gameplay dodge timer, so the context authors no audio scene, zone or event class for the techniques to govern.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         },
         {
           "subject": "game-economy-tuning",
@@ -11563,7 +11567,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_combat/choreography/types.ts:43 The context's only audio concept is this coloured SFX lane on the pacing timeline (a simulated timing chart); a search of all of sub_combat for audio, reverb, attenuation, occlusion, spatialization and acoustic found 0 hits and its only 'sfx' hits outside the lane are polish-tab sliders in another context, so nothing here defines or places a sound.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         }
       ],
       "governance": "governed"
@@ -16637,7 +16645,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/spatialDragState.ts:2 'Spatial' in this context names a drag-and-drop 2-D stash grid; a case-insensitive search of sub_inventory/catalog for audio, sound, sfx, reverb, attenuation, occlusion, spatialization, emitter and acoustic found 0 hits, so the context has no audio scene or event class for the techniques to govern.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         },
         {
           "subject": "drag-drop",
@@ -25596,7 +25608,11 @@
           "revision": 1,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/constants.ts:9 The zone-type table maps only colour, label and letter, a search of level-design for audio, sound, sfx, reverb, attenuation, occlusion, spatialization, emitter and acoustic found 0 hits, and the audio scene derives from level-document rooms rather than this plan, so the planner is an upstream World Partition tool outside the subject.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:0d2b9b42f9ee07bb",
+          "evaluatedRevision": 1
         },
         {
           "subject": "quality-gates",
