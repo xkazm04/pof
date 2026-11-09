@@ -1,0 +1,192 @@
+{
+ "schema": "conform-run/1",
+ "worker": "14fdec5b-4033-4fcf-afe6-cdec91c45c7f",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T22:58:36.410716+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 The import test swaps the store's real importCrashLog for a test-written version that replaces `reports` wholesale. The shipped action (src/stores/crashAnalyzerStore.ts:97) sets isLoading/error and merges re-imports by id, so the green 'no diagnosis' UI result describes a program no user runs.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 The helper restates the store action rather than sharing it. It drops the real merge-by-id, isLoading and error handling, and its neutral name does not say what it leaves out."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/CrashHealthMap.test.tsx:20 The test name claims the empty hint, but the only assertion (line 22) is zero health-nodes, which a component returning null would also satisfy. The 'No crashes to map yet' branch is never asserted."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/crash-analyzer-history-route.test.ts:20 The pid-keyed throwaway DB and its -wal/-shm files are deleted before the import graph opens, so this run inherits nothing from a previous one."
+    }
+   ]
+  },
+  {
+   "context": "project-ops-api",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/api/milestone-deadlines-label.test.ts:10 Several route tests here (milestone-deadlines-*, telemetry-*, project-progress-empty-payload) create a pid-keyed temp DB that they never delete and never clear at start. Because Windows reuses pids, a later run can reopen an earlier run's rows inside the global sweep's 30-minute age floor, unlike sibling tests that unlink first or rmSync in afterAll.",
+   "techniques": [
+    {
+     "technique": "isolation-lanes",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/milestone-deadlines-label.test.ts:10 The scratch DB names no reaper of its own and is not reset at startup, so the 'from the previous run: nothing' rule depends on an age-floored backstop that the harness itself says can miss pid reuse. A sibling, project-rules-scope.test.ts:27, does reap its own DB."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/telemetry-scan-same-ms.test.ts:28 The same-millisecond collision is forced by freezing the clock rather than hoping two real scans land in one ms."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/project-progress-empty-payload.test.ts:12 The test records in its own comment that it was observed failing against the defect it guards."
+    }
+   ],
+   "registryProposal": "isolation-lanes could state whether a harness-level startup sweep with an age floor (needed so concurrent runs keep their live files) satisfies 'launchers reap stale leftovers at startup' when scratch names are keyed by a reusable id such as a pid. Here the sweep and the pid key together leave a 30-minute inheritance window."
+  },
+  {
+   "context": "catalog-browser-ui",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/layout-lab/LayoutLab.skipLink.test.tsx:38 The skip-link test waits 600 ms of wall clock for the AnimatePresence exit to finish before asserting that the old view's DOM is gone. On a loaded 16-worker run the exit can outlast the sleep, so a schedule event is being asserted with a stopwatch.",
+   "techniques": [
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/layout-lab/LayoutLab.skipLink.test.tsx:38 It uses a real sleep instead of awaiting the exit-complete event, waitFor on the DOM removal, or fake timers."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/layout-lab/shellTypeFloor.scan.test.ts:14 The structural pin strips comments from its haystack, so prose about the rule cannot satisfy or trip the needle."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/layout-lab/shellTypeFloor.scan.test.ts:24 The counter is proved on a known-bad input, including a comment decoy, before it is trusted on the real files."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "e2e/catalog-pipeline-walker.spec.ts:15 The e2e walk of the /layout UI runs against a hermetic SQLite file that is wiped each run, never the operator DB."
+    },
+    {
+     "technique": "derived-selection-must-be-measured",
+     "verdict": "conformant",
+     "evidence": "e2e/catalog-pipeline-walker.spec.ts:32 The walker declares the expected population, and walk-status is written only when every expected pipeline walked (e2e/helpers/walk-status.ts:46), so a --grep subset cannot pass as the full run."
+    }
+   ]
+  },
+  {
+   "context": "module-evaluator",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/evaluator/deep-eval-cancel.test.ts:51 The cancel test sleeps 10 ms of wall clock to 'let the worker pool dispatch its first in-flight passes' before aborting. If dispatch has not happened yet the abort lands pre-dispatch and the assertions still pass, so the in-flight cancel path the test exists for may go unexercised without any signal.",
+   "techniques": [
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/evaluator/deep-eval-cancel.test.ts:51 A timed sleep stands in for 'a pass is in flight'. By contrast, deep-eval-job.test.ts:217 does it right by asserting the recorded in-flight count (maxInFlight <= 4)."
+    },
+    {
+     "technique": "approval-snapshots-with-guarded-update",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/prompts/golden.ts:83 The deep-eval pass prompt golden (off-rail-join.test.ts:176, built from module-eval-prompts) re-records whenever an env var is set or the file is missing, and passes when it does. That is a second record path with no integrity test, so a deleted golden goes green."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/evaluator/review-runner.test.ts:28 The review-runner ledger tests run in a mkdtemp scratch dir that names its reaper after every test."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "image-generation",
+   "reason": "evidence leans on generate/route.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T22:58:36.410716+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "isolation-lanes",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:58:36.410716+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "assert-the-schedule-not-the-stopwatch",
+    "isolation-lanes",
+    "negative-control-tests"
+   ],
+   "deviations": 1,
+   "context": "project-ops-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:58:36.410716+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "assert-the-schedule-not-the-stopwatch",
+    "derived-selection-must-be-measured",
+    "isolation-lanes",
+    "negative-control-tests",
+    "pin-the-call-not-the-name"
+   ],
+   "deviations": 1,
+   "context": "catalog-browser-ui",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:58:36.410716+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "approval-snapshots-with-guarded-update",
+    "assert-the-schedule-not-the-stopwatch",
+    "isolation-lanes"
+   ],
+   "deviations": 1,
+   "context": "module-evaluator",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

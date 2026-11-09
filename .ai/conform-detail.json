@@ -25454,6 +25454,95 @@
           "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:16 Banner, rail, matrix and coach are each driven through their production function, not through a path the test assembled."
         }
       ]
+    },
+    "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/test-harness": {
+      "context": "project-ops-api",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:58:36.410Z",
+      "worker": "14fdec5b-4033-4fcf-afe6-cdec91c45c7f",
+      "techniques": [
+        {
+          "technique": "isolation-lanes",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/milestone-deadlines-label.test.ts:10 The scratch DB names no reaper of its own and is not reset at startup, so the 'from the previous run: nothing' rule depends on an age-floored backstop that the harness itself says can miss pid reuse. A sibling, project-rules-scope.test.ts:27, does reap its own DB."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/telemetry-scan-same-ms.test.ts:28 The same-millisecond collision is forced by freezing the clock rather than hoping two real scans land in one ms."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/project-progress-empty-payload.test.ts:12 The test records in its own comment that it was observed failing against the defect it guards."
+        }
+      ],
+      "registryProposal": "isolation-lanes could state whether a harness-level startup sweep with an age floor (needed so concurrent runs keep their live files) satisfies 'launchers reap stale leftovers at startup' when scratch names are keyed by a reusable id such as a pid. Here the sweep and the pid key together leave a 30-minute inheritance window."
+    },
+    "6d2b14bf-26c8-4034-95ff-9f87e1f2d85c/test-harness": {
+      "context": "catalog-browser-ui",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:58:36.410Z",
+      "worker": "14fdec5b-4033-4fcf-afe6-cdec91c45c7f",
+      "techniques": [
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/layout-lab/LayoutLab.skipLink.test.tsx:38 It uses a real sleep instead of awaiting the exit-complete event, waitFor on the DOM removal, or fake timers."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/layout-lab/shellTypeFloor.scan.test.ts:14 The structural pin strips comments from its haystack, so prose about the rule cannot satisfy or trip the needle."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/layout-lab/shellTypeFloor.scan.test.ts:24 The counter is proved on a known-bad input, including a comment decoy, before it is trusted on the real files."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:15 The e2e walk of the /layout UI runs against a hermetic SQLite file that is wiped each run, never the operator DB."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:32 The walker declares the expected population, and walk-status is written only when every expected pipeline walked (e2e/helpers/walk-status.ts:46), so a --grep subset cannot pass as the full run."
+        }
+      ]
+    },
+    "fb32be4a-b388-4f9a-9888-4f8301b69db4/test-harness": {
+      "context": "module-evaluator",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:58:36.410Z",
+      "worker": "14fdec5b-4033-4fcf-afe6-cdec91c45c7f",
+      "techniques": [
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/evaluator/deep-eval-cancel.test.ts:51 A timed sleep stands in for 'a pass is in flight'. By contrast, deep-eval-job.test.ts:217 does it right by asserting the recorded in-flight count (maxInFlight <= 4)."
+        },
+        {
+          "technique": "approval-snapshots-with-guarded-update",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/prompts/golden.ts:83 The deep-eval pass prompt golden (off-rail-join.test.ts:176, built from module-eval-prompts) re-records whenever an env var is set or the file is missing, and passes when it does. That is a second record path with no integrity test, so a deleted golden goes green."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/evaluator/review-runner.test.ts:28 The review-runner ledger tests run in a mkdtemp scratch dir that names its reaper after every test."
+        }
+      ]
     }
   }
 }

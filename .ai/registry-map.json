@@ -8264,7 +8264,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/layout-lab/LayoutLab.skipLink.test.tsx:38 The skip-link test waits 600 ms of wall clock for the AnimatePresence exit to finish before asserting that the old view's DOM is gone. On a loaded 16-worker run the exit can outlast the sleep, so a schedule event is being asserted with a stopwatch.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",
@@ -20473,7 +20477,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/evaluator/deep-eval-cancel.test.ts:51 The cancel test sleeps 10 ms of wall clock to 'let the worker pool dispatch its first in-flight passes' before aborting. If dispatch has not happened yet the abort lands pre-dispatch and the assertions still pass, so the in-flight cancel path the test exists for may go unexercised without any signal.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",
@@ -23087,7 +23095,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/api/milestone-deadlines-label.test.ts:10 Several route tests here (milestone-deadlines-*, telemetry-*, project-progress-empty-payload) create a pid-keyed temp DB that they never delete and never clear at start. Because Windows reuses pids, a later run can reopen an earlier run's rows inside the global sweep's 30-minute age floor, unlike sibling tests that unlink first or rmSync in afterAll.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "error-handling",
