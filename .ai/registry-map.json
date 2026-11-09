@@ -21474,7 +21474,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/api/packaging-preflight-route.test.ts:67 The preflight tests count that a process was spawned but never read the target and config strings handed to UnrealBuildTool, so swapping Shipping for Development at that crossing stays green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",
@@ -23186,7 +23190,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/CreateProjectPanel.tsx:25 prompts.ts was extracted so the banner and the panel button send the same prompt, yet only the banner path is asserted and no test clicks the panel button, so this call site could revert to its own copy with the suite green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "voice-io",

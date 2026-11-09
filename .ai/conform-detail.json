@@ -24599,6 +24599,78 @@
           "evidence": "src/lib/visual-gen/style-dna.ts:10 State persists to a database module; no instruction tells an agent to append to a named file."
         }
       ]
+    },
+    "6540a636-c13b-4437-a682-d5c71b7d71b4/test-harness": {
+      "context": "platform-services-api",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:05:12.835Z",
+      "worker": "43bc0ed3-ff8c-44af-8239-45f0104034b5",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/packaging-preflight-route.test.ts:67 The route maps check to target and config and marshals them into argv at route.ts:78; no test in src/__tests__ pins those arguments and the file names no lane that does."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/notify-gate.test.ts:14 The fake defaults to success and line 98 asserts that same 'sent' value; recordGateNotifyOutcome is mocked and never asserted, and no failed dispatch is exercised."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/checklist-complete-item-validation.test.ts:62 Each test truncates a hand-named table on one per-file database instead of taking a discarded copy of a built-once template; packaging-history-budgets repeats the shape."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/checklist-complete-item-validation.test.ts:17 The file owns a throwaway SQLite path set in vi.hoisted before the route imports the database."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/checklist-complete-item-validation.test.ts:9 The regression file records its observed failure on the unfixed code."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/packaging/preflight/route.ts:78 The reader is UnrealBuildTool, which is not available in the unit lane; the technique excludes readers absent from the lane, and the unpinned argv is charged to unreached-decisions instead."
+        }
+      ]
+    },
+    "e6a80cc6-8720-4e4f-b11c-ef4f44203477/test-harness": {
+      "context": "project-setup-core",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:05:12.835Z",
+      "worker": "43bc0ed3-ff8c-44af-8239-45f0104034b5",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/project-setup/CreateProjectPanel.tsx:25 The technique requires asserting adoption of an extracted rule; tests only read this button for dimming, absence and disabled state, and BuildVerifyPanel's button is likewise never clicked."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/project-setup/project-setup-next-step.test.tsx:87 The banner path is driven through the real ProjectSetupModule CTA rather than a composition the test assembled."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/project-setup/build-verify-prompt.test.ts:59 The shared toolchain row a test mutates is restored in a finally block, inside the test body."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/prompts.ts:2 These strings are prompts read by a model, which the golden path assigns to the eval-harness subject rather than to a deterministic foreign reader."
+        }
+      ]
     }
   }
 }
