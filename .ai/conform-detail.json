@@ -19237,16 +19237,11 @@
       "context": "ue5-state-sync",
       "subject": "quality-gates",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T22:28:40.860Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "8647f561-e236-4dd3-b22c-2fb314138914",
-        "state": "not-applicable",
-        "at": "2026-11-08T22:29:48.051505+00:00",
-        "reason": "reviewer (sonnet): The anchor WriteOutcomeChip.tsx:13 is incidental and shows the opposite: the chip's own outcome vocabulary includes 'refused' and 'conflict', and syncEvents.ts logs a rejected write as 'refused'. The panel directory also contains 'accept-ue5' (a substring hit for 'acceptance'), so the claim that the"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:12:41.862Z",
+      "worker": "645faf2c-de92-4d06-ad84-45c7ad28f70c",
+      "techniques": []
     },
     "234034cf-29e8-432e-aca8-490e30e9f45d/eval-harness": {
       "context": "prompt-evolution",
@@ -24053,6 +24048,42 @@
           "technique": "treatment-election-rate",
           "verdict": "not-applicable",
           "evidence": "src/types/prompt-evolution.ts:157 The treatment is prompt text applied at dispatch, not a capability the candidate may decline."
+        }
+      ]
+    },
+    "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/quality-gates": {
+      "context": "save-system",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:12:41.862Z",
+      "worker": "645faf2c-de92-4d06-ad84-45c7ad28f70c",
+      "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "src/app/api/save-schema/audit/route.ts:36 collectHeaders returns [] when Source/ does not exist and silently skips unreadable directories; the route reports success at headersScanned 0 instead of treating an empty walk as could-not-run."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:106 Narrow: a thrown audit failure reaches a distinct state with no findings shown. The zero-header case is judged under gate-liveness."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:40 The audit parses the project's actual headers rather than trusting checklist progress or any other claim about them."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:165 Each finding prints its fix rule, and the Fix action on the same panel dispatches that repair; no out-of-tree path is named."
+        },
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_save/index.tsx:111 IntegrityValidator's overall PASS/WARN/FAIL comes from a literal array that cannot change, but the tab discloses it as sample data, so it is not offered as a check."
         }
       ]
     }

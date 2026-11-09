@@ -24274,7 +24274,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:111 A missing or unreadable Source/ directory walks zero headers and arrives as the ordinary 'no save class' result, which offers a Create button that dispatches a UE write task, so could-not-run shares one path with a real finding even though the count of 0 is printed.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "self-describing-model-packages",
@@ -27073,7 +27077,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/WriteOutcomeChip.tsx:10 The only refusal in this context is the editor's rejection of a property write, shown as a coloured outcome chip on a transport log; searching both panel directories for gate, verdict, waiver, exit code, threshold, severity, blocking, pre-commit and quality gate found zero hits, so there is no check here that renders a quality verdict.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "rate-limiting",
