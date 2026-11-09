@@ -16,7 +16,7 @@
  * and commits with a pathspec itself. Codex never commits (it is told so in every brief).
  */
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { routeTask } from '../../src/lib/codex-exec/routing';
@@ -24,6 +24,7 @@ import { buildCodexExecArgs, buildCodexResumeArgs, PROMPT_FROM_STDIN } from '../
 import { parseCodexEvents } from '../../src/lib/codex-exec/events';
 import { CODEX_REPORT_SCHEMA, renderBrief, type CodexTask } from '../../src/lib/codex-exec/brief';
 import { parseLedger, summarizeLedger, type CodexVerdict, type LedgerEntry } from '../../src/lib/codex-exec/ledger';
+import { latestWeeklyPercent, meterRefusal } from '../../src/lib/codex-exec/meter';
 import { runCodex, stallMinutes, type RunEnd } from './runner';
 
 const REPO = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..');
@@ -82,8 +83,24 @@ function report(id: string, eventsPath: string, lastPath: string, secs: number, 
   console.log(`report:\n${last || '(no final message)'}`);
 }
 
+/** The weekly meter as the newest session log reports it; null when no recent log carries one. */
+function weeklyMeter(): number | null {
+  const newestDirs = (d: string) => (existsSync(d) ? readdirSync(d).sort().reverse().map((n) => join(d, n)) : []);
+  const base = join(homedir(), '.codex/sessions');
+  for (const y of newestDirs(base)) for (const m of newestDirs(y)) for (const day of newestDirs(m)) {
+    const logs = newestDirs(day).filter((f) => f.endsWith('.jsonl')).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs).slice(0, 20);
+    for (const f of logs) {
+      const used = latestWeeklyPercent(readFileSync(f, 'utf8'));
+      if (used !== null) return used;
+    }
+  }
+  return null;
+}
+
 async function run(taskPath: string, timeoutMin: number) {
   const task = JSON.parse(readFileSync(taskPath, 'utf8')) as CodexTask;
+  const refusal = meterRefusal(weeklyMeter());
+  if (refusal) throw new Error(refusal);
   const dir = runDir(task.id);
   if (existsSync(dir)) throw new Error(`run ${task.id} already exists — discard it or pick a new id`);
   mkdirSync(dir, { recursive: true });

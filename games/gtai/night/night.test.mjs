@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, nextAt, parseConfig, phaseAt, planTimes, resetAt, ts } from './lib.mjs';
+import { apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, nextAt, parseConfig, phaseAt, planTimes, queueEmpty, requestsFor, resetAt, ts } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve('C:/night-root');
@@ -231,4 +231,19 @@ test('billing: the third key (ANTHROPIC_API_KEY_BACKUP_2) is spent after the bac
   assert.equal(backupKeyFromText(env), 'sk-b', 'the backup line never takes the _2 line');
   assert.equal(backupKey2FromText(env), 'sk-c');
   assert.equal(backupKey2FromText('ANTHROPIC_API_KEY_BACKUP=sk-b'), null);
+});
+
+// ---------------------------------------------------------------- queue-empty pause
+test('queueEmpty reads only the newest entry', () => {
+  assert.equal(queueEmpty('old\nQUEUE EMPTY stands\nNEXT: nothing'), true);
+  const buried = ['QUEUE EMPTY', ...Array.from({ length: 20 }, (_, i) => `line ${i}`)].join('\n');
+  assert.equal(queueEmpty(buried), false, 'an old entry does not pause the lane');
+  assert.equal(queueEmpty(''), false);
+});
+
+test('requestsFor counts only requests naming this lane', () => {
+  const j = 'REQUEST 3 -> assets: the dead\nREQUEST 1 to world: walls\nno request here for assets';
+  assert.equal(requestsFor('assets', j), 1);
+  assert.equal(requestsFor('world', j), 1);
+  assert.equal(requestsFor('perf', j), 0);
 });

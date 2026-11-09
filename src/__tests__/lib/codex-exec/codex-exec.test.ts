@@ -10,6 +10,7 @@ import { buildCodexExecArgs, buildCodexResumeArgs, CODEX_SPAWN_STDIO, PROMPT_FRO
 import { parseCodexEvents } from '@/lib/codex-exec/events';
 import { renderBrief, CODEX_REPORT_SCHEMA, REPO_LAWS, type CodexTask } from '@/lib/codex-exec/brief';
 import { summarizeLedger, type LedgerEntry } from '@/lib/codex-exec/ledger';
+import { TEXT_STOP_PERCENT, latestWeeklyPercent, meterRefusal } from '@/lib/codex-exec/meter';
 
 describe('routeTask — the operator policy', () => {
   it('bulk → Sol at low/medium; complex → Sol at high/xhigh; visual → Astra', () => {
@@ -129,6 +130,29 @@ describe('renderBrief', () => {
 
   it('the report schema requires deviations and open questions', () => {
     expect(CODEX_REPORT_SCHEMA.required).toEqual(expect.arrayContaining(['deviations', 'openQuestions', 'testsRun']));
+  });
+});
+
+describe('renderBrief for another repository', () => {
+  it('carries that repository\'s laws in place of PoF\'s', () => {
+    const b = renderBrief({ id: 'T', tier: 'bulk', access: 'write-verified', title: 't', goal: 'g', context: [], scope: [], acceptance: [], laws: ['GDScript only.'] });
+    expect(b).toContain('GDScript only.');
+    for (const law of REPO_LAWS) expect(b).not.toContain(law);
+  });
+});
+
+describe('the weekly meter guard', () => {
+  const row = (n: number) => JSON.stringify({ payload: { type: 'token_count', rate_limits: { primary: { used_percent: n } } } });
+
+  it('reads the last value in the log and survives a partial line', () => {
+    expect(latestWeeklyPercent([row(17), row(18), '{"rate_limits": partial'].join('\n'))).toBe(18);
+    expect(latestWeeklyPercent('{"type":"other"}')).toBeNull();
+  });
+
+  it('stops text tasks at the limit and never on an unknown meter', () => {
+    expect(meterRefusal(74)).toBeNull();
+    expect(meterRefusal(TEXT_STOP_PERCENT)).toMatch(/images keep the rest of the week/);
+    expect(meterRefusal(null)).toBeNull();
   });
 });
 

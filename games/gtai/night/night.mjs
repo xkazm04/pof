@@ -19,7 +19,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, ts } from './lib.mjs';
+import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, queueEmpty, requestsFor, ts } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const [cmd, ...rest] = process.argv.slice(2);
@@ -157,6 +157,16 @@ async function laneLoop(lane, t, texts) {
       fs.writeFileSync(stateFile(lane.id), JSON.stringify(state, null, 2));
       break;
     }
+    // QUEUE EMPTY: no more sessions in this phase unless the lane's journal moves or a sibling files a REQUEST for it.
+    // The next phase's own session (freeze, report) still runs.
+    if (!r.isError && queueEmpty(readIf(path.join(lane.cwd, 'JOURNAL.md')))) {
+      const journal = () => readIf(path.join(lane.cwd, 'JOURNAL.md'));
+      const siblings = () => (texts.lanes ?? []).filter((l) => l.id !== lane.id).map((l) => readIf(path.join(l.cwd, 'JOURNAL.md'))).join('\n');
+      const seenJournal = journal(), seenRequests = requestsFor(lane.id, siblings());
+      log(`${lane.id}: QUEUE EMPTY - paused until ${ts(new Date(boundary))} or a new REQUEST`);
+      while (Date.now() < boundary && journal() === seenJournal && requestsFor(lane.id, siblings()) === seenRequests) await sleep(Math.min(5 * 60_000, Math.max(1000, boundary - Date.now())));
+      continue;
+    }
     fails = r.isError && r.wallS < 120 ? fails + 1 : 0;
     if (fails >= 5) { log(`${lane.id}: 5 fast failures in a row - cooling down 10 min (read logs/${lane.id}/iter-*.err)`); await sleep(10 * 60_000); fails = 0; }
     // A lane that believes it is finished ends each session in under 3 min: back off, longer each time, capped at 30.
@@ -181,7 +191,7 @@ async function runAll() {
   const iterMin = Number(opts['iter-min'] ?? 90);
   if (!(iterMin >= 5)) die('--iter-min must be a number >= 5');
   const lanes = picked.map((l) => ({ ...l, model: String(opts[`model-${l.id}`] ?? l.model ?? opts.model ?? 'claude-opus-5-5'), effort: l.effort ?? String(opts.effort ?? 'high'), iterMin: l.iterMin ?? iterMin }));
-  const texts = { common: readIf(cfg.common) };
+  const texts = { common: readIf(cfg.common), lanes };
   for (const l of lanes) {
     fs.mkdirSync(laneLogs(l.id), { recursive: true });
     // Opt-in only: lane cwds are worktrees of a real repo, so the brief normally travels in the prompt.

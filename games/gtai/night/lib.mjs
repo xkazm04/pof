@@ -206,3 +206,15 @@ export function createBilling({ file, key = null, key2 = null, key3 = null, want
     },
   };
 }
+
+// ---------------------------------------------------------------- queue-empty pause
+/** Does the lane's newest journal entry say it has nothing left to build? Only the tail counts: an old entry can say so too. */
+export function queueEmpty(journal, tailLines = 15) {
+  return /\bQUEUE EMPTY\b/.test(String(journal).split('\n').filter((l) => l.trim()).slice(-tailLines).join('\n'));
+}
+
+/** How many REQUEST lines in a sibling's journal name this lane: a new one ends the pause. */
+export function requestsFor(laneId, text) {
+  const pattern = new RegExp(String.raw`\bREQUEST\b.*(->|to)\s*${'`'}?${laneId.replace(/[^\w-]/g, '')}\b`);
+  return String(text).split('\n').filter((l) => pattern.test(l)).length;
+}
