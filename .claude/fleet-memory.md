@@ -297,3 +297,5 @@ KIND is one of:
 - [2026-11-07] [balance] DELIVERED: bestiary-guardrails.ts header now states it has no production caller (facet deleted in fb7efa5b); keep, delete or rewire is the owner's call.
 - [2026-11-09] [gtai] DELIVERED: n10 finished clean at 07:43 on four unmerged branches awaiting owner Calls; Codex-as-second-engine plan in games/gtai/research/codex-engine-plan.md (blind n=20 backtest: 8 pass, 5 real miss, no Claude baseline yet).
 - [2026-11-09] [gtai] CONVENTION: to stop a night runner, kill the supervisor PID as well as launch.cmd, because the supervisor detaches and survives a tree kill of launch.cmd.
+- [2026-11-09] [gtai] DELIVERED: n10 merged and pushed to rtai main with CI green; Codex GPT-6.1 GDScript backtest 6/10 and an 8/8 tests-and-tools pilot landed after review (games/gtai/research/codex-engine-plan.md).
+- [2026-11-09] [gtai] DECISION: Codex may write game tests and tools under Claude review (not gameplay); dispatcher stops text tasks at 75 % of the weekly meter so images keep the rest.
