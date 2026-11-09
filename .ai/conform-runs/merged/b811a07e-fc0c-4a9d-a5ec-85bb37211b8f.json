@@ -1,0 +1,186 @@
+{
+ "schema": "conform-run/1",
+ "worker": "b811a07e-fc0c-4a9d-a5ec-85bb37211b8f",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T04:17:28.263224+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-pipeline-state",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/layout-lab/matrixRows.test.ts:10 The labAcceptance fake used to test buildMatrixRows answers 'pass' for any artifact that does not seed __status, so a test that forgets the seed gets a passing verdict with no diagnostic; the same default recurs in about ten layout-lab test files, though this file's four tests all seed it.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/layout-lab/matrixRows.test.ts:10 A fake with a passing default is the setting the technique names as worst; it is dormant in this file because every artifact seeds __status, so this is a latent defect rather than a false green seen here."
+    },
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/layout-lab/serverRowProjection.test.ts:28 Comments are stripped before matching, the needle carries the call parenthesis, and the count is exact, with the reason stated in the asserting file."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/layout-lab/serverRowProjection.test.ts:18 The scan is proved able to fire on a planted hand-rolled projection, and proved not to fire on the same text in a comment."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "e2e/catalog-pipeline-walker.spec.ts:13 Playwright drives the real lab UI and reads persisted rows back from the server; produce runs in stub mode, so it certifies the walk and persistence, not live generation."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "e2e/catalog-pipeline-walker.spec.ts:14 The walker's verdict is isolated from the operator's database and its judge or drain history."
+    },
+    {
+     "technique": "suite-partitioning",
+     "verdict": "conformant",
+     "evidence": "e2e/catalog-pipeline-walker.spec.ts:37 The walk report reconciles what walked green against the expected population and the documented skips."
+    },
+    {
+     "technique": "derived-selection-must-be-measured",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:24 The walker's population comes from the registry, and this guard declares a floor so an empty registry cannot read as green."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:16 Banner, rail, matrix and coach are driven through their shipped derivation functions rather than a composition the test assembled; only the per-step checker is faked."
+    }
+   ]
+  },
+  {
+   "context": "catalog-acceptance",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/catalog/acceptance/noComponentsImport.test.ts:13 The guard titled 'imports nothing from @/components' matches only the static from-alias shape over one non-recursive directory with no floor, so a dynamic import, a relative path or a file in a new subfolder would stay green; a search found no such import today, so the instrument is weak rather than currently hiding a violation.",
+   "techniques": [
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/catalog/acceptance/noComponentsImport.test.ts:13 The walk declares no floor and the needle is narrower than the claim in the test title; comments are not stripped either."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/acceptance/staticSweepUnreadable.test.ts:43 A missing symbol also yields deferred, so this assertion makes the answer name its producer and separates the unreadable file from a plain miss."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/acceptance/template-guard.test.ts:50 The guard is proved through registerCatalogPipeline, the production composition at pipeline-registry.ts:19, not a wrap built by the test."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/package-artifacts.test.ts:13 The cheaper fixture says what it is and what it holds, and a missing file throws rather than defaulting to present."
+    }
+   ]
+  },
+  {
+   "context": "ue5-build-bridge",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/api/ue5-inject-item-entry.test.ts:61 The test named 'injects the shape the workbench sends' counts two calls and never reads their arguments, so the function names and parameters crossing into UE are unpinned, and a grep of the UE project's Source finds neither CreatePreRolledItem nor ServerAddItemFromExternal while the suite stays green.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/ue5-inject-item-entry.test.ts:61 Mutating a function name, the /Game/Items/ prefix or the AffixTag mapping at the crossing would stay green; ue5-bridge-mutation-audit asserts only the log line for this route."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/ue5-inject-item-entry.test.ts:5 The fake defaults to success and no test feeds ok:false, so both 502 branches never run; the file header does disclose that the connection is mocked."
+    },
+    {
+     "technique": "far-side-oracle",
+     "verdict": "deviation",
+     "evidence": "src/app/api/ue5-inject-item/route.ts:102 The route reports the item injected from call results alone and no lane found reads the PIE inventory back; the UE-side function names were not found in the project Source."
+    },
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "not-applicable",
+     "evidence": "src/__tests__/lib/ue-test-scaffold/generate.test.ts:65 Generated C++ is asserted as text only, but its reader is the UE toolchain, which is outside the vitest lane; that is the technique's stated exemption."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "ai-behavior-testing",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "prompt-evolution",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:17:28.263224+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "derived-selection-must-be-measured",
+    "isolation-lanes",
+    "live-app-harness",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "proved-off-the-path",
+    "suite-partitioning"
+   ],
+   "deviations": 1,
+   "context": "catalog-pipeline-state",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:17:28.263224+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "pin-the-call-not-the-name",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "catalog-acceptance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:17:28.263224+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-through-the-reader",
+    "far-side-oracle",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "ue5-build-bridge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

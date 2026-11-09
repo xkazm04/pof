@@ -14904,58 +14904,76 @@
       "context": "catalog-pipeline-state",
       "subject": "test-harness",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-24",
-      "evaluatedTs": "2026-10-24T00:51:58.402Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:17:28.263Z",
+      "worker": "b811a07e-fc0c-4a9d-a5ec-85bb37211b8f",
       "techniques": [
         {
-          "technique": "fixture-economics",
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
           "verdict": "deviation",
-          "evidence": "e2e/helpers/walk-status.ts:14 Claims that a changed pipeline goes red, but the record is keyed only by catalogId with no content digest or rebuild trigger, so a changed pipeline that was walked once stays 'walked' (a stale fixture validating yesterday's world)."
+          "evidence": "src/__tests__/components/layout-lab/matrixRows.test.ts:10 A fake with a passing default is the setting the technique names as worst; it is dormant in this file because every artifact seeds __status, so this is a latent defect rather than a false green seen here."
         },
         {
-          "technique": "long-lane-certification",
-          "verdict": "deviation",
-          "evidence": "e2e/helpers/walk-status.ts:40 The same no-write branch also fires when a walk fails, so lane health can record only first-green and never an observed red; a now-failing walker leaves the old green in place."
-        },
-        {
-          "technique": "derived-selection-must-be-measured",
+          "technique": "pin-the-call-not-the-name",
           "verdict": "conformant",
-          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:24 The derived walker population declares a floor, so an empty registry is red rather than a vacuous green."
+          "evidence": "src/__tests__/components/layout-lab/serverRowProjection.test.ts:28 Comments are stripped before matching, the needle carries the call parenthesis, and the count is exact, with the reason stated in the asserting file."
         },
         {
-          "technique": "gate-scope-is-not-report-scope",
+          "technique": "negative-control-tests",
           "verdict": "conformant",
-          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:51 The exemption list is checked in both directions against the full registry denominator, and each skip needs a reason."
-        },
-        {
-          "technique": "suite-partitioning",
-          "verdict": "conformant",
-          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:73 The report reconciles walked ids against every registered, non-skipped pipeline, so an e2e tier that never ran cannot hide behind a green unit badge."
-        },
-        {
-          "technique": "isolation-lanes",
-          "verdict": "conformant",
-          "evidence": "e2e/catalog-pipeline-walker.spec.ts:14 The e2e lane over the lab declares its inheritance: a hermetic DB, not the operator's judge/drain history."
+          "evidence": "src/__tests__/components/layout-lab/serverRowProjection.test.ts:18 The scan is proved able to fire on a planted hand-rolled projection, and proved not to fire on the same text in a comment."
         },
         {
           "technique": "live-app-harness",
           "verdict": "conformant",
-          "evidence": "src/components/layout-lab/Baseline/index.tsx:227 The Baseline view exposes test identifiers that the walker drives through the real /layout UI, not pixel locators."
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:13 Playwright drives the real lab UI and reads persisted rows back from the server; produce runs in stub mode, so it certifies the walk and persistence, not live generation."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:14 The walker's verdict is isolated from the operator's database and its judge or drain history."
+        },
+        {
+          "technique": "suite-partitioning",
+          "verdict": "conformant",
+          "evidence": "e2e/catalog-pipeline-walker.spec.ts:37 The walk report reconciles what walked green against the expected population and the documented skips."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:24 The walker's population comes from the registry, and this guard declares a floor so an empty registry cannot read as green."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:16 Banner, rail, matrix and coach are driven through their shipped derivation functions rather than a composition the test assembled; only the per-step checker is faked."
+        },
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "e2e/helpers/walk-status.ts:14 Claims that a changed pipeline goes red, but the record is keyed only by catalogId with no content digest or rebuild trigger, so a changed pipeline that was walked once stays 'walked' (a stale fixture validating yesterday's world).",
+          "carriedFrom": "2026-10-24"
+        },
+        {
+          "technique": "long-lane-certification",
+          "verdict": "deviation",
+          "evidence": "e2e/helpers/walk-status.ts:40 The same no-write branch also fires when a walk fails, so lane health can record only first-green and never an observed red; a now-failing walker leaves the old green in place.",
+          "carriedFrom": "2026-10-24"
+        },
+        {
+          "technique": "gate-scope-is-not-report-scope",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/pipeline-e2e-coverage.test.ts:51 The exemption list is checked in both directions against the full registry denominator, and each skip needs a reason.",
+          "carriedFrom": "2026-10-24"
         },
         {
           "technique": "unreached-decisions-pin-nothing",
           "verdict": "conformant",
-          "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:16 Adoption of the shared acceptance resolver is asserted per consuming surface (banner, rail, matrix, coach), not only the predicate."
+          "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:16 Adoption of the shared acceptance resolver is asserted per consuming surface (banner, rail, matrix, coach), not only the predicate.",
+          "carriedFrom": "2026-10-24"
         }
-      ],
-      "registryProposal": "fixture-economics' freshness rule is phrased for build-once environment templates; a committed 'last green run' record read back by a cheap gate is the same staleness hazard (no fingerprint, and a write-only-on-success policy that cannot record red). A short note naming recorded-result files as fixtures would make this case findable.",
-      "withdrawn": {
-        "worker": "bda0f4cd-8e2f-43c8-b7aa-68a011e447e0",
-        "state": "deviation",
-        "at": "2026-10-24T00:52:43.541068+00:00",
-        "reason": "reviewer (sonnet): The claim is about e2e/helpers/walk-status.ts and pipeline-e2e-coverage.test.ts, which context-map.json puts in the item-catalog-pipeline context; catalog-pipeline-state lists only the layout-lab store files, none of which the evidence cites, so the verdict is about a different context."
-      }
+      ]
     },
     "940bbe98-a8c3-4d5e-b4e5-c447578e2123/eval-harness": {
       "context": "ue5-bridge-monitoring",
@@ -24669,6 +24687,68 @@
           "technique": "assert-through-the-reader",
           "verdict": "not-applicable",
           "evidence": "src/components/modules/project-setup/prompts.ts:2 These strings are prompts read by a model, which the golden path assigns to the eval-harness subject rather than to a deterministic foreign reader."
+        }
+      ]
+    },
+    "ad79be14-e4eb-4a67-9f4e-487cfaf20a8c/test-harness": {
+      "context": "catalog-acceptance",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:17:28.263Z",
+      "worker": "b811a07e-fc0c-4a9d-a5ec-85bb37211b8f",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/catalog/acceptance/noComponentsImport.test.ts:13 The walk declares no floor and the needle is narrower than the claim in the test title; comments are not stripped either."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/acceptance/staticSweepUnreadable.test.ts:43 A missing symbol also yields deferred, so this assertion makes the answer name its producer and separates the unreadable file from a plain miss."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/acceptance/template-guard.test.ts:50 The guard is proved through registerCatalogPipeline, the production composition at pipeline-registry.ts:19, not a wrap built by the test."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/catalog/package-artifacts.test.ts:13 The cheaper fixture says what it is and what it holds, and a missing file throws rather than defaulting to present."
+        }
+      ]
+    },
+    "6d876014-986d-4dbd-8fad-3609af2e0609/test-harness": {
+      "context": "ue5-build-bridge",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:17:28.263Z",
+      "worker": "b811a07e-fc0c-4a9d-a5ec-85bb37211b8f",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/ue5-inject-item-entry.test.ts:61 Mutating a function name, the /Game/Items/ prefix or the AffixTag mapping at the crossing would stay green; ue5-bridge-mutation-audit asserts only the log line for this route."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/ue5-inject-item-entry.test.ts:5 The fake defaults to success and no test feeds ok:false, so both 502 branches never run; the file header does disclose that the connection is mocked."
+        },
+        {
+          "technique": "far-side-oracle",
+          "verdict": "deviation",
+          "evidence": "src/app/api/ue5-inject-item/route.ts:102 The route reports the item injected from call results alone and no lane found reads the PIE inventory back; the UE-side function names were not found in the project Source."
+        },
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "not-applicable",
+          "evidence": "src/__tests__/lib/ue-test-scaffold/generate.test.ts:65 Generated C++ is asserted as text only, but its reader is the UE toolchain, which is outside the vitest lane; that is the technique's stated exemption."
         }
       ]
     }

@@ -7912,7 +7912,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/catalog/acceptance/noComponentsImport.test.ts:13 The guard titled 'imports nothing from @/components' matches only the static from-alias shape over one non-recursive directory with no floor, so a dynamic import, a relative path or a file in a new subfolder would stay green; a search found no such import today, so the instrument is weak rather than currently hiding a violation.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "acceptance-verdict-spine",
@@ -9246,7 +9250,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/layout-lab/matrixRows.test.ts:10 The labAcceptance fake used to test buildMatrixRows answers 'pass' for any artifact that does not seed __status, so a test that forgets the seed gets a passing verdict with no diagnostic; the same default recurs in about ten layout-lab test files, though this file's four tests all seed it.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",
@@ -26569,7 +26577,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/api/ue5-inject-item-entry.test.ts:61 The test named 'injects the shape the workbench sends' counts two calls and never reads their arguments, so the function names and parameters crossing into UE are unpinned, and a grep of the UE project's Source finds neither CreatePreRolledItem nor ServerAddItemFromExternal while the suite stays green.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "settings",
