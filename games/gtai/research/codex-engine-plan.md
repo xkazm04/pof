@@ -141,3 +141,16 @@ If Phase 2 misses its bar, stop at migrations and the test-writing classes that 
 3. **Keep a share of the weekly window for images?** Decided 2026-11-09 (c-1): the dispatcher stops starting text tasks when the total meter reaches 75 %, because the meter cannot separate text from images.
 
 Decision 2 was also answered on 2026-11-09: tests and tools first, under Claude's control. Gameplay code stays out until a further decision. The Claude baseline in Phase 1 has not run.
+
+## Batch 2 (2026-11-09, after renewal): the review changed the answer
+
+| Class | Tasks | Passed the machine bar | Landed after Claude review | Landed unchanged |
+| --- | --- | --- | --- | --- |
+| GUT tests | 8 | 5 | 4 | 1 |
+| Node tools | 3 | 3 | 3 | 2 |
+
+Tools took 83 to 106 s each; test files took 11 to 34 minutes because of mutation runs and repair. Across batches 1 and 2, tools are 5 of 5.
+
+What separates the failures: pure logic with clear rules scored well (`rig_hose`, `enemy_brain`). A generator with tuned tables scored 86.7 % by copying its constants, and was rejected. Removing pins from `sim_clips` cost 20 points of mutation score and made the test more honest: the score rewards pinning, so it can reject work but cannot accept it.
+
+**Routing recommendation.** Send Codex: Node tools with a written contract and hidden tests, and GUT tests for pure rule modules. Keep with Claude: tests for generators and tuned tables, and any landing decision. Claude's review remains mandatory; what it saves is writing, not reading. Savings in Claude tokens are unmeasured, so the case for moving more work is not proven yet.
