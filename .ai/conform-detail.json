@@ -23974,6 +23974,87 @@
           "evidence": "src/components/modules/content/level-design/ProceduralLevelWizard/useProceduralLevelWizard.ts:104 The word judges is descriptive here; no model judge exists in this context."
         }
       ]
+    },
+    "0baa32d9-9127-4452-aaee-d679f899ee1d/eval-harness": {
+      "context": "step-shared-primitives",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:34:21.015Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "ba208d29-6270-497a-9c35-7108b82169d6",
+        "state": "not-applicable",
+        "at": "2026-11-09T00:34:47.267482+00:00",
+        "reason": "reviewer (sonnet): The anchor at ProvenanceStrip.tsx:66 is the doc comment for the `explain` prop, which re-runs the step's checker. It does not show that no scenario is run, scored or aggregated here, so the anchor is incidental."
+      }
+    },
+    "6d2b14bf-26c8-4034-95ff-9f87e1f2d85c/eval-harness": {
+      "context": "catalog-browser-ui",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "unknown",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:34:21.015Z",
+      "techniques": [],
+      "withdrawn": {
+        "worker": "ba208d29-6270-497a-9c35-7108b82169d6",
+        "state": "not-applicable",
+        "at": "2026-11-09T00:34:47.339065+00:00",
+        "reason": "reviewer (sonnet): The anchor at globalCoachModel.ts:197 is a doc-comment line about re-grading through the same checker and judge bridge. It does not itself show that the precondition is absent, and the context re-derives grades."
+      }
+    },
+    "099d3014-5d1c-47d0-9d2c-e4b078222cb7/eval-harness": {
+      "context": "prompt-engineering",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T00:34:21.015Z",
+      "worker": "ba208d29-6270-497a-9c35-7108b82169d6",
+      "techniques": [
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/verdict.ts:158 The mean includes failed trials and has no both-succeeded view or incomplete state; the recipe path books trials with no duration, which default to 0 ms and enter the mean as instantaneous."
+        },
+        {
+          "technique": "metric-role-contract",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/verdict.ts:156 Duration acts as a second objective inside the verdict instead of a declared threshold, and no constraint can block a winner."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/judge-fitness.ts:136 Pass counts pool llm-panel, vlm and human judges and ignore rubricVersion and contentHash, so mixed instruments form one rate and a verdict on earlier content can be charged to the variant now stamped on the artifact."
+        },
+        {
+          "technique": "resolution-precondition",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/ab-testing.ts:213 Decide-now crowns a winner at 3 serves per arm with no z check, by duration on a tie; auto-conclude records null below the weakest band, but this path turns a measured tie into a winner with a caution attached."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "deviation",
+          "evidence": "src/app/api/checklist/complete/route.ts:79 A trial's success comes from the run's own callback and a missing field counts as success; auto-conclude can crown a winner on this self-reported basis when judged evidence is short."
+        },
+        {
+          "technique": "failure-signatures-beside-the-pass-rate",
+          "verdict": "deviation",
+          "evidence": "src/stores/promptEvolutionStore.ts:115 Each trial is one success bit, and arms carry only rates and counts, so two arms at the same rate cannot be told apart by how their runs failed."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "conformant",
+          "evidence": "src/lib/prompt-evolution/verdict.ts:122 Epsilon-greedy serving gives arms unequal N, and the verdict note states both arms' counts in the same sentence as the result."
+        },
+        {
+          "technique": "treatment-election-rate",
+          "verdict": "not-applicable",
+          "evidence": "src/types/prompt-evolution.ts:157 The treatment is prompt text applied at dispatch, not a capability the candidate may decline."
+        }
+      ]
     }
   }
 }

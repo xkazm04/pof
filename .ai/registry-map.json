@@ -23462,7 +23462,11 @@
           "revision": 37,
           "changedAt": "2026-09-29",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/types/prompt-evolution.ts:107 The prompt A/B rail sums duration over every trial, including failed runs and runs booked at 0 ms, then uses that mean to crown a winner on near-ties, so the tie-break compares a mix of outcomes and unmeasured runs rather than the cost of successful work.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:85554b740461b19e",
+          "evaluatedRevision": 39
         },
         {
           "subject": "test-harness",
