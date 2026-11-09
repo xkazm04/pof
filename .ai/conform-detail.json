@@ -25293,6 +25293,104 @@
         }
       ],
       "registryProposal": "pin-the-call-not-the-name's population section covers floors on walks but not a hand-written file list narrower than the rule the pin states. That shape has an implicit floor, since a missing file throws, and still fails toward green."
+    },
+    "3628b30f-1462-4e6a-a097-c27bd02990f0/test-harness": {
+      "context": "catalog-database",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:05:53.619Z",
+      "worker": "f2956b12-6e70-48d9-8e32-64a7ca40b4b2",
+      "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/api/pipeline-artifacts-drain.test.ts:16 A restated copy of production code instead of `importOriginal`. It has already drifted: no `entityIds` key and no `parseTier` normalisation."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/pipeline-artifacts-delete-purges-all-tables.test.ts:15 The DB-touching test owns a pid-keyed SQLite file and takes nothing from the operator's `~/.pof/pof.db`."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/pipeline-artifacts-delete-purges-all-tables.test.ts:18 The purge claim is asserted through the shipped route handler, not through a composition the test assembled itself."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/pipeline-artifacts-delete-purges-all-tables.test.ts:52 Pins the hazard named in the file's own header (attempted count reported as removed count) with an input where the two numbers differ."
+        }
+      ]
+    },
+    "91f1bb8f-3d60-4812-830a-4b9f2d6eb004/test-harness": {
+      "context": "game-design-studio-api",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:05:53.619Z",
+      "worker": "f2956b12-6e70-48d9-8e32-64a7ca40b4b2",
+      "techniques": [
+        {
+          "technique": "fixture-economics",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:111 Per-test cleanup by a private table list inside a shared mutable DB, not build-once / copy-per-test / discard-whole."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:9 The file records that its assertions were seen failing on the known-bad build, and lists the defects."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:39 The project-scope claims are driven through the shipped feature-matrix route handlers."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:36 The file opts into its own SQLite file, separate from the operator DB and from other files."
+        }
+      ]
+    },
+    "ba2ceb24-f8da-4850-9c31-5e4d8d9389c2/test-harness": {
+      "context": "lab-shell-and-navigation",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T22:05:53.619Z",
+      "worker": "f2956b12-6e70-48d9-8e32-64a7ca40b4b2",
+      "techniques": [
+        {
+          "technique": "suite-partitioning",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/layout-lab/LayoutLab.navigation.test.tsx:81 The tier budget was stretched to absorb a slow test instead of partitioning the suite."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "src/components/layout-lab/LayoutLab.tsx:90 The shell publishes a test-identifier contract that the Playwright lane drives against the real dev server."
+        },
+        {
+          "technique": "platform-quirk-absorption",
+          "verdict": "conformant",
+          "evidence": "e2e/global-setup.ts:42 A foreign server on the port, or a lab that never shows its ready marker, becomes one named diagnosis instead of N silent timeouts."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "playwright.config.ts:57 The live lane owns its server process and a throwaway DB. Reusing an existing server is opt-in only, and the lane is serial (workers: 1)."
+        },
+        {
+          "technique": "derived-selection-must-be-measured",
+          "verdict": "conformant",
+          "evidence": "e2e/helpers/walk-status.ts:46 Walk-success is recorded only when the run covered every expected pipeline, so a subset run cannot read as a full green walk."
+        }
+      ]
     }
   }
 }

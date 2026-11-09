@@ -8672,7 +8672,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/api/pipeline-artifacts-drain.test.ts:15 The drain route's lock test mocks `@/lib/test-gate-runner` and swaps in a hand-written copy of `parseDrainFilter`. The real function in `src/lib/test-gate-runner/drain.ts:51` has since added `entityIds` parsing and normalises `tier` through `parseTier`. The copy does neither, so the scope keys the route derives under test are not the ones production derives, and the test stays green anyway.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "eval-harness",
@@ -14601,7 +14605,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:111 Before every test the route suite truncates a hand-maintained list of tables (`feature_matrix`, `review_snapshots`) inside one shared per-file DB, instead of throwing away a fresh copy. Any table these routes later start writing to is left out of the list and leaks between tests, which is exactly the failure fixture-economics names.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "realtime-combat-semantics",
@@ -17953,7 +17961,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/layout-lab/LayoutLab.navigation.test.tsx:81 A full LayoutLab/Matrix jsdom render takes about 12 s even alone, yet it sits in the commit-tier unit suite. The fix was to inherit a stretched 60 s global budget rather than move the test to a heavier lane or make it faster, which is the move suite-partitioning forbids.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "native-shell-integration",
