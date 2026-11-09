@@ -2737,7 +2737,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/prompts/golden.ts:83 The golden that pins this context's generate-tests prompt (builder-fixtures.ts:336, name 'ai-testing') is re-recorded by an environment variable or by a missing file, and either way the assertion returns as a pass, with no refusal and no integrity test that record mode is off.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",
@@ -10544,7 +10548,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:159 This context's literal timer delay is invisible to the CLI timer pin, which walks only top-level .tsx files of src/components/cli and declares no floor on files read, so it stays green here and would stay green over zero files.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "chat-transcript",
@@ -23669,7 +23677,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/prompt-evolution-ab-loop.test.ts:4 Eight prompt-evolution test files replace the shipped getDb with a bare in-memory connection under a neutral name, so they run without the WAL and foreign_keys setup of src/lib/db.ts and nothing states that gap; no wrong answer was found (the tables declare no foreign keys and no test makes a locking claim), so the defect is the undeclared fork.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "agent-memory",
@@ -24337,7 +24349,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/sub_save/save-typography.test.tsx:8 The tests named for an 11px floor search for only two literal classes, so the project's own 10px text-2xs token (globals.css:113) or text-[8px] would pass; sub_save uses no text-2xs today, so this is an overstated claim and not a live defect.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",

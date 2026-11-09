@@ -1,0 +1,203 @@
+{
+ "schema": "conform-run/1",
+ "worker": "9b26be44-302d-4c46-9f64-6b04dabfba34",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T04:50:55.157389+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ai-behavior-testing",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/prompts/golden.ts:83 The golden that pins this context's generate-tests prompt (builder-fixtures.ts:336, name 'ai-testing') is re-recorded by an environment variable or by a missing file, and either way the assertion returns as a pass, with no refusal and no integrity test that record mode is off.",
+   "techniques": [
+    {
+     "technique": "approval-snapshots-with-guarded-update",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/prompts/golden.ts:83 Runtime env switch with no pipeline refusal and no integrity test; a grep of src/__tests__ finds POF_UPDATE_GOLDEN only in comments, the failure message and this read. A deleted golden silently re-records and passes."
+    },
+    {
+     "technique": "far-side-oracle",
+     "verdict": "conformant",
+     "evidence": "src/lib/ai-testing/run-verdict.ts:63 The sandbox run grade comes from UE's own automation report, not from the CLI agent's claim, which survives only as a note in the output."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/ai-testing/run-verdict.test.ts:41 Feeds passing CLI claims with no report and asserts error, so the claim cannot answer in place of the decision."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/ai-testing-record-run.test.ts:11 The route test gets a throwaway per-process DB before any module import."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/ai-testing-record-run.test.ts:18 Drives the shipped route over a real file DB via POF_DB_PATH, so the store opens through the boot path rather than a mocked getDb."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/game-systems/ai-behavior-run-close.test.tsx:83 The run-close behaviour is proved through the real view that production mounts, not a hand-built composition; its Sandbox and EQS tabs are stubbed."
+    }
+   ]
+  },
+  {
+   "context": "prompt-evolution",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/prompt-evolution-ab-loop.test.ts:4 Eight prompt-evolution test files replace the shipped getDb with a bare in-memory connection under a neutral name, so they run without the WAL and foreign_keys setup of src/lib/db.ts and nothing states that gap; no wrong answer was found (the tables declare no foreign keys and no test makes a locking claim), so the defect is the undeclared fork.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/prompt-evolution-ab-loop.test.ts:4 Forks on the Mode axis: production sets journal_mode = WAL at src/lib/db.ts:70. The cheaper variant does not say what it omits. Sibling fitness-excludes-fixtures.test.ts shows the faithful POF_DB_PATH route is available."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/prompt-evolution/fitness-excludes-fixtures.test.ts:20 The fitness join seeds synthetic rows in a per-process DB, so they cannot reach the operator's store."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/prompt-evolution-start-guard.test.ts:8 The one-running-test guard is driven through the shipped POST route, the path production takes."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/evaluator/adoption.test.ts:96 Asserts adoption through the real store as well as the pure planAdoption predicate, so the predicate and its use are both covered."
+    }
+   ]
+  },
+  {
+   "context": "cli-terminal-output",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/cli/TerminalOutput/useTerminalOutput.ts:159 This context's literal timer delay is invisible to the CLI timer pin, which walks only top-level .tsx files of src/components/cli and declares no floor on files read, so it stays green here and would stay green over zero files.",
+   "techniques": [
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/cli/no-literal-timer-delays.test.ts:33 The walk declares no floor, against the technique's rule. Its non-recursive, .tsx-only population excludes TerminalOutput/, including the .ts hook holding a literal 150. The test name is honest about its scope."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/cli/no-literal-timer-delays.test.ts:26 The pin carries an instrument self-check on seeded offending shapes, so its matcher is proven able to fire."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/cli/terminalOutputCopy.test.tsx:15 The refused-clipboard path runs through the shipped hook rather than a test-local copy."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "src/components/cli/TerminalOutput/index.tsx:188 A role-named identifier that the e2e harness reads at e2e/helpers/harness-mode.ts:309 and e2e/infra-testids.spec.ts:45."
+    }
+   ]
+  },
+  {
+   "context": "save-system",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/sub_save/save-typography.test.tsx:8 The tests named for an 11px floor search for only two literal classes, so the project's own 10px text-2xs token (globals.css:113) or text-[8px] would pass; sub_save uses no text-2xs today, so this is an overstated claim and not a live defect.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/sub_save/save-typography.test.tsx:8 'renders without any sub-11px font size' claims a floor but checks a two-item denylist, which is the technique's overstated-name failure. Read only: the mutation was not run because this review may not edit files."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/sub_save/save-sample-notice.test.tsx:14 The sample-data notice is asserted through the module's real entry component and its tab switching, with SaveHeaderAudit and the feature hooks stubbed."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "code-quality-evaluation",
+   "reason": "evidence leans on DeepEvalResults/index.tsx, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:50:55.157389+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "approval-snapshots-with-guarded-update",
+    "far-side-oracle",
+    "isolation-lanes",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "ai-behavior-testing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:50:55.157389+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "isolation-lanes",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "prompt-evolution",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:50:55.157389+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "live-app-harness",
+    "negative-control-tests",
+    "pin-the-call-not-the-name",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "cli-terminal-output",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:50:55.157389+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "save-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

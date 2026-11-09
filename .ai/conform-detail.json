@@ -24801,6 +24801,130 @@
           "evidence": "src/__tests__/lib/procgen-db.test.ts:6 The in-memory store differs from production's WAL mode, but the file drives the shipped record and read functions on one connection and makes no locking claim."
         }
       ]
+    },
+    "cdbdf5d7-de59-431b-b120-e663a9b4b5dd/test-harness": {
+      "context": "ai-behavior-testing",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:50:55.157Z",
+      "worker": "9b26be44-302d-4c46-9f64-6b04dabfba34",
+      "techniques": [
+        {
+          "technique": "approval-snapshots-with-guarded-update",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/prompts/golden.ts:83 Runtime env switch with no pipeline refusal and no integrity test; a grep of src/__tests__ finds POF_UPDATE_GOLDEN only in comments, the failure message and this read. A deleted golden silently re-records and passes."
+        },
+        {
+          "technique": "far-side-oracle",
+          "verdict": "conformant",
+          "evidence": "src/lib/ai-testing/run-verdict.ts:63 The sandbox run grade comes from UE's own automation report, not from the CLI agent's claim, which survives only as a note in the output."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/ai-testing/run-verdict.test.ts:41 Feeds passing CLI claims with no report and asserts error, so the claim cannot answer in place of the decision."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/ai-testing-record-run.test.ts:11 The route test gets a throwaway per-process DB before any module import."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/ai-testing-record-run.test.ts:18 Drives the shipped route over a real file DB via POF_DB_PATH, so the store opens through the boot path rather than a mocked getDb."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/game-systems/ai-behavior-run-close.test.tsx:83 The run-close behaviour is proved through the real view that production mounts, not a hand-built composition; its Sandbox and EQS tabs are stubbed."
+        }
+      ]
+    },
+    "234034cf-29e8-432e-aca8-490e30e9f45d/test-harness": {
+      "context": "prompt-evolution",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:50:55.157Z",
+      "worker": "9b26be44-302d-4c46-9f64-6b04dabfba34",
+      "techniques": [
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/prompt-evolution-ab-loop.test.ts:4 Forks on the Mode axis: production sets journal_mode = WAL at src/lib/db.ts:70. The cheaper variant does not say what it omits. Sibling fitness-excludes-fixtures.test.ts shows the faithful POF_DB_PATH route is available."
+        },
+        {
+          "technique": "isolation-lanes",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/prompt-evolution/fitness-excludes-fixtures.test.ts:20 The fitness join seeds synthetic rows in a per-process DB, so they cannot reach the operator's store."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/prompt-evolution-start-guard.test.ts:8 The one-running-test guard is driven through the shipped POST route, the path production takes."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/evaluator/adoption.test.ts:96 Asserts adoption through the real store as well as the pure planAdoption predicate, so the predicate and its use are both covered."
+        }
+      ]
+    },
+    "20166201-35ae-4729-8806-61f8cf8fa780/test-harness": {
+      "context": "cli-terminal-output",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:50:55.157Z",
+      "worker": "9b26be44-302d-4c46-9f64-6b04dabfba34",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/cli/no-literal-timer-delays.test.ts:33 The walk declares no floor, against the technique's rule. Its non-recursive, .tsx-only population excludes TerminalOutput/, including the .ts hook holding a literal 150. The test name is honest about its scope."
+        },
+        {
+          "technique": "negative-control-tests",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/cli/no-literal-timer-delays.test.ts:26 The pin carries an instrument self-check on seeded offending shapes, so its matcher is proven able to fire."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/cli/terminalOutputCopy.test.tsx:15 The refused-clipboard path runs through the shipped hook rather than a test-local copy."
+        },
+        {
+          "technique": "live-app-harness",
+          "verdict": "conformant",
+          "evidence": "src/components/cli/TerminalOutput/index.tsx:188 A role-named identifier that the e2e harness reads at e2e/helpers/harness-mode.ts:309 and e2e/infra-testids.spec.ts:45."
+        }
+      ]
+    },
+    "78ec1a8f-2590-4dd2-8c88-4708dda29f2f/test-harness": {
+      "context": "save-system",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:50:55.157Z",
+      "worker": "9b26be44-302d-4c46-9f64-6b04dabfba34",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/sub_save/save-typography.test.tsx:8 'renders without any sub-11px font size' claims a floor but checks a two-item denylist, which is the technique's overstated-name failure. Read only: the mutation was not run because this review may not edit files."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/sub_save/save-sample-notice.test.tsx:14 The sample-data notice is asserted through the module's real entry component and its tab switching, with SaveHeaderAudit and the feature hooks stubbed."
+        }
+      ]
     }
   }
 }
