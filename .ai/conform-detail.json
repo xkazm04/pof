@@ -24770,6 +24770,37 @@
           "evidence": "src/__tests__/lib/ue-test-scaffold/generate.test.ts:65 Generated C++ is asserted as text only, but its reader is the UE toolchain, which is outside the vitest lane; that is the technique's stated exemption."
         }
       ]
+    },
+    "781544e4-d4e7-4f67-8118-e5f903f0fb23/test-harness": {
+      "context": "procedural-level-generation",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T04:40:09.722Z",
+      "worker": "bb9a1a26-d4f7-447a-9336-ea66421a376b",
+      "techniques": [
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/level-design/procgen-grid-export.test.ts:221 The artifact's reader is a Python script whose load_export and --dry-run path need no Unreal, and Python 3.12.1 is on this machine. The contract is asserted by regex over the reader's text instead of running it at unit cost."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/level-design/procgen-grid-export.test.ts:114 The round trip runs through importProcgenGrid, which a search of src finds defined but never called outside tests. The shipped consumer is Python's load_export, so the composed path is one production does not contain."
+        },
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "scripts/ue/procgen_replay.py:60 The explanation of the source-text pin sits beside the pinned code, inside the haystack, where the technique forbids it. Test line 244 also pins the script's prose, and a pin is only admitted where the site cannot be executed, which --dry-run contradicts."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "not-applicable",
+          "evidence": "src/__tests__/lib/procgen-db.test.ts:6 The in-memory store differs from production's WAL mode, but the file drives the shipped record and read functions on one connection and makes no locking claim."
+        }
+      ]
     }
   }
 }

@@ -21735,7 +21735,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/level-design/procgen-grid-export.test.ts:221 The grid export's real reader is scripts/ue/procgen_replay.py, which has a --dry-run mode that runs outside Unreal, yet the suite only regex-matches that script's source and round-trips through a TypeScript importer no production code calls, so the reader's acceptance of the artifact is never tested.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",
