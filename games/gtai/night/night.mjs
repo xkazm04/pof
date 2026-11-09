@@ -11,12 +11,17 @@
  *   node games/gtai/night/night.mjs status  [--root R]
  *   node games/gtai/night/night.mjs report  [--root R]                       (writes <root>/SCOREBOARD.md)
  *   node games/gtai/night/night.mjs billing [--root R] [--reset api|api2|api3|subscription|all]
+ *   node games/gtai/night/night.mjs stop     [--root R] [--lane a,b] [--now]   (ends the night or the named lanes; --now kills own sessions)
+ *   node games/gtai/night/night.mjs schedule [--root R] [--until 09:00] [--freeze 07:30] [--report-at 08:15]   (a running night re-reads it)
+ *   node games/gtai/night/night.mjs status   [--root R] [--siblings R2,R3]     (flags a loop gone silent or a launch that never started)
+ *   run also takes --reserve-min 90: in the last 90 min before the freeze a BUILD session leaves the last open billing path free
  *
  * Exit codes: 0 finished, 2 config error (the supervisor does not retry it), 130 interrupted.
  * Process rule (repo law): only PIDs this script spawned are ever killed (taskkill /T /PID <own child>).
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { CONTROL_FILE, holdForReserve, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopNow, stopRequested, writeControl } from './control.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, queueEmpty, requestsFor, ts } from './lib.mjs';
@@ -123,17 +128,41 @@ function runClaude(lane, text, timeoutMs, n, mode) {
   });
 }
 
+const CONTROL_PATH = path.join(ROOT, CONTROL_FILE);
+const RESERVE_MIN = Number(opts['reserve-min'] ?? 90);
+
+/** Re-reads control.json and moves `t` in place, so every lane sees a new schedule at its next step. */
+function applyControl(t) {
+  const control = readControl(CONTROL_PATH);
+  const { t: next, changed, error } = scheduleWith(t, control);
+  if (error) { log(`control: bad schedule ignored (${error})`); return control; }
+  if (changed) {
+    Object.assign(t, next);
+    log(`control: schedule is now freeze ${ts(t.freeze)}, report ${ts(t.report)}, until ${ts(t.until)}`);
+  }
+  return control;
+}
+
 async function laneLoop(lane, t, texts) {
   const state = readJson(stateFile(lane.id), { lane: lane.id, iterations: [] });
   // A lane that already reported for this deadline is finished (a supervisor restart must not report twice).
   if (state.reportedFor === t.until.toISOString()) { log(`${lane.id}: already reported for this deadline`); return; }
   let n = state.iterations.length, fails = 0, quick = 0;
   while (Date.now() < t.until.getTime() - 3 * 60_000) {
+    const control = applyControl(t);
+    if (stopRequested(control, lane.id)) { log(`${lane.id}: stopped by control.json`); return; }
     const now = Date.now();
     const { phase, boundary } = phaseAt(now, t);
     const capAt = new Date(Math.min(now + lane.iterMin * 60_000, boundary));
     // Too little time left before the boundary to do useful work: wait for the next phase instead.
     if (boundary - now < 4 * 60_000 && phase !== 'REPORT') { await sleep(boundary - now); continue; }
+    billing.sync();
+    const open = billing.order().filter((x) => billing.usable(x) && billing.blocked[x] <= now);
+    if (holdForReserve({ phase, nowMs: now, freezeMs: t.freeze.getTime(), reserveMin: RESERVE_MIN, open })) {
+      log(`${lane.id}: reserve - only ${open[0]} is open and the freeze is ${Math.round((t.freeze.getTime() - now) / 60_000)} min off: holding it for the freeze and report sessions`);
+      await sleep(Math.min(5 * 60_000, Math.max(1000, boundary - now)));
+      continue;
+    }
     const mode = billing.pick();
     if (!mode) {
       const w = Math.max(60_000, Math.min(15 * 60_000, billing.nextFree() - now));
@@ -164,7 +193,7 @@ async function laneLoop(lane, t, texts) {
       const siblings = () => (texts.lanes ?? []).filter((l) => l.id !== lane.id).map((l) => readIf(path.join(l.cwd, 'JOURNAL.md'))).join('\n');
       const seenJournal = journal(), seenRequests = requestsFor(lane.id, siblings());
       log(`${lane.id}: QUEUE EMPTY - paused until ${ts(new Date(boundary))} or a new REQUEST`);
-      while (Date.now() < boundary && journal() === seenJournal && requestsFor(lane.id, siblings()) === seenRequests) await sleep(Math.min(5 * 60_000, Math.max(1000, boundary - Date.now())));
+      while (Date.now() < boundary && !stopRequested(readControl(CONTROL_PATH), lane.id) && journal() === seenJournal && requestsFor(lane.id, siblings()) === seenRequests) await sleep(Math.min(5 * 60_000, Math.max(1000, boundary - Date.now())));
       continue;
     }
     fails = r.isError && r.wallS < 120 ? fails + 1 : 0;
@@ -205,6 +234,9 @@ async function runAll() {
   // A lane must never take the night down with it: log and keep the other lanes running.
   process.on('uncaughtException', (e) => log(`runner: uncaught ${String(e?.stack ?? e).slice(0, 300)}`));
   process.on('unhandledRejection', (e) => log(`runner: unhandled ${String(e?.stack ?? e).slice(0, 300)}`));
+  // `stop --now` kills this runner's own sessions; a plain stop lets the session in flight end.
+  const nowPoll = setInterval(() => { if (stopNow(readControl(CONTROL_PATH))) { log('control: stop --now - killing own sessions'); for (const c of children) killTree(c); } }, 15_000);
+  nowPoll.unref();
   // Stagger the starts so cold sessions do not hit the CLI and the disk in the same second.
   await Promise.all(lanes.map(async (l, i) => {
     await sleep(i * 45_000);
@@ -213,6 +245,7 @@ async function runAll() {
       try { await laneLoop(l, t, texts); return; } catch (e) { log(`${l.id}: lane loop threw (${String(e?.message ?? e).slice(0, 160)}) - restarting it in 1 min`); await sleep(60_000); }
     }
   }));
+  clearInterval(nowPoll);
   log('run: all lanes finished - next: node games/gtai/night/night.mjs report');
 }
 
@@ -228,6 +261,55 @@ function laneSummary(l) {
   };
 }
 
+/** One line per lane of `root` whose state a builder should worry about (healthy lanes print nothing). */
+function healthLines(root, lanes, nowMs = Date.now()) {
+  const { runnerStartMs, finished } = runnerStart(readIf(path.join(root, 'logs', 'runner.log')));
+  return lanes.map((l) => {
+    const dir = path.join(root, 'logs', l.id);
+    const st = readJson(path.join(dir, 'state.json'), { iterations: [] });
+    const h = laneHealth({ nowMs, runnerStartMs, finished, reported: Boolean(st.reportedFor), iterations: st.iterations.length, lastActivityMs: lastActivity(dir), quietMin: (l.iterMin ?? 90) + 15 });
+    return { id: l.id, ...h };
+  });
+}
+
+function printHealth(label, rows) {
+  for (const r of rows) {
+    if (['never-started', 'silent'].includes(r.state)) process.stdout.write(`   FLAG ${label}${r.id}: ${r.state.toUpperCase()}: ${r.why}\n`);
+    else process.stdout.write(`   health ${label}${r.id}: ${r.state}\n`);
+  }
+}
+
+function siblingsReport() {
+  for (const raw of String(opts.siblings).split(',').map((x) => x.trim()).filter(Boolean)) {
+    const root = path.resolve(raw);
+    const file = path.join(root, 'night.json');
+    if (!fs.existsSync(file)) { process.stdout.write(`\nFLAG sibling ${root}: NEVER-STARTED: no night.json\n`); continue; }
+    const sib = parseConfig(fs.readFileSync(file, 'utf8'), root);
+    process.stdout.write(`\nsibling ${root}\n`);
+    printHealth('', healthLines(root, sib.lanes));
+  }
+}
+
+function stopCmd() {
+  const lanes = opts.lane && opts.lane !== true ? String(opts.lane).split(',').map((s) => s.trim()).filter(Boolean) : null;
+  const patch = { ...(lanes ? { stopLanes: lanes } : { stop: true }), now: opts.now === true };
+  writeControl(CONTROL_PATH, patch);
+  process.stdout.write(`stop written to ${CONTROL_PATH}: ${lanes ? lanes.join(', ') : 'the whole night'}${patch.now ? ' (own sessions are killed)' : ' (the session in flight ends first)'}\n`);
+}
+
+function scheduleCmd() {
+  const patch = {};
+  if (typeof opts.until === 'string') patch.until = opts.until;
+  if (typeof opts.freeze === 'string') patch.freeze = opts.freeze;
+  if (typeof opts['report-at'] === 'string') patch.reportAt = opts['report-at'];
+  if (!Object.keys(patch).length) die('schedule needs --until, --freeze or --report-at');
+  const t = { until: new Date(Date.now() + 24 * 3600_000), freeze: new Date(Date.now() + 2 * 3600_000), report: new Date(Date.now() + 3 * 3600_000) };
+  const planned = scheduleWith(t, { ...readControl(CONTROL_PATH), ...patch });
+  if (planned.error) die(planned.error);
+  writeControl(CONTROL_PATH, patch);
+  process.stdout.write(`schedule written to ${CONTROL_PATH}: a running night takes it at each lane's next step\n`);
+}
+
 function status() {
   const cfg = loadConfig();
   loadBilling(true);
@@ -238,7 +320,9 @@ function status() {
     const last = s.last ? `${s.last.phase} ${s.last.timedOut ? 'capped' : `exit ${s.last.code}`} via ${s.last.billing}${s.last.limited ? ' LIMIT' : ''}${s.last.drained ? ' DRAINED' : ''}` : 'none';
     process.stdout.write(`\n== ${l.id}: ${s.st.iterations.length} iteration(s), $${s.cost.toFixed(2)} (API key $${s.apiCost.toFixed(2)}) | last: ${last}${s.st.reportedFor ? ' | REPORTED' : ''}${fs.existsSync(l.cwd) ? '' : ' | CWD MISSING'}\n`);
     process.stdout.write(`   journal: ${s.journalLast.slice(0, 200)}\n   commit:  ${git(l.cwd, ['log', '-1', '--oneline']) || '(none)'}\n`);
+    printHealth('', healthLines(ROOT, [l]));
   }
+  if (opts.siblings && opts.siblings !== true) siblingsReport();
 }
 
 function report() {
@@ -274,6 +358,6 @@ function billingCmd() {
 }
 
 // ---------------------------------------------------------------- main
-const cmds = { init, run: runAll, status, report, billing: billingCmd };
-if (!cmds[cmd]) die('usage: night.mjs init|run|status|report|billing [--root R] [options] (see the header)');
+const cmds = { init, run: runAll, status, report, billing: billingCmd, stop: stopCmd, schedule: scheduleCmd };
+if (!cmds[cmd]) die('usage: night.mjs init|run|status|report|billing|stop|schedule [--root R] [options] (see the header)');
 await cmds[cmd]();
