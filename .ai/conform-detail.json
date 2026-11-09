@@ -24335,6 +24335,36 @@
           "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneEditor.tsx:72 This priority orders zone loading and does not decide which voice survives a playback limit."
         }
       ]
+    },
+    "a00c79d7-bd10-495a-8546-81ab1bfd797e/agent-memory": {
+      "context": "state-management",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:38:16.315Z",
+      "worker": "d7059a67-e141-4d1c-82fb-bab59dcac81f",
+      "techniques": []
+    },
+    "9f70d5ae-c6d4-4414-8f3c-3aeebc66e756/agent-memory": {
+      "context": "blender-pipeline",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:38:16.315Z",
+      "worker": "d7059a67-e141-4d1c-82fb-bab59dcac81f",
+      "techniques": []
+    },
+    "70030182-3a81-467f-979d-7bbad209473b/agent-memory": {
+      "context": "asset-viewer-and-browser",
+      "subject": "agent-memory",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T02:38:16.315Z",
+      "worker": "d7059a67-e141-4d1c-82fb-bab59dcac81f",
+      "techniques": []
     }
   }
 }

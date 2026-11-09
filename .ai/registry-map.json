@@ -5122,8 +5122,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/visual-gen/asset-browser/useAssetLibraryStore.ts:27 The library is a record of assets the operator acquired, and it reaches a prompt only as operator-picked per-produce references, so no agent captures or recalls from it; a search found no recall or memory-pipeline vocabulary (the 'memory' comments mean page and file-byte RAM).",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "generated-asset-world-scale",
@@ -6917,8 +6921,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/useBlenderStore.ts:17 The only retained state is a session-scoped history of Blender scripts shown to the operator, and a search of the context found no prompt, memory or recall terms, so no agent reads or writes anything here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "mesh-finishing-for-engine-readiness",
@@ -24860,8 +24868,12 @@
           "revision": 52,
           "changedAt": "2026-10-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/stores/projectStore.ts:65 These stores hold UI and project state rather than anything an agent carries forward: the persisted field that reaches prompts is an app-run project scan on a 5-minute cache, the session-only economy result is deterministic simulator input to one advisor prompt, the event-bus replay is read by devtools, and a search found no memory-pipeline vocabulary (the 'memory' comments in the stores mean in-page RAM).",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:2b62b4004acc600d",
+          "evaluatedRevision": 53
         },
         {
           "subject": "test-harness",
