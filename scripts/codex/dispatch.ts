@@ -85,15 +85,18 @@ function report(id: string, eventsPath: string, lastPath: string, secs: number, 
 
 /** The weekly meter as the newest session log reports it; null when no recent log carries one. */
 function weeklyMeter(): number | null {
-  const newestDirs = (d: string) => (existsSync(d) ? readdirSync(d).sort().reverse().map((n) => join(d, n)) : []);
+  // The sessions folder also holds loose files from older Codex versions, so only directories are walked.
+  const newestDirs = (d: string) => readdirSync(d).sort().reverse().map((n) => join(d, n)).filter((p) => statSync(p).isDirectory());
   const base = join(homedir(), '.codex/sessions');
-  for (const y of newestDirs(base)) for (const m of newestDirs(y)) for (const day of newestDirs(m)) {
-    const logs = newestDirs(day).filter((f) => f.endsWith('.jsonl')).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs).slice(0, 20);
-    for (const f of logs) {
-      const used = latestWeeklyPercent(readFileSync(f, 'utf8'));
-      if (used !== null) return used;
+  try {
+    for (const y of newestDirs(base)) for (const m of newestDirs(y)) for (const day of newestDirs(m)) {
+      const logs = readdirSync(day).filter((f) => f.endsWith('.jsonl')).map((f) => join(day, f)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs).slice(0, 20);
+      for (const f of logs) {
+        const used = latestWeeklyPercent(readFileSync(f, 'utf8'));
+        if (used !== null) return used;
+      }
     }
-  }
+  } catch { /* an unreadable log is an unknown meter, never a stop */ }
   return null;
 }
 
