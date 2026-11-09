@@ -299,3 +299,6 @@ KIND is one of:
 - [2026-11-09] [gtai] CONVENTION: to stop a night runner, kill the supervisor PID as well as launch.cmd, because the supervisor detaches and survives a tree kill of launch.cmd.
 - [2026-11-09] [gtai] DELIVERED: n10 merged and pushed to rtai main with CI green; Codex GPT-6.1 GDScript backtest 6/10 and an 8/8 tests-and-tools pilot landed after review (games/gtai/research/codex-engine-plan.md).
 - [2026-11-09] [gtai] DECISION: Codex may write game tests and tools under Claude review (not gameplay); dispatcher stops text tasks at 75 % of the weekly meter so images keep the rest.
+
+- [2026-11-09] [gtai] DELIVERED: Codex batch 2 landed in rtai 812a0b06 (3/3 tools, 4/8 GUT test files after Claude review); exe rebuilt for the owner's check.
+- [2026-11-09] [gtai] DECISION: Route Node tools and pure-rule GUT tests to Codex; generators with tuned tables and every landing decision stay with Claude, because mutation score rewards pinned constants.
