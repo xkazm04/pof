@@ -24479,6 +24479,58 @@
           "evidence": "src/stores/taskDAGStore.ts:31 The cap applies to workflow execution rows; the store holds no device measurement artefacts."
         }
       ]
+    },
+    "e00660d8-9dde-4409-9590-4c82d7a18eea/test-harness": {
+      "context": "shared-utility-hooks",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:25:13.940Z",
+      "worker": "35ceebf7-b36d-4e48-a637-b044165bb6af",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/hooks/useTestRunner-timing.test.ts:11 Needle has no call-only token and comments are not stripped; useTestRunner.ts:19 satisfies it from a comment. The site can be executed, so a text pin is not needed here."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/hooks/useTestRunner-poll-error.test.ts:30 The poll cutoff is driven by a fake clock past the budget, with no wall-time bound in the assertion."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/hooks/suspend-adoption.test.tsx:13 Suspend behaviour is asserted through real adopting panels with Profiler commit counts, so adoption is covered as well as the selector."
+        }
+      ]
+    },
+    "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/test-harness": {
+      "context": "hud-damage-and-navigation",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:25:13.940Z",
+      "worker": "35ceebf7-b36d-4e48-a637-b044165bb6af",
+      "techniques": [
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/ui-hud/damageNumberTableParity.test.ts:9 Mutating the decision the name cites (the header) cannot turn this red, and the file does not say so. useLowHealthPulse.test.ts:25 makes the same kind of claim about ARPGHUDWidget.cpp from hand-computed values."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/ui-hud/useLowHealthPulse.test.ts:14 Animation frames are queued and stepped with explicit timestamps, so the pulse assertions do not depend on machine load."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:176 The lint rule covered by menuFlowLint.test.ts has this production caller in the hook, so the tests are not evidence about an orphan."
+        }
+      ]
     }
   }
 }

@@ -15947,7 +15947,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/ui-hud/damageNumberTableParity.test.ts:9 The test name claims to pin the C++ header but only compares the app table with literals in the test file, and neither this file nor any other test reads the header or names that uncovered crossing, so a header change stays green (the five colours in the UE project's DamageNumberWidget.h match today, so this is a missing oracle and not current drift).",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "model-composed-workspace",
@@ -24639,7 +24643,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/hooks/useTestRunner-timing.test.ts:11 The structural pin uses a bare identifier that prose can spell and reads an unstripped haystack, and src/hooks/useTestRunner.ts:19 names the same identifier in a doc comment, so reverting the real call at line 52 to a literal leaves this test green even though the hook is executable under fake timers.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "render-mount-pipeline",
