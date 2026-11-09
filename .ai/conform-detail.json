@@ -13731,34 +13731,44 @@
       "subject": "engine-string-representation",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-20",
-      "evaluatedTs": "2026-10-20T21:19:59.074Z",
-      "worker": "533bc5d9-083e-4025-83c1-4376bfd588fd",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:58:38.840Z",
+      "worker": "db6172dc-2b44-4d7e-a9d4-aa6be8fc1efa",
       "techniques": [
         {
           "technique": "compile-time-static-string-table",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/StringTableCard.tsx:17 These tables serialize localization records as CSV; they are not compiled allocations for a runtime's closed vocabulary."
-        },
-        {
-          "technique": "dual-encoding-symbol-interner",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/useLocalizationPipelineView.ts:66 The map indexes localization records by their existing IDs; this context does not compile identifiers into integer symbols."
-        },
-        {
-          "technique": "inline-vtable-thin-handle",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/StringCard.tsx:27 The component renders source text through JSX and defines no engine string handle, tagged value slot, or allocation dispatch layout."
-        },
-        {
-          "technique": "narrowest-encoding-at-construction",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/TranslationCard.tsx:11 Text arrives as a host-language string; this component does not construct or control an engine's code-unit storage."
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:36 'String Tables' here means UE5 localization StringTable assets shown in a tab. It is not an engine's compile-time table of well-known names, and no closed vocabulary is minted here."
         },
         {
           "technique": "zero-copy-slice-string",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/OverviewTab.tsx:151 The view's slice limits an array of replacement records; it does not implement substring storage or owner retention."
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/OverviewTab.tsx:156 The only slice in the context slices a UI array for a preview. No substring view over an immutable owner is built."
+        },
+        {
+          "technique": "narrowest-encoding-at-construction",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/useLocalizationPipelineView.ts:14 Text stays as V8 host strings. The context makes no encoding choice of its own."
+        },
+        {
+          "technique": "dual-encoding-symbol-interner",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/types.ts:1 There is no compiler and no identifier interning. Names are TS string-literal union types."
+        },
+        {
+          "technique": "inline-vtable-thin-handle",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/StringCard.tsx:27 The component renders source text through JSX and defines no engine string handle, tagged value slot, or allocation dispatch layout.",
+          "carriedFrom": "2026-10-20"
+        }
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:105 This view processes localization content rather than implementing an engine string value, and searches of its directory and the repository found no interner, encodingFlag, zero-copy, or static string table constructs.",
+          "evaluatedAt": "2026-10-20T21:19:59.074Z",
+          "worker": "533bc5d9-083e-4025-83c1-4376bfd588fd",
+          "reason": "replaced by db6172dc-2b44-4d7e-a9d4-aa6be8fc1efa"
         }
       ]
     },

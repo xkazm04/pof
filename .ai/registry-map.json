@@ -18667,12 +18667,11 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:105 This view processes localization content rather than implementing an engine string value, and searches of its directory and the repository found no interner, encodingFlag, zero-copy, or static string table constructs.",
-          "evaluatedAt": "2026-10-20",
-          "evaluatedAgainst": "sha256-b2:70121ae88b78b37e",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 1,
-          "stale": true
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/useLocalizationPipelineView.ts:14 This context is a React view over localization records. It handles text only as ordinary host JavaScript strings (toLowerCase/includes), not as the engine's own string value, so none of the subject's preconditions hold here; a case-insensitive search of the context directory for interner, latin1, vtable, utf16, zero-copy and narrowest returned zero files.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b9ecd6e50ba4e51",
+          "evaluatedRevision": 3,
+          "revisionsBehind": 1
         },
         {
           "subject": "quality-gates",
