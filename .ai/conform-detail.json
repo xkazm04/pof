@@ -24210,6 +24210,62 @@
           "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:28 The preview is a fixed-height flat box with no rendered depth to hold or measure."
         }
       ]
+    },
+    "08075992-0eca-4e46-9923-aae255fe800d/quality-gates": {
+      "context": "cook-packaging-pipeline",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T01:51:19.282Z",
+      "worker": "65ffb46f-6e3b-4293-86a8-fb0e1058c4d9",
+      "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:219 The failed request returns before touching results, and onStatusChange carries no error field, so decide() in package-flow sees the held pass and releases the cook. A first-ever failure is safe, because no held verdict means no release."
+        },
+        {
+          "technique": "waiver-names-its-finding",
+          "verdict": "deviation",
+          "evidence": "src/lib/packaging/package-flow.ts:120 The override event names no finding, so one Package anyway click waives every failing and every unmeasured check together: a blanket. It is a one-shot, so the reaper rule does not apply."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "deviation",
+          "evidence": "src/app/api/packaging/execute/route.ts:48 The cook request carries no override or not-measured fields and the finalize and history stores have none, so the build row never records that a blocked gate was waived. The disclosure lasts only as long as the on-screen flow state."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:110 A verdict with unrun checks states its reduced coverage in the verdict word itself."
+        },
+        {
+          "technique": "refusal-names-a-reachable-remedy",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:346 Each unrun check names a remedy that is a button in this same panel, so it resolves wherever the message is read."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:70 One enumeration drives the tiles, the coverage count and the summary, rather than each surface inferring from results."
+        },
+        {
+          "technique": "severity-by-construction",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:172 Traceable to the refusal: fail blocks the cook and warn does not, and the header says ready (warnings) accordingly."
+        },
+        {
+          "technique": "gate-laddering",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:231 Cheap checks run automatically and the minutes-long build and asset checks are explicit opt-in rungs."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/game-systems/SmokeTest.tsx:12 The smoke run takes only a build id, and the server reads the exe from the recorded row, so the client cannot supply what gets judged."
+        }
+      ]
     }
   }
 }

@@ -12140,7 +12140,11 @@
           "revision": 54,
           "changedAt": "2026-10-14",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/game-systems/PreflightPanel.tsx:219 When a re-run of the fast check cannot run, the error goes only to tile state while the previous pass stays in results and the summary omits errors, so the header still reads ready and a Package press cooks on the old verdict, routing could-not-run to pass on a gate whose green authorizes shipping.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a5b34d39a4b8edd3",
+          "evaluatedRevision": 56
         },
         {
           "subject": "test-harness",
