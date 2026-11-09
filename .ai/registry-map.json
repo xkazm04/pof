@@ -4028,8 +4028,12 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/applyPlan.ts:14 The editor assembles one task prompt per apply, which the golden path separates from a repo-owned file delivered by a harness, and a case-insensitive search of StateMachineEditor for the five absence terms found zero hits, so no instruction file is authored or consumed here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32
         },
         {
           "subject": "canvas-graph",
@@ -23949,8 +23953,12 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/app/api/harness/route.ts:276 The routes are HTTP surfaces whose harness start contract exposes no instruction-file setting, and a case-insensitive search of all nine route directories for the five absence terms found zero hits, with no process spawn, cwd or worktree handling in them, so the AGENTS.md handling this route reaches sits entirely in src/lib/harness, outside this context.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32
         }
       ],
       "governance": "governed"
@@ -25162,8 +25170,12 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/status/capabilityModel.ts:24 The status models are pure aggregations over JSON and arguments and the components render them, and a case-insensitive search of src/app/_dev-inspector, src/components/status and src/lib/status for the five absence terms found zero hits; the only related text is a docblock pointing at a skill file in personalLoop.ts, which is not one of this context's listed files.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32
         },
         {
           "subject": "prompt-safety",
@@ -26376,8 +26388,12 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/AuthorTestPanel.tsx:12 The context's only contact with an agent is dispatching one per-task prompt through the shared CLI rail, which the golden path assigns to prompt-assembly, and a case-insensitive search of BridgeEndpointHealth and TestHarnessPanel for the five absence terms found zero hits, so it authors, reads and writes no instruction file.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32
         },
         {
           "subject": "on-device-verification-harness",
@@ -28986,8 +29002,12 @@
           "revision": 31,
           "changedAt": "2026-09-25",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 4
+          "state": "not-applicable",
+          "priorNotApplicable": 4,
+          "evidence": "src/lib/visual-gen/style-dna.ts:3 The prompt text in this library is addressed to image and 3D generators rather than coding agents, and a case-insensitive search of src/lib/visual-gen for the five absence terms found zero hits, so the subject's coding-harness precondition does not hold.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:9b02cf004a7ce444",
+          "evaluatedRevision": 32
         },
         {
           "subject": "prompt-assembly",

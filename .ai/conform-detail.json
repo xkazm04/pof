@@ -2690,29 +2690,28 @@
       "context": "ue5-bridge-monitoring",
       "subject": "agent-instruction-files",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T01:28:59.390Z",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:34:59.787Z",
+      "worker": "30c87f15-5c0d-40ad-bf09-555e080e3cd1",
       "techniques": [
+        {
+          "technique": "workspace-ancestry-isolation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/WaitingTestsTab.tsx:71 The launch goes through the shared hook with a module id and session key; this context creates no directory for an agent to run in."
+        },
+        {
+          "technique": "capability-coverage-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/waitingTests.ts:5 The comment describes a human UI beside an agent tool; nothing here is an instruction surface that plans agent work or names its means."
+        },
         {
           "technique": "capability-before-steering",
           "verdict": "not-applicable",
           "evidence": "src/components/modules/project-setup/TestHarnessPanel/index.tsx:4 UE scenario panel, not an instruction file.",
           "carriedFrom": "2026-10-13"
-        },
-        {
-          "technique": "capability-coverage-contract",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:23 Hook owns ping state only.",
-          "carriedFrom": "2026-10-13"
         }
-      ],
-      "withdrawn": {
-        "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
-        "state": "not-applicable",
-        "at": "2026-10-25T01:29:30.352075+00:00",
-        "reason": "reviewer (sonnet): The anchor (useBridgeEndpointHealth.ts:23) is just the hook's declaration line. It shows what the hook does but not that no instruction file is authored or loaded, so the anchor is incidental."
-      }
+      ]
     },
     "419ea285-f8b3-4f3c-b012-c75db90d3778/agent-instruction-files": {
       "context": "harness-autonomy",
@@ -17287,31 +17286,43 @@
       "context": "status-health-dashboard",
       "subject": "agent-instruction-files",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T01:28:59.390Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
-        "state": "not-applicable",
-        "at": "2026-10-25T01:29:30.410523+00:00",
-        "reason": "reviewer (sonnet): The anchor (statusModel.ts:2) is a docblock describing aggregation, not an absence. The claim 'no agent instruction file ... touched by this code' is contradicted: src/lib/status/personalLoop.ts:3 references `.claude/skills/personal-loop/SKILL.md`, and ceiling-facts.json references `.claude/green-lo"
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:34:59.787Z",
+      "worker": "30c87f15-5c0d-40ad-bf09-555e080e3cd1",
+      "techniques": [
+        {
+          "technique": "capability-coverage-contract",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/status/capabilityModel.ts:2 Capability here means a class of game content the stack can generate, not an affordance an agent could be told about."
+        },
+        {
+          "technique": "line-earning",
+          "verdict": "not-applicable",
+          "evidence": "src/app/_dev-inspector/devLocate.ts:11 The one agent-facing output is a file reference copied on demand, not a line in an always-loaded floor."
+        }
+      ]
     },
     "f2a555f4-1b04-4196-bb1c-71049494f81a/agent-instruction-files": {
       "context": "animation-state-machine-editor",
       "subject": "agent-instruction-files",
       "bundle": "software-engineering",
-      "state": "unknown",
-      "evaluatedAt": "2026-10-25",
-      "evaluatedTs": "2026-10-25T01:28:59.390Z",
-      "techniques": [],
-      "withdrawn": {
-        "worker": "91ab8a79-1108-48ee-ac8f-bf9e2355df36",
-        "state": "not-applicable",
-        "at": "2026-10-25T01:29:30.471192+00:00",
-        "reason": "reviewer (sonnet): The anchor (codegen.ts:5) is an import and comment header about compileMachine, so it is incidental. The absence claim rests only on a grep that missed 'Instructions' hits such as applyPlan.ts's buildApplyPrompt, which renders a CLI instruction."
-      }
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:34:59.787Z",
+      "worker": "30c87f15-5c0d-40ad-bf09-555e080e3cd1",
+      "techniques": [
+        {
+          "technique": "line-earning",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/applyPlan.ts:202 This restraint is paid only by the single dispatch that carries it, so the per-session admission test does not reach it."
+        },
+        {
+          "technique": "workspace-ancestry-isolation",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorTab.tsx:70 The context passes a prompt to the shared CLI rail and creates no directory for the agent."
+        }
+      ]
     },
     "d93d4d85-68b9-4c01-8e08-5ae13b63fe4f/agent-instruction-files": {
       "context": "project-ops-api",
@@ -24529,6 +24540,48 @@
           "technique": "proved-off-the-path",
           "verdict": "conformant",
           "evidence": "src/components/modules/content/ui-hud/MenuFlowDiagram/useMenuFlowDiagram.ts:176 The lint rule covered by menuFlowLint.test.ts has this production caller in the hook, so the tests are not evidence about an orphan."
+        }
+      ]
+    },
+    "bc5d1f7d-58f5-47d6-8ac2-6e9c931d8cac/agent-instruction-files": {
+      "context": "quality-evaluation-api",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:34:59.787Z",
+      "worker": "30c87f15-5c0d-40ad-bf09-555e080e3cd1",
+      "techniques": [
+        {
+          "technique": "workspace-ancestry-isolation",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/harness/route.ts:275 Paths are supplied by the caller and forwarded; the route creates no workspace and launches no agent itself."
+        },
+        {
+          "technique": "write-back-sink-class",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/harness/route.ts:472 The route hands off to the orchestrator and names no write destination; the learnings sink belongs to src/lib/harness and should be judged there."
+        }
+      ]
+    },
+    "9a11b0c7-a013-434b-8325-086ee4151f70/agent-instruction-files": {
+      "context": "visual-gen-style-asset-library",
+      "subject": "agent-instruction-files",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:34:59.787Z",
+      "worker": "30c87f15-5c0d-40ad-bf09-555e080e3cd1",
+      "techniques": [
+        {
+          "technique": "line-earning",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/prompt-chips.ts:5 These fragments are per-generation text for media models, not lines in a floor loaded by a coding agent."
+        },
+        {
+          "technique": "write-back-sink-class",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/style-dna.ts:10 State persists to a database module; no instruction tells an agent to append to a named file."
         }
       ]
     }
