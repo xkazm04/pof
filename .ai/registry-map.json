@@ -16553,7 +16553,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/visual-gen/download-variants.test.ts:18 The Poly Haven / ambientCG responses that searchAmbientCG (asset-sources.ts) and the download variants are pinned against are recordings carrying a capture date. A search of src/__tests__, e2e and scripts for the live hosts found only the playback users and no live re-certification lane, so the recordings will keep certifying the 2026-09-29 service indefinitely.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "prompt-assembly",

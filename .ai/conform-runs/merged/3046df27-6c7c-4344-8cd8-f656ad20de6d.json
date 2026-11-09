@@ -1,0 +1,121 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3046df27-6c7c-4344-8cd8-f656ad20de6d",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T23:21:12.430200+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 The ImportPanel 'reports what actually happened' test swaps the store's real importCrashLog for a test-written copy that skips the shipped action's /api/crash-analyzer POST, its merge-by-id, and its detectPatterns/computeStats recompute, so the panel's 'No diagnosis matched' text is checked against a copy of the driver that no user runs, while the comment claims only the HTTP hop is bypassed.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 seedImportable redefines the store action; the real one (crashAnalyzerStore.ts:97-140) POSTs to the server and recomputes patterns and stats. The fork is on the 'what is injected' axis. CrashAnalyzerHistory.test.tsx shows the alternative: drive the real action behind a stubbed fetch."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/suspendable-timers.test.tsx:89 Replay playback is checked on fake timers in units of the named step constant, not wall clock."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/suspendable-timers.test.tsx:14 The mock is set so that the interval decision under test is reached rather than bypassed by the reduced-motion shortcut, and the reason is stated in the asserting file."
+    }
+   ]
+  },
+  {
+   "context": "image-generation",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/visual-gen/download-variants.test.ts:18 The Poly Haven / ambientCG responses that searchAmbientCG (asset-sources.ts) and the download variants are pinned against are recordings carrying a capture date. A search of src/__tests__, e2e and scripts for the live hosts found only the playback users and no live re-certification lane, so the recordings will keep certifying the 2026-09-29 service indefinitely.",
+   "techniques": [
+    {
+     "technique": "recorded-interaction-fixtures",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/visual-gen/download-variants.test.ts:18 Freshness obligation 1 (capture date as an age proxy) is met. Obligation 2 (a live lane on a cadence) has no realization: grepping for api.polyhaven.com|ambientcg.com hits only fixtures and playback tests."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/visual-gen-input-gate-wired.test.ts:114 Adoption of the input gate is asserted through the real route against the start*Job spies. Sibling cases at :162 and :185 assert started()==1, so the zero is shown to be engaged."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/visual-gen-input-gate-wired.test.ts:32 The gate is exercised through the shipped route handler, not composed by hand in the test. The file header records that gateInputImage previously had zero callers."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/visual-gen/poll-transient.test.ts:18 Polling behavior is asserted by attempt count with intervalMs 0, not by elapsed time."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/asset-library-db.ts:70 The schema bootstrap that both the :memory: fixtures and getLibraryDb() call sets the FK pragma itself, so the test store does not fork from production on the mode that the cascade tests depend on."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "topbar-and-activity",
+   "reason": "evidence leans on ActivityFeedPanel/index.tsx, which is not a tracked file"
+  },
+  {
+   "subject": "test-harness",
+   "context": "harness-autonomy",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "cross-module-features",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:21:12.430200+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:21:12.430200+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch",
+    "proved-off-the-path",
+    "recorded-interaction-fixtures",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "image-generation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

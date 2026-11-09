@@ -25543,6 +25543,42 @@
           "evidence": "src/__tests__/lib/evaluator/review-runner.test.ts:28 The review-runner ledger tests run in a mkdtemp scratch dir that names its reaper after every test."
         }
       ]
+    },
+    "6f51c4d5-ca18-427e-adfe-9b704ca2f430/test-harness": {
+      "context": "image-generation",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T23:21:12.430Z",
+      "worker": "3046df27-6c7c-4344-8cd8-f656ad20de6d",
+      "techniques": [
+        {
+          "technique": "recorded-interaction-fixtures",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/visual-gen/download-variants.test.ts:18 Freshness obligation 1 (capture date as an age proxy) is met. Obligation 2 (a live lane on a cadence) has no realization: grepping for api.polyhaven.com|ambientcg.com hits only fixtures and playback tests."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/visual-gen-input-gate-wired.test.ts:114 Adoption of the input gate is asserted through the real route against the start*Job spies. Sibling cases at :162 and :185 assert started()==1, so the zero is shown to be engaged."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/api/visual-gen-input-gate-wired.test.ts:32 The gate is exercised through the shipped route handler, not composed by hand in the test. The file header records that gateInputImage previously had zero callers."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/visual-gen/poll-transient.test.ts:18 Polling behavior is asserted by attempt count with intervalMs 0, not by elapsed time."
+        },
+        {
+          "technique": "a-test-helper-is-a-fork-of-the-driver",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/asset-library-db.ts:70 The schema bootstrap that both the :memory: fixtures and getLibraryDb() call sets the FK pragma itself, so the test store does not fork from production on the mode that the cascade tests depend on."
+        }
+      ]
     }
   }
 }
