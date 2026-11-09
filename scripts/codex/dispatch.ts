@@ -86,12 +86,13 @@ async function run(taskPath: string, timeoutMin: number) {
   const dir = runDir(task.id);
   if (existsSync(dir)) throw new Error(`run ${task.id} already exists — discard it or pick a new id`);
   mkdirSync(dir, { recursive: true });
-  const route = routeTask(task.tier, task.hints);
+  const routed = routeTask(task.tier, task.hints);
+  const route = task.model ? { ...routed, model: task.model } : routed;
   let cwd = REPO;
   let base: string | undefined;
   if (task.access === 'write-verified') {
     cwd = wtDir(task.id);
-    const add = git(REPO, 'worktree', 'add', '-b', `codex/${task.id}`, cwd, 'HEAD');
+    const add = git(REPO, 'worktree', 'add', '-b', `codex/${task.id}`, cwd, task.base ?? 'HEAD');
     if (add.status !== 0) throw new Error(`worktree add failed: ${add.stderr}`);
     base = git(cwd, 'rev-parse', 'HEAD').stdout.trim() || undefined;
     const j = spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, 'node_modules'), join(REPO, 'node_modules')], { encoding: 'utf8' });

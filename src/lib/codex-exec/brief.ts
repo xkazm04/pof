@@ -26,6 +26,10 @@ export interface CodexTask {
   constraints?: string[];
   outOfScope?: string[];
   images?: string[];
+  /** Commit the worktree starts from instead of HEAD: a backtest replays a landed fix from its parent. */
+  base?: string;
+  /** Overrides the routed model, for measuring a model before the routing table adopts it. */
+  model?: string;
   /**
    * A task-specific result shape (a proposal, a critique) in place of `CODEX_REPORT_SCHEMA`.
    * Must be a strict JSON Schema object (additionalProperties false, every property required).
