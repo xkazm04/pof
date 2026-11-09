@@ -3970,7 +3970,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/lib/state-machine-compile.test.ts:116 The exported C++ is checked only by regex and substring, with no compiler or C++ parser reading it in any lane I could find, so code the compiler would reject can pass while the test restates one compiler rule by hand.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "quality-gates",
@@ -22809,7 +22813,11 @@
           "revision": 27,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/__tests__/components/evaluator/health/noHexClassNames.test.ts:7 The source scan states a repo-wide colour rule but walks a hand-picked 4 of ProjectHealthDashboard's 10 .tsx files and none of AggregateQualityDashboard, so the same violation at HeatmapGrid.tsx:118 ('border-[#ef4444]/50') is seen by neither this pin nor the whole-literal ESLint selector.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:a3c517733d58374b",
+          "evaluatedRevision": 29
         },
         {
           "subject": "alerting",

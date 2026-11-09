@@ -1,0 +1,146 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7b3fdfca-00be-4e35-956c-b2ec6dc8abc1",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T05:37:35.060311+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/CrashHealthMap.test.tsx:20 The test is named for the empty hint but only asserts zero health nodes at line 22, so deleting the 'No crashes to map yet' branch at CrashHealthMap.tsx:42 or rendering nothing stays green while a search for that coverage stops at this name.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/CrashHealthMap.test.tsx:20 The name claims a stronger guard than the assertion makes: the only check is queryAllByTestId('health-node') having length 0, and the hint text is never read."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/CrashAnalyzerSignatureMatch.test.tsx:36 The fixture is built by the shipped parseCrashLog and analyzeSingleCrash from a raw log, and the one bypassed hop is stated."
+    }
+   ]
+  },
+  {
+   "context": "animation-state-machine-editor",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/state-machine-compile.test.ts:116 The exported C++ is checked only by regex and substring, with no compiler or C++ parser reading it in any lane I could find, so code the compiler would reject can pass while the test restates one compiler rule by hand.",
+   "techniques": [
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/state-machine-compile.test.ts:116 generateFullCppOutput is referenced only by its test, the editor hook and a re-export; package.json has no clang or tree-sitter, and compiling is left to the model session via the applyPlan.ts:201 prompt line. Caveat: the real reader is the local UE toolchain, which is not unit-cost, so the technique's 'reader not available in the lane' exclusion is arguable, but no cost estimate or syntax-only check is recorded."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/animations/state-machine-editor-wiring.test.tsx:56 The test enters through the shipped parent view and opens the real tab, rather than composing the editor itself."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/state-machine-compile.test.ts:60 Beside the 'false finding is gone' absences, the exact findings from the compiled entry are asserted, so a check that stopped running would go red."
+    },
+    {
+     "technique": "approval-snapshots-with-guarded-update",
+     "verdict": "not-applicable",
+     "evidence": "src/__tests__/lib/state-machine-compile.test.ts:38 The golden is a hand-held source constant with no record mode, and no toMatchSnapshot appears in this context's tests, so there is no update path to guard."
+    }
+   ],
+   "registryProposal": "assert-through-the-reader's 'reader is not available in the lane' exclusion does not cover a reader that is installed locally but takes minutes and needs a whole engine, such as a UE C++ build. The technique could say whether a syntax-only parse against stub headers satisfies it, or whether the claim moves to a scheduled lane."
+  },
+  {
+   "context": "project-health-dashboards",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/evaluator/health/noHexClassNames.test.ts:7 The source scan states a repo-wide colour rule but walks a hand-picked 4 of ProjectHealthDashboard's 10 .tsx files and none of AggregateQualityDashboard, so the same violation at HeatmapGrid.tsx:118 ('border-[#ef4444]/50') is seen by neither this pin nor the whole-literal ESLint selector.",
+   "techniques": [
+    {
+     "technique": "pin-the-call-not-the-name",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/evaluator/health/noHexClassNames.test.ts:7 The population setting fails toward green: the list is not derived from the tree, and the describe title 'ProjectHealthDashboard class names' does not carry the 4-file predicate. I found no other test scanning AggregateQualityDashboard for bracket hex."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/evaluator/health/aggregateHistoryRace.test.tsx:37 The race is forced by settling held promises in a chosen order, with no timers."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/evaluator/health/headerNotNeverScanned.test.tsx:14 The absence of 'No scans yet' is paired with the positive failed-load message, naming which branch answered."
+    }
+   ],
+   "registryProposal": "pin-the-call-not-the-name's population section covers floors on walks but not a hand-written file list narrower than the rule the pin states. That shape has an implicit floor, since a missing file throws, and still fails toward green."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "code-quality-evaluation",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "lab-shell-and-navigation",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T05:37:35.060311+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:37:35.060311+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "approval-snapshots-with-guarded-update",
+    "assert-through-the-reader",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "animation-state-machine-editor",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:37:35.060311+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "assert-the-schedule-not-the-stopwatch",
+    "pin-the-call-not-the-name",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "project-health-dashboards",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

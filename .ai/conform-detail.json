@@ -25234,6 +25234,65 @@
           "evidence": "e2e/helpers/harness-mode.ts:290 A session that never started is reported differently from a timeout, which the harness flags separately at line 323."
         }
       ]
+    },
+    "f2a555f4-1b04-4196-bb1c-71049494f81a/test-harness": {
+      "context": "animation-state-machine-editor",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:37:35.060Z",
+      "worker": "7b3fdfca-00be-4e35-956c-b2ec6dc8abc1",
+      "techniques": [
+        {
+          "technique": "assert-through-the-reader",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/lib/state-machine-compile.test.ts:116 generateFullCppOutput is referenced only by its test, the editor hook and a re-export; package.json has no clang or tree-sitter, and compiling is left to the model session via the applyPlan.ts:201 prompt line. Caveat: the real reader is the local UE toolchain, which is not unit-cost, so the technique's 'reader not available in the lane' exclusion is arguable, but no cost estimate or syntax-only check is recorded."
+        },
+        {
+          "technique": "proved-off-the-path",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/animations/state-machine-editor-wiring.test.tsx:56 The test enters through the shipped parent view and opens the real tab, rather than composing the editor itself."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/lib/state-machine-compile.test.ts:60 Beside the 'false finding is gone' absences, the exact findings from the compiled entry are asserted, so a check that stopped running would go red."
+        },
+        {
+          "technique": "approval-snapshots-with-guarded-update",
+          "verdict": "not-applicable",
+          "evidence": "src/__tests__/lib/state-machine-compile.test.ts:38 The golden is a hand-held source constant with no record mode, and no toMatchSnapshot appears in this context's tests, so there is no update path to guard."
+        }
+      ],
+      "registryProposal": "assert-through-the-reader's 'reader is not available in the lane' exclusion does not cover a reader that is installed locally but takes minutes and needs a whole engine, such as a UE C++ build. The technique could say whether a syntax-only parse against stub headers satisfies it, or whether the claim moves to a scheduled lane."
+    },
+    "0dc1f270-2a7b-4d86-aaae-abf54b3eae58/test-harness": {
+      "context": "project-health-dashboards",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T05:37:35.060Z",
+      "worker": "7b3fdfca-00be-4e35-956c-b2ec6dc8abc1",
+      "techniques": [
+        {
+          "technique": "pin-the-call-not-the-name",
+          "verdict": "deviation",
+          "evidence": "src/__tests__/components/evaluator/health/noHexClassNames.test.ts:7 The population setting fails toward green: the list is not derived from the tree, and the describe title 'ProjectHealthDashboard class names' does not carry the 4-file predicate. I found no other test scanning AggregateQualityDashboard for bracket hex."
+        },
+        {
+          "technique": "assert-the-schedule-not-the-stopwatch",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/evaluator/health/aggregateHistoryRace.test.tsx:37 The race is forced by settling held promises in a chosen order, with no timers."
+        },
+        {
+          "technique": "unreached-decisions-pin-nothing",
+          "verdict": "conformant",
+          "evidence": "src/__tests__/components/evaluator/health/headerNotNeverScanned.test.tsx:14 The absence of 'No scans yet' is paired with the positive failed-load message, naming which branch answered."
+        }
+      ],
+      "registryProposal": "pin-the-call-not-the-name's population section covers floors on walks but not a hand-written file list narrower than the rule the pin states. That shape has an implicit floor, since a missing file throws, and still fails toward green."
     }
   }
 }
