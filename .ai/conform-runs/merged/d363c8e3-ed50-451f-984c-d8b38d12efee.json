@@ -1,0 +1,93 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d363c8e3-ed50-451f-984c-d8b38d12efee",
+  "subject": "on-device-verification-harness",
+  "evaluatedAt": "2026-11-09T03:08:50.110167+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "harness-autonomy",
+      "subject": "on-device-verification-harness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/app/harness/page.tsx:26 The context's two files are an operator tab page and a browser-persisted workflow DAG store, and a search of their directories for meminfo, dumpsys, logcat, soak and emulated touch found nothing, so neither installs, drives or measures a game on a real device.",
+      "techniques": [
+        {
+          "technique": "poll-ready-signal-not-fixed-delay",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:126 Workflow progress arrives by orchestrator events; this store never waits on a game process."
+        },
+        {
+          "technique": "borrow-and-return-the-shared-device",
+          "verdict": "not-applicable",
+          "evidence": "src/app/harness/page.tsx:29 The lease named here covers gate settling against the UE test path, not a shared physical device."
+        },
+        {
+          "technique": "fresh-state-per-check",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:229 The rehydrated state is localStorage workflow rows, not state left on a device by an earlier check."
+        },
+        {
+          "technique": "keep-the-failed-baseline",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:31 The cap applies to workflow execution rows; the store holds no device measurement artefacts."
+        }
+      ],
+      "absenceTerms": [
+        "meminfo",
+        "dumpsys",
+        "logcat",
+        "soak"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "on-device-verification-harness",
+      "context": "ue5-bridge-monitoring",
+      "reason": "withdrawn after review: reviewer (sonnet): The constants.ts:26 technique claim rests on PofTestRunner.cpp (a PIE-world timer after a delegate-awaited PIE start). A Glob of the repo found no file with that name, so I could not confirm the claim."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-09T03:08:50.110167+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "on-device-verification-harness"
+      ],
+      "techniques": [
+        "absolute-due-time-load-pump",
+        "attribute-every-stall-before-judging-it",
+        "borrow-and-return-the-shared-device",
+        "emulated-touch-is-not-physical-touch",
+        "fresh-state-per-check",
+        "keep-the-failed-baseline",
+        "meminfo-local-to-avoid-forced-gc",
+        "poll-ready-signal-not-fixed-delay",
+        "separate-active-race-from-transition-windows"
+      ],
+      "deviations": 0,
+      "context": "ue5-bridge-monitoring",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T03:08:50.110167+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "on-device-verification-harness"
+      ],
+      "techniques": [
+        "borrow-and-return-the-shared-device",
+        "fresh-state-per-check",
+        "keep-the-failed-baseline",
+        "poll-ready-signal-not-fixed-delay"
+      ],
+      "deviations": 0,
+      "context": "harness-autonomy",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

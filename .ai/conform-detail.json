@@ -10736,26 +10736,70 @@
       "subject": "on-device-verification-harness",
       "bundle": "game-production",
       "state": "deviation",
-      "evaluatedAt": "2026-10-18",
-      "evaluatedTs": "2026-10-18T21:37:12.479Z",
-      "worker": "286ad05e-a8f7-462e-a51d-27896f18575b",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:08:50.110Z",
       "techniques": [
         {
           "technique": "poll-ready-signal-not-fixed-delay",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:25 Default action sleeps for a fixed 1.0s to wait for initialization rather than polling a ready signal."
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:26 Fixed 1.0s template step, but PofTestRunner.cpp runs it as a timer on the PIE world after PIE start was awaited by delegate, so it is not a device launch or restart wait. Earlier deviation not kept for this subject; see notes."
         },
         {
-          "technique": "keep-the-failed-baseline",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/project-setup/TestHarnessPanel/SnapshotsTab.tsx:19 Snapshot acceptance overwrites baseline image without archival or backup, destroying the failed baseline."
+          "technique": "absolute-due-time-load-pump",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:168 Scenarios run one after another to completion; no fixed-rate input stream exists."
+        },
+        {
+          "technique": "attribute-every-stall-before-judging-it",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:78 Operator-triggered route probes with no load pump beside them, which is the technique's stated when-not-to-use case."
+        },
+        {
+          "technique": "borrow-and-return-the-shared-device",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/waitingTests.ts:93 The lease guards the drain against a shared UE editor, not a device with a screen or session to restore."
+        },
+        {
+          "technique": "emulated-touch-is-not-physical-touch",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/helpers.ts:51 Scenario actions are only function calls and waits; no touch or pointer input is injected."
         },
         {
           "technique": "fresh-state-per-check",
-          "verdict": "deviation",
-          "evidence": "src/components/modules/project-setup/TestHarnessPanel/ScenarioCard.tsx:90 Allows disabling cleanup (none), allowing spawned actors and state to leak into subsequent checks."
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:36 State is actors spawned and destroyed in a PIE world; there is no long-lived device state to inherit."
+        },
+        {
+          "technique": "keep-the-failed-baseline",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:206 This is an in-memory list of editor suite runs; no device measurement run exists to preserve."
+        },
+        {
+          "technique": "meminfo-local-to-avoid-forced-gc",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:72 Probes are HTTP GET or a WS open only; no process memory report is taken."
+        },
+        {
+          "technique": "separate-active-race-from-transition-windows",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:27 The latency series is bridge route response time, not frame or input windows from a game session."
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "deviation",
+          "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:25 The test harness template configures a fixed 1.0 second wait action for actor initialization rather than polling a readiness signal before running assertions.",
+          "evaluatedAt": "2026-10-18T21:37:12.479Z",
+          "worker": "286ad05e-a8f7-462e-a51d-27896f18575b",
+          "reason": "replaced by d363c8e3-ed50-451f-984c-d8b38d12efee"
+        }
+      ],
+      "withdrawn": {
+        "worker": "d363c8e3-ed50-451f-984c-d8b38d12efee",
+        "state": "not-applicable",
+        "at": "2026-11-09T03:11:30.193877+00:00",
+        "reason": "reviewer (sonnet): The constants.ts:26 technique claim rests on PofTestRunner.cpp (a PIE-world timer after a delegate-awaited PIE start). A Glob of the repo found no file with that name, so I could not confirm the claim."
+      }
     },
     "234034cf-29e8-432e-aca8-490e30e9f45d/prompt-fitness-and-evolution": {
       "context": "prompt-evolution",
@@ -24404,6 +24448,37 @@
       "evaluatedTs": "2026-11-09T02:38:16.315Z",
       "worker": "d7059a67-e141-4d1c-82fb-bab59dcac81f",
       "techniques": []
+    },
+    "419ea285-f8b3-4f3c-b012-c75db90d3778/on-device-verification-harness": {
+      "context": "harness-autonomy",
+      "subject": "on-device-verification-harness",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evaluatedAt": "2026-11-09",
+      "evaluatedTs": "2026-11-09T03:08:50.110Z",
+      "worker": "d363c8e3-ed50-451f-984c-d8b38d12efee",
+      "techniques": [
+        {
+          "technique": "poll-ready-signal-not-fixed-delay",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:126 Workflow progress arrives by orchestrator events; this store never waits on a game process."
+        },
+        {
+          "technique": "borrow-and-return-the-shared-device",
+          "verdict": "not-applicable",
+          "evidence": "src/app/harness/page.tsx:29 The lease named here covers gate settling against the UE test path, not a shared physical device."
+        },
+        {
+          "technique": "fresh-state-per-check",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:229 The rehydrated state is localStorage workflow rows, not state left on a device by an earlier check."
+        },
+        {
+          "technique": "keep-the-failed-baseline",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/taskDAGStore.ts:31 The cap applies to workflow execution rows; the store holds no device measurement artefacts."
+        }
+      ]
     }
   }
 }

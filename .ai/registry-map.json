@@ -15650,8 +15650,12 @@
           "revision": 2,
           "changedAt": "2026-10-23",
           "confidence": "probable",
-          "state": "unknown",
-          "priorNotApplicable": 2
+          "state": "not-applicable",
+          "priorNotApplicable": 2,
+          "evidence": "src/app/harness/page.tsx:26 The context's two files are an operator tab page and a browser-persisted workflow DAG store, and a search of their directories for meminfo, dumpsys, logcat, soak and emulated touch found nothing, so neither installs, drives or measures a game on a real device.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:4e6008f98b11b159",
+          "evaluatedRevision": 2
         },
         {
           "subject": "table",
@@ -26383,11 +26387,7 @@
           "confidence": "probable",
           "state": "deviation",
           "evidence": "src/components/modules/project-setup/TestHarnessPanel/constants.ts:25 The test harness template configures a fixed 1.0 second wait action for actor initialization rather than polling a readiness signal before running assertions.",
-          "evaluatedAt": "2026-10-18",
-          "evaluatedAgainst": "sha256-b2:c93684a45025e912",
-          "evaluatedRevision": 1,
-          "revisionsBehind": 1,
-          "stale": true
+          "evaluatedAt": "2026-10-18"
         },
         {
           "subject": "quality-gates",
