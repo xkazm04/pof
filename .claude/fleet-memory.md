@@ -295,3 +295,5 @@ KIND is one of:
 - [2026-11-08] [catalog-acceptance] DECISION: owner overrode registry technique first-non-pass-reporting-in-all-of for PoF: an allOf deferral no longer masks a later fail or pending (8326d3e3d), because serverVerdictOverlay can lift a local deferred to a pass; do not revert to first-non-pass order.
 - [2026-11-09] [scan-sweep] DELIVERED: Lane B drain of the 2026-11-08 backlog complete: 114 groups, 696 cards, 583 built with seeded controls; 162 cards remain in the Approvals spool (68 demoted/unmeasurable plus Lane C), nothing pushed.
 - [2026-11-07] [balance] DELIVERED: bestiary-guardrails.ts header now states it has no production caller (facet deleted in fb7efa5b); keep, delete or rewire is the owner's call.
+- [2026-11-09] [gtai] DELIVERED: n10 finished clean at 07:43 on four unmerged branches awaiting owner Calls; Codex-as-second-engine plan in games/gtai/research/codex-engine-plan.md (blind n=20 backtest: 8 pass, 5 real miss, no Claude baseline yet).
+- [2026-11-09] [gtai] CONVENTION: to stop a night runner, kill the supervisor PID as well as launch.cmd, because the supervisor detaches and survives a tree kill of launch.cmd.
