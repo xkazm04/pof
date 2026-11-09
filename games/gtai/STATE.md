@@ -97,6 +97,7 @@ Design truth is in `pitch.md`; this file is *where we are*.
 | 2026-11-08 | A night launch is a manual step: `launch.cmd` is written at prep, and nothing checks that it ran. n9 sat idle from 21:00 to 00:55 (about 4 h lost) | medium | open: the prep step could schedule the launch itself, or `night.mjs status` could flag a root that is past its launch time with no `run.log` |
 | 2026-11-08 | Night reel gate `--quit-after 16000` no longer covers the director reel under tilt70 / combo: 17-18 of 19 rows, varying run to run, also alone; 40000 gives 19/19 | medium | open: raise the limit in the common brief (verdict m-2) |
 | 2026-11-08 | The night runner has no reserve for its freeze and report sessions: when every billing path ran out at 09:08 they could not run | medium | open: hold back budget for the freeze, or warn when the last path is draining |
+| 2026-11-09 | A running night cannot change its schedule: `night.mjs` holds the times in memory, and killing `launch.cmd` does not stop the detached supervisor. The n10 restart left two runners on the same lanes for about 40 s | medium | open: re-read the times from a file each cycle, or add `night.mjs stop` that writes the supervisor's PID and kills it |
 
 ## Session log
 
@@ -1131,3 +1132,8 @@ Handshake: first cast **Rivet**; the memory lives in the **codebase**: `games/gt
 - Preflight: 4 worktrees imported with 0 errors, clean, native DLLs copied, godot-cpp present; world cut from `c394af55`, the others from main `9bbe6d0a`; export-template junctions verified; standby off on AC; 345 GB free; a no-key Claude call on the current login succeeded. Scheduled task state Ready, next run 21:00; it needs the owner logged on (interactive). Briefs saved in `games/gtai/day/2026-11-08/night/`, so they survive the runner root cleanup.
 - Risk: API keys are empty, so the run depends on the current plan; a weekly limit would stop it as it did n9. The asset lane stays blocked on its own recorded subscription limit until 17:01.
 
+
+### 2026-11-09 night: plan (n10 shortened; Codex research)
+- Owner (00:30): stop n10 at 08:00 and report after; meanwhile research Codex CLI (GPT-6.1) as an engine for large, less complex work and prepare a plan for where it is genuinely useful and how it works with Claude.
+- n10 new times: freeze 07:30, report 07:40, end 08:00 (was 08:30 / 08:40 / 09:00). The runner holds its times in memory, so this needs one restart. It happened at 02:10, not at the 01:07 boundary: the first attempt aborted on its PID guard without killing anything, and the second used the force time. All four lanes were mid-iteration, so their sessions in progress were cut off (rivet 15, world 18, perf 10, handheld 17), and each restarted the same iteration number on the new times. The old supervisor survived the first kill and ran beside the new one for about 40 s, until its tree was killed by PID. Its stale `bench.lock` was removed.
+- Research output: `games/gtai/research/codex-engine-plan.md`. Nothing from Codex lands tonight.

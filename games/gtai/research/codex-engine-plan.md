@@ -40,7 +40,7 @@ Three things limit how far this goes:
 - **There is no Claude baseline yet.** The tests were written around Claude's own fixes, which tilts the comparison against GPT. "8 of 20" cannot be called better or worse than Claude until Claude runs the same blind test.
 - **All 20 are PoF TypeScript.** GDScript and the game repo are unmeasured.
 
-The misses show where it breaks. Examples: nested modals, where effect order made the outer modal topmost; relabelling a fidelity rung instead of building the missing detection; a skin-binding edge case. **It handles local logic well and misses behaviour that depends on framework order or on intent the bug report doesn't state.** Larger fixes missed four times as often as small ones.
+The misses show where it breaks. Examples: nested modals, where effect order made the outer modal topmost; relabelling a fidelity rung instead of building the missing detection; a skin-binding edge case. **It handles local logic well and misses behaviour that depends on framework order or on intent the bug report doesn't state.** Larger fixes missed more often: 4 of 12 against 1 of 8.
 
 ### Blind review: can it find bugs with no bug report? (n=12)
 
