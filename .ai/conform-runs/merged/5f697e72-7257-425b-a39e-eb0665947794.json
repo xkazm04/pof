@@ -1,0 +1,59 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5f697e72-7257-425b-a39e-eb0665947794",
+ "subject": "docs-content-model",
+ "evaluatedAt": "2026-11-09T23:43:58.296980+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "app-shell-and-chrome",
+   "subject": "docs-content-model",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 The L2 sidebar is built from the module registry (getSubModulesForCategory), so it navigates application modules, not a set of documentation topics; a case-insensitive search of src/components/layout/ for topic, sitemap, includeDrafts and lastReviewed found nothing, and src/app/ has no docs route, so the subject's precondition (documentation published as a product surface) does not hold here.",
+   "techniques": [
+    {
+     "technique": "catalog-referential-invariants",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 No topic table or body map in this context; the list comes from the module registry."
+    },
+    {
+     "technique": "derived-navigation-projection",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:24 The nav is derived from CATEGORY_MAP, but that map holds modules, not documentation topics."
+    },
+    {
+     "technique": "draft-visibility-gating",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:6 There are no draft documentation topics; the searches for includeDrafts and draft found nothing in the layout files."
+    }
+   ],
+   "absenceTerms": [
+    "topic",
+    "sitemap",
+    "includeDrafts",
+    "lastReviewed"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:43:58.296980+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-content-model"
+   ],
+   "techniques": [
+    "catalog-referential-invariants",
+    "derived-navigation-projection",
+    "draft-visibility-gating"
+   ],
+   "deviations": 0,
+   "context": "app-shell-and-chrome",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

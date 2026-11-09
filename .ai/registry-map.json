@@ -4719,13 +4719,12 @@
           "changedAt": "2026-10-22",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 Searches found no topic, sitemap, or includeDrafts references in the layout context, whose navigation resolves application modules rather than a documentation-topic corpus.",
-          "evaluatedAt": "2026-10-19",
-          "evaluatedAgainst": "sha256-b2:95cdaebc076df84d",
-          "evaluatedRevision": 2,
+          "evidence": "src/components/layout/SidebarL2/useSidebarL2.ts:25 The L2 sidebar is built from the module registry (getSubModulesForCategory), so it navigates application modules, not a set of documentation topics; a case-insensitive search of src/components/layout/ for topic, sitemap, includeDrafts and lastReviewed found nothing, and src/app/ has no docs route, so the subject's precondition (documentation published as a product surface) does not hold here.",
+          "evaluatedAt": "2026-11-09",
+          "evaluatedAgainst": "sha256-b2:74839e7c9eeb3728",
+          "evaluatedRevision": 4,
           "source": "retained",
-          "revisionsBehind": 2,
-          "stale": true
+          "revisionsBehind": 2
         }
       ],
       "governance": "governed"
