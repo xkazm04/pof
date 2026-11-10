@@ -137,7 +137,8 @@ export interface TubeMesh {
   /**
    * Flat uv pairs on a tiling strip: U is arc length × target px/m ÷ strip width (so it
    * runs past 1 by design and the strip repeats along the prop), V is the side index ÷
-   * `sides`. One extra seam column per ring, so there are `(segments + 1) · (sides + 1)`.
+   * `sides`. One extra seam column per ring, so `(segments + 1) · (sides + 1)` body pairs,
+   * then `sides` per end cap.
    */
   uvs: number[];
   /** Flat triangle indices into `uvs`, parallel to `indices`. */
@@ -276,11 +277,21 @@ export function generateLinearProp(config: LinearPropConfig): LinearPropResult {
       uvIndices.push(uv(i, j), uv(i + 1, j + 1), uv(i, j + 1), uv(i, j), uv(i + 1, j), uv(i + 1, j + 1));
     }
   }
-  // The caps sample the strip's edge column: zero UV area, two small fans per prop.
-  const n = pts.length - 1;
+  // Each cap gets its own disk on the strip, scaled so its UV-to-world area ratio equals
+  // the body's (U at uPerM per metre, V at one wrap per circumference). A cap that reused
+  // the ring's edge column would have zero UV area, which the mesh-finish stretch grade
+  // counts as degenerate and grades `poor`.
+  const capBase = uvs.length / 2;
+  for (const uEnd of [0, arc]) {
+    for (let j = 0; j < sides; j++) {
+      const a = (j / sides) * Math.PI * 2;
+      uvs.push(uEnd + Math.cos(a) * radius * uPerM, 0.5 + Math.sin(a) / (2 * Math.PI));
+    }
+  }
+  const endCap = capBase + sides;
   for (let j = 1; j <= sides - 2; j++) {
-    uvIndices.push(uv(0, 0), uv(0, j), uv(0, j + 1));
-    uvIndices.push(uv(n, 0), uv(n, j + 1), uv(n, j));
+    uvIndices.push(capBase, capBase + j, capBase + j + 1);
+    uvIndices.push(endCap, endCap + j + 1, endCap + j);
   }
 
   return { ok: true, mesh: { positions, indices, sides, uvs, uvIndices, lengthM: polylineLength(pts) } };

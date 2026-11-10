@@ -173,20 +173,43 @@ describe('OBJ output', () => {
     expect(Math.min(...idx)).toBe(1);
     expect(Math.max(...idx)).toBe(17 * 6);
     expect(Math.min(...uvIdx)).toBe(1);
-    expect(Math.max(...uvIdx)).toBe(17 * 7);
+    expect(Math.max(...uvIdx)).toBe(17 * 7 + 2 * 6);
   });
 });
 
 describe('UVs on a tiling strip — the repeat is derived, never dialled', () => {
   const uSpanDensity = (cfg: LinearPropConfig, stripPx = 1024) => {
     const m = generateLinearProp(cfg).mesh!;
-    const us = m.uvs.filter((_, k) => k % 2 === 0);
+    // Body pairs only: the cap disks sit just past either end of the U span.
+    const body = m.uvs.slice(0, (cfg.segments + 1) * (cfg.sides + 1) * 2);
+    const us = body.filter((_, k) => k % 2 === 0);
     return ((Math.max(...us) - Math.min(...us)) * stripPx) / m.lengthM;
   };
 
-  it('writes one vt per ring vertex plus a seam column', () => {
+  it('writes one vt per ring vertex plus a seam column, and a disk per cap', () => {
     const obj = toObj(generateLinearProp(CFG).mesh!);
-    expect(obj.split('\n').filter((l) => l.startsWith('vt ')).length).toBe(17 * 7);
+    expect(obj.split('\n').filter((l) => l.startsWith('vt ')).length).toBe(17 * 7 + 2 * 6);
+  });
+
+  it('gives every face UV area at an even density, caps included', () => {
+    // The mesh-finish stretch grade reads sqrt(uv area / world area) per face: a zero is
+    // degenerate (graded poor), and a face off the median by more than 2x counts as bad.
+    const m = generateLinearProp({ ...CFG, to: { x: 10, y: 3, z: 0 }, slack: 0.1 }).mesh!;
+    const p = (i: number) => [m.positions[i * 3], m.positions[i * 3 + 1], m.positions[i * 3 + 2]];
+    const t = (i: number) => [m.uvs[i * 2], m.uvs[i * 2 + 1]];
+    const dens: number[] = [];
+    for (let k = 0; k < m.indices.length; k += 3) {
+      const [a, b, c] = [p(m.indices[k]), p(m.indices[k + 1]), p(m.indices[k + 2])];
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+      const v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      const world = Math.hypot(u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]) / 2;
+      const [ta, tb, tc] = [t(m.uvIndices[k]), t(m.uvIndices[k + 1]), t(m.uvIndices[k + 2])];
+      const uv = Math.abs((tb[0] - ta[0]) * (tc[1] - ta[1]) - (tc[0] - ta[0]) * (tb[1] - ta[1])) / 2;
+      dens.push(Math.sqrt(uv / world));
+    }
+    const median = [...dens].sort((x, y) => x - y)[Math.floor(dens.length / 2)];
+    expect(Math.min(...dens)).toBeGreaterThan(0);
+    expect(dens.filter((d) => d > 2 * median || d < median / 2)).toHaveLength(0);
   });
 
   it('holds the target density at any length — a 10 m rope is not starved', () => {
