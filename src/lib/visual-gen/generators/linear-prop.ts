@@ -21,6 +21,15 @@
  * plus an OBJ serialiser so the result can reach Blender or UE without a provider.
  */
 
+import { DEFAULT_TARGET_PX_PER_M } from '../texel-density';
+
+/**
+ * Pixel width of the tiling strip a linear prop samples. The strip tiles along U (the
+ * length) and maps the circumference once along V, so its width — not the prop's length —
+ * is what the texel budget sizes.
+ */
+export const DEFAULT_STRIP_WIDTH_PX = 1024;
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -40,6 +49,10 @@ export interface LinearPropConfig {
   segments: number;
   /** Divisions around the circumference. */
   sides: number;
+  /** Texel density along the length, px/m. Defaults to the texel budget's target. */
+  targetPxPerM?: number;
+  /** Pixel width of the tiling strip. Defaults to {@link DEFAULT_STRIP_WIDTH_PX}. */
+  stripWidthPx?: number;
 }
 
 /** Subjects whose geometry is fully determined by their anchors — never worth generating. */
@@ -121,7 +134,19 @@ export interface TubeMesh {
   indices: number[];
   /** Vertices per ring. */
   sides: number;
-  /** Centerline length in metres — hand this to `texel-density.ts` to size a map. */
+  /**
+   * Flat uv pairs on a tiling strip: U is arc length × target px/m ÷ strip width (so it
+   * runs past 1 by design and the strip repeats along the prop), V is the side index ÷
+   * `sides`. One extra seam column per ring, so there are `(segments + 1) · (sides + 1)`.
+   */
+  uvs: number[];
+  /** Flat triangle indices into `uvs`, parallel to `indices`. */
+  uvIndices: number[];
+  /**
+   * Centerline length in metres. It does NOT size a map: a unique map sized by length hits
+   * the 4096 ceiling at 4 m and grades `starved` past 8 m, while the strip holds the target at any
+   * length because the repeat is derived from it.
+   */
   lengthM: number;
 }
 
@@ -234,7 +259,31 @@ export function generateLinearProp(config: LinearPropConfig): LinearPropResult {
     indices.push(last, last + j + 1, last + j);
   }
 
-  return { ok: true, mesh: { positions, indices, sides, lengthM: polylineLength(pts) } };
+  // UVs on a tiling strip: the repeat is derived from the density, never dialled. The
+  // seam column (j = sides) duplicates j = 0 in UV space only, so the positions — and the
+  // watertight check over them — are unchanged.
+  const uPerM = (config.targetPxPerM ?? DEFAULT_TARGET_PX_PER_M) / (config.stripWidthPx ?? DEFAULT_STRIP_WIDTH_PX);
+  const uvs: number[] = [];
+  let arc = 0;
+  for (let i = 0; i < pts.length; i++) {
+    if (i > 0) arc += dist(pts[i - 1], pts[i]);
+    for (let j = 0; j <= sides; j++) uvs.push(arc * uPerM, j / sides);
+  }
+  const uv = (i: number, j: number) => i * (sides + 1) + j;
+  const uvIndices: number[] = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    for (let j = 0; j < sides; j++) {
+      uvIndices.push(uv(i, j), uv(i + 1, j + 1), uv(i, j + 1), uv(i, j), uv(i + 1, j), uv(i + 1, j + 1));
+    }
+  }
+  // The caps sample the strip's edge column: zero UV area, two small fans per prop.
+  const n = pts.length - 1;
+  for (let j = 1; j <= sides - 2; j++) {
+    uvIndices.push(uv(0, 0), uv(0, j), uv(0, j + 1));
+    uvIndices.push(uv(n, 0), uv(n, j + 1), uv(n, j));
+  }
+
+  return { ok: true, mesh: { positions, indices, sides, uvs, uvIndices, lengthM: polylineLength(pts) } };
 }
 
 /** Serialise to Wavefront OBJ — 1-based indices, as the format requires. */
@@ -243,8 +292,12 @@ export function toObj(mesh: TubeMesh): string {
   for (let i = 0; i < mesh.positions.length; i += 3) {
     lines.push(`v ${mesh.positions[i]} ${mesh.positions[i + 1]} ${mesh.positions[i + 2]}`);
   }
+  for (let i = 0; i < mesh.uvs.length; i += 2) {
+    lines.push(`vt ${mesh.uvs[i]} ${mesh.uvs[i + 1]}`);
+  }
+  const corner = (k: number) => `${mesh.indices[k] + 1}/${mesh.uvIndices[k] + 1}`;
   for (let i = 0; i < mesh.indices.length; i += 3) {
-    lines.push(`f ${mesh.indices[i] + 1} ${mesh.indices[i + 1] + 1} ${mesh.indices[i + 2] + 1}`);
+    lines.push(`f ${corner(i)} ${corner(i + 1)} ${corner(i + 2)}`);
   }
   return lines.join('\n');
 }

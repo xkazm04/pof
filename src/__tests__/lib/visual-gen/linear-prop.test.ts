@@ -167,8 +167,46 @@ describe('OBJ output', () => {
   it('uses 1-based indices, as the OBJ format requires', () => {
     const obj = toObj(generateLinearProp(CFG).mesh!);
     const faces = obj.split('\n').filter((l) => l.startsWith('f '));
-    const idx = faces.flatMap((l) => l.slice(2).trim().split(/\s+/).map(Number));
+    const corners = faces.flatMap((l) => l.slice(2).trim().split(/\s+/));
+    const idx = corners.map((c) => Number(c.split('/')[0]));
+    const uvIdx = corners.map((c) => Number(c.split('/')[1]));
     expect(Math.min(...idx)).toBe(1);
     expect(Math.max(...idx)).toBe(17 * 6);
+    expect(Math.min(...uvIdx)).toBe(1);
+    expect(Math.max(...uvIdx)).toBe(17 * 7);
+  });
+});
+
+describe('UVs on a tiling strip — the repeat is derived, never dialled', () => {
+  const uSpanDensity = (cfg: LinearPropConfig, stripPx = 1024) => {
+    const m = generateLinearProp(cfg).mesh!;
+    const us = m.uvs.filter((_, k) => k % 2 === 0);
+    return ((Math.max(...us) - Math.min(...us)) * stripPx) / m.lengthM;
+  };
+
+  it('writes one vt per ring vertex plus a seam column', () => {
+    const obj = toObj(generateLinearProp(CFG).mesh!);
+    expect(obj.split('\n').filter((l) => l.startsWith('vt ')).length).toBe(17 * 7);
+  });
+
+  it('holds the target density at any length — a 10 m rope is not starved', () => {
+    // A unique map sized by length would give this rope 4096 px over 10 m = 410 px/m.
+    expect(uSpanDensity({ ...CFG, to: { x: 10, y: 3, z: 0 } })).toBeCloseTo(1024, 6);
+    expect(uSpanDensity({ ...CFG, to: { x: 1, y: 3, z: 0 } })).toBeCloseTo(1024, 6);
+  });
+
+  it('follows the arc, not the chord, when the prop sags', () => {
+    expect(uSpanDensity({ ...CFG, slack: 0.1 })).toBeCloseTo(1024, 6);
+  });
+
+  it('takes the density and strip width it is given', () => {
+    const cfg = { ...CFG, targetPxPerM: 512, stripWidthPx: 2048 };
+    expect(uSpanDensity(cfg, 2048)).toBeCloseTo(512, 6);
+  });
+
+  it('wraps the circumference once along V', () => {
+    const vs = generateLinearProp(CFG).mesh!.uvs.filter((_, k) => k % 2 === 1);
+    expect(Math.min(...vs)).toBe(0);
+    expect(Math.max(...vs)).toBe(1);
   });
 });
