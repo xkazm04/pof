@@ -14445,29 +14445,39 @@
       "subject": "lazy-section-addressability",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-22",
-      "evaluatedTs": "2026-10-22T02:19:04.240Z",
-      "worker": "38d3fc38-e6bb-4326-9b90-b2ef6022a651",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:20:22.134Z",
+      "worker": "ac5367c4-792f-4885-80cc-52e763d5a938",
       "techniques": [
         {
           "technique": "always-present-anchor-wrappers",
           "verdict": "not-applicable",
-          "evidence": "src/components/layout/ModuleRenderer/index.tsx:291 Modules occupy the selected workspace pane, rather than separate addressable positions requiring reserved scroll geometry."
-        },
-        {
-          "technique": "anchor-coverage-guard",
-          "verdict": "not-applicable",
-          "evidence": "src/stores/navigationStore.ts:57 Shell navigation selects category state; it does not declare an in-page vocabulary whose entries must match DOM anchor hosts."
+          "evidence": "src/app/page.tsx:27 The root page switches between whole shells; it does not compose an ordered list of scroll sections that would need unconditional address wrappers."
         },
         {
           "technique": "external-anchor-vs-internal-id",
           "verdict": "not-applicable",
-          "evidence": "src/lib/shell/shellRoute.ts:70 Published module addresses select a workspace through query parameters; they do not resolve a section position or an internal scroll-tracking element."
+          "evidence": "src/hooks/useTabParam.ts:6 The external address here is a query-param tab selector checked against validValues, not a hash anchor to an in-page section; there is no section-anchor namespace to split into two."
         },
         {
           "technique": "scroll-to-hydrate-then-retry",
           "verdict": "not-applicable",
-          "evidence": "src/hooks/useShellRouteSync.ts:38 Arrival activates the addressed module through state; scrolling toward an unmounted section is not the mounting trigger."
+          "evidence": "src/hooks/useScrollRestoration.ts:4 Scroll handling only restores a saved scrollTop per tab. No jump resolves a target inside a section that mounts as it nears the viewport, so no retry protocol is needed."
+        },
+        {
+          "technique": "anchor-coverage-guard",
+          "verdict": "not-applicable",
+          "evidence": "src/stores/navigationStore.ts:32 Locations are module and tab ids checked against the registry and tab-id lists, not DOM anchors whose live-page hosts could drift from a declared list."
+        }
+      ],
+      "registryProposal": "navigationStore.ts:30-31 says a tab jump 'lands even when that module's pane mounts later', which is the address-vs-content split applied to tabbed app shells rather than long pages. The subject's precondition ('a long page') leaves out this neighbouring case; app-shell or session-resume might be a better home for it, or this subject could state the boundary explicitly.",
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/components/layout/ModuleRenderer/index.tsx:265 Searches found no data-anchor or anchorId declarations; this shell selects mutually exclusive module panes through navigation state rather than resolving named positions on a lazily assembled long page.",
+          "evaluatedAt": "2026-10-22T02:19:04.240Z",
+          "worker": "38d3fc38-e6bb-4326-9b90-b2ef6022a651",
+          "reason": "replaced by ac5367c4-792f-4885-80cc-52e763d5a938"
         }
       ]
     },

@@ -4454,12 +4454,11 @@
           "changedAt": "2026-10-31",
           "confidence": "probable",
           "state": "not-applicable",
-          "evidence": "src/components/layout/ModuleRenderer/index.tsx:265 Searches found no data-anchor or anchorId declarations; this shell selects mutually exclusive module panes through navigation state rather than resolving named positions on a lazily assembled long page.",
-          "evaluatedAt": "2026-10-22",
-          "evaluatedAgainst": "sha256-b2:7932d7ba8929c786",
-          "evaluatedRevision": 2,
-          "revisionsBehind": 2,
-          "stale": true
+          "evidence": "src/stores/navigationStore.ts:46 This shell moves between mutually exclusive module panes and tabs held in store state and URL query params, not between named positions on a long, lazily assembled scroll page; searches of src/app, src/hooks and src/stores for scrollIntoView, data-anchor, anchorId, hashchange and IntersectionObserver found nothing (location.hash only appears as a pass-through in useTabParam's replaceState, and sectionId only as a visibility-toggle key in useFeatureVisibility), so the subject's precondition does not hold.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:d8bb8cfa97d2f2fd",
+          "evaluatedRevision": 4,
+          "revisionsBehind": 2
         },
         {
           "subject": "prompt-assembly",
