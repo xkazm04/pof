@@ -5,6 +5,22 @@ Design truth is in `pitch.md`; this file is *where we are*.
 
 ## Now
 
+- **2026-11-10 14:10: n11 merged and pushed, rtai main `0a084006`; all 20 owner Calls A (page `VkdwHvxSSi6qayadBTV3x6`, no notes).**
+  - **Merge:** tools, hero, combat, onto main as a parallel session had left it: n12-visual, merged 12:09 and unpushed. It was pushed with ours.
+  - **Gates on `0a084006`:** lint 16/16, unit 2465/0, scenarios 55/55, parity bit for bit, goldens 11/11 and 5/5, release 666/0, reels top, tilt70 and combo OK.
+  - **Exe:** `kiro/gtai-wt/int-day/build/export/windows/RTAI.exe` (13:50; DLLs rebuilt, bake done; headless only). The cursor art has still not been seen live.
+  - **Calls built today:** h-5 (Tonnage's hit lean 4 deg, others 12), c-4 (plasma draws the amber comet), t-3 (QuestBeatValidator, four fixes plus tests). m-2: author fixed. m-4: PoF `n11-runner` landed on master `1e8f15784` (not pushed), plus a fix (a stale control.json is moved aside).
+  - **Calls left for tonight:**
+    - t-1 CitySpawnPlan `_turn += q + 1`, with Codex's test at `games/gtai/day/2026-11-10/codex/test_city_spawn_plan.gd`. Land it under t-2 (review may overrule a mutation reject on unreachable code, with the reason written).
+    - t-4 car routing, native plus a deliberate parity re-bless.
+    - t-5 widen the collision hash window.
+    - h-4 a visible fallback strike for Dent.
+    - h-3 drawn left ghost rows and c-2 a redraw of the thrown-back hit cell: both are queued at the head of the asset brief.
+    - t-6: keep a tools lane.
+  - **Noted:**
+    - `morning.mjs` on a scratch copy stopped correctly at the baseline.json conflict, so it should auto-resolve that file.
+    - My own parked edits during a gate run were caught by the gate.
+  - **Next:** the owner plays the exe; plan tonight (hero, combat, tools).
 - **2026-11-10 09:50: n11 finished (all three lanes REPORT exit 0, 07:42), verdicts waiting on page https://claude.ai/artifact/VkdwHvxSSi6qayadBTV3x6 (db `verdicts/n11`).** Branches n11-hero (93 commits), n11-combat (90), n11-tools (182), all from main 812a0b06, unmerged; PoF branch n11-runner unmerged. $240 notional, subscription. One hero commit (43f0ea59c) has author t@t from the 01:39 tools-test incident (repo config repaired). Scoreboards: kiro/gtai-n11/SCOREBOARD.md, kiro/gtai-n11t/SCOREBOARD.md. **Next:** read verdicts, merge tools, hero, combat in int-day, gates, push, clean up.
 - **2026-11-09 20:15: n11 gets a third builder, `tools`, under its own root `kiro/gtai-n11t`, ends 08:00.** Order: visual evidence kit, gate honesty and speed, Codex test factory, one-command morning merge, then the night runner gaps on PoF branch `n11-runner` (not pushed). Codex is executor and tester; the 75 % text stop stands. `hero` now tracks each character in `LEVEL.md` and cycles improvements across everyone, Rivet included (owner: Rivet is the example, not the best possible). **Next:** `/gta morning` after 08:00 covers both roots.
 - **2026-11-09 19:40: n11 running, combat visual polish in a loop, ends 08:00 (freeze 07:30, report 07:40).** The owner played `812a0b06`: combat works, plenty of graphical bugs. Two lanes from main: `hero` (cursor facing, melee directions, Rivet bounce, 150 % player size, ghosts to Rivet's standard) and `combat` (dead bodies, pickups x2, ghost panel, weapon cursors, shadows, projectiles, reactions). Root `kiro/gtai-n11`, worktrees `gtai-wt/n11-*`. The asset loop serves their REQUESTs. **Next:** `/gta morning` after 08:00.
@@ -1179,3 +1195,25 @@ Spark: `Obsidian/pof/Spark/ideas/rtai-builder-tooling-lane.md`, from 598 past FR
 ### 2026-11-10 morning: n11 review
 
 Read all three REPORTs and opened the evidence (cursor sweep, ghost melee 8-dir, death hit cell, ghost selector). Claims match the frames. Tools REPORT says no lane commit got the wrong identity; false: hero 43f0ea59c is authored t@t. Verdict page published; merge waits on it.
+
+### 2026-11-10 day: n11 merge (verdicts all A)
+
+- **Verdicts:** read from db `verdicts/n11`, submitted 11:41. All 20 Calls A, no notes.
+- **rtai `main` had moved.** A parallel session merged night n12-visual at 12:09 (30 commits, unpushed) and briefed n13-weapon-art. n11 was merged on top of it, never rewinding main. Auto-memory `feedback_billing_and_solo_sessions.md` now says to check `origin/main..main` and the worktree list before merging.
+- **m-2:** filter-branch on n11-hero rewrote the t@t author; tree identical, 93/93 commits now kazdan@seznam.cz.
+- **Merges in int-day:**
+  - tools `02cf39a3e`, hero `5384e2be5`, combat `20df975c7`.
+  - Conflicts with n12: `rivet_frames.gd` keeps n12's warmed StreetStrips cache plus hero's empty-strip warning; `fx_ground.gd` keeps both lines; the debt baseline was re-ratcheted with reasons.
+  - Lane JOURNAL, REPORT and hero's LEVEL.md are in rtai `docs/day/2026-11-10/<lane>/`.
+- **Gates on 20df975c7:** all green.
+  - The first unit run was invalidated by my own parked edits ("tree changed during run"); a clean rerun gave 2460/0.
+- **Calls committed:** 2404fcc9a, 2cfb38720, 0a0840063.
+  - Two warnings-as-errors parse failures (`float()` of a Variant, a discarded `erase()`). The gates caught the first; `tools/godot/check.mjs` caught the second in seconds.
+- **Final gates on 0a0840063:** green, reels x3 OK, export OK. Pushed 812a0b06..0a084006.
+  - w-4 still holds without a flag: `tools/reel/run_reels.mjs` (since 812a0b06) passes `--loadout=pistol` to the game itself (`reelArgs`) and rejects it as its own argument.
+- **m-3:** `morning.mjs` (run from the tools branch) on a scratch copy of pre-merge main stopped at the baseline.json conflict with the right advice. Its debt step re-ratchets anyway, so it could take either side of that file itself. That's tonight's tools item.
+- **Cleanup:**
+  - n11 worktrees and branches, both runner roots (export-template junctions unlinked first), the n11 mutation worktree, the PoF runner worktree and branch, and the Codex worktree (its test saved to `games/gtai/day/2026-11-10/codex/`).
+  - Scoreboards are in `games/gtai/day/2026-11-10/scoreboards/`. Asset replies are saved to `kiro/gtai-assets/replies/n11-{hero,combat}.md`, and the asset brief now points there, with h-3 and c-2 first.
+  - Kept: int-day (exe), the n12 and n13 worktrees and `gtai-mutate-874f1762` (the other session's), and the n11 masters (263 MB, nothing regenerable). Disk 172 G free.
+- **Spark:** `rtai-builder-tooling-lane` shipped, retro written, improvement-log line in `.claude/spark/config.md`.
