@@ -14522,31 +14522,45 @@
       "subject": "llm-extracted-entity-graph",
       "bundle": "software-engineering",
       "state": "not-applicable",
-      "evaluatedAt": "2026-10-22",
-      "evaluatedTs": "2026-10-22T03:02:42.289Z",
-      "worker": "f4709812-cafc-4773-8d88-7b4c260d084b",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:25:20.600Z",
       "techniques": [
+        {
+          "technique": "surface-form-identity-and-its-risk",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/evaluator/CrossModuleOverlapPanel/index.tsx:37 Node identity is an authored registry key (moduleId + featureName), not a model-produced surface form; the overlap panel's Jaccard name similarity flags duplicate authored features for review and does not merge nodes."
+        },
         {
           "technique": "accumulate-then-threshold-merge",
           "verdict": "not-applicable",
-          "evidence": "src/lib/constellation/layout.ts:156 Node descriptions come directly from feature definitions, without accumulating passage contributions."
+          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:102 Feature descriptions come from a static definitions registry; no per-passage description fragments build up, so there is nothing to merge."
         },
         {
           "technique": "recall-passes-with-a-declared-cap",
           "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/DependencyGraph/useDependencyGraph.ts:70 Topology is computed from feature statuses and declared dependencies, without model extraction passes."
+          "evidence": "src/components/modules/evaluator/FeatureConstellation/constants.ts:16 The node set is listed from the registry, with no extraction passes whose recall could need a cap."
         },
         {
           "technique": "recoverable-fan-out-write",
           "verdict": "not-applicable",
-          "evidence": "src/lib/topology/moduleGraph.ts:216 The topology builder returns an in-memory projection; it does not persist extracted facts across graph and vector stores."
-        },
-        {
-          "technique": "surface-form-identity-and-its-risk",
-          "verdict": "not-applicable",
-          "evidence": "src/components/modules/evaluator/DependencyGraph/GraphCanvas.tsx:136 Rendered nodes retain registered module identifiers instead of deriving identity from model-produced names."
+          "evidence": "src/components/modules/evaluator/NexusView/useNexusView.ts:40 The topology is a read-only projection held in memory; nothing is written out to a graph store plus a vector index."
         }
-      ]
+      ],
+      "superseded": [
+        {
+          "state": "not-applicable",
+          "evidence": "src/lib/topology/moduleGraph.ts:170 Searches for passage, embedding, and recall found no hits in the context directories; these views project registered feature dependencies rather than extract entities and relations from prose.",
+          "evaluatedAt": "2026-10-22T03:02:42.289Z",
+          "worker": "f4709812-cafc-4773-8d88-7b4c260d084b",
+          "reason": "replaced by 5a709969-6b7c-451d-8a7b-edaa381d33b5"
+        }
+      ],
+      "withdrawn": {
+        "worker": "5a709969-6b7c-451d-8a7b-edaa381d33b5",
+        "state": "not-applicable",
+        "at": "2026-11-10T00:25:39.623884+00:00",
+        "reason": "reviewer (sonnet): Several anchors don't say what is claimed: useDependencyGraph.ts:68 is a comment about the shared topology projection, not about an authored registry; CrossModuleOverlapPanel/index.tsx:37 is an apiFetch of '/api/feature-matrix/overlap' and shows no Jaccard or no-merge behaviour; and two cited direct"
+      }
     },
     "5c9bf6d6-7a49-4bde-81ae-ae14686c060d/measurement-honesty": {
       "context": "hud-damage-and-navigation",
