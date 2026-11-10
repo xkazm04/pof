@@ -302,3 +302,5 @@ KIND is one of:
 
 - [2026-11-09] [gtai] DELIVERED: Codex batch 2 landed in rtai 812a0b06 (3/3 tools, 4/8 GUT test files after Claude review); exe rebuilt for the owner's check.
 - [2026-11-09] [gtai] DECISION: Route Node tools and pure-rule GUT tests to Codex; generators with tuned tables and every landing decision stay with Claude, because mutation score rewards pinned constants.
+- [2026-11-10] [gtai] DELIVERED: night n11 (hero, combat, tools) merged on top of a parallel n12 merge and pushed as rtai main 0a084006, with gates green on the combined tree; PoF games/gtai/night runner gained stop, schedule, a freeze reserve and sibling health (master 1e8f15784, unpushed).
+- [2026-11-10] [gtai] DECISION: owner calls n11: x1.5 player size stays visual only, a tools lane stays for next nights, and a test review may overrule a mutation reject only on unreachable code, with the reason written down.
