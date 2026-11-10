@@ -16094,14 +16094,20 @@
       "subject": "image-to-3d-input-gating",
       "bundle": "game-production",
       "state": "unknown",
-      "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T02:17:50.852Z",
-      "techniques": [],
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:13:30.974Z",
+      "techniques": [
+        {
+          "technique": "single-subject-plain-background",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/core-engine/sub_character/_shared/data.ts:27 The listed character sources are template, Mixamo, Quixel and Blender, so no image reconstruction happens here."
+        }
+      ],
       "withdrawn": {
-        "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
+        "worker": "98049f13-6130-4a27-a81b-6c154573c9db",
         "state": "not-applicable",
-        "at": "2026-11-08T02:19:34.560920+00:00",
-        "reason": "reviewer (sonnet): The anchor (data.ts:27) is a Wizard subtab subtitle that mentions Mixamo and Quixel; it does not show that image-to-3D is absent. The cited SOURCES list is in wizard/wizard-data.ts, which is not one of this context's files."
+        "at": "2026-11-10T00:13:56.944744+00:00",
+        "reason": "reviewer (sonnet): The anchor (data.ts:27) is only the Wizard subtitle 'template, Mixamo, Quixel…'. It does not name Blender, which the evidence claims, and it does not show that no image-to-3D path exists. The 'zero hits' claim rests on a search I could not confirm, and the search terms leave out the repo's own vocab"
       }
     },
     "f825075c-6d22-4629-8aa6-ad7dbca2b500/catalog-pipeline-authoring": {
@@ -23276,27 +23282,24 @@
       "context": "visual-gen-quality-and-animation",
       "subject": "image-to-3d-input-gating",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T02:17:50.852Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:13:30.974Z",
+      "worker": "98049f13-6130-4a27-a81b-6c154573c9db",
       "techniques": [
         {
           "technique": "score-defect-verdict-protocol",
           "verdict": "deviation",
-          "evidence": "scripts/visual-gen/pof_vlm_critique.py:57 Defects are an open field and the verdict is prose. The parse loop at line 71 only prints the keys it found and still reports done."
+          "evidence": "scripts/visual-gen/pof_vlm_critique.py:63 DEFECTS is open 'comma-separated visual problems' and VERDICT is a sentence. Both are named as failures by the technique. The rest is right: the integer scale is stated, and a missing score is an error (POF_VLM_ERROR), not a pass."
         },
         {
           "technique": "single-subject-plain-background",
           "verdict": "not-applicable",
-          "evidence": "scripts/visual-gen/pof_vlm_batch.py:44 These scripts judge generated outputs (mesh renders, 2D assets) as shippable assets, not reconstruction inputs. Isolation preparation does not happen here."
+          "evidence": "scripts/visual-gen/pof_vlm_batch.py:44 These scripts judge generated outputs (mesh renders, 2D assets) as shippable assets, not reconstruction inputs. Isolation preparation does not happen here.",
+          "carriedFrom": "2026-11-08"
         }
       ],
-      "withdrawn": {
-        "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
-        "state": "deviation",
-        "at": "2026-11-08T02:19:34.640497+00:00",
-        "reason": "reviewer (sonnet): The critic scripts (pof_vlm_critique.py, pof_vlm_batch.py) judge generated outputs, not reconstruction inputs. The verdict's own technique anchor says so. A deviation against input-gating for open defect text and a prose verdict is therefore about a different concern than the subject."
-      }
+      "registryProposal": "The technique could say outright whether an output critic that defines a protocol an input gate inherits falls under the closed-vocabulary rule. The subject defers output acceptance to a sibling subject, but here the shared contract came from the output side."
     },
     "86ff083f-88a4-4882-a56b-f655ddb2a98c/mesh-finishing-for-engine-readiness": {
       "context": "blender-3d-integration",
@@ -25687,6 +25690,42 @@
           "technique": "progression-curve-shape-tests",
           "verdict": "deviation",
           "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:26 calculateXpForLevel is Math.floor(base * Math.pow(level, exponent)), which is polynomial, against the canon's geometric claim. No step-ratio CV check runs over the 1..MAX_LEVEL range."
+        }
+      ]
+    },
+    "aece38a1-8119-45ea-a968-6441cb31ee70/image-to-3d-input-gating": {
+      "context": "asset-forge",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:13:30.974Z",
+      "worker": "98049f13-6130-4a27-a81b-6c154573c9db",
+      "techniques": [
+        {
+          "technique": "multi-view-master-reference",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:20 There is no multiview mode or view slots on the client, though route.ts accepts viewDataUrls for multiview-to-3d. A character never gets the front+back views the technique calls highest-return."
+        },
+        {
+          "technique": "text-is-never-geometry",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/Image2DPanel.tsx:112 A 2D image made from a free prompt is staged as-is for reconstruction, with no text-free brief or stripping step. The 'no lettering' clause exists only in contact-sheet.ts (icon sets), and the server input-gate criteria do not list lettering either."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:294 The forge carries the gate's note (ran/unavailable/skipped) onto the job (useForgeStore inputGateNote) and shows it verbatim, so an ungated submit never reads as a pass. This verdict covers the in-context reporting only; see notes for the middle-band leak in the route."
+        },
+        {
+          "technique": "reference-role-tagging",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:106 ForgeReference holds a single image, and single-reference reconstructions are the technique's own stated exception."
+        },
+        {
+          "technique": "scene-partition-is-the-gated-unit",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-forge/referenceHandoff.ts:87 The forge has no scene-decompose mode. One reference means one asset."
         }
       ]
     }

@@ -4883,7 +4883,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:20 The forge can only submit text or one reference image, never a view set, even though the generate route accepts multiview-to-3d with front/left/back/right views; and its 2D→3D handoff passes the exact 2D image on with no brief that strips lettering. So a character is always reconstructed from the master view alone, and symbolic content gets to the paid stage unchecked.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         },
         {
           "subject": "render-submission-economy",
@@ -28846,7 +28850,11 @@
           "revision": 5,
           "changedAt": "2026-10-05",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "scripts/visual-gen/pof_vlm_critique.py:63 This script defines the SCORE/DEFECTS/VERDICT reply contract that the repo's image-to-3D input gate says it shares (input-gate.ts:25), but it asks for free-text defects and a prose verdict sentence where the standard requires a closed defect vocabulary and a verdict token from a closed set, so defect classes cannot be counted across a batch.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:665c480cdb829d21",
+          "evaluatedRevision": 5
         }
       ],
       "governance": "governed"
