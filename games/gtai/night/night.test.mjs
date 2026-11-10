@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { holdForReserve, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopNow, stopRequested, writeControl } from './control.mjs';
 import { apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, nextAt, parseConfig, phaseAt, planTimes, queueEmpty, requestsFor, resetAt, ts } from './lib.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -246,4 +247,95 @@ test('requestsFor counts only requests naming this lane', () => {
   assert.equal(requestsFor('assets', j), 1);
   assert.equal(requestsFor('world', j), 1);
   assert.equal(requestsFor('perf', j), 0);
+});
+
+test('control: stop is the whole night or named lanes; a damaged file stops nothing', () => {
+  assert.equal(stopRequested({ stop: true }, 'x'), true);
+  assert.equal(stopRequested({ stopLanes: ['a'] }, 'a'), true);
+  assert.equal(stopRequested({ stopLanes: ['a'] }, 'b'), false);
+  assert.equal(stopRequested({}, 'b'), false);
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'c.json'), '{broken');
+  assert.deepEqual(readControl(path.join(dir, 'c.json')), {});
+  assert.deepEqual(readControl(path.join(dir, 'absent.json')), {});
+});
+
+test('control: stop --now is only for a real stop', () => {
+  assert.equal(stopNow({ stop: true, now: true }), true);
+  assert.equal(stopNow({ stopLanes: ['a'], now: true }), true);
+  assert.equal(stopNow({ now: true }), false);
+  assert.equal(stopNow({ stop: true }), false);
+});
+
+test('control: writeControl merges and stamps', () => {
+  const f = path.join(tmp(), 'c.json');
+  writeControl(f, { until: '09:00' });
+  const r = writeControl(f, { freeze: '07:00' });
+  assert.equal(r.until, '09:00');
+  assert.equal(r.freeze, '07:00');
+  assert.ok(r.at);
+});
+
+test('schedule: a change moves only what it names; a bad value leaves the night alone', () => {
+  const now = at(20, 0);
+  const t = { until: at(9, 0, 3), freeze: at(7, 30, 3), report: at(8, 15, 3) };
+  assert.deepEqual(scheduleWith(t, {}, now), { t, changed: false });
+  const moved = scheduleWith(t, { freeze: '06:00', reportAt: '06:30' }, now);
+  assert.equal(moved.changed, true);
+  assert.equal(moved.t.freeze.getHours(), 6);
+  assert.equal(moved.t.until.getTime(), t.until.getTime());
+  assert.match(scheduleWith(t, { freeze: '08:30', reportAt: '08:00' }, now).error, /freeze <= report-at/);
+  assert.match(scheduleWith(t, { freeze: '10:00' }, now).error, /already passed/, 'a freeze behind the clock would skip BUILD');
+  assert.match(scheduleWith(t, { until: 'soon' }, now).error, /bad time/);
+});
+
+test('reserve: only a BUILD session near the freeze on the last open path is held', () => {
+  const base = { phase: 'BUILD', nowMs: at(6, 0, 3).getTime(), freezeMs: at(7, 0, 3).getTime(), reserveMin: 90, open: ['subscription'] };
+  assert.equal(holdForReserve(base), true);
+  assert.equal(holdForReserve({ ...base, open: ['api', 'subscription'] }), false, 'more than one path is open');
+  assert.equal(holdForReserve({ ...base, phase: 'STABILIZE' }), false, 'the freeze session may use it');
+  assert.equal(holdForReserve({ ...base, phase: 'REPORT' }), false, 'the report session may use it');
+  assert.equal(holdForReserve({ ...base, nowMs: at(5, 0, 3).getTime() }), false, 'too early to hold');
+  assert.equal(holdForReserve({ ...base, reserveMin: 0 }), false, 'reserve off');
+});
+
+const healthy = { nowMs: 100 * 60_000, runnerStartMs: 10 * 60_000, finished: false, reported: false, iterations: 3, lastActivityMs: 95 * 60_000, quietMin: 75 };
+
+test('health: a quiet loop and a launch that never started are the loud ones', () => {
+  assert.equal(laneHealth(healthy).state, 'ok');
+  assert.equal(laneHealth({ ...healthy, lastActivityMs: 0 }).state, 'silent');
+  assert.match(laneHealth({ ...healthy, lastActivityMs: 0 }).why, /nothing written for 100 min/);
+  assert.equal(laneHealth({ ...healthy, runnerStartMs: null }).state, 'never-started');
+  assert.equal(laneHealth({ ...healthy, iterations: 0 }).state, 'never-started', 'no iteration 90 min after the launch');
+  assert.equal(laneHealth({ ...healthy, iterations: 0, runnerStartMs: 95 * 60_000 }).state, 'starting');
+});
+
+test('health: a finished or reported lane is not silent, however quiet', () => {
+  assert.equal(laneHealth({ ...healthy, lastActivityMs: 0, finished: true }).state, 'finished');
+  assert.equal(laneHealth({ ...healthy, lastActivityMs: 0, reported: true }).state, 'reported');
+});
+
+test('runnerStart reads the newest run and whether it ended; lastActivity survives a missing dir', () => {
+  const log = '[2026-11-09T19:00:00.000Z] run: billing api\n[2026-11-09T20:00:00.000Z] run: all lanes finished - next\n[2026-11-09T21:00:00.000Z] run: billing sub\n[2026-11-09T21:01:00.000Z] tools: iteration 1\n';
+  const r = runnerStart(log);
+  assert.equal(r.runnerStartMs, Date.parse('2026-11-09T21:00:00.000Z'));
+  assert.equal(r.finished, false);
+  assert.equal(runnerStart('nothing here').runnerStartMs, null);
+  assert.equal(runnerStart('[2026-11-09T19:00:00.000Z] run: billing x\n[2026-11-09T19:00:01.000Z] run: all lanes finished').finished, true);
+  assert.equal(lastActivity(path.join(tmp(), 'none')), 0);
+});
+
+test('retireControl moves an earlier night\'s control file aside and reports what it held', async () => {
+  const { retireControl, readControl } = await import('./control.mjs');
+  const fsm = await import('node:fs');
+  const osm = await import('node:os');
+  const pathm = await import('node:path');
+  const dir = fsm.mkdtempSync(pathm.join(osm.tmpdir(), 'night-ctl-'));
+  const file = pathm.join(dir, 'control.json');
+  assert.equal(retireControl(file), null);
+  fsm.writeFileSync(file, JSON.stringify({ stop: true }));
+  assert.deepEqual(retireControl(file), { stop: true });
+  assert.equal(fsm.existsSync(file), false);
+  assert.deepEqual(readControl(pathm.join(dir, 'control.prev.json')), { stop: true });
+  fsm.rmSync(dir, { recursive: true, force: true });
 });
