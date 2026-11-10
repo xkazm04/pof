@@ -21,7 +21,7 @@
  */
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import { CONTROL_FILE, TIMES_FILE, holdForReserve, lanesToKill, readTimes, writeTimes, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopRequested, writeControl } from './control.mjs';
+import { CONTROL_FILE, TIMES_FILE, holdForReserve, retireControl, lanesToKill, readTimes, writeTimes, laneHealth, lastActivity, readControl, runnerStart, scheduleWith, stopRequested, writeControl } from './control.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG_TEMPLATE, API_REPROBE_MIN, apiKeyFromText, backupKeyFromText, backupKey2FromText, buildPrompt, checkPaths, classifyFailure, createBilling, isApi, parseConfig, phaseAt, planTimes, queueEmpty, requestsFor, ts } from './lib.mjs';
@@ -219,6 +219,8 @@ async function runAll() {
   let t;
   try { t = planTimes({ until: String(opts.until ?? '09:00'), freeze: String(opts.freeze ?? '07:30'), reportAt: String(opts['report-at'] ?? '08:15') }); }
   catch (e) { die(e.message); }
+  const stale = retireControl(CONTROL_PATH);
+  if (stale) log(`run: an earlier night's control.json (${JSON.stringify(stale)}) moved to control.prev.json`);
   writeTimes(TIMES_PATH, t);
   const iterMin = Number(opts['iter-min'] ?? 90);
   if (!(iterMin >= 5)) die('--iter-min must be a number >= 5');

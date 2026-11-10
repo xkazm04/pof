@@ -22,6 +22,17 @@ export function writeControl(file, patch) {
   return next;
 }
 
+/**
+ * A new `run` must not obey a control file left by an earlier night in the same root (a stale `stop: true` would end
+ * it at the first step). It is moved aside to control.prev.json; returns what it held, or null when there was none.
+ */
+export function retireControl(file) {
+  if (!fs.existsSync(file)) return null;
+  const held = readControl(file);
+  fs.renameSync(file, file.replace(/\.json$/, '.prev.json'));
+  return held;
+}
+
 export const TIMES_FILE = 'times.json';
 
 /** The running night publishes its times so `schedule` checks a change against them, not a made-up night. */

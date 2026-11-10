@@ -324,3 +324,18 @@ test('runnerStart reads the newest run and whether it ended; lastActivity surviv
   assert.equal(runnerStart('[2026-11-09T19:00:00.000Z] run: billing x\n[2026-11-09T19:00:01.000Z] run: all lanes finished').finished, true);
   assert.equal(lastActivity(path.join(tmp(), 'none')), 0);
 });
+
+test('retireControl moves an earlier night\'s control file aside and reports what it held', async () => {
+  const { retireControl, readControl } = await import('./control.mjs');
+  const fsm = await import('node:fs');
+  const osm = await import('node:os');
+  const pathm = await import('node:path');
+  const dir = fsm.mkdtempSync(pathm.join(osm.tmpdir(), 'night-ctl-'));
+  const file = pathm.join(dir, 'control.json');
+  assert.equal(retireControl(file), null);
+  fsm.writeFileSync(file, JSON.stringify({ stop: true }));
+  assert.deepEqual(retireControl(file), { stop: true });
+  assert.equal(fsm.existsSync(file), false);
+  assert.deepEqual(readControl(pathm.join(dir, 'control.prev.json')), { stop: true });
+  fsm.rmSync(dir, { recursive: true, force: true });
+});
