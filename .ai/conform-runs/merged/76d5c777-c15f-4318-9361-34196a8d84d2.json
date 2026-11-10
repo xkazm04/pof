@@ -1,0 +1,115 @@
+{
+ "schema": "conform-run/1",
+ "worker": "76d5c777-c15f-4318-9361-34196a8d84d2",
+ "subject": "game-economy-tuning",
+ "evaluatedAt": "2026-11-10T00:07:22.387719+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-pipelines",
+   "subject": "game-economy-tuning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/pipelines/currencies.ts:207 The currency balance step derives ~58,400 G/hr faucet vs ~42,900 G/hr sink in its own comment (outside \u00b115%), then ships hand-typed 'relative units' 110/105 that the \u00b115% checker passes, which is exactly the placeholder-manufactures-a-pass failure the band technique forbids.",
+   "techniques": [
+    {
+     "technique": "faucet-sink-balance-band",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/currencies.ts:207 Comment at line 202 derives a 42,900 G/hr sink ('scaled down to match typical active playstyle'); the checker receives 110/105 instead of the derived rates, so the band is never pointed at the stated economy."
+    },
+    {
+     "technique": "source-drain-converter-trader-vocabulary",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/currencies.ts:115 Orb drains carry no throughput estimate and are declared self-balancing (line 221) rather than recorded as unestimated; item sell-back (an item\u2192gold converter) is filed as a plain faucet."
+    },
+    {
+     "technique": "progression-curve-shape-tests",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/progression-curves.ts:180 The family is stated as geometric (line 22), but acceptance only checks the exponent coefficient against \u00b110%. It never evaluates the curve over its range or computes the step-ratio CV, so a polynomial formula carrying exponent 1.08 would pass."
+    },
+    {
+     "technique": "cost-curve-object-audit",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/pipelines/items.ts:697 Each item's price is derived against a power score in one central unit and audited by priceRatioWithinBand (items.ts:733) against the 0.8\u20131.2\u00d7 curve."
+    }
+   ]
+  },
+  {
+   "context": "progression-rewards-internals",
+   "subject": "game-economy-tuning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:103 The XP table generator exports a polynomial curve (base \u00d7 L^exp, via calculateXpForLevel) into a UE DataTable and loader, while the project canon (progression-curves pipeline) states a geometric family (base \u00d7 1.08^L). There is no family diagnostic and no recorded exception, so a shape error ships as tuning.",
+   "techniques": [
+    {
+     "technique": "progression-curve-shape-tests",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:26 calculateXpForLevel is Math.floor(base * Math.pow(level, exponent)), which is polynomial, against the canon's geometric claim. No step-ratio CV check runs over the 1..MAX_LEVEL range."
+    }
+   ]
+  },
+  {
+   "context": "loot-metrics-designer",
+   "subject": "game-economy-tuning",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_loot/metrics/lootMetricsView.ts:101 The loot dashboard's read model prints the affix pool size, a tier count and a pity dry streak. It never computes the five decay measurables (top-rarity share >15%, single modifier >20% of pool, drop rate vs baseline 3x/5x, power gain <2%/level, upgrades <0.5/level), so the flattening of a loot economy cannot show up.",
+   "techniques": [
+    {
+     "technique": "rarity-inflation-and-affix-saturation-alerts",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/metrics/lootMetricsView.ts:101 The affix glyph reports pool size, not the share of the most common modifier. The weights glyph (line 97) reports a tier count with shares only in a tooltip, with no 15% threshold. The drought reading is a p95 legendary dry streak in kills, not upgrades per level."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-10T00:07:22.387719+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "game-economy-tuning"
+   ],
+   "techniques": [
+    "cost-curve-object-audit",
+    "faucet-sink-balance-band",
+    "progression-curve-shape-tests",
+    "source-drain-converter-trader-vocabulary"
+   ],
+   "deviations": 1,
+   "context": "catalog-pipelines",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:07:22.387719+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "game-economy-tuning"
+   ],
+   "techniques": [
+    "progression-curve-shape-tests"
+   ],
+   "deviations": 1,
+   "context": "progression-rewards-internals",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-10T00:07:22.387719+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "game-economy-tuning"
+   ],
+   "techniques": [
+    "rarity-inflation-and-affix-saturation-alerts"
+   ],
+   "deviations": 1,
+   "context": "loot-metrics-designer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

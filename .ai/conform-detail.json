@@ -23061,22 +23061,17 @@
       "context": "loot-metrics-designer",
       "subject": "game-economy-tuning",
       "bundle": "game-production",
-      "state": "unknown",
-      "evaluatedAt": "2026-11-08",
-      "evaluatedTs": "2026-11-08T01:23:09.000Z",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:07:22.387Z",
+      "worker": "76d5c777-c15f-4318-9361-34196a8d84d2",
       "techniques": [
         {
           "technique": "rarity-inflation-and-affix-saturation-alerts",
           "verdict": "deviation",
-          "evidence": "src/components/modules/core-engine/sub_loot/ai-designer/DistributionsPanel.tsx:42 The procedural drop simulator is present (runDropSimulation), so the precondition holds, but none of the five measurables is a thresholded alert. Partial credit: lootMetricsView.ts:66-67 shows the p95 legendary dry streak with and without pity (bad-luck protection), and readings carry a live/tuned/fixture basis."
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/lootMetricsView.ts:101 The affix glyph reports pool size, not the share of the most common modifier. The weights glyph (line 97) reports a tier count with shares only in a tooltip, with no 15% threshold. The drought reading is a p95 legendary dry streak in kills, not upgrades per level."
         }
-      ],
-      "withdrawn": {
-        "worker": "de8a4144-74cf-4a15-b772-d52780e21129",
-        "state": "deviation",
-        "at": "2026-11-08T01:24:51.514087+00:00",
-        "reason": "reviewer (sonnet): The claim that the context computes no top-rarity share, rarity-inflation ratio, power-plateau or upgrade-per-level alert is not backed by the cited line. DistributionsPanel.tsx:42 only prints the frequency percentage. The grep I ran over sub_loot and lib/loot-designer found no such measurables, whi"
-      }
+      ]
     },
     "206da1bc-b199-4a21-801f-98213e5c14d5/game-economy-tuning": {
       "context": "character-movement-playground",
@@ -25645,6 +25640,53 @@
           "technique": "monte-carlo-scenario-presets",
           "verdict": "deviation",
           "evidence": "src/components/modules/core-engine/sub_bestiary/encounters/KillDeathStats.tsx:47 Rates and counts are shown with no stated sample basis (no preset, no iteration or run count, no cast version), so 'a rate without its sample size' is rendered throughout."
+        }
+      ]
+    },
+    "f825075c-6d22-4629-8aa6-ad7dbca2b500/game-economy-tuning": {
+      "context": "catalog-pipelines",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:07:22.387Z",
+      "worker": "76d5c777-c15f-4318-9361-34196a8d84d2",
+      "techniques": [
+        {
+          "technique": "faucet-sink-balance-band",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/currencies.ts:207 Comment at line 202 derives a 42,900 G/hr sink ('scaled down to match typical active playstyle'); the checker receives 110/105 instead of the derived rates, so the band is never pointed at the stated economy."
+        },
+        {
+          "technique": "source-drain-converter-trader-vocabulary",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/currencies.ts:115 Orb drains carry no throughput estimate and are declared self-balancing (line 221) rather than recorded as unestimated; item sell-back (an item→gold converter) is filed as a plain faucet."
+        },
+        {
+          "technique": "progression-curve-shape-tests",
+          "verdict": "deviation",
+          "evidence": "src/lib/catalog/pipelines/progression-curves.ts:180 The family is stated as geometric (line 22), but acceptance only checks the exponent coefficient against ±10%. It never evaluates the curve over its range or computes the step-ratio CV, so a polynomial formula carrying exponent 1.08 would pass."
+        },
+        {
+          "technique": "cost-curve-object-audit",
+          "verdict": "conformant",
+          "evidence": "src/lib/catalog/pipelines/items.ts:697 Each item's price is derived against a power score in one central unit and audited by priceRatioWithinBand (items.ts:733) against the 0.8–1.2× curve."
+        }
+      ]
+    },
+    "c7fb4de3-6779-431b-9860-639fef9f98ea/game-economy-tuning": {
+      "context": "progression-rewards-internals",
+      "subject": "game-economy-tuning",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evaluatedAt": "2026-11-10",
+      "evaluatedTs": "2026-11-10T00:07:22.387Z",
+      "worker": "76d5c777-c15f-4318-9361-34196a8d84d2",
+      "techniques": [
+        {
+          "technique": "progression-curve-shape-tests",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:26 calculateXpForLevel is Math.floor(base * Math.pow(level, exponent)), which is polynomial, against the canon's geometric claim. No step-ratio CV check runs over the 1..MAX_LEVEL range."
         }
       ]
     }

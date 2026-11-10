@@ -9668,7 +9668,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/lib/catalog/pipelines/currencies.ts:207 The currency balance step derives ~58,400 G/hr faucet vs ~42,900 G/hr sink in its own comment (outside ±15%), then ships hand-typed 'relative units' 110/105 that the ±15% checker passes, which is exactly the placeholder-manufactures-a-pass failure the band technique forbids.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "wiring-contract-doctrine",
@@ -19219,7 +19223,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_loot/metrics/lootMetricsView.ts:101 The loot dashboard's read model prints the affix pool size, a tier count and a pity dry streak. It never computes the five decay measurables (top-rarity share >15%, single modifier >20% of pool, drop rate vs baseline 3x/5x, power gain <2%/level, upgrades <0.5/level), so the flattening of a loot economy cannot show up.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "combat-pacing-and-dramatic-arc",
@@ -22453,7 +22461,11 @@
           "revision": 4,
           "changedAt": "2026-09-02",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_progression/_internals/XpTableGenerator/helpers.ts:103 The XP table generator exports a polynomial curve (base × L^exp, via calculateXpForLevel) into a UE DataTable and loader, while the project canon (progression-curves pipeline) states a geometric family (base × 1.08^L). There is no family diagnostic and no recorded exception, so a shape error ships as tuning.",
+          "evaluatedAt": "2026-11-10",
+          "evaluatedAgainst": "sha256-b2:03db0d347da7bedf",
+          "evaluatedRevision": 4
         },
         {
           "subject": "module-design",
