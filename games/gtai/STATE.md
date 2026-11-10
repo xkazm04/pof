@@ -1219,5 +1219,5 @@ Read all three REPORTs and opened the evidence (cursor sweep, ghost melee 8-dir,
 - **Spark:** `rtai-builder-tooling-lane` shipped, retro written, improvement-log line in `.claude/spark/config.md`.
 - **CI follow-up:** CI on 0a084006 was red in `tool-tests`, on Linux only.
   - Two causes: film's freshness slack of 2 ms against Linux's coarse file clock, and POSIX quoting in a morning-merge test.
-  - Fixed in rtai 18209d4e2 and verified 441/441 on Linux (WSL) and 442/442 on Windows. Pushed; CI run 42824239058 was still running at write time.
+  - Fixed in rtai 18209d4e2 and verified 441/441 on Linux (WSL) and 442/442 on Windows. Pushed; CI run 42824239058 is green (native, export, lint, evidence, tests).
   - Tonight's tools items: lint caps a check's output at 40 lines, which hid the failing test's name; and a timing-sensitive tool test flaked once in the pre-commit hook.
