@@ -23,6 +23,7 @@ describe('Localization expansion bar', () => {
     const left = parseFloat(marker.style.left);
     expect(left).toBeGreaterThan(0);
     expect(left).toBeLessThan(100);
-    expect(left).toBeCloseTo(expansionBar(100).fillPct, 5);
+    // jsdom 31 rounds serialised style lengths to four decimals, so compare at that precision.
+    expect(left).toBeCloseTo(expansionBar(100).fillPct, 3);
   });
 });

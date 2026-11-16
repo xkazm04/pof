@@ -80,7 +80,8 @@ describe('StatusCell — the two off-ladder states read as non-progress', () => 
     const { container } = render(<StatusCell cell={cell('unwired')} />);
     const el = root(container);
     expect(el.getAttribute('data-readiness')).toBe('R0');
-    expect(el.style.background).toBe('transparent');
+    // jsdom 31 serialises the `background: transparent` shorthand as its initial value, 'none'.
+    expect(['transparent', 'none']).toContain(el.style.background);
     expect(el.style.border).toContain('dashed');
   });
 });
