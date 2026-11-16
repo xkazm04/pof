@@ -3,31 +3,28 @@
 import { ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_40, OPACITY_60 } from '@/lib/chart-colors';
 import { TEXT_SCALE } from '@/lib/typography-scale';
+import { LOOT_PIPELINE_STAGES, type MetricReading } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
 
 /**
- * The loot pipeline, in order. These names used to live in a trailing comment
- * next to a hardcoded `5`, so the diagram and the copy could silently drift —
- * the count and the tooltip now both derive from this one list.
+ * The loot pipeline, in order. The stage list lives in the view (LOOT_PIPELINE_STAGES):
+ * the dots are drawn from it and the printed count + flow tooltip are the view's
+ * reading, so the diagram and the copy cannot drift.
  */
-const PIPELINE_STAGES = ['LootTable', 'WeightedRandom', 'WorldItem', 'Pickup', 'Inventory'] as const;
-const STAGE_COUNT = PIPELINE_STAGES.length;
-const FLOW_LABEL = PIPELINE_STAGES.join(' → ');
+const STAGE_COUNT = LOOT_PIPELINE_STAGES.length;
 
 const DOT_R = 2;
 const SPACING = 8;
 const SVG_W = (STAGE_COUNT - 1) * SPACING + DOT_R * 2;
 const SVG_H = DOT_R * 2 + 2;
 
-export function PipelineMetric() {
+export function PipelineMetric({ reading }: { reading: MetricReading }) {
   return (
-    // `title` sits on the wrapper, not on each dot: the dots are 4px targets, so
-    // per-dot tooltips were effectively unhittable — and they only said "Stage 3",
-    // which names nothing. One hover anywhere on the metric now reveals the actual
-    // flow. This mirrors FeatureCard's own `title` affordance on truncated copy;
-    // it's supplementary detail, so the visible "5 stages" stays the text AT reads.
-    <div className="flex items-center gap-1.5" title={FLOW_LABEL}>
+    // No `title` here: the per-dot tooltips were unhittable 4px targets, and a wrapper
+    // title would shadow the Feature Map's fixture tooltip (metrics/index.tsx), which
+    // already shows the reading's detail - the stage flow - plus "sample data".
+    <div className="flex items-center gap-1.5">
       <svg width={SVG_W} height={SVG_H} viewBox={`0 0 ${SVG_W} ${SVG_H}`} aria-hidden="true">
-        {PIPELINE_STAGES.map((stage, i) => {
+        {LOOT_PIPELINE_STAGES.map((stage, i) => {
           const cx = DOT_R + i * SPACING;
           const cy = SVG_H / 2;
           return (
@@ -50,11 +47,9 @@ export function PipelineMetric() {
           );
         })}
       </svg>
-      {/* Count + unit = dense metadata, so TEXT_SCALE.meta (the 10px token) rather
-          than a raw `text-[10px]` literal off the scale. */}
       <div className={`${TEXT_SCALE.meta} font-mono leading-tight`}>
-        <span className="font-bold" style={{ color: ACCENT }}>{STAGE_COUNT}</span>
-        <span style={{ color: withOpacity(ACCENT, OPACITY_60) }}> stages</span>
+        <span className="font-bold" style={{ color: ACCENT }}>{reading.value ?? '?'}</span>
+        <span style={{ color: withOpacity(ACCENT, OPACITY_60) }}> {reading.unit}</span>
       </div>
     </div>
   );

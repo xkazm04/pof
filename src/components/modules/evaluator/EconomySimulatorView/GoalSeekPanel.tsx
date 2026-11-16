@@ -35,8 +35,11 @@ export function GoalSeekPanel({ config }: { config: SimulationConfig }) {
   const selectedFlow = useMemo(() => flows.find((f) => f.id === effectiveFlowId), [flows, effectiveFlowId]);
 
   const run = useCallback(async () => {
-    const targetNum = Number(target);
+    // Number('') is 0, so a cleared field would silently solve for a 0 target.
+    const targetNum = target.trim() === '' ? NaN : Number(target);
     if (!Number.isFinite(targetNum)) { setErr('Enter a numeric target'); return; }
+    // A Gini coefficient lies in [0, 1]: refuse before the server bisects for an impossible target.
+    if (output === 'gini' && (targetNum < 0 || targetNum > 1)) { setErr('Gini targets are 0-1'); return; }
     if (!effectiveFlowId) { setErr('No flow selected'); return; }
     setBusy(true); setErr(null);
     try {
@@ -53,7 +56,12 @@ export function GoalSeekPanel({ config }: { config: SimulationConfig }) {
     }
   }, [config, effectiveFlowId, output, target]);
 
-  const fmtMetric = (v: number) => (output === 'gini' ? v.toFixed(3) : `${v >= 0 ? '+' : ''}${formatGold(v)}/hr`);
+  // The result card describes the solve that PRODUCED it (applied), not the
+  // controls (entered): re-picking the output or lever after a solve must not
+  // relabel a Gini as gold/hr or credit the solved amount to another flow.
+  const shownOutput: GoalOutput = result && result.output in OUTPUT_LABELS ? (result.output as GoalOutput) : output;
+  const solvedFlow = result ? flows.find((f) => f.id === result.flowId) : selectedFlow;
+  const fmtMetric = (v: number) => (shownOutput === 'gini' ? v.toFixed(3) : `${v >= 0 ? '+' : ''}${formatGold(v)}/hr`);
 
   return (
     <SurfaceCard className="p-4">
@@ -66,6 +74,7 @@ export function GoalSeekPanel({ config }: { config: SimulationConfig }) {
             <button
               key={o}
               onClick={() => setOutput(o)}
+              aria-pressed={output === o}
               className={`px-2.5 py-1 rounded-lg text-2xs font-medium border transition-colors ${
                 output === o ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 'border-border text-text-muted bg-surface hover:text-text'
               }`}
@@ -141,12 +150,12 @@ export function GoalSeekPanel({ config }: { config: SimulationConfig }) {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg bg-surface-deep px-3 py-2">
-              <div className="text-2xs text-text-muted">Solve {selectedFlow?.name ?? 'flow'} baseAmount →</div>
+              <div className="text-2xs text-text-muted">Solve {solvedFlow?.name ?? 'flow'} baseAmount →</div>
               <div className="text-sm font-mono text-amber-400">{formatGold(Math.round(result.solvedValue))}</div>
               <div className="text-2xs text-text-muted/60">was {formatGold(result.baseValue)}</div>
             </div>
             <div className="rounded-lg bg-surface-deep px-3 py-2">
-              <div className="text-2xs text-text-muted">Achieved {OUTPUT_LABELS[output]}</div>
+              <div className="text-2xs text-text-muted">Achieved {OUTPUT_LABELS[shownOutput]}</div>
               <div className="text-sm font-mono text-text">{fmtMetric(result.achievedMetric)}</div>
               <div className="text-2xs text-text-muted/60">target {fmtMetric(result.target)}</div>
             </div>

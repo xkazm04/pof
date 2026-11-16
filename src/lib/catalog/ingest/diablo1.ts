@@ -6,7 +6,7 @@
  * redistributed by a reverse-engineering project under its own terms. Checking 734 rows of
  * another studio's balance data into this repo would make the licence question
  * unanswerable forever, so the tables are read from a path the operator supplies and every
- * produced entity carries `provenance.licenceNote` (see `EntityProvenance`).
+ * produced entity carries `provenance.licenceNote` (see `IngestProvenance`).
  *
  * Why this game: it is the genre PoF targets (an ARPG with a bestiary, an affix-driven loot
  * system, a spellbook and a level curve), its data was externalized into TSV by DevilutionX
@@ -19,7 +19,7 @@
  */
 import { dropped, gap, mapped, type FieldMap } from './fieldMap';
 import { dropValues, split, unwrap } from './decode';
-import type { EntityProvenance } from '../types';
+import type { IngestProvenance } from '../types';
 
 /**
  * The upstream commit the data root must be at. Named here, in the repo, because /diablo W108
@@ -46,7 +46,7 @@ export const DIABLO1_SOURCE = {
     + 'released title without clearing rights.',
 } as const;
 
-export function provenanceFor(sourceFile: string, sourceRow: string): EntityProvenance {
+export function provenanceFor(sourceFile: string, sourceRow: string): IngestProvenance {
   return {
     kind: 'ingest',
     sourceGame: DIABLO1_SOURCE.sourceGame,

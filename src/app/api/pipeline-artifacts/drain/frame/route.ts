@@ -36,6 +36,13 @@ export async function GET(req: NextRequest) {
   if (target !== jail && !target.startsWith(jail + path.sep)) {
     return apiError('Frame is outside the capture directory', 403);
   }
+  // The temp dir is shared with every program on the machine, so "under tmpdir" proves
+  // nothing about the writer. Serve only the capture's own names: a `pof_l4_*.png` frame or a
+  // file inside a `pof_l4_*` scenario dir — the first path segment under the jail.
+  const firstSegment = path.relative(jail, target).split(path.sep)[0] ?? '';
+  if (!firstSegment.toLowerCase().startsWith('pof_l4_')) {
+    return apiError('Frame was not written by an L4 capture (pof_l4_*)', 403);
+  }
 
   const buf = fs.readFileSync(target);
   return new Response(new Uint8Array(buf), {

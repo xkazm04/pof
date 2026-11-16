@@ -8,14 +8,15 @@ import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /**
  * UPPER_SNAKE identity token for platform ids + localization keys:
  * 'First Blood' → 'FIRST_BLOOD' (so the seeded exemplar keeps ACH_FIRST_BLOOD).
  * Every step derives its ACH_ prefix from this ONE helper so siblings agree.
  */
 const snake = (n: string) =>
-  n.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  n.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '') || entitySlug(n).toUpperCase();
 
 /**
  * Achievements pipeline (catalogId: 'achievements').

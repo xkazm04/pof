@@ -43,6 +43,7 @@ import {
 import { drawLabelSweep } from '@/components/story/orrery/render/drawLabels';
 import { impactValueOf } from '@/components/story/orrery/render/drawRim';
 import { fitText } from '@/components/story/orrery/render/labels';
+import { lensStatus, markDot, markSector, newStatusMarks, strokeStatusMarks } from '@/components/story/orrery/render/statusMark';
 
 const BAR_BASE = ORRERY_GEOMETRY.barBase;
 const RIM = ORRERY_GEOMETRY.rimExtent;
@@ -98,6 +99,7 @@ export function drawFlatDial(ctx: CanvasRenderingContext2D, input: SceneInput): 
 
   // Items. A container is an outline, not a fill, so a beat drawn inside it stays legible.
   const labels: LabelSlot[] = [];
+  const marks = newStatusMarks();
   for (const [i, item] of flat.items) {
     const n = model.R[i];
     const place = flatPlace(flat, item);
@@ -123,8 +125,10 @@ export function drawFlatDial(ctx: CanvasRenderingContext2D, input: SceneInput): 
           ? palette.measuredZero
           : palette.bg;
     ctx.stroke();
+    markSector(marks, lensStatus(model, n, lens), place.a0, place.a1, place.r0, place.r1, cam.scale);
     labels.push({ ...place, i, fill: css });
   }
+  strokeStatusMarks(ctx, marks, palette, cam.scale);
 
   // Hub, with the endings docked in it.
   circlePath(ctx, 0, 0, flat.Rh);
@@ -133,6 +137,7 @@ export function drawFlatDial(ctx: CanvasRenderingContext2D, input: SceneInput): 
   ctx.lineWidth = 1.6 / cam.scale;
   ctx.strokeStyle = palette.hubRim;
   ctx.stroke();
+  const dockMarks = newStatusMarks();
   for (const i of model.dockEnds) {
     const pos = model.dockPos.get(i);
     if (!pos) continue;
@@ -144,7 +149,9 @@ export function drawFlatDial(ctx: CanvasRenderingContext2D, input: SceneInput): 
     ctx.lineWidth = 1.3 / cam.scale;
     ctx.strokeStyle = n.flags && show.flags ? palette.flag : palette.endingRing;
     ctx.stroke();
+    markDot(dockMarks, lensStatus(model, n, lens), d.x, d.y, d.r, cam.scale);
   }
+  strokeStatusMarks(ctx, dockMarks, palette, cam.scale);
 
   stats.units = drawFlatRim(ctx, input);
 

@@ -1,14 +1,31 @@
 import type { ItemData, ItemAffix } from './data';
 
-/* ── Rarity order for sort comparison ────────────────────────────────────── */
+/* ── The rarity ladder, stated once ──────────────────────────────────────── */
 
-export const RARITY_ORDER: Record<string, number> = {
-  Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4,
-};
+export interface RarityTier { name: string; magnitude: number; affixCount: number }
+
+/** Lowest to highest: the single source for sort order, stat magnitude and affix count. */
+export const RARITY_TIERS: readonly RarityTier[] = [
+  { name: 'Common', magnitude: 1, affixCount: 0 },
+  { name: 'Uncommon', magnitude: 1.5, affixCount: 0 },
+  { name: 'Rare', magnitude: 2.2, affixCount: 1 },
+  { name: 'Epic', magnitude: 3.2, affixCount: 2 },
+  { name: 'Legendary', magnitude: 4.5, affixCount: 3 },
+];
+
+/** Rarity name -> rank, derived from {@link RARITY_TIERS} (sort comparison). */
+export const RARITY_ORDER: Record<string, number> = Object.fromEntries(
+  RARITY_TIERS.map((t, i) => [t.name, i]),
+);
+
+/** The tier for a rarity name; an unknown rarity is an error, never silently Common-scaled. */
+export function rarityTier(name: string): RarityTier {
+  const tier = RARITY_TIERS.find((t) => t.name === name);
+  if (!tier) throw new Error(`Unknown item rarity "${name}" (known: ${RARITY_TIERS.map((t) => t.name).join(', ')})`);
+  return tier;
+}
 
 /* ── Internal stat builders ──────────────────────────────────────────────── */
-
-const RM: Record<string, number> = { Common: 1, Uncommon: 1.5, Rare: 2.2, Epic: 3.2, Legendary: 4.5 };
 
 const AFFIX_POOL: ItemAffix[] = [
   { name: 'of Power', stat: '+15% Atk', category: 'offensive' },
@@ -26,7 +43,7 @@ const AFFIX_POOL: ItemAffix[] = [
 ];
 
 function pickAffixes(i: number, r: string): ItemAffix[] | undefined {
-  const base = { Common: 0, Uncommon: 0, Rare: 1, Epic: 2, Legendary: 3 }[r] ?? 0;
+  const base = rarityTier(r).affixCount;
   const n = r === 'Uncommon' && i % 3 === 0 ? 1 : base;
   if (n === 0) return undefined;
   const res: ItemAffix[] = [];
@@ -46,21 +63,21 @@ const WSp: Record<string, number> = { Sword: 1.3, Bow: 1.5, Staff: 1.8, Dagger: 
 const ArB: Record<string, number> = { Chestplate: 30, Helm: 15, Greaves: 20, Boots: 12, Shield: 25, Gauntlets: 10 };
 
 function weaponStats(sub: string, r: string): Stats {
-  const m = RM[r] ?? 1, d = Math.round((WB[sub] ?? 12) * m), sp = WSp[sub] ?? 1.4;
+  const m = rarityTier(r).magnitude, d = Math.round((WB[sub] ?? 12) * m), sp = WSp[sub] ?? 1.4;
   return [
     { label: 'Damage', value: `${Math.round(d * .8)}-${Math.round(d * 1.2)}`, numericValue: d, maxValue: 60 },
     { label: 'Speed', value: `${sp.toFixed(1)}s`, numericValue: Math.round(100 - sp * 40), maxValue: 100 },
   ];
 }
 function armorStats(sub: string, r: string): Stats {
-  const m = RM[r] ?? 1, a = Math.round((ArB[sub] ?? 15) * m);
+  const m = rarityTier(r).magnitude, a = Math.round((ArB[sub] ?? 15) * m);
   return [
     { label: 'Armor', value: `${a}`, numericValue: a, maxValue: 150 },
     { label: 'Weight', value: a > 50 ? 'Heavy' : a > 25 ? 'Medium' : 'Light', numericValue: Math.min(Math.round(a * 1.5), 100), maxValue: 100 },
   ];
 }
 function accessoryStats(sub: string, r: string): Stats {
-  const m = RM[r] ?? 1, p = Math.round(5 * m), s = Math.round(3 * m);
+  const m = rarityTier(r).magnitude, p = Math.round(5 * m), s = Math.round(3 * m);
   const L: Record<string, [string, string, string, string]> = {
     Ring: ['Crit %', '%', 'Mana', ''], Amulet: ['Max HP', '', 'Regen', '/s'],
     Belt: ['Carry', '', 'Stamina', ''], Cape: ['Evasion', '%', 'Stealth', '%'],
@@ -73,7 +90,7 @@ function accessoryStats(sub: string, r: string): Stats {
   ];
 }
 function consumableStats(r: string): Stats {
-  const m = RM[r] ?? 1, v = Math.round(50 * m);
+  const m = rarityTier(r).magnitude, v = Math.round(50 * m);
   return [
     { label: 'Effect', value: `${v}`, numericValue: v, maxValue: 250 },
     { label: 'Uses', value: `${Math.max(1, Math.round(4 / m))}`, numericValue: Math.round(100 / m), maxValue: 100 },
@@ -83,7 +100,7 @@ function questStats(): Stats {
   return [{ label: 'Quest', value: 'Unique', numericValue: 100, maxValue: 100 }];
 }
 function materialStats(r: string): Stats {
-  const m = RM[r] ?? 1, q = Math.round(20 * m);
+  const m = rarityTier(r).magnitude, q = Math.round(20 * m);
   return [
     { label: 'Quality', value: `${q}`, numericValue: q, maxValue: 100 },
     { label: 'Stack', value: `${Math.max(1, Math.round(99 / m))}`, numericValue: Math.round(100 / m), maxValue: 100 },

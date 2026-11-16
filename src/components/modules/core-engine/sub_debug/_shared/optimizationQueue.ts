@@ -18,6 +18,10 @@ export type LatestTriage =
       triage: TriageResult | null;
       /** Previous real capture (base) -> this one (head); null when there is none. */
       comparison: SessionComparisonResponse | null;
+      /** Set when a previous real capture exists but the compare request failed. */
+      compareError?: string;
+      /** Set when the session has no stored triage and running it failed: the route's reason. */
+      triageError?: string;
     };
 
 export type QueueRowState = 'open' | 'dispatched' | 'still-present' | 'resolved' | 'synthetic';

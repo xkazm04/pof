@@ -41,6 +41,17 @@ function clamp(v: number, lo: number, hi: number): number {
 
 export function PlaytimeBudgetTargeter({ mode, world, baseline, applied, dispatch }: Props) {
   const [targetSec, setTargetSec] = useState<number>(DEFAULT_TARGET_SEC);
+  /* The minutes field while it is being typed in. Bounds apply when the entry
+     ends: clamping each keystroke turned "120" into 30, then 302, then 720. */
+  const [draftMinutes, setDraftMinutes] = useState<string | null>(null);
+  const commitDraft = () => {
+    if (draftMinutes === null) return;
+    const minutes = Number(draftMinutes);
+    if (draftMinutes.trim() !== '' && Number.isFinite(minutes)) {
+      setTargetSec(clamp(minutes * 60, TARGET_MIN_SEC, TARGET_MAX_SEC));
+    }
+    setDraftMinutes(null);
+  };
 
   const overall = useMemo(() => computeCumulativePath(world, mode).totalSec, [world, mode]);
   const baselineTotal = useMemo(() => computeCumulativePath(baseline, mode).totalSec, [baseline, mode]);
@@ -73,8 +84,15 @@ export function PlaytimeBudgetTargeter({ mode, world, baseline, applied, dispatc
             min={Math.ceil(TARGET_MIN_SEC / 60)}
             max={Math.floor(TARGET_MAX_SEC / 60)}
             step={5}
-            value={Math.round(targetSec / 60)}
-            onChange={(e) => setTargetSec(clamp(Number(e.target.value) * 60, TARGET_MIN_SEC, TARGET_MAX_SEC))}
+            value={draftMinutes ?? Math.round(targetSec / 60)}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setDraftMinutes(raw);
+              const sec = Number(raw) * 60;
+              if (raw.trim() !== '' && sec >= TARGET_MIN_SEC && sec <= TARGET_MAX_SEC) setTargetSec(sec);
+            }}
+            onBlur={commitDraft}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
             className="w-20 px-2 py-1 text-sm font-mono bg-surface-deep border rounded focus-ring"
             style={{ borderColor: withOpacity(ACCENT_ORANGE, OPACITY_40), color: ACCENT_ORANGE }}
             aria-label="Target minutes"

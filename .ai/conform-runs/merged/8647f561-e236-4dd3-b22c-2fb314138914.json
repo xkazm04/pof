@@ -1,0 +1,163 @@
+{
+  "schema": "conform-run/1",
+  "worker": "8647f561-e236-4dd3-b22c-2fb314138914",
+  "subject": "quality-gates",
+  "evaluatedAt": "2026-11-08T22:28:40.860912+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "status-health-dashboard",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/lib/status/statusModel.ts:600 deriveCell grades a step verified as soon as any one artifact passes at L3/L4 and never reads counts.fail on that branch, so [e1 pass L3, e2 fail L3] projects to R4 PROVEN, counts toward readyPct, not blockedCount, and is excluded from the below-R3 work queue, while a checker fail only reaches 'attention' when nothing passed or deferred (line 612).",
+      "techniques": [
+        {
+          "technique": "severity-by-construction",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:600 The header promises 'attention — a produced artifact fails', but on the pass branches a checker fail cannot change the grade; it survives only in the tooltip counts and the entity ledger. statusModel.test.ts pins deferred-over-fail but no test covers pass+fail."
+        },
+        {
+          "technique": "renameable-detector-keys",
+          "verdict": "deviation",
+          "evidence": "src/lib/status/statusModel.ts:289 Population exclusion keyed on a name the writer chooses: an entity named test-headless-* leaves the map, fails included, and nothing counts or displays the exclusion. The step-label key is handled separately (orphanedFacts plus factDrift.test.ts)."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/cellLedger.ts:88 A failed verdict read is its own state, never 'none', and verdictNote says rungs are checker-only."
+        },
+        {
+          "technique": "gate-liveness",
+          "verdict": "conformant",
+          "evidence": "src/components/status/PipelinesView.tsx:12 Could-not-read is held out of the lanes as an UNKNOWN row rather than painted R0."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:686 Lane percentages, cells and the entity ledger all derive from buildSwimlane and readinessOf; WorkQueuePanel's cap of 8 is display-only with Show all."
+        },
+        {
+          "technique": "advancement-evidence-fields",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:41 Closed non-satisfied vocabulary; never-produced is 'unwired' rather than a blank, and each grade carries a stated because."
+        },
+        {
+          "technique": "vacuous-by-evaluation",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:196 A checker re-reading its author's literals is classed hand-authored and kept out of the trusted bucket."
+        },
+        {
+          "technique": "instrument-answers-only-its-own-question",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:6 An L0-L2 pass is read only as a shape-level answer, not as evidence of quality."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "conformant",
+          "evidence": "src/lib/status/statusModel.ts:387 A step's own engine claim can only lower its grade; the audited fact outranks any upward claim."
+        }
+      ]
+    },
+    {
+      "context": "inventory-economy-simulator",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/ExportPanel.tsx:115 Every non-ok runPython result, including one with no failure kind (which run-python.ts defines as the editor having run the call and Python raising), is recorded as 'deferred', so a Wire or Verify step that ran and failed reads as a gate not yet run and this panel has no path that records a fail.",
+      "techniques": [
+        {
+          "technique": "gate-liveness",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/ExportPanel.tsx:115 Ran-and-failed is folded into could-not-run even though RunPythonErr.kind separates the two; the failure text survives only as the reason. No test pins this branch."
+        },
+        {
+          "technique": "self-reported-gate-inputs",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/ExportPanel.tsx:79 The panel writes its own unconditional pass, and deriveLifecycle then unlocks Wire from that record. The server stamps these rows UNGRADED:, but the lifecycle reads status alone."
+        },
+        {
+          "technique": "unmeasurable-criteria",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/AlertCard.tsx:11 Economy verdicts carry unmeasured as a fourth state, and the tab counts it separately from findings."
+        },
+        {
+          "technique": "policy-projection",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/core-engine/sub_inventory/economy-simulator/AffixAlertsTabs.tsx:40 The affix list takes the verdict's own threshold instead of restating it."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "quality-gates",
+      "context": "blender-mcp-bridge",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "gdd-compliance",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "quality-gates",
+      "context": "ue5-state-sync",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor WriteOutcomeChip.tsx:13 is incidental and shows the opposite: the chip's own outcome vocabulary includes 'refused' and 'conflict', and syncEvents.ts logs a rejected write as 'refused'. The panel directory also contains 'accept-ue5' (a substring hit for 'acceptance'), so the claim that the"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T22:28:40.860912+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "advancement-evidence-fields",
+        "gate-liveness",
+        "instrument-answers-only-its-own-question",
+        "policy-projection",
+        "renameable-detector-keys",
+        "self-reported-gate-inputs",
+        "severity-by-construction",
+        "unmeasurable-criteria",
+        "vacuous-by-evaluation"
+      ],
+      "deviations": 1,
+      "context": "status-health-dashboard",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T22:28:40.860912+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [
+        "gate-liveness",
+        "policy-projection",
+        "self-reported-gate-inputs",
+        "unmeasurable-criteria"
+      ],
+      "deviations": 1,
+      "context": "inventory-economy-simulator",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T22:28:40.860912+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "quality-gates"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ue5-state-sync",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

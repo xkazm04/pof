@@ -1,0 +1,203 @@
+{
+ "schema": "conform-run/1",
+ "worker": "135bd731-6c23-469b-8e27-4fe68d43161a",
+ "subject": "hitl-approval",
+ "evaluatedAt": "2026-11-08T04:16:55.193055+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/AiDiagnosisCard.tsx:82 The one action that could change anything, the 'One-Click Fix Prompt', is only copied to the clipboard for a person to run. Every other control is a read, a filter, a replay transport or a crash-log import into PoF's own history, so the machine has nothing to pause at a consequence boundary; a search of these files and the whole evaluator directory found no consent, unattended, hitl or decidedBy construct.",
+   "techniques": [
+    {
+     "technique": "human-performed-steps",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/AiDiagnosisCard.tsx:162 The fix prompt is a lead the operator chooses to run elsewhere. It is not a step the machine is barred from doing, so no runbook obligation arises here."
+    }
+   ],
+   "absenceTerms": [
+    "consent",
+    "unattended",
+    "hitl",
+    "decidedBy"
+   ]
+  },
+  {
+   "context": "code-quality-evaluation",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:138 The Asset Oracle remedy sends an autonomous Claude CLI run that edits the UE project. Its one declared boundary, 'no delete, deletes stay a human decision', exists only inside plan.prompt, and the CLI is spawned with --dangerously-skip-permissions, so the boundary holds only while the model behaves: a request, not a gate in the substrate.",
+   "techniques": [
+    {
+     "technique": "gate-state-machines",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:138 The irreversible delete is excluded only by prompt text. No recorded state or executor check refuses a delete during the run."
+    },
+    {
+     "technique": "fixed-policy-amendable-plan",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/DeepEvalResults/useDeepEvalResults.ts:305 The Deep Eval fix sends a free-form prompt as the executor's whole terms. No fixed policy (allowed paths, forbidden ops) lives outside the context the executor can reinterpret."
+    },
+    {
+     "technique": "oracle-before-gate",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/AssetCodeOracleView/useAssetCodeOracle.ts:116 A remedy's result is judged against a deterministic rescan of the targeted violation keys, so the human reads 'N of M still reported' rather than the CLI's own claim."
+    },
+    {
+     "technique": "unattended-mode",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/AssetCodeOracleView/RemedyBar.tsx:10 The one-click grant is scoped by construction to non-delete violation types. Orphan and unreferenced remedies, which could only be deletes, get no button. This is a scope rule at the dispatch site, separate from the prompt-only in-run limit."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/JudgeVerdictsView/verdictRollup.ts:16 Verdicts superseded by a later rubric, or stale because the content changed, stay visible with their provenance and are counted separately. They are not rewritten, and they no longer count toward current quality."
+    },
+    {
+     "technique": "truncated-verdict-space",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/JudgeVerdictsView/index.tsx:22 The verdict browser only displays judge verdicts. A judge pass here is a recoverable quality signal, not admission to a trust boundary."
+    }
+   ],
+   "registryProposal": "The subject has no technique for the common 'operator clicks Fix, an agent edits the repo' shape. There the click is the consent, but the in-run limits (no delete, scope) can only be enforced by the CLI's permission layer. It would help to state outright that a human-initiated dispatch still needs its forbidden operations enforced below the prompt."
+  },
+  {
+   "context": "animation-state-machine-viewer",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/animations/shared/state-machine-shared.ts:12 The context renders a read-only diagram from an AnimBP scan. Its one write is a user-clicked, deterministic NLA-strip script sent to the local Blender MCP, so no machine judgement or autonomous action needs a human gate. A search of AnimationStateMachine/ and animations/shared/ found no approv, consent, unattended or hitl construct.",
+   "techniques": [],
+   "absenceTerms": [
+    "approv",
+    "consent",
+    "unattended",
+    "hitl"
+   ]
+  },
+  {
+   "context": "catalog-core-infrastructure",
+   "subject": "hitl-approval",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/recipe.ts:392 The state-graph recipe hands the AnimBP authoring back to the operator as one prose sentence inside a model prompt. There is no runbook, no record that the person did it, no verification, and no retirement condition for what is a tooling-gap workaround. That is the 'instructions are not a handoff' failure the human-performed-steps technique names.",
+   "techniques": [
+    {
+     "technique": "human-performed-steps",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/recipe.ts:392 A prose handoff with no executable runbook, no hand-back record, and no 'delete when Python can author AnimBP graphs' condition. recipe.ts:395 admits verify cannot see the human's part."
+    },
+    {
+     "technique": "fail-loud-classification-default",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/headless.ts:115 A checker that cannot grade a payload never falls to an optimistic pass. It resolves to pending and carries the reason as a marker."
+    },
+    {
+     "technique": "gate-state-machines",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/artifactCommit.ts:9 Work authority is separate from transition authority. The writer (lab, MCP-submitting agent, script) cannot set its own verdict; the server checker derives it."
+    },
+    {
+     "technique": "oracle-before-gate",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/lifecycle.ts:46 The 'verified' claim names its comparator, a drained L3/L4 runtime gate, and refuses shape-only evidence."
+    },
+    {
+     "technique": "resume-after-decision",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/stepPrompt.ts:20 What the operator previewed under 'view prompt' is what gets sent. The server rebuilds the same string from the same inputs, so what runs is what was shown."
+    },
+    {
+     "technique": "decision-records",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/produceDirection.ts:16 Each produced artifact records verbatim what the operator asked for and the prompt sent (the 'what was shown' field). Content-hash binding keeps provenance tied to the content version (artifactCommit.ts:146)."
+    },
+    {
+     "technique": "truncated-verdict-space",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/catalog/lifecycle.ts:32 Machine checkers may admit a pass and 'verified', but that is a recoverable pipeline status, not admission across a trust boundary, so truncating the machine's yes is not required."
+    }
+   ],
+   "registryProposal": "Most of this context is machine-only acceptance (an oracle gate with no human in it). The subject's techniques assume a human verdict, so their gate-sees-target and oracle principles carry over only by analogy. A short note on 'automated gates under the same discipline' would make such pairs judgeable without stretching."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "hitl-approval",
+   "context": "procedural-level-generation",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T04:16:55.193055+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "human-performed-steps"
+   ],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:16:55.193055+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "fixed-policy-amendable-plan",
+    "gate-state-machines",
+    "oracle-before-gate",
+    "truncated-verdict-space",
+    "unattended-mode"
+   ],
+   "deviations": 1,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:16:55.193055+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "animation-state-machine-viewer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:16:55.193055+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "hitl-approval"
+   ],
+   "techniques": [
+    "decision-records",
+    "fail-loud-classification-default",
+    "gate-state-machines",
+    "human-performed-steps",
+    "oracle-before-gate",
+    "resume-after-decision",
+    "truncated-verdict-space"
+   ],
+   "deviations": 1,
+   "context": "catalog-core-infrastructure",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

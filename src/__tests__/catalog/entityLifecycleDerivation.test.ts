@@ -24,6 +24,8 @@ import { deriveEntityLifecycle, resolveTransition } from '@/lib/catalog/lifecycl
 import { deriveCatalogLifecycle, syncEntityLifecycle } from '@/lib/catalog/headless';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { seededEntities } from '@/lib/catalog/seed';
+import { bespokeStepLabels } from '@/lib/catalog/acceptance/stepGradability';
+import { catalogManifest } from '@/components/layout-lab/catalogManifest';
 import { listLifecycle } from '@/lib/catalog-db';
 import { upsertArtifact, listArtifacts, deleteArtifact } from '@/lib/pipeline-artifacts-db';
 import { GET as lifecycleGET, POST as lifecyclePOST } from '@/app/api/catalog/lifecycle/route';
@@ -99,7 +101,7 @@ function fixture() {
   for (const c of ['items', 'spellbook', 'bestiary']) {
     const pipeline = getCatalogPipeline(c);
     const entity = seededEntities(c)[0];
-    if (pipeline?.steps.length && entity) return { catalogId: c, steps: pipeline.steps.map((s) => s.label), entityId: entity.id };
+    if (pipeline?.steps.length && entity && bespokeStepLabels(c).length === 0) return { catalogId: c, steps: pipeline.steps.map((s) => s.label), entityId: entity.id };
   }
   throw new Error('fixture gap: no registered catalog with a seeded entity');
 }
@@ -189,5 +191,39 @@ describe('GET/POST /api/catalog/lifecycle', () => {
     expect(bad.status).toBe(400);
     const noCat = await lifecycleGET(new NextRequest('http://localhost/api/catalog/lifecycle'));
     expect(noCat.status).toBe(400);
+  });
+});
+
+describe('server lifecycle scope = the lab step list (registry + bespoke labels)', () => {
+  const entityId = `test-lifecycle-scope-${process.pid}`;
+  const pipeline = getCatalogPipeline('items')!;
+
+  it('counts bespoke Items rows against a denominator that includes them (produced never exceeds total)', () => {
+    const bespoke = bespokeStepLabels('items');
+    expect(bespoke.length).toBeGreaterThan(0);
+    const all = [...pipeline.steps.map((s) => s.label), ...bespoke];
+    for (const step of all) {
+      upsertArtifact({ catalogId: 'items', entityId, step, data: { s: 1 }, ueAssets: [], status: 'pass', tier: 'L0' });
+    }
+    try {
+      const v = deriveCatalogLifecycle('items', entityId)[0];
+      expect(v.evidence.produced).toBeLessThanOrEqual(v.evidence.totalSteps);
+      expect(v.evidence.totalSteps).toBe(catalogManifest('items').steps.length);
+      expect(v.evidence.produced).toBe(v.evidence.totalSteps);
+    } finally {
+      for (const step of all) deleteArtifact('items', entityId, step);
+    }
+  });
+
+  it('a lone bespoke row on a never-produced entity stays scaffolded, not generated', () => {
+    const lone = bespokeStepLabels('items')[0];
+    upsertArtifact({ catalogId: 'items', entityId, step: lone, data: { s: 1 }, ueAssets: [], status: 'pass', tier: 'L0' });
+    try {
+      const v = deriveCatalogLifecycle('items', entityId)[0];
+      expect(v.lifecycle).toBe('scaffolded');
+      expect(v.evidence.produced).toBe(1);
+    } finally {
+      deleteArtifact('items', entityId, lone);
+    }
   });
 });

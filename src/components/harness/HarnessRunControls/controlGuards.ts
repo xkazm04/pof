@@ -42,6 +42,12 @@ export function startGuard(status: HarnessRunStatus, form: StartFormValues): Con
       reason: 'A run is already in flight on this server — the API refuses a second start with 409. Pause it first.',
     };
   }
+  if (status === 'paused') {
+    return {
+      enabled: false,
+      reason: 'A paused run is still live on this server — a start would orphan it (the API answers 409 unless replacePaused is passed). Resume it instead.',
+    };
+  }
   const missing = listMissing(form);
   if (missing.length > 0) {
     return {

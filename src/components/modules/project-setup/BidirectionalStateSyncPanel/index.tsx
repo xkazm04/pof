@@ -32,6 +32,7 @@ export function BidirectionalStateSyncPanel() {
       {/* ── Header ───────────────────────────────────────────────── */}
       <PanelHeader
         isLive={s.isLive}
+        wsStatus={s.wsStatus}
         conflicts={s.conflicts}
         outboundCount={s.outboundCount}
         inboundCount={s.inboundCount}
@@ -41,7 +42,7 @@ export function BidirectionalStateSyncPanel() {
       />
 
       {/* ── Offline state ─────────────────────────────────────────── */}
-      {!s.isLive && <OfflineState autoSync={s.autoSync} />}
+      {!s.isLive && <OfflineState autoSync={s.autoSync} wsStatus={s.wsStatus} wsPort={s.wsPort} />}
 
       {/* ── Live sections ─────────────────────────────────────────── */}
       {s.isLive && (
@@ -62,7 +63,7 @@ export function BidirectionalStateSyncPanel() {
             setShowPropertyWrite={s.setShowPropertyWrite}
             watchEntries={s.watchEntries}
             handleWatchedPush={s.handleWatchedPush}
-            writes={s.writes}
+            writes={s.rowWrites}
             propEdit={s.propEdit}
             setPropEdit={s.setPropEdit}
             handleDirectPropertyPush={s.handleDirectPropertyPush}

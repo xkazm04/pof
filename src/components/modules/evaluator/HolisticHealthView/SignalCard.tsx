@@ -1,8 +1,9 @@
 import { ArrowUpRight } from 'lucide-react';
+import type { EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
 import type { SubsystemSignal } from '@/types/project-health';
 import { SIGNAL_COLORS } from './constants';
 
-export function SignalCard({ signal: s, onNavigateTab }: { signal: SubsystemSignal; onNavigateTab?: (tab: string) => void }) {
+export function SignalCard({ signal: s, onNavigateTab }: { signal: SubsystemSignal; onNavigateTab?: (tab: EvaluatorTabId) => void }) {
   const drillable = Boolean(s.linkTab && onNavigateTab);
 
   const body = (

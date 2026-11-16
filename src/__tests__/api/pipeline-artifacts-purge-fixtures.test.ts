@@ -44,7 +44,7 @@ describe('GET/POST /api/pipeline-artifacts/purge-fixtures', () => {
     expect(json.data.purged).toBe(false);
     expect(json.data.entities.map((e: { entityId: string }) => e.entityId)).toEqual(['test-headless-mcp']);
     // 1 artifact + 1 verdict + 1 history row; no revision (produced once).
-    expect(json.data.entities[0].counts).toEqual({ artifacts: 1, revisions: 0, verdicts: 1, verdictHistory: 1 });
+    expect(json.data.entities[0].counts).toEqual({ artifacts: 1, revisions: 0, verdicts: 1, verdictHistory: 1, craftVerdicts: 0, craftHistory: 0 });
     expect(json.data.totalRows).toBe(3);
     expect(listArtifacts(CAT, 'test-headless-mcp')).toHaveLength(1);
   });
@@ -70,7 +70,7 @@ describe('GET/POST /api/pipeline-artifacts/purge-fixtures', () => {
     expect(json.success).toBe(true);
     expect(json.data.purged).toBe(true);
     expect(json.data.totalRows).toBe(3);
-    expect(json.data.total).toEqual({ artifacts: 1, revisions: 0, verdicts: 1, verdictHistory: 1 });
+    expect(json.data.total).toEqual({ artifacts: 1, revisions: 0, verdicts: 1, verdictHistory: 1, craftVerdicts: 0, craftHistory: 0 });
 
     expect(listArtifacts(CAT, 'test-headless-mcp')).toHaveLength(0);
     // The real entity is untouched.

@@ -3,7 +3,6 @@
 import {
   HeartPulse, RefreshCw, XCircle, Zap, Shield,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
@@ -13,7 +12,7 @@ import { scoreStatusToken } from '@/lib/status-token';
 import { describeVelocitySample } from '@/lib/roadmap/completion-ledger';
 import type { HolisticHealthViewProps } from './types';
 import { useHolisticHealthView } from './useHolisticHealthView';
-import { SubTab } from './SubTab';
+import { SubTab, HEALTH_PANEL_ID, healthTabId } from './SubTab';
 import { PerformanceStatCard } from './PerformanceStatCard';
 import { OverviewTab } from './OverviewTab';
 import { VelocityTab } from './VelocityTab';
@@ -35,6 +34,7 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
     subsystemSignals,
     isLoading,
     error,
+    crashError,
     perfTriage,
     perfSession,
     viewTab,
@@ -78,6 +78,17 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
         </SurfaceCard>
       )}
 
+      {/* A failed crash read is not "no crashes": without this the Crash Analyzer
+          signal reads "Ready" over crash data that exists but did not load. */}
+      {crashError && (
+        <SurfaceCard level={2}>
+          <div className="flex items-center gap-2 text-amber-400" role="status" data-testid="holistic-crash-read-error">
+            <XCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span className="text-xs">Crash data couldn&apos;t be loaded — {crashError}. The crash signal below does not reflect it.</span>
+          </div>
+        </SurfaceCard>
+      )}
+
       {/* Loading */}
       {isLoading && !summary && (
         <SurfaceCard>
@@ -111,7 +122,13 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
       {/* ── Top Stats Row ────────────────────────────────────────── */}
       {summary && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {/* A failed recompute keeps the previous summary on screen; say the numbers are behind. */}
+          {error && (
+            <p className="text-xs text-amber-400" role="status" data-testid="holistic-stale-summary">
+              Showing the last successful compute &mdash; these numbers predate the failed refresh.
+            </p>
+          )}
+          <div className={`grid grid-cols-2 lg:grid-cols-5 gap-3${error ? ' opacity-70' : ''}`}>
             {/* Overall completion */}
             <SurfaceCard level={2}>
               <div className="flex items-center gap-3">
@@ -190,9 +207,14 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
                 <div>
                   <p className="text-2xs text-text-muted">Module Health</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    {healthyModules > 0 && <Badge variant="success">{healthyModules}</Badge>}
-                    {warningModules > 0 && <Badge variant="warning">{warningModules}</Badge>}
-                    {criticalModules > 0 && <Badge variant="error">{criticalModules}</Badge>}
+                    {healthyModules > 0 && <Badge variant="success">{healthyModules} healthy</Badge>}
+                    {warningModules > 0 && <Badge variant="warning">{warningModules} warning</Badge>}
+                    {criticalModules > 0 && <Badge variant="error">{criticalModules} critical</Badge>}
+                    {healthyModules + warningModules + criticalModules === 0 && (
+                      <span className="text-2xs text-text-muted" data-testid="module-health-none">
+                        none scored ({moduleHealth.filter((m) => m.status === 'not-started').length} not started)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -200,13 +222,14 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
           </div>
 
           {/* Sub-tabs */}
-          <div className="flex items-center gap-1 border-b border-border">
-            <SubTab label="Overview" active={viewTab === 'overview'} onClick={() => setViewTab('overview')} />
-            <SubTab label="Velocity" active={viewTab === 'velocity'} onClick={() => setViewTab('velocity')} />
-            <SubTab label="Quality" active={viewTab === 'quality'} onClick={() => setViewTab('quality')} />
-            <SubTab label="Milestones" active={viewTab === 'milestones'} onClick={() => setViewTab('milestones')} />
+          <div role="tablist" aria-label="Project health views" className="flex items-center gap-1 border-b border-border">
+            <SubTab tab="overview" label="Overview" active={viewTab === 'overview'} onClick={() => setViewTab('overview')} />
+            <SubTab tab="velocity" label="Velocity" active={viewTab === 'velocity'} onClick={() => setViewTab('velocity')} />
+            <SubTab tab="quality" label="Quality" active={viewTab === 'quality'} onClick={() => setViewTab('quality')} />
+            <SubTab tab="milestones" label="Milestones" active={viewTab === 'milestones'} onClick={() => setViewTab('milestones')} />
           </div>
 
+          <div role="tabpanel" id={HEALTH_PANEL_ID} aria-labelledby={healthTabId(viewTab)} className="space-y-6">
           {/* ── Overview Tab ───────────────────────────────────────── */}
           {viewTab === 'overview' && (
             <OverviewTab
@@ -231,6 +254,7 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
           {viewTab === 'milestones' && (
             <MilestonesTab burnChart={burnChart} summary={summary} milestones={milestones} />
           )}
+          </div>
         </>
       )}
     </div>

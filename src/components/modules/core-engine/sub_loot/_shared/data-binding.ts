@@ -2,6 +2,7 @@ import {
   ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
   STATUS_SUCCESS, STATUS_ERROR, STATUS_MUTED, STATUS_INFO, STATUS_WARNING,
 } from '@/lib/chart-colors';
+import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 
 /* -- 7.8 Beacon config data ----------------------------------------------- */
 
@@ -14,11 +15,11 @@ export interface BeaconConfig {
 }
 
 export const BEACON_CONFIGS: BeaconConfig[] = [
-  { rarity: 'Common', color: STATUS_MUTED, beamHeight: 20, pulseSpeed: 0, pickupRadius: 50 },
-  { rarity: 'Uncommon', color: ACCENT_EMERALD, beamHeight: 40, pulseSpeed: 1, pickupRadius: 80 },
-  { rarity: 'Rare', color: STATUS_INFO, beamHeight: 60, pulseSpeed: 2, pickupRadius: 120 },
-  { rarity: 'Epic', color: ACCENT_VIOLET, beamHeight: 80, pulseSpeed: 3, pickupRadius: 160 },
-  { rarity: 'Legendary', color: STATUS_WARNING, beamHeight: 100, pulseSpeed: 4, pickupRadius: 200 },
+  { rarity: 'Common', color: RARITY_COLOR_MAP.Common, beamHeight: 20, pulseSpeed: 0, pickupRadius: 50 },
+  { rarity: 'Uncommon', color: RARITY_COLOR_MAP.Uncommon, beamHeight: 40, pulseSpeed: 1, pickupRadius: 80 },
+  { rarity: 'Rare', color: RARITY_COLOR_MAP.Rare, beamHeight: 60, pulseSpeed: 2, pickupRadius: 120 },
+  { rarity: 'Epic', color: RARITY_COLOR_MAP.Epic, beamHeight: 80, pulseSpeed: 3, pickupRadius: 160 },
+  { rarity: 'Legendary', color: RARITY_COLOR_MAP.Legendary, beamHeight: 100, pulseSpeed: 4, pickupRadius: 200 },
 ];
 
 /* -- 7.9 Economy Impact data ---------------------------------------------- */

@@ -369,6 +369,37 @@ export function generateLOCTEXTReplacements(
 /*  String Table Generator                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * One row per (key, source): the same literal found in several files shares a
+ * locKey (it hashes the text), and a String Table / UE CSV import needs unique
+ * keys. Same key with a different source is a real collision: kept as its own
+ * row and flagged in the comment so the operator sees it.
+ */
+function dedupeRows(items: LocalizableString[]): { key: string; sourceString: string; comment: string }[] {
+  const rows: { key: string; sourceString: string; comment: string }[] = [];
+  const byKeySource = new Map<string, { row: (typeof rows)[number]; extra: number }>();
+  const sourcesByKey = new Map<string, Set<string>>();
+  for (const s of items) {
+    const sources = sourcesByKey.get(s.locKey) ?? new Set<string>();
+    sources.add(s.sourceText);
+    sourcesByKey.set(s.locKey, sources);
+    const id = JSON.stringify([s.locKey, s.sourceText]);
+    const hit = byKeySource.get(id);
+    if (hit) {
+      hit.extra++;
+      hit.row.comment = `${hit.row.comment.replace(/ \(\+\d+ more\)$/, '')} (+${hit.extra} more)`;
+      continue;
+    }
+    const row = { key: s.locKey, sourceString: s.sourceText, comment: `[${s.context}] from ${s.sourceModule}` };
+    byKeySource.set(id, { row, extra: 0 });
+    rows.push(row);
+  }
+  for (const row of rows) {
+    if ((sourcesByKey.get(row.key)?.size ?? 0) > 1) row.comment += ' [KEY COLLISION: same key, different source]';
+  }
+  return rows;
+}
+
 export function generateStringTable(
   strings: LocalizableString[],
   rootNamespace: string,
@@ -383,10 +414,6 @@ export function generateStringTable(
   return Object.entries(byNamespace).map(([ns, items]) => ({
     tableId: `ST_${rootNamespace}_${ns}`,
     namespace: `${rootNamespace}.${ns}`,
-    rows: items.map((s) => ({
-      key: s.locKey,
-      sourceString: s.sourceText,
-      comment: `[${s.context}] from ${s.sourceModule}`,
-    })),
+    rows: dedupeRows(items),
   }));
 }

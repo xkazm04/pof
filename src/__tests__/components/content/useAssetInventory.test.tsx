@@ -50,6 +50,7 @@ function scanResult(assets = DOC_ASSETS, dependencies: AssetDependencyEdge[] = [
     assets,
     dependencies,
     totalSizeBytes: assets.reduce((s, a) => s + a.sizeBytes, 0),
+    truncated: false,
     scanDurationMs: 7,
   };
 }
@@ -186,5 +187,69 @@ describe('AssetInventory: renders a scan and labels every edge\'s source', () =>
     const region = screen.getByRole('region', { name: /Dependency graph for SM_Rock/ });
     expect(within(region).getByText(/1 guessed from names/)).toBeTruthy();
     expect(within(region).queryByText(/UE-declared/)).toBeNull();
+  });
+});
+
+describe('useAssetInventory: a scan belongs to the project it was taken of', () => {
+  it('switching the project path drops the previous project\'s scan (back to pre-scan)', async () => {
+    const hook = await scanWith({ success: true, data: scanResult(ROCK, [ROCK_EDGE]) });
+    expect(hook.result.current.scanResult?.assets).toHaveLength(2);
+    act(() => { useProjectStore.setState({ projectPath: 'D:/Other' } as never); });
+    expect(hook.result.current.scanResult).toBeNull();
+    expect(hook.result.current.displayAssets).toEqual([]);
+    expect(hook.result.current.edges).toEqual([]);
+  });
+
+  it('a scan that resolves after the project changed never lands on the new project', async () => {
+    let release: (v: Response) => void = () => {};
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((r) => { release = r; })));
+    const hook = renderHook(() => useAssetInventory());
+    let pending: Promise<void> = Promise.resolve();
+    act(() => { pending = hook.result.current.handleScan(); });
+    act(() => { useProjectStore.setState({ projectPath: 'D:/Other' } as never); });
+    await act(async () => {
+      release({ ok: true, status: 200, json: async () => ({ success: true, data: scanResult(ROCK, [ROCK_EDGE]) }) } as unknown as Response);
+      await pending;
+    });
+    expect(hook.result.current.scanResult).toBeNull();
+  });
+});
+
+describe('AssetInventory: the scan async states are announced', () => {
+  it('a running scan is a status region', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})));
+    render(<AssetInventory />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Scan Content/ })); });
+    expect(screen.getByRole('status').textContent).toMatch(/Scanning Content/);
+  });
+
+  it('a failed scan is an alert that keeps its text and a Retry', async () => {
+    respond({ success: false, error: 'Project path does not exist' }, false, 404);
+    render(<AssetInventory />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Scan Content/ })); });
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('Project path does not exist');
+    expect(within(alert).getByRole('button', { name: /Retry/ })).toBeTruthy();
+  });
+});
+
+describe('AssetInventory: collapsing a dependency graph keeps keyboard focus', () => {
+  it('CLOSE and Escape return focus to the card, not to <body>', async () => {
+    respond({ success: true, data: scanResult(ROCK, [ROCK_EDGE]) });
+    render(<AssetInventory />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Scan Content/ })); });
+
+    const card = () => screen.getByRole('button', { name: /^SM_Rock/ });
+    await act(async () => { fireEvent.click(card()); });
+    const close = screen.getByRole('button', { name: /Close dependency graph for SM_Rock/ });
+    close.focus();
+    await act(async () => { fireEvent.click(close); });
+    expect(document.activeElement).toBe(card());
+
+    await act(async () => { fireEvent.click(card()); });
+    const close2 = screen.getByRole('button', { name: /Close dependency graph for SM_Rock/ });
+    close2.focus();
+    await act(async () => { fireEvent.keyDown(close2, { key: 'Escape' }); });
+    expect(document.activeElement).toBe(card());
   });
 });

@@ -39,6 +39,22 @@ async function json(res: Response) {
 }
 
 describe('GET /api/notify/gate', () => {
+  it('refuses a non-http(s) or malformed webhook URL at save with a reason, storing nothing', async () => {
+    for (const webhookUrl of ['file:///etc/passwd', 'ftp://x.example/h', 'javascript:alert(1)', 'not a url', '//x.example/h']) {
+      const res = await POST(req({ action: 'save', webhookUrl }));
+      const body = await json(res);
+      expect(res.status, webhookUrl).toBe(400);
+      expect(body.error, webhookUrl).toMatch(/http/i);
+    }
+    expect(setGateNotifyConfig).not.toHaveBeenCalled();
+  });
+
+  it('accepts http(s) webhook URLs and an empty URL (clearing it) at save', async () => {
+    for (const webhookUrl of ['https://hooks.slack.com/services/T/B/X', 'http://localhost:9000/hook', '']) {
+      expect((await POST(req({ action: 'save', webhookUrl }))).status, webhookUrl).toBe(200);
+    }
+  });
+
   it('returns the config + state', async () => {
     const body = await json(await GET());
     expect(body.success).toBe(true);

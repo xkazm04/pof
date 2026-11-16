@@ -52,7 +52,15 @@ export function useScanTab(moduleId: SubModuleId) {
   const [scanCount, setScanCount] = useState(0);
 
   // --- Batch fix state ---
-  const [selectedFindings, setSelectedFindings] = useState<Set<string>>(new Set());
+  const [tickedFindings, setSelectedFindings] = useState<Set<string>>(new Set());
+  const activeFindings = useMemo(() => findings.filter((f) => !f.resolvedAt), [findings]);
+  const resolvedFindings = useMemo(() => findings.filter((f) => f.resolvedAt), [findings]);
+  // The ticked ids, narrowed to findings still ACTIVE: a row resolved (or dropped by
+  // a reload) after it was ticked must not be counted, fixed or resolved again.
+  const selectedFindings = useMemo(() => {
+    const active = new Set(activeFindings.map((f) => f.id));
+    return new Set([...tickedFindings].filter((id) => active.has(id)));
+  }, [tickedFindings, activeFindings]);
   const [fixQueue, setFixQueue] = useState<string[]>([]);
   const fixQueueRef = useRef<string[]>([]);
   fixQueueRef.current = fixQueue;
@@ -267,8 +275,16 @@ export function useScanTab(moduleId: SubModuleId) {
     setFixVerification((prev) => beginFixes(prev, ids));
 
     const finding = findings.find((f) => f.id === firstId);
-    if (finding) fixCli.sendPrompt(buildScanFixPrompt(finding, moduleLabel));
-  }, [activeFixId, findings, moduleLabel, fixCli]);
+    if (!finding) {
+      // Same rule as advanceFix: nothing is dispatched for a vanished id, so no
+      // onComplete would ever arrive — skip it and let the chain take the next.
+      logger.warn(`[ScanTab] ${moduleId} batch fix skipped "${firstId}": finding no longer in scan results — advancing to the next item`);
+      setFixVerification((prev) => dropFixTarget(prev, firstId));
+      scheduleAdvance();
+      return;
+    }
+    fixCli.sendPrompt(buildScanFixPrompt(finding, moduleLabel));
+  }, [activeFixId, findings, moduleId, moduleLabel, fixCli, scheduleAdvance]);
 
   const startBatchFix = useCallback(() => {
     startFixes(Array.from(selectedFindings));
@@ -282,13 +298,13 @@ export function useScanTab(moduleId: SubModuleId) {
     setSelectedFindings(new Set());
   }, [selectedFindings, resolveFindings]);
 
-  // Poll for new findings while the scan is running (every 3s)
-  // Pauses when module is suspended (hidden in LRU).
+  // Poll for new findings while the scan is running (UI_TIMEOUTS.pollInterval, the
+  // CLI-driven completion poll). Pauses when module is suspended (hidden in LRU).
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useSuspendableEffect(() => {
     if (scanCli.isRunning) {
       // Start polling
-      pollRef.current = setInterval(() => { void fetchAndMergeFindings(); }, 3000);
+      pollRef.current = setInterval(() => { void fetchAndMergeFindings(); }, UI_TIMEOUTS.pollInterval);
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
       };
@@ -374,8 +390,6 @@ export function useScanTab(moduleId: SubModuleId) {
   }, []);
 
   // Group findings by severity
-  const activeFindings = useMemo(() => findings.filter((f) => !f.resolvedAt), [findings]);
-  const resolvedFindings = useMemo(() => findings.filter((f) => f.resolvedAt), [findings]);
 
   const bySeverity = useMemo(() => {
     const grouped: Record<ScanSeverity, ScanFinding[]> = {

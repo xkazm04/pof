@@ -143,6 +143,13 @@ describe('parseStatusSearch / serializeStatusSearch', () => {
       route: 'other-gate',
     });
   });
+  it('a focus or catalog carrying URL syntax survives the round trip', () => {
+    const a = { tab: 'item' as const, focus: { catalogId: 'items', entityId: 'a&b c#d' }, catalog: null, filterClass: null, route: null };
+    expect(parseStatusSearch(serializeStatusSearch(a))).toEqual(a);
+    const c = { tab: 'category' as const, focus: null, catalog: 'a&b', filterClass: null, route: null };
+    expect(parseStatusSearch(serializeStatusSearch(c))).toEqual(c);
+  });
+
   it('round-trips', () => {
     for (const q of ['', '?route=text', '?class=audio&route=other-gate', '?tab=models', '?catalog=items', '?entity=items:e1', '?tab=pipelines']) {
       const a = parseStatusSearch(q);

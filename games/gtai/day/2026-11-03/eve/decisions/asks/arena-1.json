@@ -1,0 +1,12 @@
+{
+  "id": "arena-1",
+  "lane": "arena",
+  "question": "Arena size and layout. First build: four separate slabs around a small hub (range 42x17 m, course 38x20 m, pit 36x26 m, powers pad 38x15 m; about 80x55 m in all), real Rivet, D5 ink floor. Keep this layout, or change it?",
+  "options": [
+    { "key": "A", "label": "Keep four slabs around a hub (as built)", "tradeoff": "each station is isolated and easy to read and measure; walking between stations takes 5-10 s", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/arena/frames/arena-overview-12.png", "C:/Users/kazda/kiro/gtai-masters/eve/arena/frames/arena-range-32.png"] },
+    { "key": "B", "label": "One open floor, stations as zones with low walls between them", "tradeoff": "closer to a city block (enemies can chase across zones); harder to measure one thing at a time", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/arena/frames/arena-overview-12.png"] },
+    { "key": "C", "label": "Keep the slabs, plus a dev key that teleports Rivet to any station", "tradeoff": "fastest to iterate in; one more dev key", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/arena/frames/arena-overview-12.png"] }
+  ],
+  "default": "C",
+  "asked": "21:00"
+}

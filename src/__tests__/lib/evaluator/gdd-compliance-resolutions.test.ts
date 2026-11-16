@@ -125,4 +125,16 @@ describe('gap resolutions persist', () => {
     resolveGap('', gapId);
     expect(gapById(gapId, '')!.resolved).toBe(true);
   });
+
+  it('keeps a resolution across spellings of one project path', () => {
+    const gapId = firstGapId('c:/p');
+    resolveGap('C:\\P\\', gapId);
+    expect(gapById(gapId, 'c:/p')!.resolved).toBe(true);
+    expect(listResolutions('c:/p').map((r) => r.gapId)).toEqual([gapId]);
+    // Re-resolving under another spelling refreshes the one row, not a second one.
+    resolveGap('c:/p', gapId);
+    expect(getDb().prepare('SELECT COUNT(*) AS n FROM gdd_gap_resolutions').get()).toEqual({ n: 1 });
+    expect(unresolveGap('C:/P/', gapId)).toBe(true);
+    expect(gapById(gapId, 'c:/p')!.resolved).toBe(false);
+  });
 });

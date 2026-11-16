@@ -54,9 +54,11 @@ export function ArchetypesTab({
   }, [searchTerm, roleFilter, categoryFilter, tierFilter, areaFilter]);
 
   const [page, setPage] = useState(0);
-  const [prevFilterLen, setPrevFilterLen] = useState(filteredArchetypes.length);
-  if (prevFilterLen !== filteredArchetypes.length) {
-    setPrevFilterLen(filteredArchetypes.length);
+  /* Reset on the filter TUPLE: two filters can match the same count of different enemies. */
+  const filterKey = JSON.stringify([searchTerm, roleFilter, categoryFilter, tierFilter, areaFilter]);
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (prevFilterKey !== filterKey) {
+    setPrevFilterKey(filterKey);
     if (page !== 0) setPage(0);
   }
 

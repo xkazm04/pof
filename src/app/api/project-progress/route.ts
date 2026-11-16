@@ -39,12 +39,21 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { projectPath, checklistProgress, checklistCompletedAt, moduleHealth, checklistVerification, moduleHistory } =
       body;
 
-    if (!projectPath) {
+    if (typeof projectPath !== 'string' || !projectPath) {
       return apiError('projectPath is required', 400);
+    }
+    for (const key of ['checklistProgress', 'checklistCompletedAt', 'moduleHealth', 'checklistVerification', 'moduleHistory'] as const) {
+      const blob = body[key];
+      if (blob != null && (typeof blob !== 'object' || Array.isArray(blob))) {
+        return apiError(`${key} must be an object`, 400);
+      }
     }
 
     const migratedKeys = saveProgress(projectPath, {

@@ -18,12 +18,12 @@ export function AggroMetric() {
               width: `${Math.max(4, (entry.threat / maxThreat) * 16)}px`,
               backgroundColor: entry.color,
             }}
-            title={`${entry.target}: ${entry.threat}%`}
+            title={`${entry.target}: ${entry.threat} threat`}
             aria-hidden="true"
           />
         ))}
       </div>
-      <div className="text-[10px] font-mono leading-tight">
+      <div className="text-2xs font-mono leading-tight">
         <span className="font-bold" style={{ color: ACCENT_RED }}>{threatCount}</span>
         <span style={{ color: withOpacity(ACCENT_RED, OPACITY_50) }}> threat sources</span>
       </div>

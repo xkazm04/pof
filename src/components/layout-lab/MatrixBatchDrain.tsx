@@ -61,7 +61,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
     <div
       data-testid="batch-drain"
       className={t.fontMono}
-      style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 13, color: t.muted }}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', fontSize: 'var(--lab-fs-xs)', color: t.muted }}
     >
       {running ? (
         <>
@@ -82,7 +82,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
           </Button>
           {/* What cancel CAN and CANNOT stop, in the open — not only in a hover title. */}
           <span data-testid="batch-drain-cancel-scope" role="status" aria-live="polite"
-            style={{ flexBasis: '100%', fontSize: 12, color: cancelRequested ? t.warn : t.muted }}>
+            style={{ flexBasis: '100%', fontSize: 'var(--lab-fs-xs)', color: cancelRequested ? t.warn : t.muted }}>
             {cancelRequested
               ? 'Cancel requested. The request already running in the editor cannot be recalled — it will finish. What the cancel does stop is the automatic retry after a lease conflict.'
               : "Cancel can't recall the request already running in the editor; it only skips the automatic retry after a lease conflict."}
@@ -103,7 +103,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
             {/* What this button needs, BEFORE the click — never a disabled button. The bridge
                 probe can be stale or wrong, and the operator must always be able to try; what
                 they must not do is click in the belief that a UE editor will be started for them. */}
-            <span data-testid="batch-drain-executor-note" style={{ fontSize: 12, color: editorConnected ? t.muted : t.warn }}>
+            <span data-testid="batch-drain-executor-note" style={{ fontSize: 'var(--lab-fs-xs)', color: editorConnected ? t.muted : t.warn }}>
               {editorConnected
                 ? 'Runs through the UE bridge — editor connected.'
                 : `Needs a running UE editor with the PoF bridge (${connectionStatus}) — it never launches one. Every gate will be skipped until the editor is up.`}
@@ -117,7 +117,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
           click with an interruption that never happened. */}
       {!running && cancelEffect && (
         <span data-testid="batch-drain-cancel-outcome" role="status" aria-live="polite"
-          style={{ flexBasis: '100%', fontSize: 12, color: t.warn }}>
+          style={{ flexBasis: '100%', fontSize: 'var(--lab-fs-xs)', color: t.warn }}>
           {cancelEffect === 'skipped-retry'
             ? 'Cancel took effect: the retry after the lease conflict was skipped. The request that was already running in the editor still finished.'
             : 'Cancel had nothing left to skip — the batch had already spent its single attempt, so the run completed as it would have anyway.'}
@@ -144,7 +144,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
           )}
           {summary.entitiesLocked > 0 && <span style={{ color: t.warn }} title="Skipped — another drain held the lease after a retry">{summary.entitiesLocked} locked</span>}
           {summary.entitiesLocked > 0 && (
-            <span data-testid="batch-drain-locked-hint" style={{ color: t.muted, flexBasis: '100%', fontSize: 12 }}>
+            <span data-testid="batch-drain-locked-hint" style={{ color: t.muted, flexBasis: '100%', fontSize: 'var(--lab-fs-xs)' }}>
               Lease held by another session — see the runner chip in the header.
             </span>
           )}
@@ -155,7 +155,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
             <Button mono onClick={onDismiss} data-testid="batch-drain-dismiss"
               ariaLabel="Dismiss this drain summary"
               title="Dismiss this drain summary (the next run clears it too)."
-              style={{ padding: '2px 6px', fontSize: 12 }}>
+              style={{ padding: '2px 6px', fontSize: 'var(--lab-fs-xs)' }}>
               ✕ Dismiss
             </Button>
           )}
@@ -168,7 +168,7 @@ export function MatrixBatchDrain({ t, deferredEntities, state, onStart, onCancel
           bridge, so the remedy is named: start the editor. */}
       {!running && summary && ranNothing(summary) && (
         <span data-testid="batch-drain-no-executor" role="status" aria-live="polite"
-          style={{ flexBasis: '100%', fontSize: 12, color: t.bad }}>
+          style={{ flexBasis: '100%', fontSize: 'var(--lab-fs-xs)', color: t.bad }}>
           {summary.skipped} gate{summary.skipped > 1 ? 's' : ''} queued, 0 gates ran — no UE executor was available.
           {' '}The drain runs through the UE bridge and never launches an editor
           {editorConnected
@@ -203,7 +203,7 @@ function ReasonList({ t, testId, tone, notes }: { t: LabTheme; testId: string; t
   return (
     <ul data-testid={testId} style={{ listStyle: 'none', margin: 0, padding: 0, flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
       {notes.map((n) => (
-        <li key={`${n.entityId}:${n.step}`} style={{ fontSize: 12, color: tone }}>
+        <li key={`${n.entityId}:${n.step}`} style={{ fontSize: 'var(--lab-fs-xs)', color: tone }}>
           <span style={{ color: t.inkDeep, fontWeight: 600 }}>{n.entityName}</span>
           <span style={{ color: t.muted }}> · {n.step} — </span>
           {n.reason}

@@ -27,7 +27,7 @@ export const USAGE = `usage: review:module <moduleId> --project-path <path> --ue
   --project-path <path>   UE project the review is ABOUT (required)
   --ue-version <ver>      e.g. 5.7.3 (required)
   --project-name <name>   default: basename of the project path
-  --origin <url>          running PoF app (default ${DEFAULT_ORIGIN})
+  --origin <url>          running PoF app (default http://localhost:$PORT, else ${DEFAULT_ORIGIN})
   --write                 actually start the review (default: dry-run, prints the plan only)
   --ledger <path>         daily-cap ledger (default ~/.pof/review-runner-ledger.json, or env POF_REVIEW_LEDGER)
   --help                  this text`;
@@ -84,7 +84,8 @@ export function parseArgs(argv: readonly string[], env: Record<string, string | 
       ueVersion,
       // Split on both separators: a Windows path is not a basename on a POSIX host.
       projectName: values.get('--project-name') ?? (projectPath.split(/[\\/]+/).filter(Boolean).pop() ?? basename(projectPath)),
-      origin: (values.get('--origin') ?? DEFAULT_ORIGIN).replace(/\/+$/, ''),
+      // Default to the port the app itself runs on (getAppOrigin reads the same PORT).
+      origin: (values.get('--origin') ?? (env.PORT && /^\d+$/.test(env.PORT) ? `http://localhost:${env.PORT}` : DEFAULT_ORIGIN)).replace(/\/+$/, ''),
       write,
       ledgerPath: values.get('--ledger') ?? env.POF_REVIEW_LEDGER ?? join(homedir(), '.pof', 'review-runner-ledger.json'),
     },
@@ -123,11 +124,15 @@ export function readLedger(path: string, today: string): Ledger {
     throw e;
   }
   const parsed = JSON.parse(raw) as Partial<Ledger> | null;
-  if (!parsed || typeof parsed.date !== 'string' || typeof parsed.count !== 'number' || !Array.isArray(parsed.runs)) {
+  if (
+    !parsed || typeof parsed.date !== 'string' || !Array.isArray(parsed.runs)
+    || typeof parsed.count !== 'number' || !Number.isInteger(parsed.count) || parsed.count < 0
+  ) {
     throw new Error(`ledger ${path} is not a review-runner ledger`);
   }
   if (parsed.date !== today) return { date: today, count: 0, runs: [] };
-  return { date: parsed.date, count: parsed.count, runs: parsed.runs };
+  // Spend fails closed: never read as less than the runs the same file records.
+  return { date: parsed.date, count: Math.max(parsed.count, parsed.runs.length), runs: parsed.runs };
 }
 
 /** Count one started review: re-reads the file, count = previous + 1 (1 on a new day), writes it back. */

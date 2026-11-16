@@ -3,6 +3,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 import {
   toolRow,
@@ -11,6 +13,8 @@ import {
   type DetectedEngine,
   type DetectedTool,
 } from '@/lib/project-setup/toolchain';
+import { compareReleases } from '@/lib/project-setup/engineFloor';
+import { detectGodotProjects } from '@/lib/project-setup/godotProjects';
 
 interface ListResponse {
   path: string;
@@ -261,7 +265,8 @@ async function scanForEngines(): Promise<DetectedEngine[]> {
     // Epic Games directory doesn't exist — no engines found
   }
 
-  return engines.sort((a, b) => b.version.localeCompare(a.version));
+  // Newest first by parsed release: as text, "5.10.0" sorts below "5.9.0".
+  return engines.sort((a, b) => compareReleases(b.version, a.version));
 }
 
 async function scanForTooling(): Promise<DetectedTool[]> {
@@ -440,11 +445,14 @@ async function scanForProjects(): Promise<DetectedProject[]> {
 
 /** `normalized` has already passed `checkLocalPath` (local, absolute, normalized). */
 async function handleList(normalized: string) {
+  const dir = path.dirname(normalized);
+  // A filesystem root is its own dirname and has no parent, whether or not it exists.
+  const parent = dir !== normalized ? dir : null;
 
   if (!(await directoryExists(normalized))) {
     return apiSuccess({
       path: normalized,
-      parent: path.dirname(normalized),
+      parent,
       directories: [] as { name: string; path: string; hasUProject: boolean }[],
       uprojectFiles: [] as string[],
       isUEProject: false,
@@ -463,11 +471,9 @@ async function handleList(normalized: string) {
     return apiError(`Cannot read directory ${normalized} (${code})`, 500);
   }
 
-  const parent = path.dirname(normalized);
-
   return apiSuccess({
     path: normalized,
-    parent: parent !== normalized ? parent : null,
+    parent,
     directories,
     uprojectFiles,
     isUEProject: uprojectFiles.length > 0,
@@ -475,8 +481,12 @@ async function handleList(normalized: string) {
 }
 
 export async function POST(request: NextRequest) {
+  // Reads the local disk: no cross-site page, and no caller without the token when one is set.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const { action, path: requestedPath } = body;
 
     switch (action) {
@@ -492,6 +502,11 @@ export async function POST(request: NextRequest) {
       case 'detect-projects': {
         const projects = await scanForProjects();
         return apiSuccess({ projects } satisfies DetectProjectsResponse);
+      }
+
+      case 'detect-godot-projects': {
+        // Godot projects (a folder with project.godot) of the registered Godot games, e.g. RTAI.
+        return apiSuccess({ projects: detectGodotProjects() });
       }
 
       case 'detect-engines': {

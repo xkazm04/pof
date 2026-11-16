@@ -227,9 +227,15 @@ function tripoErr(json: unknown): string {
   return 'unexpected Tripo response';
 }
 
-/** File extension → the image `type` Tripo expects (jpeg→jpg). Pure. */
+/**
+ * File extension → the image `type` Tripo expects (jpeg→jpg), from a path or a URL. Reads
+ * the last segment only, query/fragment stripped (signed CDN URLs carry both); a name with
+ * no extension is `png`. Pure.
+ */
 export function imageTypeFromPath(path: string): string {
-  const ext = (path.split('.').pop() ?? '').toLowerCase();
+  const name = path.split(/[?#]/)[0].split(/[\\/]/).pop() ?? '';
+  const dot = name.lastIndexOf('.');
+  const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
   return ext === 'jpeg' ? 'jpg' : ext || 'png';
 }
 
@@ -262,7 +268,7 @@ export function buildCreateTaskBody(spec: TripoSpec): Record<string, unknown> {
     const files = TRIPO_VIEW_ORDER.map((v) => viewFileEntry(spec.views?.[v]));
     return { type: 'multiview_to_model', files, ...opt };
   }
-  const type = spec.imageType ?? (spec.imagePath ? imageTypeFromPath(spec.imagePath) : 'png');
+  const type = spec.imageType ?? imageTypeFromPath(spec.imagePath ?? spec.imageUrl ?? '');
   const file = spec.imageToken
     ? { type, file_token: spec.imageToken }
     : { type, url: spec.imageUrl };
@@ -384,7 +390,8 @@ export function buildMeshSegmentBody(spec: MeshSegmentSpec): Record<string, unkn
  */
 export function parseV3TaskStatus(json: unknown): ParsedStatus {
   const j = json as { code?: number; data?: { status?: string; progress?: number; output?: { model_url?: string; rendered_image_url?: string } } } | undefined;
-  if (!j || j.code !== 0 || !j.data) return { state: 'failed', error: tripoErr(json) };
+  // Same rule as v2's parseTaskStatus: an unreadable poll is not a verdict on the task.
+  if (!j || j.code !== 0 || !j.data) return { state: 'transient', error: tripoErr(json) };
   const status = String(j.data.status ?? '').toLowerCase();
   const out = j.data.output ?? {};
   if (status === 'success') {
@@ -472,6 +479,8 @@ function terr(message: string, start: number, now: () => number, taskId?: string
 
 const MISSING_KEY = 'TRIPO_API_KEY not set (get a free key at https://platform.tripo3d.ai)';
 
+const reasonOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
 interface PollCtx {
   http: TripoHttp;
   auth: Record<string, string>;
@@ -522,14 +531,23 @@ async function pollTripoTask(taskId: string, outputPath: string, opts: TripoPoll
   let unreadable = 0;
   let lastUnreadable: string | undefined;
   for (let i = 0; i < maxPolls; i++) {
-    const s = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth);
-    const ps = parseTaskStatus(s.json);
+    // A rejected request (dropped socket, DNS blip) is an unreadable poll like any other:
+    // the task is unaffected and paid for, so it must not escape as a job-ending throw.
+    const ps: ParsedStatus = await http.getJson(`${TRIPO_BASE}/task/${taskId}`, auth).then(
+      (s) => parseTaskStatus(s.json),
+      (e: unknown): ParsedStatus => ({ state: 'transient', error: `poll request failed: ${reasonOf(e)}` }),
+    );
     ctx.onStatus?.(ps.state === 'transient' ? 'unreadable' : (ps.status ?? ps.state), ps.progress);
     if (ps.state === 'success') {
       if (!ps.modelUrl) return terr('task succeeded but no model URL in output', start, now, taskId, false);
-      const ok = await http.download(ps.modelUrl, outputPath);
       // The task finished and is paid for: a fresh poll re-issues the model URL, so a
-      // failed download is recoverable for free.
+      // failed download is recoverable for free, however it failed.
+      let thrown: string | undefined;
+      const ok = await http.download(ps.modelUrl, outputPath).catch((e: unknown) => {
+        thrown = reasonOf(e);
+        return false;
+      });
+      if (thrown) return terr(`model download failed: ${thrown}`, start, now, taskId, true);
       if (!ok || !fileExists(outputPath)) return terr('model download failed', start, now, taskId, true);
       return {
         ok: true,

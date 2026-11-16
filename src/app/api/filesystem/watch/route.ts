@@ -21,6 +21,7 @@ import {
   type FileChangeEvent,
 } from '@/lib/file-watcher';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { requireOperator } from '@/lib/api-auth';
 import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
@@ -109,7 +110,8 @@ export async function POST(request: NextRequest) {
   const denied = requireOperator(request);
   if (denied) return denied;
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const action = body.action as string;
 
     switch (action) {

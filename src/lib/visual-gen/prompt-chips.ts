@@ -1,4 +1,3 @@
-import type { GenerationMode } from '@/lib/visual-gen/providers';
 
 /**
  * Chip vocabulary for the no-jargon visual prompt builder. Each chip pairs a
@@ -85,7 +84,6 @@ export interface ComposePromptInput {
   subject?: string;
   /** Ids of the chips the user has toggled on. */
   chipIds?: string[];
-  mode?: GenerationMode;
 }
 
 /**

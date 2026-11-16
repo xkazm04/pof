@@ -32,7 +32,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const action = body.action as string;
 
     if (action === 'simulate') {
@@ -41,16 +45,21 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'generate-code') {
-      // Accept either a full simulation result or a config to re-simulate
-      let simResult: SimulationResult;
-
+      // Accept either a full simulation result or a config to re-simulate. A supplied result is
+      // only a carrier for its config: it used to be fed to codegen verbatim, so a malformed one
+      // 500'd and a hand-edited one emitted "calibrated" C++ from numbers no simulation produced.
+      // The engine is seeded, so re-simulating a genuine result's config reproduces it exactly.
+      let rawConfig: unknown = body.config;
       if (body.result) {
-        simResult = body.result;
-      } else {
-        // Same trust boundary as 'simulate' — an unclamped re-simulate here
-        // emits NaN/undefined into "calibrated" UE5 C++.
-        simResult = runSimulation(normalizeSimulationConfig(body.config));
+        const carried = (body.result as { config?: unknown }).config;
+        if (typeof carried !== 'object' || carried === null || Array.isArray(carried)) {
+          return apiError('result.config (the simulated config) is required to generate code', 400);
+        }
+        rawConfig = carried;
       }
+      // Same trust boundary as 'simulate' — an unclamped re-simulate here
+      // emits NaN/undefined into "calibrated" UE5 C++.
+      const simResult = runSimulation(normalizeSimulationConfig(rawConfig));
 
       const codeResult = generateUE5Code(simResult);
       return apiSuccess(codeResult);
@@ -63,10 +72,18 @@ export async function POST(req: NextRequest) {
       if (!result || !Array.isArray(result.metrics)) {
         return apiError('result (SimulationResult) is required', 400);
       }
+      // As with generate-code, the result only carries its config: saving its metrics verbatim
+      // let a client-edited result become a saved run (or the drift baseline) whose numbers no
+      // simulation produced. Re-simulate the normalized config (seeded → a genuine run reproduces).
+      const carried = result.config as unknown;
+      if (typeof carried !== 'object' || carried === null || Array.isArray(carried)) {
+        return apiError('result.config (the simulated config) is required to save a run', 400);
+      }
+      const simulated = runSimulation(normalizeSimulationConfig(carried));
       const run = saveRun({
         name,
-        config: result.config,
-        metrics: extractRunMetrics(result),
+        config: simulated.config,
+        metrics: extractRunMetrics(simulated),
       });
       return apiSuccess({ run });
     }
@@ -90,6 +107,9 @@ export async function POST(req: NextRequest) {
     if (action === 'set-baseline') {
       const id = body.id === null ? null : typeof body.id === 'string' ? body.id : '';
       if (id === '') return apiError('id (string or null) is required', 400);
+      // setBaseline clears every flag before setting the match, so an unknown id used to wipe
+      // the current baseline and answer 200 { baseline: null }.
+      if (id !== null && !getRun(id)) return apiError('Run not found', 404);
       const baseline = setBaseline(id);
       return apiSuccess({ baseline });
     }

@@ -89,4 +89,19 @@ describe('computeVelocityForecast', () => {
     }, NOW);
     expect(result).toBeNull();
   });
+
+  // HealthTrendChart prints "At {velocityPerDay} points per day … {daysRemaining}
+  // days". Rounding to one decimal turned a slow-but-real 0.04/day into "0", which
+  // contradicts the finite ETA computed from the unrounded rate.
+  it('a slow, positive velocity never reports as 0 per day', () => {
+    const result = computeVelocityForecast({
+      verified: 51,
+      total: 100,
+      history: [{ verified: 50, at: NOW - 25 * DAY }],
+    }, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.velocityPerDay).toBeGreaterThan(0);
+    // The printed rate reproduces the printed ETA to within rounding.
+    expect(Math.abs(49 / result!.velocityPerDay - result!.daysRemaining)).toBeLessThan(result!.daysRemaining * 0.05);
+  });
 });

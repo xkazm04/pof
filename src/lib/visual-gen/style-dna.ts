@@ -42,7 +42,9 @@ export interface StyleDnaReply {
 }
 
 const parseList = (text: string, key: string): string[] => {
-  const raw = text.match(new RegExp(`${key}=\\s*([^;\\n\`]+)`))?.[1]?.trim() ?? '';
+  // The prompt asks for the line to END with '.', so the last dimension carries the protocol's
+  // closing period: strip it, or "MOTIFS=none." saves the chip "none." and "chains." keeps its dot.
+  const raw = (text.match(new RegExp(`${key}=\\s*([^;\\n\`]+)`))?.[1]?.trim() ?? '').replace(/\.+$/, '').trim();
   if (/^(none|n\/a|-)?$/i.test(raw)) return [];
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 };
@@ -192,5 +194,12 @@ export async function distillStyleDna(images: VisionImage[], deps: StyleDnaDeps 
   }
   const reply = parseStyleDnaReply(raw);
   if (!reply.ok || !reply.dna) return { ok: false, error: reply.error ?? 'unparseable vision reply', raw };
-  return { ok: true, dna: reply.dna, raw };
+  // An all-`none` reply parses, but saved it becomes the ACTIVE style and appends
+  // "In the established project art style — ." to every prompt: style text with no style.
+  // The edit path (`validateStyleDna`) already refuses this DNA; the distill path must too.
+  const dna = reply.dna;
+  if ((Object.keys(dna) as (keyof StyleDna)[]).every((k) => dna[k].length === 0)) {
+    return { ok: false, error: 'the vision reply named no style chips in any dimension — nothing to save', raw };
+  }
+  return { ok: true, dna, raw };
 }

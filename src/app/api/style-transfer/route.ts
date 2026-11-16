@@ -1,18 +1,21 @@
 import { type NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import type { AnalyzedProperties } from '@/components/modules/content/materials/MaterialStyleTransfer';
 import type { SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
-import { STYLE_RULES } from '@/lib/visual-gen/style-keywords';
+import { STYLE_RULES, matchesStyleKeyword } from '@/lib/visual-gen/style-keywords';
 
 // ── POST — analyze reference ────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const action = body.action as string;
+    const body = await readJsonObject(req);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+    const action = body.action;
 
     if (action === 'analyze') {
-      const description = (body.description ?? '') as string;
+      const description = body.description ?? '';
+      if (typeof description !== 'string') return apiError('description must be a string', 400);
       const hasImage = !!body.imageDataUrl;
       const analysis = analyzeFromDescription(description, hasImage);
       // Additive and machine-checkable: nothing here decodes the image, so every consumer
@@ -70,7 +73,7 @@ function analyzeFromDescription(description: string, hasImage: boolean): Analyze
   let matchCount = 0;
 
   for (const rule of STYLE_RULES) {
-    const matched = rule.keywords.some((kw) => lower.includes(kw));
+    const matched = rule.keywords.some((kw) => matchesStyleKeyword(lower, kw));
     if (!matched) continue;
     matchCount++;
 

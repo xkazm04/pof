@@ -1,0 +1,133 @@
+{
+ "schema": "conform-run/1",
+ "worker": "43bc0ed3-ff8c-44af-8239-45f0104034b5",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T04:05:12.835484+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "platform-services-api",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/api/packaging-preflight-route.test.ts:67 The preflight tests count that a process was spawned but never read the target and config strings handed to UnrealBuildTool, so swapping Shipping for Development at that crossing stays green.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/packaging-preflight-route.test.ts:67 The route maps check to target and config and marshals them into argv at route.ts:78; no test in src/__tests__ pins those arguments and the file names no lane that does."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/notify-gate.test.ts:14 The fake defaults to success and line 98 asserts that same 'sent' value; recordGateNotifyOutcome is mocked and never asserted, and no failed dispatch is exercised."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/checklist-complete-item-validation.test.ts:62 Each test truncates a hand-named table on one per-file database instead of taking a discarded copy of a built-once template; packaging-history-budgets repeats the shape."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/checklist-complete-item-validation.test.ts:17 The file owns a throwaway SQLite path set in vi.hoisted before the route imports the database."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/checklist-complete-item-validation.test.ts:9 The regression file records its observed failure on the unfixed code."
+    },
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/packaging/preflight/route.ts:78 The reader is UnrealBuildTool, which is not available in the unit lane; the technique excludes readers absent from the lane, and the unpinned argv is charged to unreached-decisions instead."
+    }
+   ]
+  },
+  {
+   "context": "project-setup-core",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/project-setup/CreateProjectPanel.tsx:25 prompts.ts was extracted so the banner and the panel button send the same prompt, yet only the banner path is asserted and no test clicks the panel button, so this call site could revert to its own copy with the suite green.",
+   "techniques": [
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/project-setup/CreateProjectPanel.tsx:25 The technique requires asserting adoption of an extracted rule; tests only read this button for dimming, absence and disabled state, and BuildVerifyPanel's button is likewise never clicked."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/project-setup/project-setup-next-step.test.tsx:87 The banner path is driven through the real ProjectSetupModule CTA rather than a composition the test assembled."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/project-setup/build-verify-prompt.test.ts:59 The shared toolchain row a test mutates is restored in a finally block, inside the test body."
+    },
+    {
+     "technique": "assert-through-the-reader",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/prompts.ts:2 These strings are prompts read by a model, which the golden path assigns to the eval-harness subject rather than to a deterministic foreign reader."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "ai-behavior-testing",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "prompt-evolution",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:05:12.835484+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-through-the-reader",
+    "fixture-economics",
+    "isolation-lanes",
+    "negative-control-tests",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "platform-services-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T04:05:12.835484+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "assert-through-the-reader",
+    "isolation-lanes",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "project-setup-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -43,7 +43,8 @@ for d in parts:
     t += d["local_rot_mats"].shape[0] / fps
 
 arrays = {k: np.concatenate(v, axis=0) for k, v in merged.items()}
-arrays["fps"] = np.asarray(int(fps))
+# Store the rate as read: int() turned 29.97 into 29 while the section starts above used 29.97.
+arrays["fps"] = np.asarray(int(fps) if fps.is_integer() else fps)
 arrays["text"] = np.asarray(" + ".join(str(d["text"]) for d in parts))
 # Provenance members: which clips were joined, what was done to them, and the skeleton they share.
 # Readers that know these members can verify them; readers that do not are unaffected (extra members).

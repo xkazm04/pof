@@ -1,0 +1,107 @@
+{
+ "common": "briefs/common.md",
+ "lanes": [
+  {
+   "id": "weapon-art",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n-weapon-art",
+   "brief": "briefs/weapon-art.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n4",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai"
+   ]
+  },
+  {
+   "id": "rivet-arsenal",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n-rivet-arsenal",
+   "brief": "briefs/rivet-arsenal.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n4",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai"
+   ]
+  },
+  {
+   "id": "gunplay",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n-gunplay",
+   "brief": "briefs/gunplay.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n4",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai"
+   ]
+  },
+  {
+   "id": "human-reactions",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n-human-reactions",
+   "brief": "briefs/human-reactions.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n4",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai"
+   ]
+  },
+  {
+   "id": "brutality",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n-brutality",
+   "brief": "briefs/brutality.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n4",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai"
+   ]
+  },
+  {
+   "id": "showcase",
+   "cwd": "C:/Users/kazda/kiro/gtai-wt/n-showcase",
+   "brief": "briefs/showcase.md",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "iterMin": 60,
+   "addDirs": [
+    "C:/Users/kazda/kiro/gtai-masters",
+    "C:/Users/kazda/kiro/gtai-n4",
+    "C:/Users/kazda/kiro/pof/games/gtai",
+    "C:/Users/kazda/kiro/gtai-spike",
+    "C:/Users/kazda/kiro/gtai-wt",
+    "C:/Users/kazda/kiro/ai-registry",
+    "C:/Users/kazda/kiro/gtai"
+   ]
+  }
+ ]
+}

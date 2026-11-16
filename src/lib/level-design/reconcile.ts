@@ -18,19 +18,17 @@
  * report; the verdict stands until the next Check Sync.
  */
 
-import type {
-  LevelDesignDocument,
-  RoomNode,
-  RoomType,
-  PacingCurve,
-  DifficultyLevel,
-  SyncDivergence,
+import {
+  ROOM_TYPES,
+  type LevelDesignDocument,
+  type RoomNode,
+  type RoomType,
+  type PacingCurve,
+  type DifficultyLevel,
+  type SyncDivergence,
 } from '@/types/level-design';
 import { ok, err, type Result } from '@/types/result';
 
-const ROOM_TYPES: readonly RoomType[] = [
-  'combat', 'puzzle', 'exploration', 'boss', 'safe', 'transition', 'cutscene', 'hub',
-];
 const PACING_CURVES: readonly PacingCurve[] = ['rising', 'falling', 'peak', 'rest', 'buildup'];
 
 /** Normalise an LLM-written field name so `Room Name`, `roomName` and `room_name` agree. */

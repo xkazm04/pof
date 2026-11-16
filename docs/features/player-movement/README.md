@@ -31,7 +31,7 @@
 Unique to this pipeline: **bridge-driven** via the `pythonStep` checkers. Step 2 is **L1** (`humanConfirmed`). Steps 1, 3–9 are **L2** on a clean Python run (no `failed` entries, enough `created`+`skipped`); before any run they report **L3 `deferred`** (`pending bridge run`), keeping them config-complete/walkable in stub mode. Step 10 is **L4 visual-deferred** (`visualDeferred`). Deferred gates: every Python step pre-run (L3) and the Playable Gate (L4). Config-complete = the dispatch is authored and each step sits `deferred` with a reason until the editor bridge runs the module live.
 
 ## Status & notes
-**The only bridge-driven pipeline in the catalog** — no `cppSymbolExists`/`seedRowPresent` static checks; truth comes from the Python return envelope, not UE source parsing. Surfaced in `NEW_CATALOGS` (Game Assets) specifically to retire its previously orphaned / walker-skip status. The pipeline self-registers on import; `PLAYER_MOVEMENT_STEPS_TEST_HELPER` is a test-only export. Step 7 is effectively a once-per-PoFEditor-source-change L0 symbol probe; the AnimBP author (step 8) depends on it resolving.
+**The only bridge-driven pipeline in the catalog** — no `cppSymbolExists`/`seedRowPresent` static checks; truth comes from the Python return envelope, not UE source parsing. Surfaced in `NEW_CATALOGS` (Game Assets) specifically to retire its previously orphaned / walker-skip status. The pipeline self-registers on import and exports nothing. Step 7 is effectively a once-per-PoFEditor-source-change L0 symbol probe; the AnimBP author (step 8) depends on it resolving.
 
 ---
 *See [`../pipeline-architecture.md`](../pipeline-architecture.md) for the View/Produce/Acceptance model and the L0–L4 acceptance ladder.*

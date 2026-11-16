@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { Hammer } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { DetectedEngine } from './useProjectScan';
-import { buildBuildVerifyPrompt } from './prompts';
+import { buildBuildVerifyPrompt, selectBuildEngine } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Button } from '@/components/ui/Button';
 
@@ -23,6 +23,8 @@ export function BuildVerifyPanel({ engines, isRunning, onSendPrompt }: BuildVeri
     onSendPrompt(buildBuildVerifyPrompt({ projectName, projectPath, ueVersion, engines }));
   }, [projectName, projectPath, ueVersion, engines, onSendPrompt]);
 
+  const { mismatch } = selectBuildEngine(ueVersion, engines);
+
   return (
     <div className="mb-6">
       <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
@@ -33,6 +35,11 @@ export function BuildVerifyPanel({ engines, isRunning, onSendPrompt }: BuildVeri
           Health-check your SDK toolchain and compile the project with UnrealBuildTool to
           verify everything is wired correctly.
         </p>
+        {mismatch && (
+          <p data-testid="pof-setup-build-engine-mismatch" className="text-xs text-amber-400 mb-3">
+            {mismatch}
+          </p>
+        )}
         <Button
           data-testid="pof-setup-wizard-build-verify-btn"
           intent="warning"

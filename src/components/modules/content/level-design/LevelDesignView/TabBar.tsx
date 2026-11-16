@@ -23,6 +23,21 @@ export function ScrollableTabBar({ children }: { children: React.ReactNode }) {
     return () => ro.disconnect();
   }, [updateOverflow]);
 
+  // WAI-ARIA tabs: arrows / Home / End move focus AND selection (automatic activation).
+  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    const tabs = Array.from(scrollRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? []);
+    const idx = tabs.indexOf((e.target as HTMLElement).closest<HTMLButtonElement>('[role="tab"]') as HTMLButtonElement);
+    if (idx < 0) return;
+    e.preventDefault();
+    const next = e.key === 'Home' ? 0
+      : e.key === 'End' ? tabs.length - 1
+      : e.key === 'ArrowRight' ? (idx + 1) % tabs.length
+      : (idx - 1 + tabs.length) % tabs.length;
+    tabs[next].focus();
+    tabs[next].click();
+  }, []);
+
   return (
     <div className="relative border-b border-border">
       {/* Left fade */}
@@ -32,6 +47,9 @@ export function ScrollableTabBar({ children }: { children: React.ReactNode }) {
       {/* Scrollable container */}
       <div
         ref={scrollRef}
+        role="tablist"
+        aria-label="Level design views"
+        onKeyDown={onKeyDown}
         onScroll={updateOverflow}
         className="flex items-center gap-1 px-5 overflow-x-auto scrollbar-hide"
         style={{ scrollSnapType: 'x mandatory' }}
@@ -65,6 +83,10 @@ export function TabButton({
 }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative whitespace-nowrap flex-shrink-0 ${
         active ? 'text-text' : 'text-text-muted hover:text-text'

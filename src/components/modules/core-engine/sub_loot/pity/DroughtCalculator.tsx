@@ -12,6 +12,7 @@ import { DROUGHT_RARITY_OPTIONS } from '../_shared/data';
 import { cumulativeProbCurve, findPercentileKill } from '../_shared/math';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { PityCohortChart } from './PityCohortChart';
+import { expectedKillsToDrop } from './pityCohort';
 
 interface DroughtCalculatorProps {
   pityThreshold: number;
@@ -27,8 +28,9 @@ export function DroughtCalculator({ pityThreshold }: DroughtCalculatorProps) {
     const pity = droughtPityEnabled ? pityThreshold : null;
     const maxKills = Math.min(Math.max(Math.ceil(5 / rate), 50), 500);
     const curve = cumulativeProbCurve(rate, maxKills, pity);
-    const expectedDry = Math.round(1 / rate);
-    const p50 = findPercentileKill(rate, 50, null);
+    // Headline stats follow the toggle: with pity on, the median and the mean are capped too.
+    const expectedDry = Math.round(expectedKillsToDrop(rate, pity));
+    const p50 = findPercentileKill(rate, 50, pity);
     const p95 = findPercentileKill(rate, 95, null);
     const p99 = findPercentileKill(rate, 99, null);
     const p95Pity = findPercentileKill(rate, 95, pity);

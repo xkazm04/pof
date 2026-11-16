@@ -16,6 +16,7 @@ import { addAffix as addAffixTo, defaultWallet, eligiblePool, instantiateAffix, 
 import { priceCraftGoal } from './craftGoal';
 import type { CraftGoalReport } from './craftGoal';
 import { createRNG } from '@/lib/seeded-rng';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 /** Fixed seed: the same item always gets the same price. */
 const PRICE_SEED = 7;
@@ -80,21 +81,27 @@ export function useAffixWorkbench() {
 
   const [synergyGlow, setSynergyGlow] = useState(false);
   const [newSynergyLabels, setNewSynergyLabels] = useState<Set<string>>(new Set());
-  const prevSynergyCountRef = useRef(0);
+  // Reveal only synergies that just FORMED: diff labels against the previous
+  // set, which is recorded on every pass (a magnitude nudge forms nothing).
+  const prevSynergyLabelsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const prev = prevSynergyCountRef.current;
-    const curr = activeSynergies.length;
-    if (curr > prev && prev >= 0) {
-      setNewSynergyLabels(new Set(activeSynergies.map((s) => s.label)));
+    const prev = prevSynergyLabelsRef.current;
+    const curr = new Set(activeSynergies.map((s) => s.label));
+    prevSynergyLabelsRef.current = curr;
+    const formed = [...curr].filter((l) => !prev.has(l));
+    if (formed.length > 0) {
+      setNewSynergyLabels(new Set(formed));
       setSynergyGlow(true);
-      const t = setTimeout(() => setSynergyGlow(false), 600);
-      if (!expandedSynergies) setExpandedSynergies(true);
-      return () => clearTimeout(t);
+      setExpandedSynergies(true);
+    } else if (prev.size !== curr.size || [...prev].some((l) => !curr.has(l))) {
+      setNewSynergyLabels(new Set());
     }
-    if (curr <= prev && newSynergyLabels.size > 0) setNewSynergyLabels(new Set());
-    prevSynergyCountRef.current = curr;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSynergies]);
+  useEffect(() => {
+    if (!synergyGlow) return;
+    const t = setTimeout(() => setSynergyGlow(false), UI_TIMEOUTS.synergyGlow);
+    return () => clearTimeout(t);
+  }, [synergyGlow]);
 
   // Radar
   const radarAxes = ['Offense', 'Defense', 'Utility'];
@@ -144,7 +151,8 @@ export function useAffixWorkbench() {
   const [priced, setPriced] = useState<{ report: CraftGoalReport; affixes: CraftedAffix[]; base: ItemBase } | null>(null);
   const priceCurrentItem = useCallback(() => {
     const report = priceCraftGoal({
-      rarity: selectedBase.rarity, targetTags: craftedAffixes.map((a) => a.tag), start: [],
+      rarity: selectedBase.rarity, targetTags: craftedAffixes.map((a) => a.tag),
+      minMagnitude: Object.fromEntries(craftedAffixes.map((a) => [a.tag, a.magnitude])), start: [],
       wallet: defaultWallet(), runs: PRICE_RUNS, rng: createRNG(PRICE_SEED),
     });
     setPriced({ report, affixes: craftedAffixes, base: selectedBase });
@@ -189,6 +197,6 @@ export function useAffixWorkbench() {
     resetWallet: crafting.resetWallet, applyArchetype, priceCurrentItem,
     handleCopy: exporting.handleCopy, handleExportFile: exporting.handleExportFile,
     handleInjectToUE5: exporting.handleInjectToUE5, selectBase,
-    canAfford: crafting.canAfford,
+    refusalFor: crafting.refusalFor,
   };
 }

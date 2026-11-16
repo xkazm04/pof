@@ -8,8 +8,13 @@ SAME script runs Qwen3-VL-4B, Gemma 4 12B, InternVL3.5, etc. Emits POF_VLM_* mar
     --model Qwen/Qwen3-VL-4B-Instruct --subject chair [--load-4bit]
 """
 import argparse
-import re
+import os
 import sys
+
+
+# `python -I` drops the script directory from sys.path; put it back for the shared parser.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pof_vlm_reply import parse_fields, parse_score  # noqa: E402
 
 
 def main() -> int:
@@ -22,6 +27,7 @@ def main() -> int:
     ap.add_argument("--load-8bit", action="store_true", help="bitsandbytes 8-bit (fallback if 4-bit inference is buggy)")
     ap.add_argument("--max-new-tokens", type=int, default=220)
     args = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a piped Windows stdout is cp1252
     try:
         import time
         import torch
@@ -68,10 +74,15 @@ def main() -> int:
         gen = proc.batch_decode(out[:, inputs["input_ids"].shape[1]:], skip_special_tokens=True)[0].strip()
         print(f"POF_VLM_INFER_S={time.time() - ti:.1f}")
         print("POF_VLM_RAW=" + gen.replace("\n", " ").strip())
-        for key in ("SCORE", "DEFECTS", "VERDICT"):
-            m = re.search(key + r"=([^;]+)", gen)
-            if m:
-                print(f"POF_VLM_{key}=" + m.group(1).strip())
+        fields = parse_fields(gen)
+        for key in ("DEFECTS", "VERDICT"):
+            if key in fields:
+                print(f"POF_VLM_{key}=" + fields[key])
+        score = parse_score(fields.get("SCORE"))
+        if score is None:
+            print("POF_VLM_ERROR=no 0-10 score in the reply")
+            return 1
+        print(f"POF_VLM_SCORE={score:g}")
         print("POF_VLM_DONE=ok")
         return 0
     except Exception as e:  # noqa: BLE001

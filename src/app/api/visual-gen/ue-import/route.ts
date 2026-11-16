@@ -1,10 +1,15 @@
 import { NextRequest } from 'next/server';
 import { existsSync } from 'node:fs';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { startUeImportJob } from '@/lib/visual-gen/ue-import-job-store';
-import type { CollisionUse } from '@/lib/visual-gen/ue-import';
+import { ASSET_CLASS_IDS } from '@/lib/visual-gen/polycount-presets';
+import { UE_ASSET_NAME, UE_CONTENT_PATH, type CollisionUse } from '@/lib/visual-gen/ue-import';
 
 const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
+/** Longest an import may wait on the editor; the importer's own default is three minutes. */
+const MAX_SETTLE_MS = 1_800_000;
 
 /**
  * POST /api/visual-gen/ue-import
@@ -33,8 +38,13 @@ const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
  * derivable rather than importing at a silent 1.0. The factor is applied at import and read back.
  */
 export async function POST(req: NextRequest) {
+  const denied = requireOperator(req);
+  if (denied) return denied;
+
   try {
-    const body = (await req.json()) as {
+    const parsed = await readJsonObject(req);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as {
       glbPath?: string;
       use?: string;
       destPath?: string;
@@ -45,6 +55,7 @@ export async function POST(req: NextRequest) {
       targetExtentM?: number;
     };
 
+    if (body.glbPath !== undefined && typeof body.glbPath !== 'string') return apiError('glbPath must be a string', 400);
     const glbPath = body.glbPath?.trim();
     if (!glbPath) return apiError('glbPath is required', 400);
     if (!/\.glb$/i.test(glbPath)) {
@@ -75,6 +86,22 @@ export async function POST(req: NextRequest) {
     }
     if (body.assetClass !== undefined && typeof body.assetClass !== 'string') {
       return apiError('assetClass, when given, must be a string', 400);
+    }
+    // The same rule mesh-finish applies: a typo (`charcter`) must not silently drop the class
+    // budget and the scale nominal. An empty string still means "no class", as before.
+    if (body.assetClass?.trim() && !(ASSET_CLASS_IDS as readonly string[]).includes(body.assetClass.trim())) {
+      return apiError(`assetClass must be one of ${ASSET_CLASS_IDS.join(', ')}`, 400);
+    }
+
+    // The importer refuses these too, but only after the job has critiqued the mesh.
+    if (body.assetName !== undefined && !(typeof body.assetName === 'string' && UE_ASSET_NAME.test(body.assetName))) {
+      return apiError('assetName, when given, may only hold letters, digits, _ and -', 400);
+    }
+    if (body.destPath !== undefined && !(typeof body.destPath === 'string' && UE_CONTENT_PATH.test(body.destPath))) {
+      return apiError('destPath, when given, must be a content path like /Game/Generated', 400);
+    }
+    if (body.settleMs !== undefined && !(Number.isInteger(body.settleMs) && body.settleMs > 0 && body.settleMs <= MAX_SETTLE_MS)) {
+      return apiError(`settleMs, when given, must be a positive integer of at most ${MAX_SETTLE_MS}`, 400);
     }
 
     const jobId = startUeImportJob({

@@ -1,0 +1,125 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a648b2b8-783c-413c-a707-71bb596a9f34",
+ "subject": "table",
+ "evaluatedAt": "2026-11-07T05:19:25.323990+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "loot-affix-workbench",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointFilters.tsx:74 The breakpoint table filters on every keystroke with three filters (category, rarity, text), but its result count is a plain span, not a status message, and there is no single clear-all action, so a screen-reader user hears nothing as rows change and a sighted user must reset each filter separately.",
+   "techniques": [
+    {
+     "technique": "filtering",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointFilters.tsx:74 Filtering per keystroke is legitimate here because all data is on the client, but the technique then requires the count to be a status message (SC 4.1.3); this one has no role=status or aria-live. The only reset is an 'All' option per filter, which the technique says is not a substitute for one clear action."
+    },
+    {
+     "technique": "loading-and-empty-states",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:95 The empty row says the filter is the cause but names no active filter and offers no one-tap clear. Its colSpan is 9+N, but the header has only 6+N columns."
+    },
+    {
+     "technique": "client-server-split",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:32 Everything runs on the client over the complete static AFFIX_POOL, so no axis is split across server and client."
+    },
+    {
+     "technique": "grid-keyboard-model",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:64 The cells are read-only text, so a native table is the right shape and no grid role is needed."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/BreakpointTable.tsx:31 The filtered and computed rows are derived in a memo keyed on the filter values, not stored in state."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/data.ts:68 The data is a static pool of roughly 20 affixes, too small to need a window."
+    },
+    {
+     "technique": "export-escapes-for-its-consumer",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/useExportActions.ts:36 The export writes generated C++ code, not table rows to CSV or a spreadsheet."
+    },
+    {
+     "technique": "clipboard-range-round-trip",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_loot/affix-workbench/useExportActions.ts:22 The clipboard receives generated code; no cell range is copied or pasted."
+    }
+   ]
+  },
+  {
+   "context": "cli-terminal-output",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/cli/TerminalOutput/index.tsx:192 This surface is a scrolling log of streamed CLI events, not a set of records compared across shared columns. A case-insensitive search of TerminalOutput/ for <table, aria-sort, columnheader, csv, pagination, .sort( and role=grid found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "<table",
+    "aria-sort",
+    "columnheader",
+    "csv"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "table",
+   "context": "character-overview-input",
+   "reason": "evidence leans on _shared/data.ts, which is not a tracked file"
+  },
+  {
+   "subject": "table",
+   "context": "holistic-quality-overview",
+   "reason": "pair anchor refused: placeholder evidence at src/components/modules/evaluator/HolisticHealthView/QualityTab.tsx:16"
+  },
+  {
+   "subject": "table",
+   "context": "inventory-economy-simulator",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T05:19:25.323990+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "client-server-split",
+    "clipboard-range-round-trip",
+    "export-escapes-for-its-consumer",
+    "filtering",
+    "grid-keyboard-model",
+    "loading-and-empty-states",
+    "pagination",
+    "performance"
+   ],
+   "deviations": 1,
+   "context": "loot-affix-workbench",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T05:19:25.323990+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "cli-terminal-output",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -26,26 +26,32 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
-      className="relative overflow-hidden rounded-lg border cursor-pointer transition-all"
+      className="relative overflow-hidden rounded-lg border transition-all"
       style={{
         borderColor: isSelected ? withOpacity(preset.color, OPACITY_50) : isCompareTarget ? withOpacity(preset.color, OPACITY_25) : withOpacity(preset.color, OPACITY_10),
         backgroundColor: isSelected ? withOpacity(preset.color, OPACITY_8) : 'transparent',
         boxShadow: isSelected ? `0 0 12px ${withOpacity(preset.color, OPACITY_20)}, inset 0 0 12px ${withOpacity(preset.color, OPACITY_5)}` : 'none',
       }}
-      onClick={onSelect}
     >
       <CornerBrackets color={preset.color} size={6} />
-      <div className="p-2.5">
-        <div className="flex items-center justify-between mb-1">
+      {/* Native button for the primary action (keyboard + announced state);
+          Compare stays a sibling button so no control nests inside another. */}
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-pressed={isSelected}
+        className="block w-full text-left p-2.5 pb-0 cursor-pointer focus-ring rounded-lg"
+      >
+        <span className="flex items-center justify-between mb-1">
           <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: preset.color }}>
             {preset.name}
           </span>
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted px-1.5 py-0.5 rounded bg-surface-deep border border-border/30">
             {preset.genre}
           </span>
-        </div>
-        <p className="text-xs text-text-muted leading-relaxed mb-1.5">{preset.description}</p>
-        <div className="flex flex-wrap gap-1 mb-2">
+        </span>
+        <span className="block text-xs text-text-muted leading-relaxed mb-1.5">{preset.description}</span>
+        <span className="flex flex-wrap gap-1 mb-2">
           {preset.tags.slice(0, 4).map((tag) => (
             <span
               key={tag}
@@ -55,10 +61,14 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
               {tag}
             </span>
           ))}
-        </div>
+        </span>
+      </button>
+      <div className="px-2.5 pb-2.5">
         <button
-          onClick={(e) => { e.stopPropagation(); onCompare(); }}
-          className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded transition-colors"
+          type="button"
+          onClick={onCompare}
+          aria-pressed={isCompareTarget}
+          className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded transition-colors focus-ring"
           style={{
             backgroundColor: isCompareTarget ? withOpacity(preset.color, OPACITY_15) : 'var(--surface-deep)',
             color: isCompareTarget ? preset.color : 'var(--text-muted)',

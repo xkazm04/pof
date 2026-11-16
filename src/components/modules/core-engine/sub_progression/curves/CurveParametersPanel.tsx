@@ -67,7 +67,7 @@ export function CurveParametersPanel({
             value={baseXp}
             accent={ACCENT}
             onChange={onBaseXpChange}
-            ticks={['50', 'Fast', '500']}
+            ticks={[String(BASE_XP_RANGE.min), 'Fast', String(BASE_XP_RANGE.max)]}
           />
         </div>
 
@@ -88,7 +88,7 @@ export function CurveParametersPanel({
             accent={ACCENT}
             onChange={onCurveExpChange}
             formatValue={(v) => v.toFixed(2)}
-            ticks={['Linear (1.1)', 'Steep (2.5)']}
+            ticks={[`Linear (${CURVE_EXP_RANGE.min})`, `Steep (${CURVE_EXP_RANGE.max})`]}
           />
         </div>
 

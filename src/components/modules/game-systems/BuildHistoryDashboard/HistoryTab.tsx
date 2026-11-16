@@ -10,7 +10,7 @@ import type { SortKey, SortDir } from './types';
 
 export function HistoryTab({
   availablePlatforms, platformFilter, togglePlatform, setPlatformFilter,
-  sortKey, sortDir, handleSort, filteredSortedBuilds, builds, handleDelete, scope,
+  sortKey, sortDir, handleSort, filteredSortedBuilds, builds, handleDelete, scope, loadFailed,
 }: {
   availablePlatforms: string[];
   platformFilter: Set<string>;
@@ -25,6 +25,8 @@ export function HistoryTab({
   /** What the scoped read could and could not see — the empty state is not entitled
    *  to claim "no builds recorded" without it. */
   scope?: ProjectScopeCounts | null;
+  /** The last read failed: an empty table then proves nothing about the history. */
+  loadFailed?: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -62,7 +64,7 @@ export function HistoryTab({
 
       <div className="rounded border border-border bg-background/60 overflow-hidden">
         {/* Sortable table header */}
-        <div className="grid grid-cols-[auto_1fr_80px_80px_80px_60px_auto] gap-2 px-2 py-1.5 bg-surface-deep border-b border-border">
+        <div role="row" className="grid grid-cols-[auto_1fr_80px_80px_80px_60px_auto] gap-2 px-2 py-1.5 bg-surface-deep border-b border-border">
           <span className="w-2.5" />
           <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Build</span>
           <SortableHeader label="Platform" sortKey="platform" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
@@ -74,7 +76,9 @@ export function HistoryTab({
         {filteredSortedBuilds.length === 0 ? (
           <div className="text-center text-text-muted text-xs py-8">
             {builds.length === 0
-              ? emptyHistoryCopy(scope)
+              ? loadFailed
+                ? 'Build history could not be read, so nothing is known about recorded builds.'
+                : emptyHistoryCopy(scope)
               : 'No builds match the current filter.'}
           </div>
         ) : (

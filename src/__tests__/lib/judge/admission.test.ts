@@ -22,7 +22,8 @@ const FUTURE = RUBRIC_VERSION + 1;
 
 const claim = (over: Partial<JudgeVerdict>): JudgeVerdict => ({
   catalogId: 'items', entityId: 'e1', step: 'Concept Brief', judge: 'llm-panel', verdict: 'pass',
-  score: 95, findings: 'fifteen plus characters of findings', model: 'm', rubricVersion: RUBRIC_VERSION, ...over,
+  score: 95, findings: 'fifteen plus characters of findings', model: 'm', rubricVersion: RUBRIC_VERSION,
+  dimensions: { clarity: 95, craft: 92 }, ...over,
 });
 
 describe('admitJudgeVerdict — the write door', () => {
@@ -36,6 +37,23 @@ describe('admitJudgeVerdict — the write door', () => {
     const r = admitJudgeVerdict(claim({ score: BANDS.shippable - 5 }));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.join(' ')).toContain(String(BANDS.shippable));
+  });
+
+  it('refuses a current-rubric non-human PASS that itemises no dimension (absent or empty)', () => {
+    for (const dimensions of [undefined, {}]) {
+      const r = admitJudgeVerdict(claim({ score: 95, dimensions }));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.join(' ')).toContain('must itemise its dimensions');
+    }
+    // llm-panel and vlm alike; an itemised pass is admitted.
+    expect(admitJudgeVerdict(claim({ judge: 'vlm', dimensions: undefined })).ok).toBe(false);
+    expect(admitJudgeVerdict(claim({ dimensions: { clarity: 95 } })).ok).toBe(true);
+  });
+
+  it('[honest floor] a dimensionless FAIL, a human pass and a pre-rubric (v1) pass stay admitted', () => {
+    expect(admitJudgeVerdict(claim({ verdict: 'fail', score: 40, dimensions: undefined })).ok).toBe(true);
+    expect(admitJudgeVerdict(claim({ judge: 'human', dimensions: undefined })).ok).toBe(true);
+    expect(admitJudgeVerdict(claim({ judge: 'vlm', rubricVersion: undefined, score: 70, dimensions: undefined })).ok).toBe(true);
   });
 
   it('[honest floor] admits a FAIL at any score — a stricter condemnation is never refused', () => {

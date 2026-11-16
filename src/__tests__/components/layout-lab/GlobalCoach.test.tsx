@@ -65,7 +65,7 @@ describe('<GlobalCoach />', () => {
     expect(Array.from(items).map((n) => n.getAttribute('data-priority'))).toEqual(['drift', 'pending']);
   });
 
-  it('caps the expanded list at the top-N and offers a show-all-blockers expansion', () => {
+  it('caps the expanded list at the top-N and offers a show-all expansion', () => {
     // 9 candidates → top row + 4 in the disclosure (TOP_N = 5) + 4 behind "show all".
     coachMock.mockReturnValue(
       Array.from({ length: 9 }, (_, i) => cand({ entityId: `e${i}`, entityName: `E${i}`, priority: 'pending' })),
@@ -77,7 +77,10 @@ describe('<GlobalCoach />', () => {
     expect(shown()).toHaveLength(4); // rows 1..4 — the rest are behind the expansion
 
     const showAll = container.querySelector('[data-testid="global-coach-show-all"]') as HTMLElement;
-    expect(showAll.textContent).toContain('Show all 9 blockers');
+    // Nine PENDING candidates: none is a failed gate, so none is a blocker (the Matrix's
+    // own word for 'at least one failed gate'). The control counts next steps.
+    expect(showAll.textContent).toContain('Show all 9 next steps');
+    expect(showAll.textContent).not.toMatch(/blocker/i);
     expect(showAll.textContent).toContain('4 more');
 
     fireEvent.click(showAll);
@@ -125,6 +128,22 @@ describe('<GlobalCoach />', () => {
     expect(container.querySelector('[data-testid="global-coach-item-0"]')).toBeNull();
   });
 
+  it('does not paint the loading placeholder in the failure colour (loading is not failed)', () => {
+    coachMock.mockReturnValue([]);
+    loadingMock.mockReturnValue(true);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    const bar = container.querySelector('[data-testid="global-coach"]') as HTMLElement;
+    expect(bar.style.borderLeft).not.toContain(LIGHT.bad);
+  });
+
+  it('keeps the failure colour on the bar when a catalog fetch failed and nothing is advised', () => {
+    coachMock.mockReturnValue([]);
+    failedMock.mockReturnValue([{ catalogId: 'items', label: 'Items', error: 'HTTP 500' }]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    const bar = container.querySelector('[data-testid="global-coach"]') as HTMLElement;
+    expect(bar.style.borderLeft).toContain(LIGHT.bad);
+  });
+
   it('drops the loading placeholder once the real recommendation lands', () => {
     coachMock.mockReturnValue([cand({ entityId: 'e1', entityName: 'Sword' })]);
     loadingMock.mockReturnValue(false);
@@ -145,6 +164,32 @@ describe('<GlobalCoach />', () => {
     expect(failed.textContent).toContain('HTTP 500');
     // And it does NOT invent a "start something" recommendation for the unreadable catalog.
     expect(container.querySelector('[data-testid="global-coach-item-0"]')).toBeNull();
+  });
+
+  it('does not claim NO catalog was read when only some failed (the rest were read and are clear)', () => {
+    coachMock.mockReturnValue([]);
+    failedMock.mockReturnValue([{ catalogId: 'items', label: 'Items', error: 'HTTP 500' }]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    const bar = container.querySelector('[data-testid="global-coach"]') as HTMLElement;
+    // The hook reports failures, not a total — so the row may only speak for what loaded.
+    expect(bar.textContent).not.toMatch(/no catalog status could be read/i);
+    expect(container.querySelector('[data-testid="global-coach-empty"]')?.textContent).toMatch(/catalogs that could be read/i);
+  });
+
+  it('keeps each row\'s visible text inside its accessible name (WCAG 2.5.3 label in name)', () => {
+    coachMock.mockReturnValue([
+      cand({ entityId: 'e1', priority: 'fail', reason: 'price/power 1.43x out of band' }),
+      cand({ entityId: 'e2', catalogId: 'armor', catalogLabel: 'Armor', entityName: 'Shield', priority: 'unproduced' }),
+    ]);
+    const { container } = render(<GlobalCoach t={LIGHT} />);
+    fireEvent.click(container.querySelector('[data-testid="global-coach-toggle"]') as HTMLElement);
+    const squash = (s: string) => s.replace(/\s+/g, '');
+    for (const id of ['global-coach-item-0', 'global-coach-item-1']) {
+      const btn = container.querySelector(`[data-testid="${id}"]`) as HTMLElement;
+      const clone = btn.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+      expect(squash(btn.getAttribute('aria-label') ?? '')).toContain(squash(clone.textContent ?? ''));
+    }
   });
 
   it('shows the concrete checker reason on a candidate that carries one (and falls back to the generic hint otherwise)', () => {

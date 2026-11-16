@@ -9,7 +9,7 @@
  * through to the importer's shared default (`TripoSRMesh`), so every blank-named import
  * replaced the previous one.
  */
-import { jobOutcome } from './forgeJobStatus';
+import { jobOutcome } from '@/lib/visual-gen/forgeJobStatus';
 import type { GenerationJob } from './useForgeStore';
 
 /** The delivery's verdict, carried verbatim — a rejected or ungated mesh is offered, never as a pass. */

@@ -1,0 +1,330 @@
+/**
+ * The house refusal shape across the mesh routes: a body or field the caller got wrong is a
+ * 400 that starts nothing. Every process and vision seam is mocked, so no test here can reach
+ * Blender, the editor or a paid provider.
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NextRequest } from 'next/server';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const seams = vi.hoisted(() => ({
+  startFinish: vi.fn(() => 'finish-1'),
+  startView: vi.fn(() => 'view-1'),
+  getView: vi.fn(),
+  startImport: vi.fn(() => 'import-1'),
+  split: vi.fn(),
+  critique: vi.fn(async () => ({ ok: false, unavailable: true, error: 'mocked' })),
+  decompose: vi.fn(),
+}));
+
+vi.mock('@/lib/visual-gen/mesh-finish-job-store', () => ({ startMeshFinishJob: seams.startFinish }));
+vi.mock('@/lib/visual-gen/view-gate-job-store', () => ({ startViewGateJob: seams.startView, getViewGateJob: seams.getView }));
+vi.mock('@/lib/visual-gen/ue-import-job-store', () => ({ startUeImportJob: seams.startImport, importStageFor: () => 'raw' }));
+vi.mock('@/lib/visual-gen/mesh-split', async (original) => ({
+  ...(await original<typeof import('@/lib/visual-gen/mesh-split')>()),
+  runMeshSplit: seams.split,
+}));
+vi.mock('@/lib/visual-gen/mesh-critique', () => ({ critiqueMesh: seams.critique }));
+vi.mock('@/lib/visual-gen/generators/scene-decompose', async (original) => ({
+  ...(await original<typeof import('@/lib/visual-gen/generators/scene-decompose')>()),
+  decomposeScene: seams.decompose,
+}));
+
+import { POST as finish } from '@/app/api/visual-gen/mesh-finish/route';
+import { POST as remediate } from '@/app/api/visual-gen/mesh-finish/remediate/route';
+import { POST as split } from '@/app/api/visual-gen/mesh-split/route';
+import { POST as decompose } from '@/app/api/visual-gen/scene-decompose/route';
+import { POST as viewGate } from '@/app/api/visual-gen/view-gate/route';
+import { GET as viewGateStatus } from '@/app/api/visual-gen/view-gate/status/route';
+import { POST as ueImport } from '@/app/api/visual-gen/ue-import/route';
+import { POST as uePlan } from '@/app/api/visual-gen/ue-import/plan/route';
+
+type Handler = (req: NextRequest) => Promise<Response>;
+
+const ROUTES: ReadonlyArray<readonly [string, Handler]> = [
+  ['mesh-finish', finish],
+  ['mesh-finish/remediate', remediate],
+  ['mesh-split', split],
+  ['scene-decompose', decompose],
+  ['view-gate', viewGate],
+  ['ue-import', ueImport],
+  ['ue-import/plan', uePlan],
+];
+
+const raw = (body: string, headers: Record<string, string> = {}) =>
+  new NextRequest('http://localhost/api/visual-gen/x', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body,
+  });
+const json = (body: unknown) => raw(JSON.stringify(body));
+
+let root = '';
+let glb = '';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  root = mkdtempSync(join(tmpdir(), 'pof-mesh-routes-'));
+  mkdirSync(join(root, 'generated', 'meshes'), { recursive: true });
+  glb = join(root, 'generated', 'meshes', 'crate.glb').replace(/\\/g, '/');
+  writeFileSync(glb, 'glb');
+  vi.spyOn(process, 'cwd').mockReturnValue(root);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  rmSync(root, { recursive: true, force: true });
+});
+
+function expectNothingStarted() {
+  for (const seam of [seams.startFinish, seams.startView, seams.startImport, seams.split, seams.critique, seams.decompose]) {
+    expect(seam).not.toHaveBeenCalled();
+  }
+}
+
+describe('malformed bodies', () => {
+  for (const [name, handler] of ROUTES) {
+    for (const [label, body] of [['broken JSON', '{nope'], ['an array', '[]'], ['null', 'null']] as const) {
+      it(`${name} answers 400 to ${label} and starts nothing`, async () => {
+        const res = await handler(raw(body));
+        expect(res.status).toBe(400);
+        expectNothingStarted();
+      });
+    }
+  }
+});
+
+describe('operator guard', () => {
+  for (const [name, handler] of ROUTES) {
+    it(`${name} refuses a cross-site browser request before reading the body`, async () => {
+      const res = await handler(raw('{}', { origin: 'https://evil.example', host: 'localhost' }));
+      expect(res.status).toBe(403);
+      expectNothingStarted();
+    });
+  }
+});
+
+describe('view-gate status', () => {
+  it('reports the reference-conformance answer the caller asked for', async () => {
+    const memberConformance = { verdict: 'fail', reason: 'a barrel, not a crate' };
+    seams.getView.mockReturnValue({
+      status: 'done',
+      verdict: 'pass',
+      conformance: 'fail',
+      members: [{ name: 'crate', meshPath: 'crate.glb', conformance: memberConformance }],
+      startedAt: 1,
+    });
+    const res = await viewGateStatus(new NextRequest('http://localhost/api/visual-gen/view-gate/status?jobId=v1'));
+    const { data } = await res.json();
+    expect(data.conformance).toBe('fail');
+    expect(data.members[0].conformance).toEqual(memberConformance);
+  });
+});
+
+describe('mesh-finish fields', () => {
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['highPolyPath', 7],
+    ['outputPath', 7],
+    ['mirror', 'w'],
+    ['bake', 'normal'],
+    ['bake', ['gloss']],
+    ['bakeSize', 0],
+    ['bakeSize', 99999],
+    ['bakeSize', 'big'],
+    ['targetFaces', -1],
+    ['targetFaces', 1.5],
+    ['targetFaces', 'many'],
+    ['assetClass', 'not-a-class'],
+    ['assetClass', 7],
+    ['unwrap', 'yes'],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)}`, async () => {
+      const res = await finish(json({ highPolyPath: glb, targetFaces: 5000, [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  it('still starts a job for a fully valid request', async () => {
+    const res = await finish(json({
+      highPolyPath: glb, assetClass: 'prop', targetFaces: 5000, mirror: 'x', bake: ['normal', 'metallic'], bakeSize: 1024, unwrap: true,
+    }));
+    expect(res.status).toBe(202);
+    expect(seams.startFinish).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('view-gate fields', () => {
+  it('refuses a non-array members', async () => {
+    const res = await viewGate(json({ members: 'crate.glb' }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain('members');
+    expectNothingStarted();
+  });
+
+  it('refuses a member that is not an object', async () => {
+    const res = await viewGate(json({ members: [7] }));
+    expect(res.status).toBe(400);
+    expectNothingStarted();
+  });
+
+  for (const [field, value] of [['meshPath', 7], ['referencePath', 7], ['subject', 7], ['name', 7]] as const) {
+    it(`refuses a member whose ${field} is not a string`, async () => {
+      const res = await viewGate(json({ members: [{ meshPath: glb, [field]: value }] }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['meshPath', 7],
+    ['views', 'six'],
+    ['resolution', 0],
+    ['resolution', 99999],
+    ['resolution', 'big'],
+    ['outDir', 7],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)}`, async () => {
+      const res = await viewGate(json({ meshPath: glb, [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  it('still starts a job for a valid request', async () => {
+    const res = await viewGate(json({ meshPath: glb, views: 6, resolution: 512 }));
+    expect(res.status).toBe(202);
+    expect(seams.startView).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('mesh-split fields', () => {
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['name', 7],
+    ['dir', 7],
+    ['minFaceShare', -0.1],
+    ['minFaceShare', 1.5],
+    ['minFaceShare', 'x'],
+    ['minCoverage', 1.5],
+    ['minCoverage', 'x'],
+    ['maxParts', 0],
+    ['maxParts', 1.5],
+    ['maxParts', 999],
+    ['center', 'yes'],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)}`, async () => {
+      const res = await split(json({ name: 'crate.glb', dir: 'meshes', [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  it('still runs for valid tuning values', async () => {
+    seams.split.mockResolvedValue({ ok: false, parts: [], error: 'mocked', durationMs: 1 });
+    const res = await split(json({ name: 'crate.glb', dir: 'meshes', minFaceShare: 0.01, minCoverage: 0.5, maxParts: 8, center: false }));
+    expect(res.status).toBe(200);
+    expect(seams.split).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ue-import fields', () => {
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['assetName', '../Crate'],
+    ['assetName', 'SM Crate'],
+    ['assetName', 7],
+    ['destPath', '../Game'],
+    ['destPath', 'C:/Content'],
+    ['destPath', 7],
+    ['settleMs', 0],
+    ['settleMs', 'soon'],
+    ['settleMs', 99_000_000],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)} before the editor launch`, async () => {
+      const res = await ueImport(json({ glbPath: glb, use: 'blocking', [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+
+  for (const [name, handler] of [['ue-import', ueImport], ['ue-import/plan', uePlan]] as const) {
+    it(`${name} refuses a non-string glbPath with a 400`, async () => {
+      const res = await handler(json({ glbPath: 7, use: 'blocking', assetName: 'SM_Crate' }));
+      expect(res.status).toBe(400);
+      expectNothingStarted();
+    });
+  }
+
+  it('still starts a job for a valid request', async () => {
+    const res = await ueImport(json({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', destPath: '/Game/Generated/SM_Crate', settleMs: 1000 }));
+    expect(res.status).toBe(202);
+    expect(seams.startImport).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('remediate fields', () => {
+  for (const [field, value] of [['name', 7], ['assetClass', 7]] as const) {
+    it(`refuses a non-string ${field} with a 400, not a TypeError 500`, async () => {
+      const res = await remediate(json({ name: 'crate.glb', dir: 'meshes', [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+});
+
+describe('scene-decompose fields', () => {
+  const IMAGE = 'data:image/png;base64,aGVsbG8=';
+  const bad: ReadonlyArray<readonly [string, unknown]> = [
+    ['imageDataUrl', 7],
+    ['hint', 7],
+    ['gateCrops', 'yes'],
+    ['seed', 'x'],
+    ['areaExtent', 0],
+    ['areaExtent', 'wide'],
+    ['jitterDegrees', -1],
+    ['jitterDegrees', 'x'],
+  ];
+  for (const [field, value] of bad) {
+    it(`refuses ${field}=${JSON.stringify(value)} before any vision call`, async () => {
+      const res = await decompose(json({ imageDataUrl: IMAGE, [field]: value }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain(field);
+      expectNothingStarted();
+    });
+  }
+});
+
+describe('assetClass is one rule across mesh-finish, remediate, ue-import and its plan', () => {
+  const bodies: ReadonlyArray<readonly [string, Handler, (assetClass: string) => Record<string, unknown>]> = [
+    ['mesh-finish', finish, (assetClass) => ({ highPolyPath: glb, assetClass })],
+    ['mesh-finish/remediate', remediate, (assetClass) => ({ name: 'crate.glb', dir: 'meshes', assetClass })],
+    ['ue-import', ueImport, (assetClass) => ({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', assetClass })],
+    ['ue-import/plan', uePlan, (assetClass) => ({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', assetClass })],
+  ];
+  for (const [name, handler, body] of bodies) {
+    it(`${name} refuses a mistyped class with a 400 naming the valid ones and starts nothing`, async () => {
+      const res = await handler(json(body('charcter')));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain('assetClass must be one of');
+      expectNothingStarted();
+    });
+  }
+
+  it('ue-import still starts a job for a known class and for an empty (class-less) one', async () => {
+    for (const assetClass of ['prop', '']) {
+      const res = await ueImport(json({ glbPath: glb, use: 'blocking', assetName: 'SM_Crate', assetClass }));
+      expect(res.status).toBe(202);
+    }
+  });
+});

@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { CodeViewer } from '@/components/ui/CodeViewer';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import { MOTION } from '@/lib/constants';
-import { MODULE_COLORS, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_PURPLE_BOLD, STATUS_NEUTRAL } from '@/lib/chart-colors';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -85,6 +85,9 @@ export function EconomyCodeGenPanel() {
       <div className="flex items-center gap-2 px-4 py-3">
         <button
           onClick={() => codeGenResult ? setExpanded(!expanded) : handleGenerate()}
+          // Only a disclosure once there is code to reveal; before that it is a
+          // plain "generate" action and must not claim a collapsed region.
+          aria-expanded={codeGenResult ? expanded : undefined}
           className="flex items-center gap-2 flex-1 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
         >
           {codeGenResult && (
@@ -148,7 +151,7 @@ export function EconomyCodeGenPanel() {
                   >
                     <FileCode
                       className="w-3 h-3"
-                      style={{ color: LANG_COLORS[file.language] ?? '#888' }}
+                      style={{ color: LANG_COLORS[file.language] ?? STATUS_NEUTRAL }}
                     />
                     {file.filename}
                     <span className="text-text-muted/50">{file.lines}L</span>

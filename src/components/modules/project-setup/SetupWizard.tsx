@@ -8,15 +8,29 @@ import { slugifyForTestId } from '@/lib/test-ids';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Button } from '@/components/ui/Button';
+import { ErrorBanner } from '@/components/modules/project-setup/ErrorBanner';
 import { useNewProjectPlan } from '@/components/modules/project-setup/useNewProjectPlan';
 import type { PlanIssue } from '@/lib/project-setup/newProjectPlan';
+import { engineFit, engineFitNote, orderByEngineFit } from '@/lib/project-setup/engineFloor';
+import { useActiveGameStore, gameUrl } from '@/stores/activeGameStore';
+import type { GameId } from '@/lib/games/types';
 
+/** The one Unreal version PoF is built and verified against. Older projects still open (the
+ *  recorded engine is a floor, see `engineFloor`); there is no toggle for earlier releases. */
 const UE_VERSIONS = [
-  { value: '5.5.4', label: '5.5', note: 'best AI coverage' },
-  { value: '5.6.1', label: '5.6', note: 'web search for newer APIs' },
-  { value: '5.7.3', label: '5.7', note: 'supported' },
-  { value: '5.8.0', label: '5.8', note: 'latest · tooling default' },
+  { value: '5.8.0', label: '5.8', note: 'tooling default' },
 ] as const;
+
+type Engine = 'ue5' | 'godot';
+
+interface DetectedGodotProject {
+  gameId: GameId;
+  name: string;
+  path: string;
+  root: string;
+  engineVersion: string;
+  validated: boolean;
+}
 
 /** The pill value for an installed engine version (same major.minor), else the raw version. */
 const pillValueFor = (version: string) =>
@@ -34,6 +48,22 @@ interface DetectedProject {
 const LINK_CLASSES =
   'focus-ring text-xs font-medium text-accent-core hover:text-accent-core/80 underline underline-offset-2 transition-colors';
 
+const scanFailure = (e: unknown) => (e instanceof Error ? e.message : 'The scan did not complete');
+
+/** A project scan that failed: its reason and a retry, in place of the "nothing found" row. */
+function DetectError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="py-4" data-testid="pof-setup-wizard-detect-error">
+      <ErrorBanner message={`Could not scan for projects: ${message}`} />
+      <div className="text-center mt-3">
+        <button type="button" data-testid="pof-setup-wizard-detect-retry" onClick={onRetry} className={LINK_CLASSES}>
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** First-run landing in the app's design system (surface cards, accent-setup,
  *  underline tabs). Pick a UE version, then open a detected project or start fresh. */
 export function SetupWizard() {
@@ -41,6 +71,14 @@ export function SetupWizard() {
   const [newName, setNewName] = useState('');
   const [projects, setProjects] = useState<DetectedProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [engine, setEngine] = useState<Engine>('ue5');
+  const [godotProjects, setGodotProjects] = useState<DetectedGodotProject[]>([]);
+  const [godotLoading, setGodotLoading] = useState(true);
+  // A failed scan is not an empty machine: the "nothing found" rows must not claim it.
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [godotError, setGodotError] = useState<string | null>(null);
+  const [projectsAttempt, setProjectsAttempt] = useState(0);
+  const [godotAttempt, setGodotAttempt] = useState(0);
 
   const setProject = useProjectStore((s) => s.setProject);
   const completeSetup = useProjectStore((s) => s.completeSetup);
@@ -53,6 +91,7 @@ export function SetupWizard() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setProjectsError(null);
       try {
         const data = await apiFetch<{ projects: DetectedProject[] }>(
           '/api/filesystem/browse',
@@ -63,28 +102,50 @@ export function SetupWizard() {
           },
         );
         if (!cancelled) setProjects(data.projects ?? []);
-      } catch {
-        // non-critical
+      } catch (e) {
+        if (!cancelled) setProjectsError(scanFailure(e));
       }
       if (!cancelled) setLoading(false);
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [projectsAttempt]);
 
-  // Derived: filter projects by selected UE major.minor
+  // Godot projects (a folder with project.godot) of the registered Godot games, e.g. RTAI
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setGodotLoading(true);
+      setGodotError(null);
+      try {
+        const data = await apiFetch<{ projects: DetectedGodotProject[] }>(
+          '/api/filesystem/browse',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'detect-godot-projects' }),
+          },
+        );
+        if (!cancelled) setGodotProjects(data.projects ?? []);
+      } catch (e) {
+        if (!cancelled) setGodotError(scanFailure(e));
+      }
+      if (!cancelled) setGodotLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [godotAttempt]);
+
+  // Derived: the recorded engine is a floor, not a pin. Every project is listed; matches
+  // first, a project built on a NEWER engine than the selected one carries a warning.
   const selectedMajorMinor = ueVersion.split('.').slice(0, 2).join('.');
-  const filteredProjects = projects.filter((p) => {
-    if (!p.engineVersion) return false;
-    return p.engineVersion.startsWith(selectedMajorMinor);
-  });
+  const orderedProjects = orderByEngineFit(projects, ueVersion);
+  const matchCount = orderedProjects.filter((p) => p.fit.kind === 'match').length;
 
   // Open an existing project — one click
   const handleOpenExisting = (project: DetectedProject) => {
     const matchedVersion = project.engineVersion
-      ? UE_VERSIONS.find((v) =>
-          project.engineVersion!.startsWith(v.value.split('.').slice(0, 2).join('.')),
-        )?.value ?? ueVersion
+      ? UE_VERSIONS.find((v) => engineFit(project.engineVersion, v.value).kind === 'match')?.value ?? ueVersion
       : ueVersion;
 
     setProject({
@@ -93,6 +154,16 @@ export function SetupWizard() {
       ueVersion: matchedVersion,
       isNewProject: false,
     });
+    completeSetup();
+  };
+
+  // Open a Godot project: it is a game workspace, not a UE module set. Select its game (the
+  // lab and /status show that game's pipelines) and write `g` so a stale URL cannot win.
+  const handleOpenGodot = (project: DetectedGodotProject) => {
+    setProject({ projectName: project.name, projectPath: project.path, isNewProject: false });
+    useActiveGameStore.getState().setGame(project.gameId);
+    const next = gameUrl(window.location.href, project.gameId);
+    if (next) window.history.replaceState(window.history.state, '', next);
     completeSetup();
   };
 
@@ -135,33 +206,50 @@ export function SetupWizard() {
           </div>
         </div>
 
-        {/* UE Version pills */}
+        {/* Engine pills: Unreal 5.8 (the version in use) or Godot */}
         <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
-          {UE_VERSIONS.map((v) => (
-            <button
-              key={v.value}
-              type="button"
-              data-testid={`pof-setup-wizard-version-pill-${v.value}`}
-              aria-pressed={ueVersion === v.value}
-              onClick={() => setProject({ ueVersion: v.value })}
-              title={installed ? `${v.note} · ${installed.has(v.label) ? 'installed' : 'not installed'}` : v.note}
-              data-installed={installed ? String(installed.has(v.label)) : undefined}
-              className={`focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                ueVersion === v.value
-                  ? 'bg-accent-medium text-accent-setup border-accent-strong'
-                  : 'bg-surface-deep text-text-muted border-border hover:text-text hover:border-border-bright'
-              }`}
-            >
-              UE {v.label}
-              {installed?.has(v.label) && <StatusDot state="ok" size="xs" label="installed" />}
-            </button>
-          ))}
+          {UE_VERSIONS.map((v) => {
+            const active = engine === 'ue5';
+            return (
+              <button
+                key={v.value}
+                type="button"
+                data-testid={`pof-setup-wizard-version-pill-${v.value}`}
+                aria-pressed={active}
+                onClick={() => { setEngine('ue5'); setProject({ ueVersion: v.value }); }}
+                title={installed ? `${v.note} · ${installed.has(v.label) ? 'installed' : 'not installed'}` : v.note}
+                data-installed={installed ? String(installed.has(v.label)) : undefined}
+                className={`focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  active
+                    ? 'bg-accent-medium text-accent-setup border-accent-strong'
+                    : 'bg-surface-deep text-text-muted border-border hover:text-text hover:border-border-bright'
+                }`}
+              >
+                UE {v.label}
+                {installed?.has(v.label) && <StatusDot state="ok" size="xs" label="installed" />}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            data-testid="pof-setup-wizard-engine-pill-godot"
+            aria-pressed={engine === 'godot'}
+            onClick={() => { setEngine('godot'); setMode('existing'); }}
+            title="Open a Godot project (a folder with project.godot)"
+            className={`focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              engine === 'godot'
+                ? 'bg-accent-medium text-accent-setup border-accent-strong'
+                : 'bg-surface-deep text-text-muted border-border hover:text-text hover:border-border-bright'
+            }`}
+          >
+            Godot
+          </button>
         </div>
 
-        {/* Version hint */}
+        {/* Engine hint */}
         <p className="text-center text-xs text-text-subtle mb-5">
-          {ueVersion.startsWith('5.5')
-            ? 'Full AI training data'
+          {engine === 'godot'
+            ? 'Godot projects open in their game workspace'
             : `Web search for UE ${selectedMajorMinor} API changes`}
         </p>
 
@@ -179,6 +267,7 @@ export function SetupWizard() {
               <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t bg-accent-setup" />
             )}
           </button>
+          {engine === 'ue5' && (
           <button
             type="button"
             data-testid="pof-setup-wizard-tab-fresh"
@@ -191,19 +280,64 @@ export function SetupWizard() {
               <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t bg-accent-setup" />
             )}
           </button>
+          )}
         </div>
 
         {/* === Open Existing === */}
-        {mode === 'existing' && (
+        {engine === 'godot' && (
+          <div data-testid="pof-setup-wizard-godot-list">
+            {godotLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-text-muted">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Scanning for Godot projects…</span>
+              </div>
+            ) : godotError ? (
+              <DetectError message={godotError} onRetry={() => setGodotAttempt((n) => n + 1)} />
+            ) : godotProjects.length > 0 ? (
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+                {godotProjects.map((project) => (
+                  <button
+                    key={project.path}
+                    type="button"
+                    data-testid={`pof-setup-wizard-godot-item-${slugifyForTestId(project.gameId)}`}
+                    onClick={() => handleOpenGodot(project)}
+                    className="focus-ring w-full flex items-center gap-3 p-3 text-left bg-surface-deep border border-border rounded-lg hover:bg-surface-hover hover:border-border-bright transition-all"
+                  >
+                    <FolderOpen className="w-4 h-4 text-text-muted shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text truncate">{project.name}</p>
+                      <p className="text-xs text-text-muted font-mono truncate">{project.path}</p>
+                    </div>
+                    <span className="shrink-0 px-1.5 py-0.5 rounded text-2xs font-medium bg-accent-medium text-accent-setup border border-accent-strong">
+                      Godot {project.engineVersion}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FolderOpen className="w-8 h-8 text-text-subtle mx-auto mb-3" />
+                <p className="text-sm text-text-muted">No Godot projects found</p>
+                <p className="text-xs text-text-subtle mt-1">A registered game&apos;s folder must hold a project.godot</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {engine === 'ue5' && mode === 'existing' && (
           <div>
             {loading ? (
               <div className="flex items-center justify-center gap-2 py-8 text-text-muted">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-sm">Scanning for UE projects…</span>
               </div>
-            ) : filteredProjects.length > 0 ? (
+            ) : projectsError ? (
+              <DetectError message={projectsError} onRetry={() => setProjectsAttempt((n) => n + 1)} />
+            ) : orderedProjects.length > 0 ? (
               <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
-                {filteredProjects.map((project) => (
+                {orderedProjects.map((project) => {
+                  const note = engineFitNote(project.fit, project.engineVersion, ueVersion);
+                  return (
                   <button
                     key={project.path}
                     type="button"
@@ -221,28 +355,19 @@ export function SetupWizard() {
                         {project.engineVersion}
                       </span>
                     )}
+                    {note && <StatusDot state="warn" size="md" title={note} label={note} />}
                     {!project.validated && (
                       <StatusDot state="warn" size="md" title="Missing Config — may be incomplete" label="Unverified project" />
                     )}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
                 <FolderOpen className="w-8 h-8 text-text-subtle mx-auto mb-3" />
-                <p className="text-sm text-text-muted">No UE {selectedMajorMinor} projects found</p>
+                <p className="text-sm text-text-muted">No UE projects found</p>
                 <div className="flex items-center justify-center gap-3 mt-3 flex-wrap">
-                  {UE_VERSIONS.filter((v) => v.value !== ueVersion).map((v) => (
-                    <button
-                      key={v.value}
-                      type="button"
-                      onClick={() => setProject({ ueVersion: v.value })}
-                      className={LINK_CLASSES}
-                    >
-                      Switch to {v.label}
-                    </button>
-                  ))}
-                  <span className="text-text-subtle">|</span>
                   <button type="button" onClick={() => setMode('fresh')} className={LINK_CLASSES}>
                     Start fresh project
                   </button>
@@ -252,14 +377,14 @@ export function SetupWizard() {
 
             {!loading && projects.length > 0 && (
               <p className="text-xs text-text-muted text-center mt-3">
-                {filteredProjects.length} of {projects.length} projects match UE {selectedMajorMinor}
+                {matchCount} of {projects.length} projects built on UE {selectedMajorMinor}
               </p>
             )}
           </div>
         )}
 
         {/* === Start Fresh === */}
-        {mode === 'fresh' && (
+        {engine === 'ue5' && mode === 'fresh' && (
           <div className="pt-4">
             <input
               type="text"

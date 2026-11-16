@@ -109,6 +109,16 @@ describe('paddedDomain', () => {
   it('falls back to the full [floor, ceil] domain for an empty series', () => {
     expect(paddedDomain([], 0.5, 0, 5)).toEqual({ min: 0, max: 5 });
   });
+
+  it('never inverts: a value above ceil or below floor still yields min <= max', () => {
+    for (const values of [[120], [-3], [120, 130], [-3, -9], [50, 120], [-3, 50]]) {
+      const { min, max } = paddedDomain(values, 0.5, 0, 100);
+      expect(min).toBeLessThanOrEqual(max);
+      expect(min).toBeGreaterThanOrEqual(0);
+      expect(max).toBeLessThanOrEqual(100);
+    }
+    expect(paddedDomain([120], 0.5, 0, 100)).toEqual({ min: 100, max: 100 });
+  });
 });
 
 describe('sparklinePoints', () => {

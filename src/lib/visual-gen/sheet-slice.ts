@@ -36,6 +36,8 @@ export interface SheetImageOps {
     path: string,
     cells: SheetCell[],
     seamXs: number[],
+    /** Row-cut y offsets (column 0, rows > 0): the horizontal cuts, measured like the vertical ones. */
+    seamYs: number[],
   ): Promise<{ cellStdev: number[]; seams: number[]; interior: number }>;
   cut(path: string, cell: SheetCell, outPath: string): Promise<void>;
 }
@@ -67,8 +69,34 @@ export type SheetRunResult =
   | { ok: false; refused?: boolean; error: string; sheetUrl?: string; verdict?: SheetGateVerdict }
   | { ok: true; sheetUrl: string; model?: string; verdict: SheetGateVerdict; icons: CutIcon[] };
 
+const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
 export function iconUrl(name: string): string {
   return `/api/visual-gen/icon/${encodeURIComponent(name)}`;
+}
+
+/**
+ * Why this cast cannot give every cell its own icon file, or undefined when it can.
+ *
+ * `iconFileBase` collapses an id to `[a-z0-9_]`, so `Fire Imp` and `fire-imp` are one file and
+ * every non-latin id is `_`: the later cell silently overwrites the earlier one while both
+ * entities report an icon. An id with no latin letter or digit at all cannot be parsed back
+ * as entity-scoped either. Checked before the provider is paid.
+ */
+function castFileClash(spec: ContactSheetSpec, catalogId: string, step: string): string | undefined {
+  const byFile = new Map<string, string>();
+  for (const { id } of spec.cast) {
+    if (!/[a-z0-9]/i.test(id)) {
+      return `cast id ${JSON.stringify(id)} has no latin letter or digit, so its icon file could not be addressed`;
+    }
+    const file = iconFileBase(catalogId, step, id);
+    const other = byFile.get(file);
+    if (other !== undefined) {
+      return `cast ids ${JSON.stringify(other)} and ${JSON.stringify(id)} both file as ${file}.png — one cell would overwrite the other`;
+    }
+    byFile.set(file, id);
+  }
+  return undefined;
 }
 
 export async function runContactSheet(
@@ -79,6 +107,8 @@ export async function runContactSheet(
 
   const prompt = buildContactSheetPrompt(spec);
   if (!prompt.ok) return { ok: false, refused: true, error: prompt.error };
+  const clash = castFileClash(spec, catalogId, step);
+  if (clash) return { ok: false, refused: true, error: clash };
 
   const gen = await deps.generate(prompt.data);
   if (!gen.ok || !gen.path) {
@@ -97,9 +127,16 @@ export async function runContactSheet(
   // second source of truth for the one mapping that must never drift.
   const cells = width > 0 && height > 0 ? contactSheetCells(spec, width, height) : [];
   const seamXs = cells.filter((c) => c.row === 0 && c.col > 0).map((c) => c.x);
-  const measured = cells.length
-    ? await deps.image.stats(gen.path, cells, seamXs)
-    : { cellStdev: [], seams: [], interior: 0 };
+  const seamYs = cells.filter((c) => c.col === 0 && c.row > 0).map((c) => c.y);
+  let measured: { cellStdev: number[]; seams: number[]; interior: number };
+  try {
+    measured = cells.length
+      ? await deps.image.stats(gen.path, cells, seamXs, seamYs)
+      : { cellStdev: [], seams: [], interior: 0 };
+  } catch (e) {
+    // The credit is spent and the art exists: the url has to survive whatever broke here.
+    return { ok: false, error: `the sheet was generated but could not be measured: ${messageOf(e)}`, sheetUrl: gen.url };
+  }
 
   const verdict = gradeSheet({
     cols: spec.cols,
@@ -130,7 +167,16 @@ export async function runContactSheet(
       cellIndex: cell.index,
       ...(gen.model ? { model: gen.model } : {}),
     };
-    await deps.commit(file, (out) => deps.image.cut(sheetPath, cell, out), origin);
+    try {
+      await deps.commit(file, (out) => deps.image.cut(sheetPath, cell, out), origin);
+    } catch (e) {
+      return {
+        ok: false,
+        error: `the sheet was generated but cutting stopped at ${cell.id} after ${icons.length} of ${cells.length} icons: ${messageOf(e)}`,
+        sheetUrl: gen.url,
+        verdict,
+      };
+    }
     icons.push({ entityId: cell.id, file, url: iconUrl(file) });
   }
 

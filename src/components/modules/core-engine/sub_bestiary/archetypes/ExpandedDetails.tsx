@@ -8,6 +8,7 @@ import type { FeatureRow } from '@/types/feature-matrix';
 import type { ArchetypeConfig, EliteModifier } from '../_shared/data';
 import { ELITE_MODIFIERS } from '../_shared/data';
 import { inertStatMods } from '@/lib/bestiary/elite-stat-axes';
+import { isModifierExcluded } from '@/lib/bestiary/modifier-exclusion';
 
 interface ExpandedDetailsProps {
   archetype: ArchetypeConfig;
@@ -57,7 +58,7 @@ export function ExpandedDetails({
         <div className="flex flex-wrap gap-1.5">
           {ELITE_MODIFIERS.map(mod => {
             const isActive = activeModifiers.includes(mod.id);
-            const isExcluded = !isActive && mod.excludes?.some(ex => activeModifiers.includes(ex));
+            const isExcluded = isModifierExcluded(mod.id, activeModifiers, ELITE_MODIFIERS);
             return (
               <button key={mod.id}
                 onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleModifier(mod.id); }}
@@ -75,7 +76,7 @@ export function ExpandedDetails({
               >
                 <span>{mod.icon}</span>
                 {mod.name}
-                <span className="text-[9px] uppercase opacity-60 ml-0.5">{mod.tier[0]}</span>
+                <span className="text-2xs uppercase text-text-subtle ml-0.5">{mod.tier[0]}</span>
               </button>
             );
           })}
@@ -96,13 +97,13 @@ export function ExpandedDetails({
                         <span key={s.label}>
                           {i > 0 && ', '}
                           <span
-                            className={isInert ? 'line-through opacity-50' : undefined}
+                            className={isInert ? 'line-through text-text-subtle' : undefined}
                             title={isInert ? `${s.label}: no ${s.stat} stat on this archetype` : undefined}
                             data-inert={isInert || undefined}
                           >
                             {s.label}
                           </span>
-                          {isInert && <span className="opacity-60"> (inert)</span>}
+                          {isInert && <span className="text-text-subtle"> (inert)</span>}
                         </span>
                       );
                     })}

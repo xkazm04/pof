@@ -15,9 +15,14 @@
  * Measured 2026-09-22: 13 keys in, 13 keys out, one of them hollow.
  */
 
-/** Values JSON keeps verbatim. */
+/**
+ * Values JSON keeps verbatim. A number only when FINITE: `NaN` / `±Infinity` are numbers to
+ * `typeof` but `JSON.stringify` writes them as `null`, so a computed stat that divided by zero
+ * would read back as "no value" with nothing logged.
+ */
 function isPrimitive(v: unknown): boolean {
-  return v === null || ['string', 'number', 'boolean'].includes(typeof v);
+  if (typeof v === 'number') return Number.isFinite(v);
+  return v === null || typeof v === 'string' || typeof v === 'boolean';
 }
 
 /** A `{}`/`Object.create(null)` bag — the only object shape JSON carries faithfully. */
@@ -52,7 +57,9 @@ export function jsonUnsafeKeys(value: unknown, prefix = ''): string[] {
 
   const visit = (v: unknown, path: string) => {
     if (isPrimitive(v)) return;
-    if (typeof v === 'function' || typeof v === 'symbol' || v === undefined) {
+    // A non-finite number is rewritten to `null`; a bigint makes `JSON.stringify` throw.
+    if (typeof v === 'function' || typeof v === 'symbol' || v === undefined
+      || typeof v === 'number' || typeof v === 'bigint') {
       out.push(path);
       return;
     }

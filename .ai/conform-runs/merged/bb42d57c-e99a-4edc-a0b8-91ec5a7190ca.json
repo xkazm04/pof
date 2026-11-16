@@ -1,0 +1,204 @@
+{
+ "schema": "conform-run/1",
+ "worker": "bb42d57c-e99a-4edc-a0b8-91ec5a7190ca",
+ "subject": "table",
+ "evaluatedAt": "2026-11-08T04:26:39.736797+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "inventory-economy-simulator",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/loot-filter/LivePreview.tsx:57 None of this context's listed files renders a table. The loot-filter preview and rule list are flex-div lists keyed by id, the heatmap is an SVG chart, and the export writes UE DataTable JSON, not CSV. A recursive search of sub_inventory found no aria-sort, pageSize, csv or columnheader, so the table techniques have nothing to apply to.",
+   "techniques": [],
+   "absenceTerms": [
+    "aria-sort",
+    "pageSize",
+    "csv",
+    "columnheader"
+   ]
+  },
+  {
+   "context": "character-overview-input",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "conformant",
+   "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:95 The input-bindings surface is a native semantic table over a fixed 16-row binding profile held on the client, with rows keyed by action identity and a single-cell rebind write, so the table techniques that apply are realized and the rest have no precondition here.",
+   "techniques": [
+    {
+     "technique": "client-server-split",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:28 The whole set is a 16-row constant (INPUT_BINDINGS) plus persisted overrides, held and resolved on the client. That is the small-set case where client placement is correct."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:106 Rows are keyed by stable record identity, not array index, so a rebind updates the row in place."
+    },
+    {
+     "technique": "sorting",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:98 Static header cells with no sort affordance. Rows keep the profile's authored order."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:104 A bounded, fixed set of 16 rows is rendered whole, so there is no window to page."
+    },
+    {
+     "technique": "one-door-for-range-writes",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsTable.tsx:60 Only single-cell rebinds through one store action exist. There is no paste or fill-drag range write."
+    },
+    {
+     "technique": "grid-keyboard-model",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_character/input/InputBindingsRow.tsx:53 One button per row in a 16-row native table is the right shape (few rows, not a grid). Caveat: the button carries focus:outline-none (line 54) with only a hover ring, so keyboard focus is not visible. That is an accessibility gap, not a grid-model choice."
+    }
+   ]
+  },
+  {
+   "context": "holistic-quality-overview",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/HolisticHealthView/QualityTab.tsx:26 HolisticHealthView and UnifiedSummaryView show data as charts, gauges, stat cards and flex-row lists, never as a table. A case-insensitive search of both directories found no <table, thead, aria-sort, role=\"grid\" or pageSize.",
+   "techniques": [],
+   "absenceTerms": [
+    "<table",
+    "thead",
+    "aria-sort",
+    "role=\"grid\"",
+    "pageSize"
+   ]
+  },
+  {
+   "context": "eqs-squad-combat-spatial",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/SquadChoreographyEditor/SquadMemberRow.tsx:33 Squad members are a listbox of options with a roving tabindex, and EQS components are cards and pipeline diagrams. A case-insensitive search of the four context directories found no <table, thead, aria-sort, role=\"grid\" or pageSize, so the table techniques have no surface here.",
+   "techniques": [],
+   "absenceTerms": [
+    "<table",
+    "thead",
+    "aria-sort",
+    "role=\"grid\"",
+    "pageSize"
+   ]
+  },
+  {
+   "context": "game-ui-hud",
+   "subject": "table",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:35 The Responsive Breakpoints list is a four-column, read-only comparison drawn as CSS-grid divs with a fake header row of spans. It carries no table or grid semantics, so assistive technology gets no column headers or row/column relations. The rule is to keep a native table for read-only cells, and that is not done here.",
+   "techniques": [
+    {
+     "technique": "grid-keyboard-model",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:35 Read-only tabular cells should be a native table. This one is div soup with no semantics at all, while the Widget Binding Inspector in the same file does use a native table."
+    },
+    {
+     "technique": "client-server-split",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:15 Rows are compile-time constants imported from _shared/data, so there is no server and no placement decision."
+    },
+    {
+     "technique": "sorting",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:138 Header cells have no sort affordance."
+    },
+    {
+     "technique": "pagination",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:145 A small constant set is rendered whole."
+    },
+    {
+     "technique": "performance",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_ui/ui/UIBindingsTab.tsx:146 Rows are keyed by widget identity, not index."
+    }
+   ],
+   "registryProposal": "grid-keyboard-model frames the choice as native table vs grid. It could say outright that a third shape, read-only tabular data drawn as styled divs with no table or grid roles, is the failure, because it loses header association for assistive technology."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-08T04:26:39.736797+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "inventory-economy-simulator",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:26:39.736797+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "client-server-split",
+    "grid-keyboard-model",
+    "one-door-for-range-writes",
+    "pagination",
+    "performance",
+    "sorting"
+   ],
+   "deviations": 0,
+   "context": "character-overview-input",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:26:39.736797+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "holistic-quality-overview",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:26:39.736797+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "eqs-squad-combat-spatial",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T04:26:39.736797+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "table"
+   ],
+   "techniques": [
+    "client-server-split",
+    "grid-keyboard-model",
+    "pagination",
+    "performance",
+    "sorting"
+   ],
+   "deviations": 1,
+   "context": "game-ui-hud",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

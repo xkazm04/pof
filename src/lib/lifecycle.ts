@@ -65,33 +65,6 @@ export function createLifecycle<T>(
 }
 
 /**
- * Create a Lifecycle for a set of unsubscribe functions (event subscriptions).
- * Calling init() collects subscriptions; dispose() unsubscribes all.
- */
-export function createSubscriptionLifecycle(
-  subscribe: () => (() => void)[],
-): Lifecycle<void> {
-  let unsubs: (() => void)[] = [];
-  let active = false;
-
-  return {
-    init() {
-      if (active) this.dispose();
-      unsubs = subscribe();
-      active = true;
-    },
-    isActive() {
-      return active;
-    },
-    dispose() {
-      for (const unsub of unsubs) unsub();
-      unsubs = [];
-      active = false;
-    },
-  };
-}
-
-/**
  * Create a Lifecycle that guards one-time initialization.
  * Re-calling init() is a no-op while active. Call dispose() first to re-init.
  */
@@ -150,28 +123,6 @@ export function createTimerLifecycle(
         timer = null;
       }
       active = false;
-    },
-  };
-}
-
-// ─── Composition ──────────────────────────────────────────────────────────────
-
-/**
- * Compose multiple Lifecycle instances into one.
- * init() calls all in order; dispose() calls all in reverse order.
- */
-export function composeLifecycles(...lifecycles: Lifecycle[]): Lifecycle<void> {
-  return {
-    init() {
-      for (const lc of lifecycles) lc.init();
-    },
-    isActive() {
-      return lifecycles.some((lc) => lc.isActive());
-    },
-    dispose() {
-      for (let i = lifecycles.length - 1; i >= 0; i--) {
-        lifecycles[i].dispose();
-      }
     },
   };
 }

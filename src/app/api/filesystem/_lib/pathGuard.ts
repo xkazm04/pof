@@ -25,6 +25,8 @@ export const MAX_PATH_LENGTH = 1024;
 
 const UNC_OR_DEVICE = /^[\\/]{2}/;
 const DRIVE_RELATIVE = /^[A-Za-z]:(?![\\/])/;
+/** One leading separator and no drive (a doubled one is UNC and refused earlier). */
+const DRIVE_LESS_ROOTED = /^[\\/](?![\\/])/;
 const DRIVE_ABSOLUTE = /^[A-Za-z]:[\\/]/;
 /** A UE module name: a C++ identifier (UBT refuses anything else). */
 const UE_MODULE_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,127}$/;
@@ -54,6 +56,11 @@ export function checkLocalPath(
     return err(`${field} must be a local path; UNC and device paths (\\\\server\\share, \\\\?\\, \\\\.\\) are refused`);
   }
   if (DRIVE_RELATIVE.test(raw)) return err(`${field} must be absolute; a drive-relative path (C:foo) is refused`);
+  // A rooted path with no drive (a lone leading slash or backslash) is "absolute" to Node but takes its drive
+  // from the server's cwd, the same state nobody chose that the rules above refuse.
+  if (process.platform === 'win32' && DRIVE_LESS_ROOTED.test(raw)) {
+    return err(`${field} must name its drive; a rooted path with no drive (\\foo, /foo) is refused`);
+  }
   if (!path.isAbsolute(raw) && !DRIVE_ABSOLUTE.test(raw)) return err(`${field} must be an absolute path`);
 
   const normalized = path.normalize(raw);

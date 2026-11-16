@@ -1,0 +1,150 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d71651d9-f13c-4e71-8963-1c7af8d01fb8",
+  "subject": "generated-mesh-acceptance",
+  "evaluatedAt": "2026-11-06T01:17:34.249278+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "visual-gen-mesh-quality-gates",
+      "subject": "generated-mesh-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/best-of-n.ts:153 The re-roll loop's repeat-failure guard (best-of-n.ts:305) still decides whether to stop by blanking digits out of the first reason sentence, although every scoreMesh finding now carries a stable code, so rewording a reason changes paid retry decisions.",
+      "techniques": [
+        {
+          "technique": "defect-code-taxonomy-not-prose",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/best-of-n.ts:153 A closed FindingCode enum and published FINISH_RESOLVES/REROLL_RESOLVES lists exist (mesh-score.ts:67, critique-stage.ts:61/78), but failureShape still branches on prose, which the technique forbids."
+        },
+        {
+          "technique": "structural-scorecard",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:242 trimesh extracts the metrics and a separate pure scorer grades them. The verdict is derived from the findings (fails first), density is a warn, and the score is 100-50f-15w (mesh-score.ts:179/203-204)."
+        },
+        {
+          "technique": "floater-vs-part-face-share-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/component-split.ts:34 Uses a 0.5% share and an 8-face absolute floor. Truncated histograms resolve toward the harsher side (lines 41-47). Parts and floaters get separate codes, and the blunt count rule is the fallback with no histogram. Minor: floaterFaces omits the faces of omitted specks."
+        },
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/critique-stage.ts:143 Stage enum includes unknown. assessStage reads a verdict and never softens it. Caveats are derived from the actual codes, and an absent or errored critic returns the empty assessment."
+        },
+        {
+          "technique": "unmeasured-is-not-pass",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:170 An unavailable critic is reported as ungated, not passed. ComponentSplit carries a measured flag, and budget/scale grades are absent without a request."
+        },
+        {
+          "technique": "face-rig-shell-readiness",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/mesh-critique.ts:84 Correctly three-valued and kept out of scoreMesh, but step 5 (route on it, gating the rigging stage) is not realized: grep finds no non-test caller of faceRigReadiness, separableParts or FACE_RIG_MIN_SHELLS."
+        }
+      ],
+      "registryProposal": "defect-code-taxonomy-not-prose could name 'detecting a repeated defect across rolls' as a consumer: compare fail-code sets, not the primary reason sentence. That is the exact residue here, after codes were introduced."
+    },
+    {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "generated-mesh-acceptance",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/lib/visual-gen/finish-routing.ts:90 When the caller supplies no stage, the router substitutes 'raw' and passes it to assessStage, so a routing assessment can report misTiered/raw caveats for a stage nobody declared, instead of reporting it as unknown.",
+      "techniques": [
+        {
+          "technique": "stage-declared-grading",
+          "verdict": "deviation",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:90 The technique requires taking the stage from the caller and never defaulting. Undeclared must stay 'unknown'."
+        },
+        {
+          "technique": "defect-code-taxonomy-not-prose",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:148 Routing is driven only by finding codes via assessStage. It refuses rather than parse prose."
+        },
+        {
+          "technique": "floater-vs-part-face-share-rule",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:155 Applies the decision rule 'when debris survives a finishing pass, say so'. A floater-only fail is not routed into finish."
+        },
+        {
+          "technique": "unmeasured-is-not-pass",
+          "verdict": "conformant",
+          "evidence": "src/lib/visual-gen/finish-routing.ts:118 A deferred-budget mesh with no face count is refused as unknown rather than routed or passed. rig-gate.ts:67-71 also separates undefined jointNames from []."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "generated-mesh-acceptance",
+      "context": "visual-gen-mesh",
+      "reason": "evidence leans on mesh-finish/status/route.ts, which is not a tracked file"
+    },
+    {
+      "subject": "generated-mesh-acceptance",
+      "context": "procedural-scene-tools",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "generated-mesh-acceptance",
+      "context": "visual-gen-3d-model-runners",
+      "reason": "withdrawn after review: reviewer (sonnet): tripo-skins.ts is not one of this context's files, and none of the context's runners or job stores reference checkSkinGeometry (only generated-assets.ts does), so the verdict is about a different context's code."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-06T01:17:34.249278+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-mesh-acceptance"
+      ],
+      "techniques": [
+        "defect-code-taxonomy-not-prose",
+        "face-rig-shell-readiness",
+        "floater-vs-part-face-share-rule",
+        "stage-declared-grading",
+        "structural-scorecard",
+        "unmeasured-is-not-pass"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh-quality-gates",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T01:17:34.249278+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-mesh-acceptance"
+      ],
+      "techniques": [
+        "defect-code-taxonomy-not-prose",
+        "floater-vs-part-face-share-rule",
+        "stage-declared-grading",
+        "unmeasured-is-not-pass"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-rigging-conformance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-06T01:17:34.249278+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-mesh-acceptance"
+      ],
+      "techniques": [
+        "stage-declared-grading",
+        "structural-scorecard",
+        "unmeasured-is-not-pass"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-3d-model-runners",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

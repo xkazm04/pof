@@ -2,7 +2,7 @@
 /*  UE5 Crash Analyzer — Crash Log Parser                              */
 /* ------------------------------------------------------------------ */
 
-import type { CallstackFrame, CrashReport, CrashSeverity, CrashType, MachineState } from '@/types/crash-analyzer';
+import { CRASH_HISTORY_LIMITS, type CallstackFrame, type CrashReport, type CrashSeverity, type CrashType, type MachineState } from '@/types/crash-analyzer';
 import { CRASH_TAXONOMY, taxonomyRow } from './crash-taxonomy';
 
 /** Highest faulting address still treated as a null-pointer dereference. */
@@ -63,8 +63,44 @@ function contentHash(text: string): string {
   return (h >>> 0).toString(36);
 }
 
+/** Header kept from the top of an oversize log: CPU/GPU/OS/memory lines live there. */
+const PARSE_HEAD_CHARS = 16_000;
+/** Text kept from the first error line on: the message, timestamp and callstack follow it. */
+const PARSE_CRASH_CHARS = CRASH_HISTORY_LIMITS.rawLogChars * 3;
+
+/** Offset of the first line holding `Error:` that is not the `[Callstack]` marker, or -1. */
+function firstErrorLineStart(text: string): number {
+  let from = 0;
+  for (;;) {
+    const at = text.indexOf('Error:', from);
+    if (at < 0) return -1;
+    const start = text.lastIndexOf('\n', at) + 1;
+    const end = text.indexOf('\n', at);
+    const line = text.slice(start, end < 0 ? text.length : end);
+    if (!line.includes('[Callstack]')) return start;
+    from = end < 0 ? text.length : end + 1;
+  }
+}
+
+/**
+ * Bound what the parser has to read. A pasted Saved/Logs file can be tens of MB;
+ * the crash is the first error line and the callstack after it, the machine
+ * description is in the header. Everything between is dropped, and the log says so.
+ * A log already within the window is returned untouched.
+ */
+function boundParseWindow(rawText: string): string {
+  if (rawText.length <= PARSE_HEAD_CHARS + PARSE_CRASH_CHARS) return rawText;
+  const errStart = firstErrorLineStart(rawText);
+  if (errStart < 0) return rawText.slice(0, PARSE_HEAD_CHARS);
+  if (errStart <= PARSE_HEAD_CHARS) return rawText.slice(0, errStart + PARSE_CRASH_CHARS);
+  const omitted = errStart - PARSE_HEAD_CHARS;
+  const crash = rawText.slice(errStart, errStart + PARSE_CRASH_CHARS);
+  return `${rawText.slice(0, PARSE_HEAD_CHARS)}\n[... ${omitted} chars omitted by the importer ...]\n${crash}`;
+}
+
 /** Parse raw crash log text into a CrashReport */
-export function parseCrashLog(rawText: string): CrashReport | null {
+export function parseCrashLog(fullText: string): CrashReport | null {
+  const rawText = boundParseWindow(fullText);
   const lines = rawText.split('\n');
   const errorLine = lines.find((l) => l.includes('Error:') && !l.includes('[Callstack]'));
   if (!errorLine) return null;

@@ -8,6 +8,7 @@ import {
 import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { SubTab } from '../../unique-tabs/_shared';
 import type { ItemRarity } from '@/types/economy-simulator';
+import { RARITY_TIERS } from '../_shared/data-items';
 
 /* ── Accent ───────────────────────────────────────────────────────────── */
 
@@ -23,9 +24,7 @@ export const RARITY_COLORS: Record<ItemRarity, string> = {
   legendary: RARITY_COLOR_MAP.Legendary,
 };
 
-export const RARITY_LABELS: ItemRarity[] = [
-  'common', 'uncommon', 'rare', 'epic', 'legendary',
-];
+export const RARITY_LABELS: ItemRarity[] = RARITY_TIERS.map((t) => t.name.toLowerCase() as ItemRarity);
 
 /* ── Stat display names ───────────────────────────────────────────────── */
 

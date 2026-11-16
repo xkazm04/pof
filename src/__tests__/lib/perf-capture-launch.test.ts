@@ -39,6 +39,14 @@ describe('perf-capture plan', () => {
     expect(() => buildPerfCapturePlan({ totalSeconds: 0 })).toThrow(RangeError);
     expect(buildPerfCapturePlan({ settle: 0, totalSeconds: 1 }, 0).captureFrameCap).toBe(60);
   });
+
+  // The window was guarded against a non-finite figure; the baseline and slack were not, so a
+  // NaN settle wrote `-csvCaptureOnEventFrameCount=NaN` onto the launch line.
+  it('refuses a non-finite settle or slack instead of emitting a NaN frame cap', () => {
+    expect(() => buildPerfCapturePlan({ settle: Number.NaN, totalSeconds: 1 })).toThrow(RangeError);
+    expect(() => buildPerfCapturePlan({ settle: Number.POSITIVE_INFINITY, totalSeconds: 1 })).toThrow(RangeError);
+    expect(() => buildPerfCapturePlan({ settle: 1, totalSeconds: 1 }, Number.NaN)).toThrow(RangeError);
+  });
 });
 
 describe('perf-capture launch args', () => {

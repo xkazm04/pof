@@ -51,7 +51,9 @@ export function useGeneration(entity: StoredCatalogEntity): UseGenerationResult 
     onComplete: () => {
       apiFetch<LifecycleRecord[]>(`/api/catalog?catalogId=${entity.catalogId}`)
         .then((records) => loadLifecycle(records))
-        .catch(() => {});
+        .catch((e: unknown) => {
+          logger.warn(`[useGeneration] lifecycle refresh failed for ${entity.catalogId}: ${e instanceof Error ? e.message : String(e)}`);
+        });
     },
   });
 

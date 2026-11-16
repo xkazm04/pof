@@ -6,7 +6,7 @@ import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
 import { appendLog, deriveConflicts, sameLedger, type Ledger } from '@/lib/ue5-bridge/sync-ledger';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import { MAX_LOG_ENTRIES } from './constants';
-import { nextLogId, truncate } from './helpers';
+import { nextLogId, parseViewTarget, truncate } from './helpers';
 import { diffSyncState, tallyEvents, EMPTY_TOTALS, type SyncView, type SyncTotals } from './syncEvents';
 import { planResolution, type ConflictChoice } from './conflictResolution';
 import type { WriteReceipt } from '@/types/ue5-bridge';
@@ -14,6 +14,7 @@ import type { SyncDirection, LogLevel, SyncLogEntry, PropertyEdit, ViewportTarge
 
 export function useBidirectionalStateSyncPanel() {
   const {
+    wsStatus,
     snapshot,
     propertyWatches,
     frameRate,
@@ -25,6 +26,7 @@ export function useBidirectionalStateSyncPanel() {
   } = useLiveStateSync();
 
   const autoSync = useUE5BridgeStore((s) => s.autoSyncLiveState);
+  const wsPort = useUE5BridgeStore((s) => s.wsPort);
 
   // ── Sync log ──
   const [syncLog, setSyncLog] = useState<SyncLogEntry[]>([]);
@@ -53,9 +55,11 @@ export function useBidirectionalStateSyncPanel() {
     else addLog('outbound', 'info', category, message, detail);
   }, [addLog]);
 
-  // Auto-scroll log
+  // Follow the newest entry inside the log box only: scrollIntoView also scrolls every
+  // ancestor, which yanked the page to the log on each inbound event.
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const box = logEndRef.current?.parentElement;
+    if (box) box.scrollTop = box.scrollHeight;
   }, [syncLog]);
 
   // ── Sections ──
@@ -68,7 +72,7 @@ export function useBidirectionalStateSyncPanel() {
   const [propEdit, setPropEdit] = useState<PropertyEdit>({ objectPath: '', propertyName: '', value: '' });
 
   const handleDirectPropertyPush = useCallback(() => {
-    if (!propEdit.objectPath.trim() || !propEdit.propertyName.trim()) return;
+    if (!propEdit.objectPath.trim() || !propEdit.propertyName.trim() || !propEdit.value.trim()) return;
     let parsed: unknown;
     try {
       parsed = JSON.parse(propEdit.value);
@@ -77,7 +81,7 @@ export function useBidirectionalStateSyncPanel() {
     }
     const receipt = setProperty(propEdit.objectPath.trim(), propEdit.propertyName.trim(), parsed);
     logWrite([receipt], 'SET', `${propEdit.propertyName} = ${truncate(propEdit.value, 40)}`, propEdit.objectPath);
-    setPropEdit({ objectPath: '', propertyName: '', value: '' });
+    if (receipt.sent) setPropEdit({ objectPath: '', propertyName: '', value: '' }); // a dropped write stays editable
   }, [propEdit, setProperty, logWrite]);
 
   // ── Watched property push-back ──
@@ -90,7 +94,7 @@ export function useBidirectionalStateSyncPanel() {
 
   // ── PIE control ──
   const handlePIE = useCallback((action: 'play' | 'pause' | 'stop') => {
-    // PIE control uses set.property on the editor subsystem
+    // The plugin routes this reserved key to its PIE command handler and acks it
     const receipt = setProperty('/Script/UnrealEd.Default__UnrealEditorSubsystem', 'PIECommand', action);
     logWrite([receipt], 'PIE', `PIE ${action}`, 'EditorSubsystem');
   }, [setProperty, logWrite]);
@@ -101,9 +105,9 @@ export function useBidirectionalStateSyncPanel() {
   });
 
   const handleViewportPush = useCallback(() => {
-    const loc = { x: parseFloat(viewTarget.x) || 0, y: parseFloat(viewTarget.y) || 0, z: parseFloat(viewTarget.z) || 0 };
-    const rot = { pitch: parseFloat(viewTarget.pitch) || 0, yaw: parseFloat(viewTarget.yaw) || 0, roll: parseFloat(viewTarget.roll) || 0 };
-    const fov = parseFloat(viewTarget.fov) || 90;
+    const target = parseViewTarget(viewTarget);
+    if (!target) return; // the button is disabled; a blank field must never mean "go to 0"
+    const { loc, rot, fov } = target;
 
     const receipts = [
       setProperty('/Editor/ViewportClient', 'CameraLocation', loc),
@@ -137,6 +141,12 @@ export function useBidirectionalStateSyncPanel() {
   const conflicts = useMemo(
     () => allConflicts.filter((c) => dismissed.get(c.key) !== writes.get(c.key)?.seq),
     [allConflicts, dismissed, writes],
+  );
+
+  // The row chips read this view, so a dismissed write stops reading "conflict" there too.
+  const rowWrites = useMemo<Ledger>(
+    () => new Map([...writes].filter(([key, w]) => dismissed.get(key) !== w.seq)),
+    [writes, dismissed],
   );
 
   const resolveConflict = useCallback((key: string, choice: ConflictChoice) => {
@@ -182,6 +192,8 @@ export function useBidirectionalStateSyncPanel() {
   }, [pushEvents]);
 
   return {
+    wsStatus,
+    wsPort,
     snapshot,
     frameRate,
     isLive,
@@ -216,6 +228,7 @@ export function useBidirectionalStateSyncPanel() {
     handleCopyFromSnapshot,
     conflicts,
     writes,
+    rowWrites,
     resolveConflict,
     outboundCount,
     inboundCount,

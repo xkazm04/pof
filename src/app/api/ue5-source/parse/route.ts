@@ -1,11 +1,13 @@
 import path from 'path';
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { parseUE5AbilitySystem } from '@/lib/ue5-source-parser';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const { projectPath } = body;
 
     if (!projectPath || typeof projectPath !== 'string') {
@@ -13,10 +15,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate: must be absolute and contain no path traversal components
-    const normalized = path.resolve(projectPath);
-    if (normalized !== path.normalize(projectPath) || projectPath.includes('..')) {
+    if (!path.isAbsolute(projectPath) || projectPath.split(/[\\/]/).includes('..')) {
       return apiError('projectPath must be an absolute path with no traversal (..)', 400);
     }
+    const normalized = path.resolve(projectPath);
 
     const data = await parseUE5AbilitySystem(normalized);
     return apiSuccess(data);

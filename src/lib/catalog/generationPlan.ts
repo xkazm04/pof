@@ -1,4 +1,5 @@
 import { STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
+import { LIFECYCLE_LADDER } from '@/lib/catalog/lifecycle';
 import type { LifecycleState } from '@/lib/catalog/types';
 
 /**
@@ -11,7 +12,7 @@ import type { LifecycleState } from '@/lib/catalog/types';
  * recipe's own step list, never a hand-copied lifecycle ternary.
  */
 
-const ORDER: readonly LifecycleState[] = ['planned', 'scaffolded', 'generated', 'wired', 'verified'];
+const ORDER = LIFECYCLE_LADDER;
 
 /**
  * The recipe step to dispatch next for an entity at `lifecycle`, or null when no step

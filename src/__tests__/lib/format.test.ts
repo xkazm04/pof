@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatBytes, formatDuration, formatDurationBetween } from '@/lib/format';
+import { formatBytes, formatDuration, formatDurationBetween, readoutDecimals } from '@/lib/format';
 
 describe('formatBytes (packaging style)', () => {
   it('formats raw bytes with a space and no decimals below 1 KB', () => {
@@ -63,6 +63,13 @@ describe('formatDuration', () => {
     expect(formatDuration(3_661_000)).toBe('1h 1m');
     expect(formatDuration(90_000_000)).toBe('25h 0m'); // 25h "time invested" total
   });
+
+  it('carries into the next unit at boundaries instead of printing 60', () => {
+    expect(formatDuration(59_960)).toBe('1m 0s');
+    expect(formatDuration(119_600)).toBe('2m 0s');
+    expect(formatDuration(3_599_600)).toBe('1h 0m');
+    expect(formatDuration(7_199_000)).toBe('2h 0m');
+  });
 });
 
 describe('formatDurationBetween', () => {
@@ -73,5 +80,20 @@ describe('formatDurationBetween', () => {
 
   it('clamps a negative span (end before start) to zero', () => {
     expect(formatDurationBetween('2026-01-01T00:00:05Z', '2026-01-01T00:00:00Z')).toBe('0ms');
+  });
+});
+
+describe('readoutDecimals', () => {
+  it('shows whole numbers for a unit-or-larger step', () => {
+    expect(readoutDecimals(1)).toBe(0);
+    expect(readoutDecimals(5)).toBe(0);
+  });
+  it('shows at least two decimals for a fractional step', () => {
+    expect(readoutDecimals(0.1)).toBe(2);
+    expect(readoutDecimals(0.01)).toBe(2);
+  });
+  it('carries as many decimals as the step, capped at six', () => {
+    expect(readoutDecimals(0.0007)).toBe(4);
+    expect(readoutDecimals(0.0000012)).toBe(6);
   });
 });

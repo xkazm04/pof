@@ -68,6 +68,9 @@ export function queuePrev(q: WorkQueue): { queue: WorkQueue; item: WorkQueueItem
  */
 export function reconcileQueue(q: WorkQueue, loc: { catalogId: string; entityId: string | null }): WorkQueue | null {
   if (loc.catalogId !== q.catalogId || !loc.entityId) return null;
+  // Already on this entity's stop: stay. An entity may own several stops (the regression queue is
+  // one per regressed STEP), and re-anchoring to its FIRST one undid every Next past it.
+  if (q.items[q.cursor]?.entityId === loc.entityId) return q;
   const k = q.items.findIndex((i) => i.entityId === loc.entityId);
   if (k < 0) return null;
   return k === q.cursor ? q : { ...q, cursor: k };

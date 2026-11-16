@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Table, Copy, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { ACCENT } from '../_shared/data';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
@@ -13,7 +15,8 @@ import {
 export function AttributeDefaultsTab() {
   const [rows, setRows] = useState<AttributeRow[]>(() =>
     DEFAULT_ATTRIBUTE_ROWS.map((r) => ({ rowName: r.rowName, values: { ...r.values } })));
-  const [copied, setCopied] = useState(false);
+  // Feedback follows the verified write: 'failed' when the clipboard rejects.
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
 
   const script = useMemo(() => buildAttributeDefaultsPython(rows), [rows]);
 
@@ -22,11 +25,15 @@ export function AttributeDefaultsTab() {
       r.rowName === rowName ? { ...r, values: { ...r.values, [field]: value } } : r));
   }, []);
 
-  const copyScript = useCallback(() => {
-    void navigator.clipboard?.writeText(script);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const copyScript = useCallback(async () => {
+    setCopyState((await copyToClipboard(script)) ? 'copied' : 'failed');
   }, [script]);
+
+  useEffect(() => {
+    if (copyState === 'idle') return;
+    const t = setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
+    return () => clearTimeout(t);
+  }, [copyState]);
 
   return (
     <motion.div data-testid="combat-attribute-defaults" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
@@ -63,8 +70,9 @@ export function AttributeDefaultsTab() {
       <BlueprintPanel color={ACCENT} className="p-3">
         <div className="flex items-center justify-between mb-2">
           <SectionHeader label="UE Python — create DT_AttributeDefaults" color={ACCENT} icon={Table} />
-          <button onClick={copyScript} className="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer">
-            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}{copied ? 'Copied' : 'Copy'}
+          <button onClick={() => { void copyScript(); }} aria-live="polite" className="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer">
+            {copyState === 'copied' ? <Check className="w-3 h-3" aria-hidden /> : <Copy className="w-3 h-3" aria-hidden />}
+            {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
           </button>
         </div>
         <pre className="text-[10px] font-mono whitespace-pre-wrap max-h-64 overflow-y-auto text-text-muted">{script}</pre>

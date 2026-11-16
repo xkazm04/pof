@@ -16,7 +16,11 @@ import { LivePreviewScene } from './LivePreviewScene';
 import { ParameterEditor } from './ParameterEditor';
 import { ExportPanel } from './ExportPanel';
 import { ApplyToProjectBar } from './ApplyToProjectBar';
+import type { CopyState } from './ExportPanel';
 import { useHudDesignStore } from '@/stores/hudDesignStore';
+import { copyToClipboard } from '@/lib/clipboard';
+import { downloadBlob } from '@/lib/download';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { useProjectStore } from '@/stores/projectStore';
 import type { HudTheme, RGBA } from './types';
 
@@ -28,7 +32,7 @@ export function HudThemeEditor() {
   const theme = useHudDesignStore((s) => s.byProject[projectPath]?.themeDraft ?? DEFAULT_THEME);
   const setThemeDraft = useHudDesignStore((s) => s.setThemeDraft);
   const [playing, setPlaying] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
   const [activeSection, setActiveSection] = useState<'health' | 'damage' | 'enemy'>('health');
 
   const time = useAnimationLoop(playing);
@@ -50,19 +54,15 @@ export function HudThemeEditor() {
   const exportConfig = useMemo(() => generateUE5Config(theme), [theme]);
 
   const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(exportConfig);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Shared helper: a rejected write (no secure context / focus) reports failure, never throws.
+    const ok = await copyToClipboard(exportConfig);
+    setCopyState(ok ? 'copied' : 'failed');
+    setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
   }, [exportConfig]);
 
   const handleDownload = useCallback(() => {
-    const blob = new Blob([exportConfig], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'HUDThemeConfig.h';
-    a.click();
-    URL.revokeObjectURL(url);
+    // Shared helper defers the revoke so the click is not raced into a 0-byte file.
+    downloadBlob(new Blob([exportConfig], { type: 'text/plain' }), 'HUDThemeConfig.h');
   }, [exportConfig]);
 
   // Section config tabs
@@ -93,6 +93,7 @@ export function HudThemeEditor() {
             onClick={() => setPlaying(!playing)}
             className="p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
             title={playing ? 'Pause preview' : 'Play preview'}
+            aria-label={playing ? 'Pause preview' : 'Play preview'}
           >
             {playing ? (
               <Pause className="w-3.5 h-3.5 text-text-muted" />
@@ -104,6 +105,7 @@ export function HudThemeEditor() {
             onClick={handleReset}
             className="p-1.5 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors"
             title="Reset to C++ defaults"
+            aria-label="Reset to C++ defaults"
           >
             <RotateCcw className="w-3.5 h-3.5 text-text-muted" />
           </button>
@@ -133,7 +135,7 @@ export function HudThemeEditor() {
         <ExportPanel
           theme={theme}
           exportConfig={exportConfig}
-          copied={copied}
+          copyState={copyState}
           handleCopy={handleCopy}
           handleDownload={handleDownload}
           onImport={handleImport}

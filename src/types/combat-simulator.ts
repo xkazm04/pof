@@ -339,19 +339,3 @@ export interface ABComparisonResult {
   /** Alerts that appeared, disappeared, or persisted between the two runs */
   alertDiff: AlertDiffEntry[];
 }
-
-// ── API Types ───────────────────────────────────────────────────────────────
-
-export interface RunCombatSimRequest {
-  scenario: CombatScenario;
-  tuning: TuningOverrides;
-  config: CombatSimConfig;
-}
-
-export interface GetCombatDefaultsResponse {
-  enemies: EnemyArchetype[];
-  abilities: CombatAbility[];
-  gearLoadouts: GearLoadout[];
-  defaultTuning: TuningOverrides;
-  defaultConfig: CombatSimConfig;
-}

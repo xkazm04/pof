@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LabTheme } from './theme';
 import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
-import type { EntityProvenance, LifecycleState } from '@/lib/catalog/types';
+import type { IngestProvenance, LifecycleState } from '@/lib/catalog/types';
 import { STATUS_GLYPH, lifecycleStatus, statusAriaLabel, type StatusKind } from './statusLanguage';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { tryApiFetch } from '@/lib/api-utils';
@@ -101,7 +101,7 @@ const BROWSER_ONLY_TITLE =
  * Say where — game, file, source row — and carry the licence note, so a reference entity can
  * never pass for a designed one in the tree.
  */
-function ingestTitle(p: EntityProvenance): string {
+function ingestTitle(p: IngestProvenance): string {
   return `Ingested from ${p.sourceGame} — ${p.sourceFile} (${p.sourceRow}). ${p.licenceNote}`;
 }
 
@@ -124,8 +124,8 @@ function lifecycleTitle(name: string, lifecycle: LifecycleState, summary?: strin
 }
 
 function CatalogRow({
-  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps, derivedLifecycle,
-  verified,
+  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps, entityRovingProps,
+  derivedLifecycle, verified,
 }: {
   t: LabTheme;
   catalog: LabCatalog;
@@ -135,6 +135,8 @@ function CatalogRow({
   onSelectCatalog: (id: string) => void;
   onSelectEntity: (id: string) => void;
   rovingItemProps?: { tabIndex: number; 'data-roving-active'?: boolean };
+  /** Roving props for one of this catalog's entity rows (they share the tree's single tab-stop). */
+  entityRovingProps?: (entityId: string) => { tabIndex: number; 'data-roving-active'?: boolean };
   derivedLifecycle?: DerivedLifecycleMap;
   /** Entities derived as `verified`, or `null` when nothing has been derived for this catalog. */
   verified: number | null;
@@ -147,6 +149,7 @@ function CatalogRow({
     <>
       <button
         role="treeitem"
+        aria-level={2}
         aria-selected={isSelected}
         onClick={() => onSelectCatalog(catalog.catalogId)}
         data-testid={`harness-catalog-${catalog.catalogId}`}
@@ -160,23 +163,32 @@ function CatalogRow({
           color: isSelected ? t.inkDeep : t.text,
           fontWeight: isSelected ? 600 : 400,
           fontSize: 14,
+          // An off-manifest catalog shown under "show all pipelines" is greyed and says so in words.
+          ...(catalog.notInGame ? { opacity: 0.6 } : {}),
           transition: 'background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out',
         }}
+        {...(catalog.notInGame ? { 'data-not-in-game': '' } : {})}
       >
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {catalog.label}
+          {catalog.notInGame && (
+            <span data-testid={`catalog-not-in-game-${catalog.catalogId}`} className={t.fontMono}
+              style={{ marginLeft: 8, fontSize: 'var(--lab-fs-xs)', color: t.muted, fontStyle: 'italic' }}>
+              not in {catalog.notInGame}
+            </span>
+          )}
         </span>
         <span
           className={t.fontMono}
           data-testid={`catalog-verified-${catalog.catalogId}`}
           data-derived={verified === null ? 'unknown' : 'derived'}
           title={verified === null ? UNKNOWN_VERIFIED_TITLE : verifiedTitle(verified, catalog.total)}
-          style={{ fontSize: 12, color: t.muted, flexShrink: 0, marginLeft: 8 }}
+          style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, flexShrink: 0, marginLeft: 8 }}
         >
           {verified === null ? '—' : verified}/{catalog.total}
         </span>
       </button>
-      {isSelected && entities.map((entity) => {
+      {isSelected && entities.length > 0 && <div role="group" aria-label={`${catalog.label} entities`}>{entities.map((entity) => {
         const isDraft = entity.id.startsWith('draft-');
         // A draft whose server persist failed is BROWSER-ONLY: nothing on the server can
         // resolve it, so none of its gates can run. Say so on the row rather than letting it
@@ -203,8 +215,12 @@ function CatalogRow({
             }}
           >
             <button
+              role="treeitem"
+              aria-level={3}
+              aria-selected={isEntitySelected}
               onClick={() => onSelectEntity(entity.id)}
               aria-label={statusAriaLabel(entity.name, status)}
+              {...entityRovingProps?.(entity.id)}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: 8,
                 textAlign: 'left', padding: '6px 12px 6px 36px',
@@ -227,7 +243,7 @@ function CatalogRow({
                   border: isPass ? 'none' : `1px solid ${dotColor}`,
                   color: dotColor,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 700, lineHeight: 1,
+                  fontSize: 'var(--lab-fs-xs)', fontWeight: 700, lineHeight: 1,
                 }}
               >{isPass ? '' : STATUS_GLYPH[status]}</span>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -240,7 +256,7 @@ function CatalogRow({
                 title={draft?.persistError ? `${BROWSER_ONLY_TITLE} (${draft.persistError})` : BROWSER_ONLY_TITLE}
                 className={t.fontMono}
                 style={{
-                  flexShrink: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
+                  flexShrink: 0, fontSize: 'var(--lab-fs-xs)', fontWeight: 700, letterSpacing: 0.4,
                   color: t.bad, border: `1px solid ${t.bad}`, borderRadius: 3, padding: '0 3px',
                 }}
               >
@@ -253,7 +269,7 @@ function CatalogRow({
                 title={ingestTitle(draft.provenance)}
                 className={t.fontMono}
                 style={{
-                  flexShrink: 0, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, marginRight: 8,
+                  flexShrink: 0, fontSize: 'var(--lab-fs-xs)', fontWeight: 700, letterSpacing: 0.4, marginRight: 8,
                   color: t.muted, border: `1px solid ${t.muted}`, borderRadius: 3, padding: '0 3px',
                 }}
               >
@@ -263,14 +279,22 @@ function CatalogRow({
             {isDraft && (
               <button
                 aria-label="discard draft"
+                // Enter/Space must activate THIS button, not the tree's roving select.
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
                 onClick={(e) => {
                   e.stopPropagation();
                   // Remove the SERVER rows first, then the local cache: the counts come back
                   // from the deletes themselves, so the report can never be a guess.
+                  // A failed delete KEEPS the draft: this row is the only handle on the server
+                  // rows left behind, so dropping it would leave nothing to retry from.
                   void discardDraftEntity(catalog.catalogId, entity.id).then((r) => {
-                    useCatalogStore.getState().removeDraft(catalog.catalogId, entity.id);
                     const msg = describeDiscard(entity.name, r);
-                    if (r.errors.length) toast.error(msg); else toast.success(msg);
+                    if (r.errors.length) {
+                      toast.error(`${msg} — kept in the tree so you can retry the discard.`);
+                      return;
+                    }
+                    useCatalogStore.getState().removeDraft(catalog.catalogId, entity.id);
+                    toast.success(msg);
                   });
                 }}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 14, padding: '0 4px' }}
@@ -280,7 +304,7 @@ function CatalogRow({
             )}
           </div>
         );
-      })}
+      })}</div>}
     </>
   );
 }
@@ -298,14 +322,15 @@ export function CatalogTree({
    * absent fetch (which resolves to an EMPTY map — see `useDerivedLifecycle`). Costs zero
    * extra requests: the one fetch the open catalog already issues serves both.
    *
-   * Drafts are excluded because `LabCatalog.total` counts persisted entities only — a count
-   * that could exceed its own denominator would be a new lie, not a fix for the old one.
+   * Counted over EVERY listed entity, drafts included: `LabCatalog.total` is the same list
+   * (`labEntitiesOf`), so numerator and denominator cover one set. Skipping `draft-` ids while
+   * counting other persisted rows (`d1-*` ingests) under-counted drafts and, against the old
+   * seeds-only total, let the numerator exceed its own denominator.
    */
   const verifiedInSelected = useMemo(() => {
     if (!derivedLifecycle || derivedLifecycle.size === 0) return null;
     let n = 0;
     for (const e of entities) {
-      if (e.id.startsWith('draft-')) continue;
       if (derivedLifecycle.get(e.id)?.lifecycle === 'verified') n++;
     }
     return n;
@@ -319,35 +344,39 @@ export function CatalogTree({
     [groups, selectedCatalogId],
   );
   const isOpen = (category: string) => (category in override ? override[category] : category === selectedCategory);
-  // Flatten the visible (open-chapter) catalogs once, and carry each catalog's
-  // flat index in the same pass so render rows do an O(1) Map lookup instead of
-  // an O(catalogs) indexOf per row (which was O(catalogs²) over the whole tree).
-  const { visibleCatalogs, visibleIndex } = useMemo(() => {
+  // Flatten the visible (open-chapter) catalogs once.
+  const visibleCatalogs = useMemo(() => {
     const list: LabCatalog[] = [];
-    const index = new Map<LabCatalog, number>();
     for (const g of groups) {
       if (!(g.category in override ? override[g.category] : g.category === selectedCategory)) continue;
-      for (const c of g.catalogs) {
-        index.set(c, list.length);
-        list.push(c);
+      for (const c of g.catalogs) list.push(c);
+    }
+    return list;
+  }, [groups, override, selectedCategory]);
+  // The roving list spans two levels: every visible catalog, and — directly after the open
+  // catalog — its entity rows, so ArrowDown walks Category -> Catalog -> Entity as one tree.
+  const { items, catalogIndex, entityIndex } = useMemo(() => {
+    const list: Array<{ kind: 'catalog' | 'entity'; id: string }> = [];
+    const cIdx = new Map<string, number>();
+    const eIdx = new Map<string, number>();
+    for (const c of visibleCatalogs) {
+      cIdx.set(c.catalogId, list.length);
+      list.push({ kind: 'catalog', id: c.catalogId });
+      if (c.catalogId !== selectedCatalogId) continue;
+      for (const e of entities) {
+        eIdx.set(e.id, list.length);
+        list.push({ kind: 'entity', id: e.id });
       }
     }
-    return { visibleCatalogs: list, visibleIndex: index };
-  }, [groups, override, selectedCategory]);
-  const activeIdx = Math.max(0, visibleCatalogs.findIndex((c) => c.catalogId === selectedCatalogId));
-  const roving = useRovingFocus(visibleCatalogs.length, activeIdx, (i) => {
-    const c = visibleCatalogs[i];
-    if (c) onSelectCatalog(c.catalogId);
+    return { items: list, catalogIndex: cIdx, entityIndex: eIdx };
+  }, [visibleCatalogs, selectedCatalogId, entities]);
+  const activeIdx = Math.max(0, catalogIndex.get(selectedCatalogId ?? '') ?? 0);
+  const roving = useRovingFocus(items.length, activeIdx, (i) => {
+    const item = items[i];
+    if (!item) return;
+    if (item.kind === 'catalog') onSelectCatalog(item.id);
+    else onSelectEntity(item.id);
   });
-
-  // Keep the roving cursor in sync with the selected catalog + visible-list changes.
-  // Render-phase bail-out (guarded by a prev-value) — NOT an effect, so it stays clear
-  // of react-hooks/set-state-in-effect; React de-dupes the extra setState.
-  const [prevActiveIdx, setPrevActiveIdx] = useState(activeIdx);
-  if (activeIdx !== prevActiveIdx) {
-    setPrevActiveIdx(activeIdx);
-    roving.setActive(activeIdx);
-  }
 
   return (<>
     <SeedDriftNotice t={t} />
@@ -362,6 +391,9 @@ export function CatalogTree({
         return (
           <div key={group.category}>
             <button
+              role="treeitem"
+              aria-level={1}
+              aria-selected={false}
               onClick={() => setOverride((o) => ({ ...o, [group.category]: !open }))}
               aria-expanded={open}
               className="focus-ring-inset"
@@ -377,7 +409,7 @@ export function CatalogTree({
             >
               <span aria-hidden="true">{open ? '▾' : '▸'}</span> {group.category}
             </button>
-            {open && group.catalogs.map((catalog, ci) => (
+            {open && <div role="group" aria-label={`${group.category} catalogs`}>{group.catalogs.map((catalog, ci) => (
               <motion.div key={catalog.catalogId}
                 initial={reduce ? false : { opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -392,10 +424,11 @@ export function CatalogTree({
                   onSelectEntity={onSelectEntity}
                   derivedLifecycle={derivedLifecycle}
                   verified={catalog.catalogId === selectedCatalogId ? verifiedInSelected : null}
-                  rovingItemProps={roving.itemProps(visibleIndex.get(catalog) ?? -1)}
+                  rovingItemProps={roving.itemProps(catalogIndex.get(catalog.catalogId) ?? -1)}
+                  entityRovingProps={(id) => roving.itemProps(entityIndex.get(id) ?? -1)}
                 />
               </motion.div>
-            ))}
+            ))}</div>}
           </div>
         );
       })}

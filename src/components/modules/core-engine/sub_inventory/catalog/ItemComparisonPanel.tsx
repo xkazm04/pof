@@ -29,12 +29,15 @@ export function ItemComparisonPanel({ items: explicitItems }: { items?: ItemData
     [items, category],
   );
 
+  // One column per DISTINCT item: the same item picked in two slots would otherwise be
+  // compared against itself (a fake "tie") and render duplicate React keys.
   const selectedItems = useMemo(
-    () => slotIds.map(id => pool.find(i => i.id === id)).filter((i): i is ItemData => i != null),
+    () => [...new Set(slotIds.filter(Boolean))]
+      .map(id => pool.find(i => i.id === id)).filter((i): i is ItemData => i != null),
     [slotIds, pool],
   );
 
-  const canCompare = selectedItems.length >= 2 && new Set(slotIds.filter(Boolean)).size >= 2;
+  const canCompare = selectedItems.length >= 2;
 
   const handleClear = useCallback(() => {
     setCategory(null);
@@ -96,6 +99,7 @@ export function ItemComparisonPanel({ items: explicitItems }: { items?: ItemData
           {slotIds.map((id, idx) => (
             <div key={idx} className="flex items-center gap-1 flex-1 min-w-[150px]">
               <select value={id} onChange={e => handleSetSlot(idx, e.target.value)}
+                aria-label={`Comparison slot ${String.fromCharCode(65 + idx)}`}
                 className="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
                 <option value="">{`— Slot ${String.fromCharCode(65 + idx)} —`}</option>
                 {pool.map(i => <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>)}

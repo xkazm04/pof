@@ -1,4 +1,4 @@
-import type { ABTest, ABTestView, EvolutionSuggestion, PromptVariant } from '@/types/prompt-evolution';
+import type { ABTest, ABTestVerdict, ABTestView, EvolutionSuggestion, PromptVariant } from '@/types/prompt-evolution';
 import { TIE_MARGIN, verdictOf } from '@/lib/prompt-evolution/verdict';
 
 // ── Adopt a decided winner ──────────────────────────────────────────────────
@@ -51,6 +51,17 @@ const fail = (kind: AdoptionBlockKind, message: string, testId?: string): Adopti
 
 const decidedAt = (t: AnyTest): number => Date.parse(t.concludedAt ?? t.createdAt) || 0;
 
+/**
+ * What the band licenses: strong and moderate adopt; weak is a lead; none detected
+ * no difference (a ceiling or decide-now conclusion still crowns one arm).
+ */
+function evidenceCaution(reading: ABTestVerdict): string | null {
+  const counts = `${reading.trialsA} vs ${reading.trialsB} ${reading.basis === 'judge' ? 'judge verdicts' : 'self-reported runs'}`;
+  if (reading.band === 'weak') return `This win is a lead, not a result (weak evidence, ${counts}). Running the test longer would settle it.`;
+  if (reading.band === 'none') return `No reliable difference was detected (${counts}), so this pick is close to a coin flip.`;
+  return null;
+}
+
 export function planAdoption(input: {
   test: AnyTest;
   variants: PromptVariant[];
@@ -98,7 +109,7 @@ export function planAdoption(input: {
   const contested = loseRate - winRate >= TIE_MARGIN;
   const caution = contested
     ? `Current evidence now favours the other version (${Math.round(loseRate * 100)}% vs ${Math.round(winRate * 100)}%). Adopt only if you still trust this win.`
-    : null;
+    : evidenceCaution(reading);
 
   return { ok: true, data: { winner, incumbent, diff, contested, caution } };
 }
@@ -106,13 +117,33 @@ export function planAdoption(input: {
 /**
  * Drop adopt-winner suggestions whose variant is already the served one, so an
  * adopted winner stops being re-suggested (and stops crowding the 4-row bar).
+ * The server suggests one card per concluded test, but the action adopts the item's
+ * LATEST winner, so a card naming an earlier winner would adopt a different version.
  */
 export function filterAdoptSuggestions(
   suggestions: EvolutionSuggestion[],
   variants: PromptVariant[],
+  tests: AnyTest[] = [],
 ): EvolutionSuggestion[] {
   const activeIds = new Set(variants.filter((v) => v.active).map((v) => v.id));
-  return suggestions.filter((s) => !(s.type === 'adopt-winner' && s.variantId && activeIds.has(s.variantId)));
+  const latest = new Map<string, AnyTest>();
+  for (const t of tests) {
+    if (t.status !== 'concluded' || !t.winnerId) continue;
+    const key = `${t.moduleId}::${t.checklistItemId}`;
+    const current = latest.get(key);
+    if (!current || decidedAt(t) > decidedAt(current)) latest.set(key, t);
+  }
+  const seen = new Set<string>();
+  return suggestions.filter((s) => {
+    if (s.type !== 'adopt-winner' || !s.variantId) return true;
+    if (activeIds.has(s.variantId)) return false;
+    const key = `${s.moduleId}::${s.checklistItemId}`;
+    const current = latest.get(key);
+    if (current && current.winnerId !== s.variantId) return false;
+    if (seen.has(`${key}::${s.variantId}`)) return false;
+    seen.add(`${key}::${s.variantId}`);
+    return true;
+  });
 }
 
 export interface AdoptionHandle {

@@ -201,3 +201,31 @@ describe('ROUND TRIP — real GLB → real gate → payload → grader', () => {
     expect(riggedMeshSelected('mesh', 'x')(data).status).toBe('deferred');
   });
 });
+
+describe('a rig record whose own facts contradict its pass bit never passes', () => {
+  // The producer stamps `pass`; the grader must not take that bit on trust when the facts carried
+  // beside it are exactly the ones `scoreRig` fails on (registry: the producer never hands the gate
+  // its verdict).
+  const field = 'mesh';
+  const label = 'A rigged mesh candidate is selected';
+  const cases: [string, RigCandidateRecord][] = [
+    ['no joints', { ...GRUNT_RIG, jointCount: 0, referencedJoints: 0 }],
+    ['unweighted vertices', { ...GRUNT_RIG, zeroWeightVertices: 12 }],
+    ['recorded failures', { ...GRUNT_RIG, failures: ['weights are not normalized'] }],
+    ['no referenced joint', { ...GRUNT_RIG, referencedJoints: 0 }],
+  ];
+  for (const [name, rig] of cases) {
+    it(`fails: pass:true with ${name}`, () => {
+      const r = gradeRiggedSelection(meshArtifact(field, rig), field, label);
+      expect(r.status).toBe('fail');
+      expect(r.reason).toMatch(/contradict/i);
+    });
+  }
+
+  it('a legacy record without referencedJoints still passes on its other facts', () => {
+    const legacy = { ...GRUNT_RIG } as Partial<RigCandidateRecord>;
+    delete legacy.referencedJoints;
+    const r = gradeRiggedSelection(meshArtifact(field, legacy as RigCandidateRecord), field, label);
+    expect(r.status).toBe('pass');
+  });
+});

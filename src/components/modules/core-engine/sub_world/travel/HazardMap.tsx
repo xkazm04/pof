@@ -23,10 +23,11 @@ const WARNING_ICONS: Record<string, LucideIcon> = {
   Critical: AlertOctagon,
 };
 
-function dangerGlyph(score: number): { Icon: LucideIcon; color: string } {
-  if (score >= 80) return { Icon: Flame, color: STATUS_ERROR };
-  if (score >= 50) return { Icon: AlertOctagon, color: ACCENT_ORANGE };
-  if (score >= 20) return { Icon: AlertTriangle, color: STATUS_WARNING };
+/** Bands are on the score's own scale: sum(dps x area fraction), about 0-13 today. */
+export function dangerGlyph(score: number): { Icon: LucideIcon; color: string } {
+  if (score >= 10) return { Icon: Flame, color: STATUS_ERROR };
+  if (score >= 5) return { Icon: AlertOctagon, color: ACCENT_ORANGE };
+  if (score > 0) return { Icon: AlertTriangle, color: STATUS_WARNING };
   return { Icon: ShieldCheck, color: STATUS_SUCCESS };
 }
 

@@ -1,0 +1,243 @@
+{
+ "schema": "conform-run/1",
+ "worker": "91199031-ef99-4384-85f6-41218ba688c1",
+ "subject": "generative-artifact-gating",
+ "evaluatedAt": "2026-11-03T22:44:30.434540+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "step-shared-primitives",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:36 The shared candidate shape treats any imageUrl as a real generated asset and has no field for an acquisition record. Meanwhile libraryReference/StepLibraryPicker tell producers to use already-downloaded library assets, so an acquired asset that fills a slot is indistinguishable from generated work.",
+   "techniques": [
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:36 GenCandidate has no source/licence acquisition record, so origin is read off representation. The prompt-side licence flag at libraryReference.ts:27 is good but never reaches the candidate."
+    },
+    {
+     "technique": "placeholder-is-not-an-asset",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/assetHonesty.tsx:20 The UI labels stand-in swatches as seed previews, never as output."
+    },
+    {
+     "technique": "auto-picked-vs-human-chosen-provenance",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:82 Four values. appendBatch marks a pick auto, selectCandidate promotes to human only on a click, and legacy histories stay unrecorded."
+    },
+    {
+     "technique": "generation-history-as-artifact",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:101 Every batch is persisted inside the artifact data, capped at 12, and pruneHistory never prunes the batch that owns the selection."
+    },
+    {
+     "technique": "cite-evidence-not-descriptions",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/stepEvidence.ts:76 Only served URLs of the selected candidate are cited, never swatches, and nothing real means no section at all. genericFixCopy also composes fix text without inventing target values."
+    }
+   ]
+  },
+  {
+   "context": "image-generation",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/visual-gen/qwen-image-runner.ts:159 On a quota or rate-limit error the runner dispatches the next paid fallback model instead of latching. It also re-dispatches when a response had no decodable image, and no local reservation ledger exists anywhere in the module.",
+   "techniques": [
+    {
+     "technique": "reserve-before-dispatch-stop-latch",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/qwen-image-runner.ts:159 Quota evidence leads to continuing down the model chain rather than a durable latch. An uncertain 'no image in response' is also retried automatically. grep found no reserve, ledger or latch in src/lib/visual-gen."
+    },
+    {
+     "technique": "gate-before-every-credit-spend",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/input-gate.ts:208 The input gate does sit before image-to-3D spend, but a gate that could not run returns no refusal, so the paid job proceeds ungated. The technique says a refusal is a result and the spend stops."
+    },
+    {
+     "technique": "generator-failure-deterministic-gates",
+     "verdict": "deviation",
+     "evidence": "src/lib/visual-gen/input-gate.ts:83 Cropping is a known failure and is left to a VLM score that can pass an image into spend. No deterministic raw-margin check runs first. seam-check.ts is a deterministic gate, but only for tiling."
+    },
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "conformant",
+     "evidence": "src/lib/visual-gen/asset-library-db.ts:43 Library acquisitions persist source, download URL and licence. A missing licence stays blank rather than being defaulted to a value. How a blank is displayed is judged in the asset-browser context."
+    }
+   ]
+  },
+  {
+   "context": "visual-gen-core",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/app/api/visual-gen/generate-2d/route.ts:59 The 2D generation route (and contact-sheet, which calls the same generateTwoDImage) dispatches a metered provider call with no reservation taken in a local ledger and no durable stop latch checked, so a batch can keep spending after a quota error.",
+   "techniques": [
+    {
+     "technique": "reserve-before-dispatch-stop-latch",
+     "verdict": "deviation",
+     "evidence": "src/app/api/visual-gen/generate-2d/route.ts:59 The paid call is made directly. grep for reserve, ledger, latch and spend across src/app/api/visual-gen found nothing."
+    },
+    {
+     "technique": "gate-before-every-credit-spend",
+     "verdict": "deviation",
+     "evidence": "src/app/api/visual-gen/generate/route.ts:132 A Tier-0 input gate and a shape route both run before spend, and a fail refuses (line 148). But an unavailable gate lets the paid job proceed stamped 'ungated'. That is the wave-through the technique forbids."
+    },
+    {
+     "technique": "declare-the-producer-per-asset-class",
+     "verdict": "conformant",
+     "evidence": "src/app/api/visual-gen/generate/route.ts:108 Classes declared in LINEAR_PROP_SUBJECTS (rope and similar) are refused toward the procedural linear-prop producer before any credit is spent."
+    },
+    {
+     "technique": "generation-history-as-artifact",
+     "verdict": "conformant",
+     "evidence": "src/app/api/visual-gen/icons/route.ts:22 The icon manifest carries a recorded origin bound to a sidecar (or 'unrecorded'), never an inferred one."
+    },
+    {
+     "technique": "generator-failure-deterministic-gates",
+     "verdict": "conformant",
+     "evidence": "src/app/api/visual-gen/contact-sheet/route.ts:69 The contact sheet measures cell stdev and seam gradients deterministically with sharp before cutting. Partial: it covers only sheet-cut failures."
+    }
+   ]
+  },
+  {
+   "context": "asset-viewer-and-browser",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/visual-gen/asset-browser/LibraryAssetCard.tsx:162 An acquired library asset with a blank licence renders no licence badge at all, so an unrecorded licence reads as no restriction. The technique forbids exactly that reading.",
+   "techniques": [
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/visual-gen/asset-browser/LibraryAssetCard.tsx:162 The record is written at acquisition (useAssetLibraryStore.ts:88 posts source, licence and downloadUrl), but a blank licence is rendered as silence instead of a flagged deferral."
+    }
+   ]
+  },
+  {
+   "context": "catalog-acceptance",
+   "subject": "generative-artifact-gating",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:108 candidateAsset counts any served reference (including an arbitrary payload.assetPath) as a real generated asset, and gradeGallerySelection then passes it at L1 without reading any acquisition record or licence. A downloaded asset therefore graduates as generated work.",
+   "techniques": [
+    {
+     "technique": "acquired-is-not-generated",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:108 There is no acquisition-record branch before the served-reference rule, and grep for acquir and licen in src/lib/catalog/acceptance and packaging found nothing."
+    },
+    {
+     "technique": "grade-the-selected-candidate",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:170 Dereferences the selection, fails when it is unresolved or the back-reference disagrees, and names the judged asset in its detail (line 189)."
+    },
+    {
+     "technique": "placeholder-is-not-an-asset",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:199 A swatch stand-in defers at L4 with a reason. The stub is self-describing (line 50) and has a fixed timestamp."
+    },
+    {
+     "technique": "generation-history-as-artifact",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:142 The grader reads the genHistory shape it imports from genHistory.ts, so seed and grader share one source, and an empty history defers as not measured."
+    },
+    {
+     "technique": "auto-picked-vs-human-chosen-provenance",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:72 The seeded selection keeps its auto provenance, and the grader does not fail on provenance."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-03T22:44:30.434540+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated",
+    "auto-picked-vs-human-chosen-provenance",
+    "cite-evidence-not-descriptions",
+    "generation-history-as-artifact",
+    "placeholder-is-not-an-asset"
+   ],
+   "deviations": 1,
+   "context": "step-shared-primitives",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:44:30.434540+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated",
+    "gate-before-every-credit-spend",
+    "generator-failure-deterministic-gates",
+    "reserve-before-dispatch-stop-latch"
+   ],
+   "deviations": 1,
+   "context": "image-generation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:44:30.434540+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "declare-the-producer-per-asset-class",
+    "gate-before-every-credit-spend",
+    "generation-history-as-artifact",
+    "generator-failure-deterministic-gates",
+    "reserve-before-dispatch-stop-latch"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:44:30.434540+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated"
+   ],
+   "deviations": 1,
+   "context": "asset-viewer-and-browser",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T22:44:30.434540+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "generative-artifact-gating"
+   ],
+   "techniques": [
+    "acquired-is-not-generated",
+    "auto-picked-vs-human-chosen-provenance",
+    "generation-history-as-artifact",
+    "grade-the-selected-candidate",
+    "placeholder-is-not-an-asset"
+   ],
+   "deviations": 1,
+   "context": "catalog-acceptance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

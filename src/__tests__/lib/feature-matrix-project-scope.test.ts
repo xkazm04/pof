@@ -49,11 +49,11 @@ import {
   getAllReviewHistory,
   getProjectScopeReport,
   normalizeProjectId,
-  clearModuleFeatures,
   upsertFeatures,
   updateFeatureStatus,
   captureReviewSnapshot,
 } from '@/lib/feature-matrix-db';
+import { clearFeatureMatrixExact } from '@/__tests__/helpers/clearFeatureMatrix';
 import { runComplianceAudit } from '@/lib/gdd-compliance';
 import { getDb } from '@/lib/db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
@@ -417,10 +417,10 @@ describe('every write path stamps the active project', () => {
     expect(stored).toEqual([{ project_id: normalizeProjectId(PROJECT_A) }]);
   });
 
-  it('clearModuleFeatures cannot reach another project\'s rows', () => {
+  it('clearFeatureMatrixExact cannot reach another project\'s rows', () => {
     upsertFeatures(MODULE, [row(A_ONLY, 'implemented', 'A')], { projectId: PROJECT_A });
     upsertFeatures(MODULE, [row(B_ONLY, 'missing', 'B')], { projectId: PROJECT_B });
-    clearModuleFeatures(MODULE, PROJECT_B);
+    clearFeatureMatrixExact(MODULE, PROJECT_B);
     expect(getFeaturesByModule(MODULE, PROJECT_A).map((f) => f.featureName)).toEqual([A_ONLY]);
     expect(getFeaturesByModule(MODULE, PROJECT_B)).toHaveLength(0);
   });

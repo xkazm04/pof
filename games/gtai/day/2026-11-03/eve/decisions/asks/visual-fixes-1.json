@@ -1,0 +1,12 @@
+{
+  "id": "visual-fixes-1",
+  "lane": "visual-fixes",
+  "question": "Road width (call C1). Streets are 17 m kerb to kerb; T1 shows about 10 m. The road is quantised to 8 m tiles (3 per street: 8 m lane tile + two kerb tiles holding 4.5 m of asphalt and the parked cars each), so a narrower street means re-cut kerb/junction tiles, the traffic lanes, the nav field and the parked-car slots, and moves replay and parity goldens. Which width should I build?",
+  "options": [
+    { "key": "A", "label": "10 m kerb to kerb (T1): 2 lanes, parked cars squeezed to a 1 m strip or onto the pavement", "tradeoff": "Matches T1 and tightens every chase and fight; vehicles lane's turning room and quest 1's car section get tight", "frames": ["C:\Users\kazda\kiro\gtai-masters\eve\visual-fixes\road-width-mock-32ppm.png", "C:\Users\kazda\kiro\gtai-masters\eve\visual-fixes\road-width-mock-48ppm.png"] },
+    { "key": "B", "label": "12 m kerb to kerb: 2 lanes + a 2 m parking lane on one side only", "tradeoff": "Keeps parked cars as cover and room to drive a hijacked car; reads between today and T1 (no mock yet, built on a yes)", "frames": [] },
+    { "key": "C", "label": "Keep 17 m", "tradeoff": "No sim risk; street frames stay mostly asphalt at 48 px/m", "frames": [] }
+  ],
+  "default": "B",
+  "asked": "21:15"
+}

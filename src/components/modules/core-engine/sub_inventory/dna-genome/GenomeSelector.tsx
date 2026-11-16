@@ -13,10 +13,12 @@ interface Props {
 
 export function GenomeSelector({ genomes, selectedId, onSelect }: Props) {
   return (
-    <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+    <div role="group" aria-label="Select genome" className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1">
       {genomes.map((g) => (
         <button
           key={g.id}
+          type="button"
+          aria-pressed={g.id === selectedId}
           onClick={() => onSelect(g.id)}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
             g.id === selectedId ? 'ring-1 text-white' : 'text-text-muted hover:text-text'

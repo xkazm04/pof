@@ -34,11 +34,26 @@ function StaggerItem({ index, children }: { index: number; children: ReactNode }
   );
 }
 
+/** A level no agent reached: an explicit unsampled stub, not a measured zero. */
+function UnsampledBar({ level }: { level: number }) {
+  return (
+    <div
+      data-sampled="false"
+      className="flex-1 h-[2%] border-t border-dashed border-text-muted/50"
+      title={`Lv${level}: unsampled (no agent reached it)`}
+    />
+  );
+}
+
 /* ── Power Curves Tab ─────────────────────────────────────────────────── */
 
 export function PowerTab({ result, config }: {
   result: ItemEconomyResult; config: ItemEconomyConfig;
 }) {
+  // A level no agent reached is written as power 0 by the engine; plotting it would
+  // draw the curve crashing to zero. Only sampled levels are drawn.
+  const sampledLevels = new Set(result.brackets.filter((b) => b.agents > 0).map((b) => b.level));
+  const sampledCurve = result.powerCurve.filter((p) => sampledLevels.has(p.level));
   return (
     <div className="space-y-3">
       <StaggerItem index={0}>
@@ -48,7 +63,7 @@ export function PowerTab({ result, config }: {
             Average equipped item power per level bracket. Band shows P10-P90 spread.
           </p>
           <div className="min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-            <PowerCurveChart data={result.powerCurve} />
+            <PowerCurveChart data={sampledCurve} />
           </div>
         </BlueprintPanel>
       </StaggerItem>
@@ -60,9 +75,11 @@ export function PowerTab({ result, config }: {
             {result.brackets.map((b) => {
               const maxR = Math.max(...result.brackets.map((br) => br.gearReplacementCount), 1);
               const h = (b.gearReplacementCount / maxR) * 80;
+              if (b.agents === 0) return <UnsampledBar key={b.level} level={b.level} />;
               return (
                 <div
                   key={b.level}
+                  data-sampled="true"
                   className="flex-1 rounded-t-sm transition-all hover:opacity-80"
                   style={{
                     height: `${Math.max(h, 2)}%`,
@@ -88,9 +105,11 @@ export function PowerTab({ result, config }: {
             {result.brackets.map((b) => {
               const maxG = Math.max(...result.brackets.map((br) => br.avgGold), 1);
               const h = (b.avgGold / maxG) * 80;
+              if (b.agents === 0) return <UnsampledBar key={b.level} level={b.level} />;
               return (
                 <div
                   key={b.level}
+                  data-sampled="true"
                   className="flex-1 rounded-t-sm"
                   style={{ height: `${Math.max(h, 2)}%`, backgroundColor: ACCENT_ORANGE, opacity: 0.6 }}
                   title={`Lv${b.level}: ${b.avgGold}g avg`}
@@ -160,9 +179,12 @@ export function RarityTab({ result, config, inflation }: {
 
 function RarityBreakdown({ label, sublabel, brackets, unsampled = false }: {
   label: string; sublabel: string;
-  brackets: { rarityDistribution: Record<string, number> }[];
+  brackets: { rarityDistribution: Record<string, number>; agents: number }[];
   unsampled?: boolean;
 }) {
+  // An unreached bracket carries an all-zero distribution; averaging it in would
+  // read as a measured 0% share, so only sampled brackets form the denominator.
+  const sampled = brackets.filter((b) => b.agents > 0);
   return (
     <BlueprintPanel color={ACCENT} className="p-2 text-center">
       <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">
@@ -174,8 +196,8 @@ function RarityBreakdown({ label, sublabel, brackets, unsampled = false }: {
           <span className="text-xs font-mono uppercase text-text-muted">no agent reached it</span>
         )}
         {!unsampled && RARITY_LABELS.map((r) => {
-          const avg = brackets.reduce((s, b) => s + (b.rarityDistribution[r] ?? 0), 0)
-            / Math.max(brackets.length, 1);
+          const avg = sampled.reduce((s, b) => s + (b.rarityDistribution[r] ?? 0), 0)
+            / Math.max(sampled.length, 1);
           return avg > 0.005 ? (
             <span key={r} className="text-xs font-mono font-bold" style={{ color: RARITY_COLORS[r] }}>
               {(avg * 100).toFixed(0)}%

@@ -16,10 +16,15 @@ import { NextRequest } from 'next/server';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { parseHeader, checkExpectations, type SemanticResult } from '@/lib/cpp-semantic-parser';
 import { getExpectationsFor, getExpectationsForItem } from '@/lib/checklist-expectations';
 import { collectHeaders } from '@/lib/ue-source/collect-headers';
 import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
+
+/** Header reads in flight at once (matches scan-project and scan-animbp). */
+const HEADER_READ_BATCH = 20;
 
 interface VerifyRequest {
   projectPath: string;
@@ -38,32 +43,49 @@ interface ItemVerification {
 }
 
 export async function POST(request: NextRequest) {
+  // Reads the local disk: no cross-site page, and no caller without the token when one is set.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = (await request.json()) as VerifyRequest;
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as unknown as VerifyRequest;
     if (!body.projectPath || !body.items?.length) {
       return apiError('projectPath and items[] required', 400);
     }
+    if (!Array.isArray(body.items) || !body.items.every(isVerifyItem)) {
+      return apiError('items must be an array of { itemId, moduleId? } strings', 400);
+    }
     const checked = checkLocalPath(body.projectPath, 'projectPath');
     if (!checked.ok) return apiError(checked.error, 400);
+    // A wrong path must not read as "every item is missing": callers record that verdict.
+    const projectIsDir = await fsPromises.stat(checked.data).then((s) => s.isDirectory(), () => false);
+    if (!projectIsDir) return apiError('Project path does not exist', 404);
 
     const sourceDir = path.join(checked.data, 'Source');
 
     // Collect all .h files from Source/ for parsing
     const headerFiles = await collectHeaders(sourceDir);
 
-    // Parse all headers once; an unreadable header is disclosed, not fatal
+    // Parse all headers once, in batches of 20 like scan-project/scan-animbp: opening every
+    // header at once can hit EMFILE, which would land here as "unreadable". An unreadable
+    // header is disclosed, not fatal.
     const unreadable: string[] = [];
-    const parsedOrNull = await Promise.all(
-      headerFiles.map(async (fp): Promise<HeaderParseResult | null> => {
-        try {
-          const content = await fsPromises.readFile(fp, 'utf-8');
-          return parseHeader(content, fp);
-        } catch {
-          unreadable.push(path.relative(sourceDir, fp).split(path.sep).join('/'));
-          return null;
-        }
-      }),
-    );
+    const parsedOrNull: (HeaderParseResult | null)[] = [];
+    for (let i = 0; i < headerFiles.length; i += HEADER_READ_BATCH) {
+      const batch = await Promise.all(
+        headerFiles.slice(i, i + HEADER_READ_BATCH).map(async (fp): Promise<HeaderParseResult | null> => {
+          try {
+            const content = await fsPromises.readFile(fp, 'utf-8');
+            return parseHeader(content, fp);
+          } catch {
+            unreadable.push(path.relative(sourceDir, fp).split(path.sep).join('/'));
+            return null;
+          }
+        }),
+      );
+      parsedOrNull.push(...batch);
+    }
     const parsedHeaders = parsedOrNull.filter((p): p is HeaderParseResult => p !== null);
     unreadable.sort();
 
@@ -152,6 +174,12 @@ export async function POST(request: NextRequest) {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 import { type SemanticExpectation, type HeaderParseResult } from '@/lib/cpp-semantic-parser';
+
+function isVerifyItem(value: unknown): value is VerifyRequest['items'][number] {
+  if (typeof value !== 'object' || value === null) return false;
+  const { moduleId, itemId } = value as Record<string, unknown>;
+  return typeof itemId === 'string' && (moduleId === undefined || typeof moduleId === 'string');
+}
 
 function findBestMatch(
   parsedHeaders: HeaderParseResult[],

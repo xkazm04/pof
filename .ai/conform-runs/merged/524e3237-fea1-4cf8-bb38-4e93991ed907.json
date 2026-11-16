@@ -1,0 +1,126 @@
+{
+ "schema": "conform-run/1",
+ "worker": "524e3237-fea1-4cf8-bb38-4e93991ed907",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T22:28:14.439429+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "code-quality-evaluation",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/hooks/useDeepEvalResults-git-attribution.test.tsx:65 The fetch fake used by the useDeepEvalResults hook test answers every URL it was not told about with a success envelope `{ ok: true }`. So any endpoint the hook starts calling passes silently instead of failing the test, which is the passing-default fake the standard forbids.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/hooks/useDeepEvalResults-git-attribution.test.tsx:65 Fake with a passing default. The sibling AssetCodeOracleView.test.tsx:80 shows the conformant form: it throws on an unexpected URL."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/evaluator/DeepEvalResultsSection.hollowClean.test.tsx:42 The test name states the decision it claims, and the test drives that decision directly through ResultsSection with failedModules set. No cache or default can answer in its place."
+    }
+   ]
+  },
+  {
+   "context": "build-quality-monitoring",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/evaluator/PerformanceProfilingCompare.test.tsx:69 The profiling-compare fetch fake answers any unrouted action with `{ success: true, data: {} }`. So a new or renamed request from the view gets a pass-shaped reply instead of failing the test.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/evaluator/PerformanceProfilingCompare.test.tsx:69 Passing default in the fake. BuildHealthDashboard.build-now.test.tsx:39 shows the conformant form: it throws on an unexpected fetch."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/evaluator/BuildHealthDashboard.build-now.test.tsx:80 Polling is proved with fake timers advanced by the shared interval constant, not by wall-clock waits."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-acceptance-engine",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:27 The mock of the context's own labAcceptance checker returns 'pass' for any step whose data has no seeded status. A surface that reaches an unseeded step therefore reads green with no diagnostic. Today's seeded steps don't hit the default, so the gap is latent.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:27 The fake checker defaults to 'pass' instead of failing on an unstated assumption."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/oneAcceptanceTruth.test.ts:16 Banner, rail, matrix and coach are each driven through their production function, not through a path the test assembled."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "crash-analysis",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "project-ops-api",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T22:28:14.439429+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:28:14.439429+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "assert-the-schedule-not-the-stopwatch"
+   ],
+   "deviations": 1,
+   "context": "build-quality-monitoring",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:28:14.439429+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "pipeline-acceptance-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

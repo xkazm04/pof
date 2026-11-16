@@ -39,6 +39,12 @@ export const ERROR_BANNER =
 /** Inline warning text — used for "Connect to Blender MCP first" hints. */
 export const WARNING_TEXT = 'text-amber-400';
 
+/** Inline success text tone (the one green for done / OK / imported). */
+export const SUCCESS_TEXT = 'text-green-400';
+
+/** Inline error text tone. */
+export const ERROR_TEXT = 'text-red-400';
+
 /** Success result block — subtle green fill + medium green border. */
 export const SUCCESS_RESULT =
   'bg-status-green-subtle border border-status-green-medium';

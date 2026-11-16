@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Hammer, ChevronDown, ShieldCheck, FileSearch, CircleDashed } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL, MODULE_COLORS } from '@/lib/chart-colors';
@@ -118,8 +118,11 @@ export function PreflightPanel({
   // The maps the held FAST verdict measured - the summary's identity, so the
   // Package flow can tell a verdict for profile A's maps from one for B's.
   const [fastMapsKey, setFastMapsKey] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Per-kind: a failure stays attributed to its own check and is cleared only
+  // by a re-run of that same kind (never by another kind's dispatch).
+  const [errors, setErrors] = useState<Partial<Record<CheckKind, string>>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const issuesIdPrefix = useId();
   const onStatusChangeRef = useRef(onStatusChange);
   useEffect(() => { onStatusChangeRef.current = onStatusChange; }, [onStatusChange]);
 
@@ -146,7 +149,7 @@ export function PreflightPanel({
     setResults([]);
     setRunning(new Set());
     setFastMapsKey(null);
-    setError(null);
+    setErrors({});
   }
 
   // Stable dependency for the maps list — the parent may hand a fresh array
@@ -189,7 +192,12 @@ export function PreflightPanel({
     if (inFlightRef.current.get(kind) === flightKey) return;
     inFlightRef.current.set(kind, flightKey);
     setRunning((prev) => new Set(prev).add(kind));
-    setError(null);
+    setErrors((prev) => {
+      if (!(kind in prev)) return prev;
+      const next = { ...prev };
+      delete next[kind];
+      return next;
+    });
     const res = await tryApiFetch<PreflightResponse>('/api/packaging/preflight', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -208,7 +216,7 @@ export function PreflightPanel({
       return next;
     });
     if (!res.ok) {
-      setError(res.error);
+      setErrors((prev) => ({ ...prev, [kind]: res.error }));
       return;
     }
     const ownedIds = new Set(CHECK_RESULT_IDS[kind]);
@@ -250,6 +258,17 @@ export function PreflightPanel({
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  // A kind's error renders on the first tile that kind owns.
+  const errorFor = (known: KnownCheck): ReactNode => {
+    const msg = errors[known.kind];
+    if (!msg || KNOWN_CHECKS.find((c) => c.kind === known.kind) !== known) return null;
+    return (
+      <div data-testid={`pof-preflight-error-${known.kind}`} role="alert" className="px-2.5 pb-1.5 text-2xs font-mono" style={{ color: STATUS_ERROR }}>
+        {known.label} failed to run: {msg}
+      </div>
+    );
   };
 
   const overall = worstStatus(results);
@@ -297,12 +316,6 @@ export function PreflightPanel({
         </div>
       </div>
 
-      {error && (
-        <div data-testid="pof-preflight-error" className="text-2xs font-mono" style={{ color: STATUS_ERROR }}>
-          {error}
-        </div>
-      )}
-
       {/* Coverage disclosure — what this verdict does and does not cover. */}
       <div data-testid="pof-preflight-coverage" className="text-2xs text-text-muted font-mono">
         {notRun.length === 0
@@ -333,6 +346,7 @@ export function PreflightPanel({
                     {isRunning ? 'running…' : `Not run — no verdict. To measure it: ${known.howToRun}.`}
                   </span>
                 </div>
+                {errorFor(known)}
               </div>
             );
           }
@@ -347,24 +361,38 @@ export function PreflightPanel({
               data-status={r.status}
               className="rounded border border-border-bright bg-background"
             >
-              <button
-                onClick={() => hasIssues && toggleExpand(r.id)}
-                className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left ${hasIssues ? 'cursor-pointer' : 'cursor-default'}`}
-              >
-                <Icon
-                  className="w-3.5 h-3.5 shrink-0"
-                  style={{ color: style.color }}
-                  role="img"
-                  aria-label={r.status === 'pass' ? 'Passed' : r.status === 'warn' ? 'Warning' : 'Failed'}
-                />
-                <span className="text-xs font-medium text-text">{r.label}</span>
-                <span className="text-2xs text-text-muted flex-1 truncate">{r.detail}</span>
-                {hasIssues && (
-                  <ChevronDown className={`w-3 h-3 text-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                )}
-              </button>
+              {(() => {
+                const head = (
+                  <>
+                    <Icon
+                      className="w-3.5 h-3.5 shrink-0"
+                      style={{ color: style.color }}
+                      role="img"
+                      aria-label={r.status === 'pass' ? 'Passed' : r.status === 'warn' ? 'Warning' : 'Failed'}
+                    />
+                    <span className="text-xs font-medium text-text">{r.label}</span>
+                    <span className="text-2xs text-text-muted flex-1 truncate">{r.detail}</span>
+                  </>
+                );
+                // Only a tile with issues discloses anything, so only it is a button —
+                // and that button reports whether its issue list is open.
+                return hasIssues ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(r.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={`${issuesIdPrefix}-${r.id}`}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left cursor-pointer"
+                  >
+                    {head}
+                    <ChevronDown className={`w-3 h-3 text-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                  </button>
+                ) : (
+                  <div className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left">{head}</div>
+                );
+              })()}
               {isOpen && hasIssues && (
-                <ul className="px-3 pb-2 space-y-1 border-t border-border pt-1.5">
+                <ul id={`${issuesIdPrefix}-${r.id}`} className="px-3 pb-2 space-y-1 border-t border-border pt-1.5">
                   {r.issues.map((issue, i) => (
                     <li key={i} className="text-2xs text-text-muted font-mono leading-relaxed">
                       • {issue}
@@ -372,6 +400,7 @@ export function PreflightPanel({
                   ))}
                 </ul>
               )}
+              {errorFor(known)}
             </div>
           );
         })}

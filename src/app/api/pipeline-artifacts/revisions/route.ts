@@ -1,8 +1,10 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { listRevisions, getRevision } from '@/lib/pipeline-artifacts-db';
 import { artifactCommitDeps, gradeArtifact, hasRegisteredChecker } from '@/lib/catalog/headless';
 import { commitArtifact, deriveVerdict } from '@/lib/catalog/artifactCommit';
+import { acquireLeases, releaseLeases, scopeFromKey, leaseKeysForFilter } from '@/lib/test-gate-runner/drain-lease';
 
 /**
  * GET /api/pipeline-artifacts/revisions?catalogId&entityId&step
@@ -46,7 +48,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { revisionId?: unknown; dryRun?: unknown };
+    const denied = requireOperator(req);
+    if (denied) return denied;
+    const body = (await req.json().catch(() => undefined)) as { revisionId?: unknown; dryRun?: unknown } | null | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const revisionId = Number(body.revisionId);
     if (!Number.isInteger(revisionId) || revisionId <= 0) {
       return apiError('revisionId (a positive integer) is required', 400);
@@ -77,11 +84,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const committed = commitArtifact(
-      { catalogId: rev.catalogId, entityId: rev.entityId, step: rev.step, data: rev.data, ueAssets: rev.ueAssets, producer },
-      { kind: 'restore' },
-      artifactCommitDeps,
-    );
+    // The write takes the same lease a drain holds for this entity, so a restore cannot be
+    // overwritten by an in-flight drain's write-back (nor land under one). Dry run is exempt.
+    const keys = leaseKeysForFilter({ catalogId: rev.catalogId, entityId: rev.entityId });
+    const acquired = acquireLeases(keys);
+    if (!acquired.ok) {
+      return apiError(`drain in flight for ${scopeFromKey(acquired.conflict)} — refusing to restore over it`, 409);
+    }
+    let committed: ReturnType<typeof commitArtifact>;
+    try {
+      committed = commitArtifact(
+        { catalogId: rev.catalogId, entityId: rev.entityId, step: rev.step, data: rev.data, ueAssets: rev.ueAssets, producer },
+        { kind: 'restore' },
+        artifactCommitDeps,
+      );
+    } finally {
+      releaseLeases(keys);
+    }
     if (!committed.ok) return apiError(committed.error, 404);
 
     return apiSuccess({

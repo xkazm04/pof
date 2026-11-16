@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { resolveAffectedItems, type VerifyTarget } from '@/lib/checklist-verify-index';
@@ -71,6 +71,13 @@ async function semanticVerify(items: VerifyTarget[], projectPath: string): Promi
     logger.warn('[useFileWatcher] verify-semantic could not read', data.data.unreadable);
   }
 
+  // moduleStore holds one project at a time: a verdict for a project the user has
+  // since left would tick same-id items of the new one.
+  if (useProjectStore.getState().projectPath !== projectPath) {
+    logger.warn('[useFileWatcher] project changed while verify-semantic was pending; verdict dropped');
+    return;
+  }
+
   const asked = new Map(items.map((i) => [`${i.moduleId}::${i.itemId}`, i]));
   const { setChecklistItem, setVerification } = useModuleStore.getState();
   for (const result of data.data.results) {
@@ -95,8 +102,6 @@ export function useFileWatcher(): WatcherStatus {
     lastChangeAt: null,
     changeCount: 0,
   });
-
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Auto-verify the items whose expectation names a changed class
   const autoVerify = useCallback((declarations: ScannedDeclaration[]) => {
@@ -147,17 +152,23 @@ export function useFileWatcher(): WatcherStatus {
     return createLifecycle<EventSource>(
       () => {
         const es = new EventSource(url);
-        eventSourceRef.current = es;
 
         es.onmessage = (event) => {
+          let data: { type?: string; events?: FileChangeEvent[] };
           try {
-            const data = JSON.parse(event.data);
+            data = JSON.parse(event.data);
+          } catch {
+            return; // a malformed frame is dropped
+          }
+          try {
             if (data.type === 'connected') {
               setStatus((prev) => ({ ...prev, connected: true }));
             } else if (data.type === 'changes') {
               handleChanges(data.events as FileChangeEvent[]);
             }
-          } catch { /* ignore parse errors */ }
+          } catch (err) {
+            logger.warn('[useFileWatcher] handling a changes frame failed', err);
+          }
         };
 
         es.onerror = () => {
@@ -168,7 +179,6 @@ export function useFileWatcher(): WatcherStatus {
       },
       (es) => {
         es.close();
-        eventSourceRef.current = null;
         setStatus((prev) => ({ ...prev, connected: false }));
       },
     );

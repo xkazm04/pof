@@ -27,6 +27,7 @@
  * orchestration is unit-tested without the network, credits, or disk.
  */
 import { isQuotaError } from '@/lib/anim-critique/qwen';
+import { sniffImageExt } from '@/lib/visual-gen/image-providers';
 
 export const QWEN_IMAGE_BASE = 'https://dashscope-intl.aliyuncs.com/api/v1';
 export const QWEN_IMAGE_ENDPOINT = `${QWEN_IMAGE_BASE}/services/aigc/multimodal-generation/generation`;
@@ -53,7 +54,7 @@ export const DEFAULT_QWEN_IMAGE_FALLBACKS = [
 
 export interface QwenImageSpec {
   prompt: string;
-  /** Full output path; DashScope returns a PNG. */
+  /** Output path; its extension is corrected to the downloaded bytes' real format (sniffed). */
   outputPath: string;
   model?: string;
   /** Quota-exceeded chain; unset → DEFAULT_QWEN_IMAGE_FALLBACKS. */
@@ -146,33 +147,47 @@ export async function runQwenImage(spec: QwenImageSpec, deps?: Partial<QwenImage
   const models = [primary, ...fallbacks.filter((m) => m !== primary)];
 
   let lastErr = '';
-  for (const model of models) {
-    const res = await d.fetch(QWEN_IMAGE_ENDPOINT, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildQwenImageBody(spec, model)),
-    });
+  // Where the attempt was when something THREW (a rejected fetch, a non-JSON body, a failed
+  // write): reported with the reason, and the chain stops there — a transport or disk fault
+  // is not a quota wall, so it must not buy the next paid model.
+  let at: { model?: string; imageUrl?: string } = {};
+  try {
+    for (const model of models) {
+      at = { model };
+      const res = await d.fetch(QWEN_IMAGE_ENDPOINT, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildQwenImageBody(spec, model)),
+      });
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      lastErr = `Qwen-Image ${model} HTTP ${res.status}: ${body.slice(0, 200)}`;
-      // A real error must not burn the rest of the chain; only quota falls through.
-      if (!isQuotaError(res.status, body)) return done({ ok: false, error: lastErr });
-      continue;
-    }
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        lastErr = `Qwen-Image ${model} HTTP ${res.status}: ${body.slice(0, 200)}`;
+        // A real error must not burn the rest of the chain; only quota falls through.
+        if (!isQuotaError(res.status, body)) return done({ ok: false, error: lastErr });
+        continue;
+      }
 
-    const url = parseImageUrl(await res.json());
-    if (!url) {
-      lastErr = `no image in the ${model} response`;
-      continue;
-    }
+      const url = parseImageUrl(await res.json());
+      // An answered request with no image is not a quota wall: same rule as the non-quota
+      // HTTP error above, so it must not buy the next paid model in the chain.
+      if (!url) return done({ ok: false, error: `no image in the ${model} response`, model });
 
-    const img = await d.fetch(url);
-    if (!img.ok) {
-      return done({ ok: false, error: `image download failed: HTTP ${img.status}`, imageUrl: url, model });
+      at = { model, imageUrl: url };
+      const img = await d.fetch(url);
+      if (!img.ok) {
+        return done({ ok: false, error: `image download failed: HTTP ${img.status}`, imageUrl: url, model });
+      }
+      const bytes = new Uint8Array(await img.arrayBuffer());
+      // Name the file after what was downloaded, never after what DashScope is assumed to send.
+      const ext = sniffImageExt(bytes);
+      const outPath = ext ? spec.outputPath.replace(/\.[A-Za-z0-9]+$/, '') + `.${ext}` : spec.outputPath;
+      await d.writeFile(outPath, bytes);
+      return done({ ok: true, imagePath: outPath, imageUrl: url, model });
     }
-    await d.writeFile(spec.outputPath, new Uint8Array(await img.arrayBuffer()));
-    return done({ ok: true, imagePath: spec.outputPath, imageUrl: url, model });
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    return done({ ok: false, error: `Qwen-Image ${at.model ?? ''} failed: ${reason}`, ...at });
   }
 
   return done({ ok: false, error: `all Qwen-Image models exhausted. last: ${lastErr}` });

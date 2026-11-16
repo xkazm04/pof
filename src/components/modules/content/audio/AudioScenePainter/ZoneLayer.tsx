@@ -1,7 +1,14 @@
 import type { AudioZone } from '@/types/audio-scene';
 import { STATUS_ERROR } from '@/lib/chart-colors';
-import { ZONE_COLORS } from './constants';
+import { resolveZoneColor } from './helpers';
 import type { PaintMode } from './types';
+
+/** Hex-alpha byte -> opacity, so the look matches the old `${hex}NN` suffixes exactly. */
+const ALPHA_10 = 0x10 / 255;
+const ALPHA_20 = 0x20 / 255;
+const ALPHA_40 = 0x40 / 255;
+const ALPHA_60 = 0x60 / 255;
+const ALPHA_80 = 0x80 / 255;
 
 export function ZoneLayer({
   zones,
@@ -12,6 +19,8 @@ export function ZoneLayer({
   handleZoneMouseDown,
   handleResizeStart,
   deleteZone,
+  handleItemKeyDown,
+  handleItemKeyUp,
 }: {
   zones: AudioZone[];
   selectedZoneId: string | null;
@@ -21,25 +30,42 @@ export function ZoneLayer({
   handleZoneMouseDown: (e: React.MouseEvent, zoneId: string) => void;
   handleResizeStart: (e: React.MouseEvent, zoneId: string, handle: string) => void;
   deleteZone: (zoneId: string) => void;
+  handleItemKeyDown: (e: React.KeyboardEvent, kind: 'zone' | 'emitter', id: string) => void;
+  handleItemKeyUp: (e: React.KeyboardEvent) => void;
 }) {
   return (
     <>
       {zones.map((zone) => {
         const isSelected = selectedZoneId === zone.id;
-        const zoneColor = zone.color || ZONE_COLORS[zone.reverbPreset] || 'var(--text-muted)';
+        // Alpha goes through fill-/stroke-opacity, never a hex suffix: a zone color may be a
+        // CSS variable, and `var(--x)60` is not a color (the fill would fall back to black).
+        const zoneColor = resolveZoneColor(zone);
         const isParentOfSelectedEmitter = highlightedParentZoneId === zone.id;
+        // Keyboard parity with the pointer: a body is a focusable button in select mode.
+        const keyProps = {
+          role: 'button' as const,
+          tabIndex: paintMode === 'select' ? 0 : -1,
+          'aria-label': `Zone ${zone.name}. Enter selects, arrows move, Delete removes.`,
+          'aria-pressed': isSelected,
+          onKeyDown: (e: React.KeyboardEvent) => handleItemKeyDown(e, 'zone', zone.id),
+          onKeyUp: handleItemKeyUp,
+        };
 
         return (
           <g key={zone.id}>
-            {/* Attenuation radius (outer glow) */}
+            {/* Attenuation radius (outer glow) — decorative and pointer-transparent, like the
+                emitter attenuation circle: it is larger than the zone, so a hit-target glow
+                would cover earlier zones' bodies and eat their selection/drag presses. */}
             {zone.shape === 'circle' ? (
               <circle
                 cx={zone.x} cy={zone.y}
                 r={zone.attenuationRadius}
                 fill={`url(#radar-glow)`}
-                stroke={`${zoneColor}20`}
+                stroke={zoneColor}
+                strokeOpacity={ALPHA_20}
                 strokeWidth={1}
                 strokeDasharray="4,8"
+                style={{ pointerEvents: 'none' }}
               />
             ) : (
               <rect
@@ -47,9 +73,11 @@ export function ZoneLayer({
                 width={zone.width + 60} height={zone.height + 60}
                 rx={12}
                 fill={`url(#radar-glow)`}
-                stroke={`${zoneColor}20`}
+                stroke={zoneColor}
+                strokeOpacity={ALPHA_20}
                 strokeWidth={1}
                 strokeDasharray="4,8"
+                style={{ pointerEvents: 'none' }}
               />
             )}
 
@@ -57,10 +85,13 @@ export function ZoneLayer({
             {zone.shape === 'circle' ? (
               <circle
                 data-zone-id={zone.id}
+                {...keyProps}
                 cx={zone.x} cy={zone.y}
                 r={zone.width / 2}
-                fill={`${zoneColor}10`}
-                stroke={isSelected ? accentColor : `${zoneColor}60`}
+                fill={zoneColor}
+                fillOpacity={ALPHA_10}
+                stroke={isSelected ? accentColor : zoneColor}
+                strokeOpacity={isSelected ? 1 : ALPHA_60}
                 strokeWidth={isSelected ? 2 : 1.5}
                 onMouseDown={(e) => handleZoneMouseDown(e, zone.id)}
                 style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}40)` : 'none' }}
@@ -68,11 +99,14 @@ export function ZoneLayer({
             ) : (
               <rect
                 data-zone-id={zone.id}
+                {...keyProps}
                 x={zone.x} y={zone.y}
                 width={zone.width} height={zone.height}
                 rx={2}
-                fill={`${zoneColor}10`}
-                stroke={isSelected ? accentColor : `${zoneColor}60`}
+                fill={zoneColor}
+                fillOpacity={ALPHA_10}
+                stroke={isSelected ? accentColor : zoneColor}
+                strokeOpacity={isSelected ? 1 : ALPHA_60}
                 strokeWidth={isSelected ? 2 : 1.5}
                 onMouseDown={(e) => handleZoneMouseDown(e, zone.id)}
                 style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}40)` : 'none' }}
@@ -116,15 +150,15 @@ export function ZoneLayer({
             <g style={{ pointerEvents: 'none' }}>
               {zone.shape === 'circle' ? (
                 <>
-                  <rect x={zone.x - 40} y={zone.y - zone.width / 2 - 16} width={80} height={14} rx={2} fill="var(--surface-deep)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                  <rect x={zone.x - 40} y={zone.y - zone.width / 2 - 16} width={80} height={14} rx={2} fill="var(--surface-deep)" stroke={zoneColor} strokeOpacity={ALPHA_40} strokeWidth={1} />
                   <text x={zone.x} y={zone.y - zone.width / 2 - 6} textAnchor="middle" fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
                 </>
               ) : (
                 <>
-                  <rect x={zone.x + 8} y={zone.y + 8} width={Math.max(80, zone.name.length * 6 + 10)} height={14} rx={2} fill="var(--surface-deep)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                  <rect x={zone.x + 8} y={zone.y + 8} width={Math.max(80, zone.name.length * 6 + 10)} height={14} rx={2} fill="var(--surface-deep)" stroke={zoneColor} strokeOpacity={ALPHA_40} strokeWidth={1} />
                   <text x={zone.x + 12} y={zone.y + 18} fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
 
-                  <text x={zone.x + 12} y={zone.y + 32} fontSize={7} fill={`${zoneColor}80`} fontFamily="monospace" style={{ textTransform: 'uppercase' }}>[{zone.reverbPreset}]</text>
+                  <text x={zone.x + 12} y={zone.y + 32} fontSize={7} fill={zoneColor} fillOpacity={ALPHA_80} fontFamily="monospace" style={{ textTransform: 'uppercase' }}>[{zone.reverbPreset}]</text>
                 </>
               )}
             </g>
@@ -144,10 +178,19 @@ export function ZoneLayer({
 
                 {/* Delete button */}
                 <g
+                  data-testid={`zone-delete-${zone.id}`}
                   transform={zone.shape === 'circle'
                     ? `translate(${zone.x + zone.width / 2 - 8},${zone.y - zone.width / 2 - 24})`
                     : `translate(${zone.x + zone.width - 24},${zone.y + 8})`}
+                  // Own the press: bubbling to the canvas deselects, which unmounts this button before its click.
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => { e.stopPropagation(); deleteZone(zone.id); }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Delete zone ${zone.name}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); deleteZone(zone.id); }
+                  }}
                   style={{ cursor: 'pointer' }}
                 >
                   <rect x={0} y={0} width={16} height={16} rx={4} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}50`} />

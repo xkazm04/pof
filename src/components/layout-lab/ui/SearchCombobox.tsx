@@ -70,6 +70,14 @@ export interface SearchComboboxProps<P> {
 }
 
 const DEFAULT_MAX_HITS = 12;
+
+/** "1 entity matches" / "3 entities match" — the live region is the only count a screen
+ *  reader gets, so plural form (consonant+y -> ies) and verb agreement both matter. */
+function matchPhrase(n: number, noun: string): string {
+  if (n === 1) return `1 ${noun} matches`;
+  const plural = /[^aeiou]y$/i.test(noun) ? `${noun.slice(0, -1)}ies` : `${noun}s`;
+  return `${n} ${plural} match`;
+}
 const NO_HITS: never[] = [];
 
 // Popup chrome shared by the listbox and the no-match message so both hang off the input
@@ -104,6 +112,9 @@ export function SearchCombobox<P>({
   const [q, setQ] = useState('');
   // The recall list shows only while the input is focused (an autoFocused one starts so).
   const [recallOpen, setRecallOpen] = useState(!!autoFocus);
+  // True once focus has LEFT the input: the popup collapses (APG combobox) but the query is kept,
+  // and re-focusing — or typing, which needs focus — brings it back.
+  const [blurred, setBlurred] = useState(false);
   // Highlighted option. Clamped during render (never reset from an effect) so the index
   // stays valid as the hit list shrinks under the user's typing.
   const [activeRaw, setActiveRaw] = useState(0);
@@ -113,10 +124,10 @@ export function SearchCombobox<P>({
   // Full match set first (recall-ranked when opted in), capped list second — so the cap can
   // be reported rather than hidden. An empty needle yields the recents (recall) or nothing.
   const { matches, record } = useRecallMatches(idPrefix, recall?.resolve, needle, search);
-  const shown = needle || recallOpen ? matches : NO_HITS;
+  const shown = !blurred && (needle || recallOpen) ? matches : NO_HITS;
   const hits = useMemo(() => shown.slice(0, maxHits) as SearchHit<P>[], [shown, maxHits]);
 
-  const open = needle.length > 0;
+  const open = needle.length > 0 && !blurred;
   const hasHits = hits.length > 0;
   const recalling = !open && hasHits;
   const hidden = matches.length - hits.length;
@@ -129,7 +140,7 @@ export function SearchCombobox<P>({
     : !open
     ? ''
     : hasHits
-      ? `${matches.length} ${noun}${matches.length === 1 ? '' : 's'} match${hidden > 0 ? `, showing first ${hits.length}` : ''}`
+      ? `${matchPhrase(matches.length, noun)}${hidden > 0 ? `, showing first ${hits.length}` : ''}`
       : emptyUniverse
         ? 'Nothing loaded yet'
         : `No ${noun} matches`;
@@ -187,10 +198,10 @@ export function SearchCombobox<P>({
         type="text"
         role="combobox"
         value={q}
-        onChange={(e) => { setQ(e.target.value); setActiveRaw(0); }}
+        onChange={(e) => { setQ(e.target.value); setActiveRaw(0); setBlurred(false); }}
         onKeyDown={onKeyDown}
-        onFocus={() => setRecallOpen(true)}
-        onBlur={() => setRecallOpen(false)}
+        onFocus={() => { setRecallOpen(true); setBlurred(false); }}
+        onBlur={() => { setRecallOpen(false); setBlurred(true); }}
         placeholder={placeholder}
         aria-label={ariaLabel}
         aria-expanded={hasHits}

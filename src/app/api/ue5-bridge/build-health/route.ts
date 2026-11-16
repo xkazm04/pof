@@ -3,11 +3,12 @@
  *
  * GET — Return the build health & trend report for a project: success rate,
  * duration trend, slowest targets, recurring error fingerprints, and regression
- * alerts. Reads from the `headless_builds` + `error_memory` tables.
+ * alerts. Reads from the `headless_builds` table.
  *
  * Query params:
  *   projectPath  (required) — the UE project whose builds to analyze
- *   limit        (optional) — max builds to consider (default 200)
+ *   limit        (optional) — max builds to consider, a positive integer capped
+ *                             at 1000 (default 200); anything else answers 400
  */
 
 import { type NextRequest } from 'next/server';
@@ -24,7 +25,10 @@ export async function GET(req: NextRequest) {
     }
 
     const limitParam = searchParams.get('limit');
-    const limit = limitParam ? Math.max(1, Math.min(1000, parseInt(limitParam, 10) || 200)) : 200;
+    if (limitParam !== null && (!/^\d+$/.test(limitParam) || Number(limitParam) < 1)) {
+      return apiError('limit must be a positive integer', 400);
+    }
+    const limit = limitParam ? Math.min(1000, Number(limitParam)) : 200;
 
     const report = getBuildHealthReport(projectPath, { limit });
     return apiSuccess(report);

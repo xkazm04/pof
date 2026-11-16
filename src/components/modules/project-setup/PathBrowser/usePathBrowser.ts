@@ -163,7 +163,10 @@ export function usePathBrowser({
     browse('~');
   };
 
+  // The drive list writes the same listing slot as browse(), so it shares the
+  // same latest-wins token: whichever navigation was dispatched last wins.
   const navigateDrives = async () => {
+    const seq = ++browseSeqRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -172,6 +175,7 @@ export function usePathBrowser({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'drives' }),
       });
+      if (seq !== browseSeqRef.current) return;
       const drives = data.drives ?? [];
       setDirectories(
         drives.map((d) => ({
@@ -186,9 +190,10 @@ export function usePathBrowser({
       setUprojectFiles([]);
       setIsUEProject(false);
     } catch {
+      if (seq !== browseSeqRef.current) return;
       setError('Failed to list drives');
     }
-    setLoading(false);
+    if (seq === browseSeqRef.current) setLoading(false);
   };
 
   const selectProject = (project: DetectedProject) => {

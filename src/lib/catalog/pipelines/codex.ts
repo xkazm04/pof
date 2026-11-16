@@ -15,7 +15,8 @@ import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 const LORE_DEPTH_CHARS = Number(/at least (\d+) characters/.exec(CANON_SEED.find((r) => r.id === 'codex-lore-depth')?.body ?? '')?.[1] ?? NaN);
 if (!Number.isFinite(LORE_DEPTH_CHARS)) throw new Error('canon rule codex-lore-depth no longer states "at least N characters"');
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 
 /**
  * Codex pipeline (catalogId: 'codex').

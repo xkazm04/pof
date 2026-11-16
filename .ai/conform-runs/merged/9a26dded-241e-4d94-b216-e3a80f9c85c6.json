@@ -1,0 +1,128 @@
+{
+  "schema": "conform-run/1",
+  "worker": "9a26dded-241e-4d94-b216-e3a80f9c85c6",
+  "subject": "codebase-scanning",
+  "evaluatedAt": "2026-11-08T03:14:44.664769+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "gdd-compliance",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:63 The Codebase Archeologist list shows at most 100 findings, but the count line above it (line 52) still says '{hits.length} issues' and never says 'top 100 of N', so the cut is hidden. The golden path calls a silently clipped list 'a lie about the backlog'.",
+      "techniques": [
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/ChurnTab.tsx:16 The git-churn sensor's catch-all (src/lib/codebase-archeologist.ts:323, 'Not a git repo or git not available — return empty') turns a failed read into an empty array. The UI then reports that as a fact about the target ('No git history found') instead of saying the sensor was skipped, and the High Churn card shows 0."
+        },
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:50 Each sweep replaces the previous result wholesale. Nothing persists, there is no ack or dedup across sweeps, and there is no cleared/regressed/persisted verdict. Hit ids are a per-process counter (lib:75 `ap-${++nextId}`), not a stable identity."
+        },
+        {
+          "technique": "causes-beside-the-finding-count",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:91 The headline publishes only the emission count. No count of independent causes sits beside it. OverviewTab:8 also derives the health score from raw emission counts."
+        },
+        {
+          "technique": "the-tree-is-not-the-population",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/OverviewTab.tsx:19 totalFiles is counted after the file walk has already trimmed the population: depth cap 8, SKIP_DIRS, and a 2000-file safety cap at lib:59. None of this is disclosed, so the population reads as if it were the whole tree."
+        },
+        {
+          "technique": "rule-precision-discipline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/constants.ts:23 The six regex detectors ship with no measured precision recorded anywhere. A grep for 'precision|false.positive' over src/lib/codebase-archeologist.ts and its route found nothing."
+        },
+        {
+          "technique": "the-broad-root-is-the-unaudited-one",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/GDDComplianceView/MappingStrip.tsx:23 The hand-declared checklist→feature mapping is audited for rot: mapped entries that match nothing in the scan, plus unmapped and heuristic items, are surfaced instead of silently shrinking the population."
+        },
+        {
+          "technique": "the-narrowest-view-owns-the-number",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/GDDComplianceView/ModuleCard.tsx:83 Each per-module judgment carries its own coverage ('X of Y features scanned'), so the number is not borrowed from the global report."
+        }
+      ],
+      "registryProposal": "The sensor-pipeline technique says 'cap with disclosed truncation' at the pipeline stage. Here the undisclosed cap is added by the render layer (a view-side slice) on top of a server-side cap (backlog.slice(0, 50)). The technique could say outright that every later restriction, including a UI list slice, owes the same 'top N of M' disclosure, which ties it to the-narrowest-view-owns-the-number."
+    },
+    {
+      "context": "material-style-tools",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/materials/MaterialStyleTransfer/useMaterialStyleTransfer.ts:25 The only 'analysis' here is of a reference image's style properties feeding a material, not a scan of a codebase. A case-insensitive grep of src/components/modules/content/materials for antiPattern, dedup, detector, sensor and finding returned no hits.",
+      "techniques": [],
+      "absenceTerms": [
+        "antiPattern",
+        "detector",
+        "sensor",
+        "dedup",
+        "finding"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "codebase-scanning",
+      "context": "blueprint-transpiler-game-systems",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "codebase-scanning",
+      "context": "audio-generation-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor, SpatialAudioGeneratorPanel/index.tsx:19, is only the `post` fetch helper. It does not show that the context has no codebase-scanning behaviour, so the anchor is incidental."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T03:14:44.664769+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [
+        "causes-beside-the-finding-count",
+        "finding-lifecycle",
+        "rule-precision-discipline",
+        "sensor-pipeline",
+        "the-broad-root-is-the-unaudited-one",
+        "the-narrowest-view-owns-the-number",
+        "the-tree-is-not-the-population"
+      ],
+      "deviations": 1,
+      "context": "gdd-compliance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T03:14:44.664769+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "audio-generation-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T03:14:44.664769+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "material-style-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

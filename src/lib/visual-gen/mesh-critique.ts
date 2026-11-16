@@ -23,6 +23,8 @@ export {
   type GeometryFacts, type GeometryRequest,
 } from './mesh-score';
 
+const NO_CRITIQUE_MARKERS = 'no critique markers in output';
+
 /** Parse the `POF_CRITIQUE_*` marker block into typed metrics. Pure. */
 export function parseCritiqueMetrics(stdout: string): { ok: boolean; metrics?: MeshMetrics; error?: string } {
   const get = (k: string): string | undefined => {
@@ -32,8 +34,18 @@ export function parseCritiqueMetrics(stdout: string): { ok: boolean; metrics?: M
   const error = get('ERROR');
   if (error) return { ok: false, error };
   const verts = get('VERTS');
-  if (!get('DONE') || verts === undefined) return { ok: false, error: 'no critique markers in output' };
+  if (!get('DONE') || verts === undefined) return { ok: false, error: NO_CRITIQUE_MARKERS };
+  // A NaN clears every `<` and `>` in scoreMesh, so an unreadable count would grade as a clean
+  // mesh. The counts the verdict turns on must be numbers; an unreadable one means no metrics.
+  for (const key of ['VERTS', 'FACES', 'COMPONENTS']) {
+    if (!Number.isFinite(Number(get(key) ?? NaN))) return { ok: false, error: `unreadable ${key} marker in critique output` };
+  }
+  const degenerate = get('DEGENERATE_FACES');
+  if (degenerate !== undefined && !Number.isFinite(Number(degenerate))) {
+    return { ok: false, error: 'unreadable DEGENERATE_FACES marker in critique output' };
+  }
   const bbox = (get('BBOX') ?? '0,0,0').split(',').map(Number);
+  if (bbox.length !== 3 || !bbox.every(Number.isFinite)) return { ok: false, error: 'unreadable BBOX marker in critique output' };
   const vol = get('VOLUME');
   const compFaces = get('COMPONENT_FACES');
   return {
@@ -232,9 +244,13 @@ export async function critiqueMesh(glbPath: string, deps: CritiqueDeps = {}): Pr
   const script = join(process.cwd(), 'scripts', 'visual-gen', 'pof_mesh_critique.py');
   if (!fileExists(script)) return critiqueUnavailable(`critique script not found at ${script}`);
 
-  const { stdout } = await run(py, [script, '--mesh', glbPath], 60_000);
+  const { stdout, code } = await run(py, [script, '--mesh', glbPath], 60_000);
   const parsed = parseCritiqueMetrics(stdout);
-  if (!parsed.ok || !parsed.metrics) return { ok: false, error: parsed.error ?? 'critique produced no metrics' };
+  if (!parsed.ok || !parsed.metrics) {
+    // With no markers the script never reported, so what it printed is the only reason there is.
+    const detail = parsed.error === NO_CRITIQUE_MARKERS ? ` (exit ${code ?? 'none'}): ${stdout.trim().slice(-300)}` : '';
+    return { ok: false, error: `${parsed.error ?? 'critique produced no metrics'}${detail}` };
+  }
   return {
     ok: true,
     metrics: parsed.metrics,

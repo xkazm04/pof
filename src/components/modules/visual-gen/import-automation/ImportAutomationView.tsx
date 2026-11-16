@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { FileUp, Code, Copy, Check } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FileUp, Copy, Check } from 'lucide-react';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { StyledSlider } from '@/components/ui/StyledSlider';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
@@ -21,7 +23,12 @@ const USES: CollisionUse[] = ['blocking', 'decorative', 'character'];
 function ConfigTab() {
   const [config, setConfig] = useState<ImportConfig>({ ...DEFAULT_IMPORT_CONFIG });
   const [activeOutput, setActiveOutput] = useState<'import' | 'dataasset'>('import');
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+  }, []);
 
   const plan = useMemo(() => importPlanFor(config), [config]);
   const glb = config.format !== 'fbx';
@@ -32,10 +39,11 @@ function ConfigTab() {
       : generateDataAsset(config);
   }, [config, activeOutput]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(output);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    const ok = await copyToClipboard(output);
+    setCopyState(ok ? 'copied' : 'failed');
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
   };
 
   const updateConfig = <K extends keyof ImportConfig>(key: K, value: ImportConfig[K]) => {
@@ -47,9 +55,10 @@ function ConfigTab() {
       {/* Left: Config form */}
       <div className="w-72 shrink-0 space-y-4 overflow-y-auto pr-2">
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Asset Name</label>
+          <label htmlFor="import-asset-name" className="text-xs text-text-muted mb-1 block">Asset Name</label>
           <input
             type="text"
+            id="import-asset-name"
             value={config.assetName}
             onChange={(e) => updateConfig('assetName', e.target.value)}
             className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text focus:outline-none focus:border-[var(--visual-gen)]"
@@ -62,6 +71,7 @@ function ConfigTab() {
             {(['fbx', 'gltf', 'glb'] as const).map((fmt) => (
               <button
                 key={fmt}
+                aria-pressed={config.format === fmt}
                 onClick={() => updateConfig('format', fmt)}
                 className={`px-2.5 py-1 rounded text-xs uppercase ${
                   config.format === fmt
@@ -81,6 +91,7 @@ function ConfigTab() {
             {(['static', 'skeletal'] as const).map((t) => (
               <button
                 key={t}
+                aria-pressed={config.meshType === t}
                 onClick={() => updateConfig('meshType', t)}
                 className={`flex-1 px-2.5 py-1 rounded text-xs capitalize ${
                   config.meshType === t
@@ -96,9 +107,10 @@ function ConfigTab() {
 
         {glb ? (
           <div>
-            <label className="text-xs text-text-muted mb-1 block">Source .glb / .gltf</label>
+            <label htmlFor="import-source-path" className="text-xs text-text-muted mb-1 block">Source .glb / .gltf</label>
             <input
               type="text"
+              id="import-source-path"
               value={config.sourcePath}
               placeholder={`generated/mesh-finish/${config.assetName}.glb`}
               onChange={(e) => updateConfig('sourcePath', e.target.value)}
@@ -120,9 +132,10 @@ function ConfigTab() {
         )}
 
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Content Path</label>
+          <label htmlFor="import-content-path" className="text-xs text-text-muted mb-1 block">Content Path</label>
           <input
             type="text"
+            id="import-content-path"
             value={config.contentPath}
             onChange={(e) => updateConfig('contentPath', e.target.value)}
             className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text font-mono focus:outline-none focus:border-[var(--visual-gen)]"
@@ -151,10 +164,11 @@ function ConfigTab() {
         </div>
 
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Shells (declared — nothing here measures the mesh)</label>
+          <label htmlFor="import-shells" className="text-xs text-text-muted mb-1 block">Shells (declared — nothing here measures the mesh)</label>
           <input
             type="number"
             min={1}
+            id="import-shells"
             value={config.components ?? ''}
             onChange={(e) => updateConfig('components', e.target.value ? Math.max(1, Math.floor(Number(e.target.value))) : undefined)}
             className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text font-mono focus:outline-none focus:border-[var(--visual-gen)]"
@@ -182,6 +196,7 @@ function ConfigTab() {
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
           <button
+            aria-pressed={activeOutput === 'import'}
             onClick={() => setActiveOutput('import')}
             className={`px-2.5 py-1 rounded text-xs ${
               activeOutput === 'import'
@@ -192,6 +207,7 @@ function ConfigTab() {
             Import Script
           </button>
           <button
+            aria-pressed={activeOutput === 'dataasset'}
             onClick={() => setActiveOutput('dataasset')}
             className={`px-2.5 py-1 rounded text-xs ${
               activeOutput === 'dataasset'
@@ -203,11 +219,13 @@ function ConfigTab() {
           </button>
           <div className="flex-1" />
           <button
-            onClick={handleCopy}
+            onClick={() => void handleCopy()}
             className="flex items-center gap-1 px-2 py-1 rounded text-xs text-text-muted hover:text-text transition-colors"
           >
-            {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-            {copied ? 'Copied!' : 'Copy'}
+            {copyState === 'copied' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+            <span aria-live="polite">
+              {copyState === 'copied' ? 'Copied!' : copyState === 'failed' ? 'Copy failed' : 'Copy'}
+            </span>
           </button>
         </div>
         <pre className="flex-1 overflow-auto rounded-lg bg-[var(--surface-deep)] border border-border p-4 text-xs font-mono text-text-muted whitespace-pre-wrap">

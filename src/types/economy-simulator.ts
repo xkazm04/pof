@@ -1,7 +1,9 @@
 // ── Economy Simulator Types ─────────────────────────────────────────────────
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-export type ItemCategory = 'weapon' | 'armor' | 'consumable' | 'material' | 'gem' | 'recipe';
+/** Every item category, in display order. The engine's buckets and the UI's tabs both read this. */
+export const ITEM_CATEGORIES = ['weapon', 'armor', 'consumable', 'material', 'gem', 'recipe'] as const;
+export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 /**
  * The five functional node kinds an economy is allowed to contain
  * (ai-registry `game-economy-tuning` / `source-drain-converter-trader-vocabulary`).

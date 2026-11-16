@@ -155,7 +155,7 @@ export const OPACITY_90 = 'e6';
 
 /** Default border opacity — visible but not heavy (20%) */
 export const BORDER_DEFAULT = OPACITY_20;
-/** Hover border opacity — stronger emphasis on interaction (37%) */
+/** Hover border opacity — stronger emphasis on interaction (40%) */
 export const BORDER_HOVER = OPACITY_37;
 /** Subtle border opacity — faint structural hints (10%) */
 export const BORDER_SUBTLE = OPACITY_10;
@@ -171,14 +171,34 @@ export const GLOW_LG = '0 0 16px';
 
 // ── General opacity helper ────────────────────────────────────────────────
 
+const HEX_6 = /^#[0-9a-f]{6}$/i;
+const HEX_3 = /^#[0-9a-f]{3}$/i;
+const ALPHA_SUFFIX = /^[0-9a-f]{2}$/i;
+
 /**
- * Combine a hex color with an OPACITY_* suffix constant.
+ * Apply a two-digit hex alpha suffix to any CSS color. A suffix only extends
+ * `#rrggbb`, so `#rrggbb` keeps the plain concatenation and every other form
+ * (`var(--x)`, `rgb()`, a named color, `#rrggbbaa`) goes through `color-mix`,
+ * since gluing the suffix on would be invalid CSS the browser silently drops.
+ */
+function applyAlpha(color: string, suffix: string): string {
+  if (!color) return 'transparent';
+  if (HEX_6.test(color) || !ALPHA_SUFFIX.test(suffix)) return `${color}${suffix}`;
+  if (HEX_3.test(color)) return `#${[...color.slice(1)].map((c) => c + c).join('')}${suffix}`;
+  const percent = Math.round((parseInt(suffix, 16) / 255) * 1000) / 10;
+  return `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+}
+
+/**
+ * Combine a color with an OPACITY_* suffix constant. A hex input stays a hex
+ * string; a CSS variable or other color form becomes a `color-mix()`, so the
+ * result is valid CSS for any input (not usable as a canvas fill when it is a var).
  *
- * @example withOpacity(STATUS_SUCCESS, OPACITY_8)  // '#4ade8014'
- * @example withOpacity(accent, OPACITY_20)          // '${accent}33'
+ * @example withOpacity(STATUS_SUCCESS, OPACITY_8)    // '#4ade8014'
+ * @example withOpacity('var(--x)', OPACITY_20)       // 'color-mix(in srgb, var(--x) 20%, transparent)'
  */
 export function withOpacity(color: string, opacity: string): string {
-  return `${color}${opacity}`;
+  return applyAlpha(color, opacity);
 }
 
 // ── Semantic opacity helpers ───────────────────────────────────────────────
@@ -200,7 +220,7 @@ const INTENSITY_SUFFIX: Record<number, string> = {
  * @example statusBg(STATUS_SUCCESS, 0.20) // '#4ade8033' — stronger success bg
  */
 export function statusBg(color: string, intensity: OpacityIntensity = 0.08): string {
-  return `${color}${INTENSITY_SUFFIX[intensity] ?? OPACITY_8}`;
+  return applyAlpha(color, INTENSITY_SUFFIX[intensity] ?? OPACITY_8);
 }
 
 /**
@@ -208,7 +228,7 @@ export function statusBg(color: string, intensity: OpacityIntensity = 0.08): str
  * Default is 20% — a visible but not heavy border.
  */
 export function statusBorder(color: string, intensity: OpacityIntensity = 0.20): string {
-  return `${color}${INTENSITY_SUFFIX[intensity] ?? OPACITY_20}`;
+  return applyAlpha(color, INTENSITY_SUFFIX[intensity] ?? OPACITY_20);
 }
 
 // ── Status glow helpers ────────────────────────────────────────────────────
@@ -289,13 +309,18 @@ export const HEATMAP_STEP_5 = '#065f46';
 
 const HEATMAP_STOPS = [HEATMAP_STEP_1, HEATMAP_STEP_2, HEATMAP_STEP_3, HEATMAP_STEP_4, HEATMAP_STEP_5];
 
+/** Clamp to 0..1, reading NaN as 0 (`Math.min`/`Math.max` pass NaN straight through). */
+function clamp01(t: number): number {
+  return Number.isNaN(t) ? 0 : Math.max(0, Math.min(1, t));
+}
+
 /**
  * Linearly interpolate between two `#rrggbb` hex colors (`t` clamped to 0..1).
  * Single source of the channel-mixing math for every gradient/heatmap helper —
  * use instead of hand-rolling `parseInt(hex.slice(...))` color lerps in views.
  */
 export function lerpHexColor(from: string, to: string, t: number): string {
-  const c = Math.max(0, Math.min(1, t));
+  const c = clamp01(t);
   const channel = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
   const mix = (i: number) => Math.round(channel(from, i) + (channel(to, i) - channel(from, i)) * c);
   const hex = (n: number) => n.toString(16).padStart(2, '0');
@@ -307,13 +332,13 @@ export function lerpHexColor(from: string, to: string, t: number): string {
  * `t` (0..1) maps low→mid, the upper half mid→high.
  */
 function lerp3Hex(t: number, low: string, mid: string, high: string): string {
-  const c = Math.max(0, Math.min(1, t));
+  const c = clamp01(t);
   return c < 0.5 ? lerpHexColor(low, mid, c / 0.5) : lerpHexColor(mid, high, (c - 0.5) / 0.5);
 }
 
 /** Interpolate a 0-1 value to a 5-stop heatmap color. */
 export function heatmapScale(t: number): string {
-  const clamped = Math.max(0, Math.min(1, t));
+  const clamped = clamp01(t);
   if (clamped <= 0) return HEATMAP_STOPS[0];
   if (clamped >= 1) return HEATMAP_STOPS[4];
   const segment = clamped * 4;
@@ -334,8 +359,8 @@ const QUALITY_COLORS = [
 
 /** Map a 1-5 quality score to its semantic color. */
 export function qualityColor(score: number | null): string {
-  if (score === null || score < 1 || score > 5) return 'var(--text-muted)';
-  return QUALITY_COLORS[score];
+  if (score === null || !(score >= 1 && score <= 5)) return 'var(--text-muted)';
+  return QUALITY_COLORS[Math.round(score)];
 }
 
 // ── Score bands (0-100) ─────────────────────────────────────────────────────
@@ -603,7 +628,8 @@ export function statusToColor(status: string): { bg: string; text: string; borde
     warn: { color: STATUS_WARNING, label: 'WARN' },
     error: { color: STATUS_ERROR, label: 'FAIL' },
   };
-  const { color, label } = map[status] ?? { color: STATUS_ERROR, label: 'FAIL' };
+  // A status outside ok/warn/error was never measured: render it as unknown, not as a failure.
+  const { color, label } = map[status] ?? { color: STATUS_MUTED, label: 'UNKNOWN' };
   return { bg: statusBg(color), text: color, border: statusBorder(color), label };
 }
 

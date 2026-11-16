@@ -53,7 +53,7 @@ function BlenderSendReport({ result }: { result: SendToBlenderResult }) {
   );
 }
 
-function EditorTab() {
+export function EditorTab() {
   const params = useMaterialStore((s) => s.params);
   const previewMesh = useMaterialStore((s) => s.previewMesh);
   const albedoTexture = useMaterialStore((s) => s.albedoTexture);
@@ -107,10 +107,13 @@ function EditorTab() {
             {isSending ? 'Sending...' : 'Send to Blender'}
           </button>
 
-          {sent && <BlenderSendReport result={sent} />}
+          {/* Pre-mounted so assistive tech announces the report when it appears. */}
+          <div role="status" aria-live="polite" data-testid="blender-send-status">
+            {sent && <BlenderSendReport result={sent} />}
+          </div>
 
           {sendError !== null && (
-            <div className="flex items-start gap-1.5 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1.5">
+            <div role="alert" className="flex items-start gap-1.5 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1.5">
               <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>{sendError}</span>
             </div>

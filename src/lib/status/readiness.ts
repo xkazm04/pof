@@ -22,6 +22,10 @@
  */
 import type { StepCell, CellGrade } from './statusModel';
 
+// Duplicated by value from statusModel (this module takes only types from it, to stay free of a
+// runtime cycle); the readiness test pins the two together.
+const NOT_HEADLESS = 'not headless-operable via pof-mcp';
+
 /** The ladder, ascending. `LADDER` below is the single source of order. */
 export type ReadinessLevel = 'R0' | 'R1' | 'R2' | 'R3' | 'R4' | 'R5';
 
@@ -114,7 +118,18 @@ function blockedWouldBeLevel(cell: StepCell): ReadinessLevel {
   if (cell.counts.pass === 0) return 'R1';
   // Something passed — grade it as if the judge verdict were absent, which is exactly
   // the `trusted` / `ungated` split deriveCell applies to a plain pass.
-  return cell.checkerMeaningful === false ? 'R2' : 'R3';
+  return cell.checkerMeaningful === false || cell.passUngated ? 'R2' : 'R3';
+}
+
+/** `trusted` is reached three ways; only the plain engine-class pass may use its sentence. */
+function reachedBecause(cell: StepCell): string {
+  if (cell.grade === 'trusted' && cell.reason?.startsWith(NOT_HEADLESS)) {
+    return 'a real gate passed, but the step is not headless-reproducible, so it is held below R4';
+  }
+  if (cell.grade === 'trusted' && cell.judgeAttribution?.applied && cell.judgeAttribution.verdict === 'pass') {
+    return 'a judge passed this output, below the shippable band';
+  }
+  return GRADE_BECAUSE[cell.grade];
 }
 
 /**
@@ -139,7 +154,7 @@ export function readinessOf(cell: StepCell): Readiness {
       because: 'gate-proven AND audited as actually running in UE',
     };
   }
-  return { level: GRADE_LEVEL[cell.grade], state: 'reached', because: GRADE_BECAUSE[cell.grade] };
+  return { level: GRADE_LEVEL[cell.grade], state: 'reached', because: reachedBecause(cell) };
 }
 
 /**

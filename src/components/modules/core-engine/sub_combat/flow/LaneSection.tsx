@@ -37,6 +37,8 @@ export function LaneSection({ lane, featureMap, defs, expanded, onToggle }: Lane
           return (
             <div key={name}>
               <button
+                type="button"
+                aria-expanded={isExpanded}
                 onClick={() => onToggle(name)}
                 className="w-full flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/50 transition-colors text-left cursor-pointer"
               >

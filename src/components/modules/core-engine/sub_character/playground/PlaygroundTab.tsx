@@ -111,8 +111,11 @@ export function CharacterFeelPlayground({ moduleId }: CharacterFeelPlaygroundPro
         {/* Preset dropdown */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setPresetOpen(v => !v)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold hover:border-border-bright transition-colors"
+            aria-expanded={presetOpen}
+            aria-haspopup="true"
+            className="focus-ring flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold hover:border-border-bright transition-colors"
             style={{ color: preset.color }}
           >
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: preset.color }} />
@@ -128,7 +131,8 @@ export function CharacterFeelPlayground({ moduleId }: CharacterFeelPlaygroundPro
                 <button
                   key={p.id}
                   onClick={() => handlePresetChange(p.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-bold transition-colors ${
+                  type="button"
+                  className={`focus-ring w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm font-bold transition-colors ${
                     p.id === activePreset ? 'bg-surface-deep border border-border/60' : 'hover:bg-surface-deep/50 border border-transparent'
                   }`}
                   style={{ color: p.id === activePreset ? p.color : 'var(--text)' }}
@@ -160,7 +164,7 @@ export function CharacterFeelPlayground({ moduleId }: CharacterFeelPlaygroundPro
         <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={() => setIsPlaying(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold text-text hover:border-border-bright transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold text-text hover:border-border-bright transition-colors focus-ring"
           >
             {isPlaying
               ? <><Pause className="w-3.5 h-3.5" /> Pause</>
@@ -170,7 +174,7 @@ export function CharacterFeelPlayground({ moduleId }: CharacterFeelPlaygroundPro
           <button
             onClick={clearPlaygroundCurves}
             disabled={!hasCurveEdits}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold text-text-muted hover:text-text hover:border-border-bright transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/40 bg-surface-deep/50 text-sm font-bold text-text-muted hover:text-text hover:border-border-bright transition-colors disabled:opacity-40 focus-ring"
             title={hasCurveEdits ? 'Remove the Playground curves layer from the feel stack' : 'No curve edits in the feel stack'}
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset
@@ -232,7 +236,7 @@ export function CharacterFeelPlayground({ moduleId }: CharacterFeelPlaygroundPro
       </div>
 
       {/* Hint */}
-      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted text-center opacity-60">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-subtle text-center">
         Drag a handle to set its value in the persisted feel stack (the Playground curves layer); every tab and
         Apply via CLI read the same resolved stack. Reset removes the Playground curves layer.
       </div>

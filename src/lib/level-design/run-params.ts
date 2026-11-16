@@ -18,8 +18,17 @@ export const UE_ROOMS_MIN = 2;
 export const UE_ROOMS_MAX = 20;
 
 /**
+ * Largest seed the UE generators can represent: `RandomSeed` is an int32 and the
+ * spec handoff sends the seed as uint32 (`seedValue >>> 0`), so 2^32 - 1 is the
+ * ceiling. A larger value would reach PROCGEN_SEED and the run ledger unchanged
+ * while UE used some other number.
+ */
+export const SEED_MAX = 4294967295;
+
+/**
  * Pure validator for a seed field. Returns an error string when the raw input is
- * empty, non-numeric (NaN), non-integer, or negative; null when acceptable.
+ * empty, non-numeric (NaN), non-integer, negative, or above {@link SEED_MAX};
+ * null when acceptable.
  */
 export function validateSeed(raw: string): string | null {
   if (raw.trim() === '') return 'Enter a seed';
@@ -27,5 +36,6 @@ export function validateSeed(raw: string): string | null {
   if (!Number.isFinite(n)) return 'Seed must be a number';
   if (!Number.isInteger(n)) return 'Seed must be a whole number';
   if (n < 0) return 'Seed must be 0 or greater';
+  if (n > SEED_MAX) return `Seed must be at most ${SEED_MAX}`;
   return null;
 }

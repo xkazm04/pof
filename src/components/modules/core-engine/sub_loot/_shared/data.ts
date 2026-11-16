@@ -1,10 +1,11 @@
-import { ACCENT_EMERALD, ACCENT_ORANGE, STATUS_MUTED, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING } from '@/lib/chart-colors';
+import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { GaugeMetric, DiffEntry, HeatmapCell } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
 import { Layers, FlaskConical, Dices, Shield, DollarSign } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ARCHETYPES } from '../../sub_bestiary/_shared/data';
+import { rarityColor } from './rarityBadge';
 
 export const ACCENT = ACCENT_ORANGE;
 
@@ -51,9 +52,8 @@ export const TOTAL_WEIGHT = RARITY_TIERS.reduce((sum, t) => sum + t.weight, 0);
 /** Enemy archetype lookup by id. Shared by index.tsx and LootFilters.tsx. */
 export const enemyMap = new Map(ARCHETYPES.map(a => [a.id, a]));
 
-/** Resolve a rarity tier's color by name, falling back to the module ACCENT. */
-export const rarityColorFor = (name: string): string =>
-  RARITY_TIERS.find(t => t.name === name)?.color ?? ACCENT;
+/** Resolve a rarity tier's color by name - the one rule (rarityBadge.rarityColor): case-insensitive, muted fallback. */
+export const rarityColorFor = (name: string): string => rarityColor(name);
 
 /* -- World item examples per rarity --------------------------------------- */
 
@@ -86,13 +86,21 @@ export interface TreemapRect {
   affixes: string[];
 }
 
-export const TREEMAP_DATA: TreemapRect[] = [
-  { name: 'Common', probability: 50, color: STATUS_MUTED, affixes: ['Sturdy', 'Worn', 'Basic', 'Plain'] },
-  { name: 'Uncommon', probability: 25, color: ACCENT_EMERALD, affixes: ['Keen', 'Swift', 'Reinforced'] },
-  { name: 'Rare', probability: 15, color: STATUS_INFO, affixes: ['Blazing', 'Frozen', 'Vampiric'] },
-  { name: 'Epic', probability: 8, color: ACCENT_VIOLET, affixes: ['Celestial', 'Void-touched'] },
-  { name: 'Legendary', probability: 2, color: STATUS_WARNING, affixes: ['Godslayer'] },
-];
+const TREEMAP_AFFIXES: Record<string, string[]> = {
+  Common: ['Sturdy', 'Worn', 'Basic', 'Plain'],
+  Uncommon: ['Keen', 'Swift', 'Reinforced'],
+  Rare: ['Blazing', 'Frozen', 'Vampiric'],
+  Epic: ['Celestial', 'Void-touched'],
+  Legendary: ['Godslayer'],
+};
+
+/** Probability per tier is derived from RARITY_TIERS (the one authority); only the affix names live here. */
+export const TREEMAP_DATA: TreemapRect[] = RARITY_TIERS.map((t) => ({
+  name: t.name,
+  probability: (t.weight / TOTAL_WEIGHT) * 100,
+  color: t.color,
+  affixes: TREEMAP_AFFIXES[t.name] ?? [],
+}));
 
 /* -- 7.3 Loot Table Diff data --------------------------------------------- */
 
@@ -108,13 +116,6 @@ export const LOOT_DIFF_ENTRIES: DiffEntry[] = [
 
 export const DROPS_PER_HOUR_GAUGE: GaugeMetric = { label: 'Items/Hour', current: 45, target: 60, unit: '/hr' };
 export const GOLD_PER_HOUR_GAUGE: GaugeMetric = { label: 'Gold/Hour', current: 2300, target: 3000, unit: 'g' };
-
-export const DROP_SOURCE_BREAKDOWN = [
-  { source: 'Grunt', pct: 40, color: STATUS_MUTED },
-  { source: 'Caster', pct: 30, color: STATUS_INFO },
-  { source: 'Boss', pct: 20, color: ACCENT_VIOLET },
-  { source: 'Chest', pct: 10, color: STATUS_WARNING },
-];
 
 /* -- 7.5 Affix data ------------------------------------------------------- */
 
@@ -203,15 +204,7 @@ export interface LootEditorEntryExpanded extends LootEditorEntry {
   [key: string]: unknown;
 }
 
-const RARITY_TO_COLOR: Record<string, string> = {
-  Common: STATUS_MUTED,
-  Uncommon: ACCENT_EMERALD,
-  Rare: STATUS_INFO,
-  Epic: ACCENT_VIOLET,
-  Legendary: STATUS_WARNING,
-};
-
-const rc = (r: string) => RARITY_TO_COLOR[r] ?? STATUS_MUTED;
+const rc = (r: string) => rarityColor(r);
 
 interface LootEntryRaw {
   id: string;
@@ -305,9 +298,6 @@ export const EXPANDED_ENTRIES: LootEditorEntryExpanded[] = LOOT_ENTRIES_RAW.map(
   ...e,
   color: rc(e.rarity),
 } as LootEditorEntryExpanded));
-
-/** Backwards-compat flat list (LootEditorEntry without source). */
-export const DEFAULT_EDITOR_ENTRIES: LootEditorEntry[] = EXPANDED_ENTRIES;
 
 /** All unique sources for grouping. */
 export const LOOT_SOURCES: LootSource[] = ['enemy', 'chest', 'quest', 'crafting'];

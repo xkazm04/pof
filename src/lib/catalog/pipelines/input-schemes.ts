@@ -26,7 +26,8 @@ import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
  * Deadzone and hold-to-toggle settings persist via the game-config save slot.
  */
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 
 registerCatalogPipeline({
   catalogId: 'input-schemes',

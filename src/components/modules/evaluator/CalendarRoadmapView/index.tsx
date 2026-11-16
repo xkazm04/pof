@@ -30,12 +30,17 @@ export function CalendarRoadmapView() {
     saveDeadline,
     handleDragStart,
     getVariance,
+    alerts,
   } = useCalendarRoadmapView();
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <RoadmapHeader summary={summary} setScrollOffset={setScrollOffset} />
+
+      {alerts.map((message) => (
+        <p key={message} role="alert" className="text-xs text-red-400">{message}</p>
+      ))}
 
       {/* Legend */}
       <RoadmapLegend />

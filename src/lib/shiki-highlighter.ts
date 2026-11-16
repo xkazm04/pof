@@ -43,12 +43,18 @@ let highlighterPromise: Promise<Highlighter> | null = null;
 /** Lazily create (once) a shared Shiki highlighter with the supported grammars. */
 export function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
-    highlighterPromise = import('shiki').then((mod) =>
+    const pending = import('shiki').then((mod) =>
       mod.createHighlighter({
         themes: [SHIKI_THEME],
         langs: [...SUPPORTED_LANGS],
       }),
     );
+    // A failed init must not be memoised: a rejected promise kept here made
+    // every later highlight() reject for the life of the tab.
+    pending.catch(() => {
+      if (highlighterPromise === pending) highlighterPromise = null;
+    });
+    highlighterPromise = pending;
   }
   return highlighterPromise;
 }

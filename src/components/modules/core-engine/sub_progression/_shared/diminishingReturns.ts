@@ -65,13 +65,16 @@ export function drEffectiveBonus(cfg: DRConfig, pts: number): number {
   return total;
 }
 
-/** Per-point value sampled every `step` points from `step` to 100. */
+/** Per-point value sampled every `step` points from `step` to 100, plus the soft cap. */
 export function drMarginalSeries(cfg: DRConfig, step = 10): DRAttribute['curve'] {
-  const out: DRAttribute['curve'] = [];
-  for (let pts = step; pts <= DR_MAX_POINTS; pts += step) {
-    out.push({ points: pts, marginalValue: cfg.baseValuePerPoint * drMultiplierAt(cfg, pts) });
-  }
-  return out;
+  // Like the CSV keys: the cap is sampled so the kink is drawn at the cap, not at the
+  // nearest grid point before it, and the series always reaches the last point.
+  const keys = new Set<number>([DR_MAX_POINTS]);
+  for (let pts = step; pts <= DR_MAX_POINTS; pts += step) keys.add(pts);
+  if (Number.isInteger(cfg.softCap) && cfg.softCap > 0 && cfg.softCap < DR_MAX_POINTS) keys.add(cfg.softCap);
+  return [...keys].sort((a, b) => a - b).map((pts) => ({
+    points: pts, marginalValue: cfg.baseValuePerPoint * drMultiplierAt(cfg, pts),
+  }));
 }
 
 /** The visualizer dataset for a set of configs. */

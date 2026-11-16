@@ -15,6 +15,12 @@ import { ACCENT, STATUS_COLORS, type ViewMode } from './constants';
 import type { AdoptionResult } from './adoption';
 import { AdoptionPreview } from './AdoptionPreview';
 
+/**
+ * Stored confidence is a z-test band only from here up (verdict.ts `confidenceFromZ`).
+ * Below it the number is z/2 or a decide-now volume score, capped at 0.7.
+ */
+const WEAKEST_BAND_CONFIDENCE = 0.8;
+
 // ── A/B Test Card ───────────────────────────────────────────────────────────
 
 export function ABTestCard({
@@ -50,12 +56,17 @@ export function ABTestCard({
 
   // Plain-language verdict — the single human-readable answer.
   const verdict = explainTestVerdict(test, variantA?.label, variantB?.label, reading);
-  const winnerVariant = verdict.winnerSlot === 'A' ? variantA : verdict.winnerSlot === 'B' ? variantB : undefined;
+  // A running front-runner has a slot too; only a decided test has a winner to act on.
+  const winnerVariant = !verdict.concluded ? undefined : verdict.winnerSlot === 'A' ? variantA : verdict.winnerSlot === 'B' ? variantB : undefined;
 
   const handleUseWording = useCallback(async () => {
     if (!winnerVariant) return;
-    await navigator.clipboard.writeText(winnerVariant.prompt);
-    toast.success(`Copied “${winnerVariant.label}” to clipboard`);
+    try {
+      await navigator.clipboard.writeText(winnerVariant.prompt);
+      toast.success(`Copied “${winnerVariant.label}” to clipboard`);
+    } catch {
+      toast.error('Clipboard unavailable in this browser');
+    }
   }, [winnerVariant]);
 
   const plainStatus = test.status === 'concluded' ? 'Decided' : test.status === 'running' ? 'Testing' : 'Stopped';
@@ -64,6 +75,7 @@ export function ABTestCard({
     <SurfaceCard level={2} className="overflow-hidden">
       <button
         onClick={onToggle}
+        aria-expanded={isExpanded}
         className="w-full flex items-center gap-2 p-3 text-left hover:bg-surface/50 transition-colors"
       >
         {isExpanded ? (
@@ -130,7 +142,12 @@ export function ABTestCard({
                   </div>
 
                   {/* Raw confidence (jargon tooltipped) */}
-                  {test.confidence > 0 && (
+                  {test.confidence > 0 && test.confidence < WEAKEST_BAND_CONFIDENCE && (
+                    <p className="text-xs text-text-muted" data-testid="confidence-below-band">
+                      Decided below the weakest confidence band: no significance result.
+                    </p>
+                  )}
+                  {test.confidence >= WEAKEST_BAND_CONFIDENCE && (
                     <div className="flex items-center gap-2 text-xs text-text-muted">
                       <Target className="w-3 h-3" />
                       <span>
@@ -212,7 +229,7 @@ function PlainVerdictBanner({
   adoption?: AdoptionResult;
   onAdopt?: () => Promise<boolean>;
 }) {
-  const hasWinner = verdict.winnerSlot !== null;
+  const hasWinner = verdict.concluded && verdict.winnerSlot !== null;
   const [previewing, setPreviewing] = useState(false);
   const [busy, setBusy] = useState(false);
   const confirm = async () => {

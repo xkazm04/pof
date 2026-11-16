@@ -73,6 +73,13 @@ def main() -> int:
                          "GPUs without flash-attn support. MUST be set before trellis2 imports.")
     ap.add_argument("--no-preview", action="store_true")
     args = ap.parse_args()
+    # A native crash or a timeout kill must not take the markers already printed with it.
+    sys.stdout.reconfigure(line_buffering=True)
+
+    # Before any import: a wrong path should not cost a model load to discover.
+    if not os.path.isfile(args.image):
+        print("POF_T2_ERROR=input image not found: " + args.image)
+        return 1
 
     # trellis2 reads ATTN_BACKEND at IMPORT time, so this has to precede the import
     # below — setting it afterwards silently has no effect.

@@ -18,6 +18,31 @@ export function apiError(message: string, status = 500, details?: unknown) {
 }
 
 /**
+ * Read a request body that must be a JSON object. The single authority for the house shape:
+ * malformed JSON and a non-object value (`null`, an array, a scalar) are both the caller's
+ * fault - 400, never a TypeError 500 thrown out of destructuring.
+ *
+ * @example
+ *   const body = await readJsonObject(req);
+ *   if (!body.ok) return body.error;
+ *   const { name } = body.data;
+ */
+export async function readJsonObject(
+  req: Request,
+): Promise<Result<Record<string, unknown>, ReturnType<typeof apiError>>> {
+  let parsed: unknown;
+  try {
+    parsed = await req.json();
+  } catch {
+    return err(apiError('Invalid JSON body', 400));
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return err(apiError('Body must be a JSON object', 400));
+  }
+  return ok(parsed as Record<string, unknown>);
+}
+
+/**
  * Convert a {@link Result} into the standard HTTP envelope: a success becomes
  * `apiSuccess(data, okStatus)`, a failure becomes `apiError(error, errorStatus)`.
  *
@@ -71,21 +96,34 @@ export function withRoute<Args extends unknown[]>(
 
 // ---- Client-side helper (used in hooks/components) ----
 
+/**
+ * Read a response as the envelope, or as a failure naming its HTTP status: an HTML
+ * error page must not surface as a JSON parser message, and a body with no `error`
+ * must not become an empty one.
+ */
+async function readEnvelope<T>(res: Response): Promise<Result<T, string>> {
+  const unreadable = `Request failed (HTTP ${res.status})`;
+  let json: ApiResponse<T> | null;
+  try {
+    json = await res.json();
+  } catch {
+    return err(unreadable);
+  }
+  if (json?.success) return ok(json.data);
+  return err(json?.error || unreadable);
+}
+
 /** Fetch an API route and unwrap the standardized envelope. Throws on error responses. */
 export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  const json: ApiResponse<T> = await res.json();
-  if (!json.success) throw new Error(json.error);
-  return json.data;
+  const result = await readEnvelope<T>(await fetch(url, init));
+  if (!result.ok) throw new Error(result.error);
+  return result.data;
 }
 
 /** Non-throwing variant of apiFetch. Returns Result<T, string> instead of throwing. */
 export async function tryApiFetch<T>(url: string, init?: RequestInit): Promise<Result<T, string>> {
   try {
-    const res = await fetch(url, init);
-    const json: ApiResponse<T> = await res.json();
-    if (!json.success) return err(json.error);
-    return ok(json.data);
+    return await readEnvelope<T>(await fetch(url, init));
   } catch (e) {
     return err(e instanceof Error ? e.message : 'Network error');
   }

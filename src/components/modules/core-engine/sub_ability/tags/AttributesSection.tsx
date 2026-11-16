@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { BarChart3, Network, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { isFeatureDone } from '@/lib/feature-done';
 import {
   STATUS_SUCCESS, STATUS_IMPROVED, ACCENT_EMERALD_DARK,
   withOpacity, OPACITY_5, OPACITY_15, OPACITY_25,
@@ -80,7 +81,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
         </div>
         <div className="grid grid-cols-3 gap-2 mb-4">
           {filteredCore.map((attr, i) => {
-            const isInit = attrStatus === 'implemented' || attrStatus === 'improved';
+            const isInit = isFeatureDone(attrStatus);
             const c = isInit ? STATUS_SUCCESS : 'var(--text-muted)';
             return (
               <motion.div
@@ -108,7 +109,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
         </div>
         <div className="grid grid-cols-3 gap-2">
           {filteredDerived.map((attr, i) => {
-            const isInit = attrStatus === 'implemented' || attrStatus === 'improved';
+            const isInit = isFeatureDone(attrStatus);
             const c = isInit ? STATUS_IMPROVED : 'var(--text-muted)';
             return (
               <motion.div

@@ -1,0 +1,27 @@
+{
+  "id": "gunplay-2",
+  "lane": "gunplay",
+  "question": "How fast should enemy bullets fly? Every enemy shot now has a tell: a dashed vermilion aim line for 0.35 s (it tracks Rivet for the first half, then locks and thickens), then a muzzle flash and a 3-round volley at the locked point. In both 20 s clips Rivet sidesteps 250 ms after each tell starts (a human read) while three gunners take turns. Speed mostly changes how readable a round is, not how often it hits: the tell is the difficulty dial.",
+  "options": [
+    {
+      "key": "A",
+      "label": "0.45x the player's round (pistol 27 m/s): every round visibly crosses the screen",
+      "tradeoff": "most readable; slow rounds linger, so you can step into another gunner's round (6 of 91 hit)",
+      "frames": [
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\dodge-speed-0.45-32ppm.mp4",
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\dodge-speed-0.45-last.png"
+      ]
+    },
+    {
+      "key": "B",
+      "label": "0.65x (pistol 39 m/s): snappier, still visible at 32 px/m",
+      "tradeoff": "punchier, shorter on screen; 3 of 91 hit because the dodge comes from the lock",
+      "frames": [
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\dodge-speed-0.65-32ppm.mp4",
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\dodge-speed-0.65-last.png"
+      ]
+    }
+  ],
+  "default": "A",
+  "asked": "21:44"
+}

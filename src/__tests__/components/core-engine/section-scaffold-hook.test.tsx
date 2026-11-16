@@ -126,3 +126,18 @@ describe('[guard] FeatureMapTab never dispatches or scans on its own', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 });
+
+describe('"Scaffold next" names the section by its label, even in another tab group', () => {
+  it('enemy-ai with Archetypes scaffolded, viewed on the Archetypes tab: next is AI Logic "Behavior Tree", not its raw id', () => {
+    useProjectStore.setState({ dynamicContext: ctx('UARPGEnemyArchetype', 'FARPGEliteModifier') });
+    render(<FeatureMapTab moduleId="arpg-enemy-ai" />);
+    const next = screen.getByRole('button', { name: /Scaffold next/ });
+    expect(next.textContent).toBe('Scaffold next: Behavior Tree');
+  });
+
+  it('[control] next inside the active group already reads its label', () => {
+    useProjectStore.setState({ dynamicContext: ctx('UARPGEnemyArchetype') });
+    render(<FeatureMapTab moduleId="arpg-enemy-ai" />);
+    expect(screen.getByRole('button', { name: /Scaffold next/ }).textContent).toBe('Scaffold next: Modifiers');
+  });
+});

@@ -6,6 +6,7 @@ import { autoIncrementOnSuccess } from '@/lib/packaging/version-manager';
 import type { FinalizeDeps } from '@/lib/packaging/finalize-build';
 import { startCookJob, cookJobEventStream, COOK_SSE_HEADERS } from '@/lib/packaging/cook-jobs';
 import { apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 
 interface ExecuteRequest {
   profileId: string;
@@ -34,6 +35,9 @@ function isExecuteRequest(v: unknown): v is ExecuteRequest {
  * cook (interactive or nightly) is refused with 409 naming that job.
  */
 export async function POST(req: Request): Promise<Response> {
+  // Starts a process (or retargets one) — operator-guarded like every spawn route.
+  const denied = requireOperator(req);
+  if (denied) return denied;
   let body: unknown;
   try { body = await req.json(); } catch {
     return apiError('invalid JSON body', 400);

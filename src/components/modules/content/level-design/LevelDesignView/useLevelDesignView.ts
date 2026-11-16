@@ -1,7 +1,7 @@
 'use client';
 import { getModuleChecklist } from '@/lib/module-registry';
 
-import { useState, useCallback, useMemo, useReducer } from 'react';
+import { useState, useCallback, useMemo, useReducer, useRef } from 'react';
 import { toast } from 'sonner';
 import { useDesignDocument } from '@/hooks/useDesignDocument';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -22,7 +22,7 @@ import type { RoomNode, SyncDivergence } from '@/types/level-design';
 import type { LevelEditOp } from '@/lib/level-design/level-edit';
 import {
   streamingPlanReducer, initialStreamingPlan,
-  type StreamingPlanStore, type StreamingZonePlannerConfig,
+  type StreamingPlanState, type StreamingOp, type StreamingPlanStore, type StreamingZonePlannerConfig,
 } from '@/lib/level-design/streaming-plan';
 import {
   procgenSpecReducer, initialProcgenSpecState, type ProcgenSpecStore,
@@ -32,6 +32,14 @@ import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import type { TabId } from './types';
 import type { EditCommitMode } from '@/hooks/useEntityCommitBuffer';
 import { useDocCommitBuffer } from './useDocCommitBuffer';
+
+/** Streaming plans keyed by document id; an absent key means "still the seed". */
+type StreamingPlans = Record<number, StreamingPlanState>;
+function streamingPlansReducer(plans: StreamingPlans, action: { docId: number; op: StreamingOp }): StreamingPlans {
+  const current = plans[action.docId] ?? initialStreamingPlan();
+  const next = streamingPlanReducer(current, action.op);
+  return next === current && action.docId in plans ? plans : { ...plans, [action.docId]: next };
+}
 
 export function useLevelDesignView() {
   const {
@@ -94,15 +102,25 @@ export function useLevelDesignView() {
 
   // ── Document CLI sessions ──
 
+  // Document id the in-flight codegen run was dispatched for.
+  const codegenDocIdRef = useRef<number | null>(null);
   const codegenCli = useModuleCLI({
     moduleId: 'level-design',
     sessionKey: 'level-design-codegen',
     label: 'Level Code Gen',
     accentColor: MODULE_COLORS.content,
     onComplete: (success) => {
-      if (success && activeDoc) {
+      // The run was dispatched FOR one document; the user may have opened another
+      // since. Stamp the dispatched doc, never whichever one is open now.
+      const target = codegenDocIdRef.current;
+      codegenDocIdRef.current = null;
+      if (!success || target === null) return;
+      const stamp = { syncStatus: 'synced' as const, lastGeneratedAt: new Date().toISOString() };
+      if (activeDoc && activeDoc.id === target) {
         // An explicit syncStatus wins over the buffer's doc-ahead escalation.
-        commit({ syncStatus: 'synced', lastGeneratedAt: new Date().toISOString() });
+        commit(stamp);
+      } else {
+        void updateDoc({ id: target, ...stamp });
       }
     },
   });
@@ -130,13 +148,23 @@ export function useLevelDesignView() {
   });
 
   // The streaming plan lives HERE, not in the planner: the planner is unmounted
-  // on every tab switch (same reason as the procgen spec below).
-  const [streamingPlanState, dispatchStreamingPlan] = useReducer(
-    streamingPlanReducer, undefined, initialStreamingPlan,
+  // on every tab switch (same reason as the procgen spec below). One plan PER
+  // DOCUMENT: a document nobody has edited shows the seed, never a sibling's zones.
+  const streamingDocId = activeDoc?.id ?? null;
+  const [streamingPlans, dispatchStreamingPlans] = useReducer(streamingPlansReducer, {});
+  const streamingPlanState = useMemo(
+    () => (streamingDocId === null ? undefined : streamingPlans[streamingDocId]) ?? initialStreamingPlan(),
+    [streamingPlans, streamingDocId],
+  );
+  const dispatchStreamingPlan = useCallback(
+    (op: StreamingOp) => {
+      if (streamingDocId !== null) dispatchStreamingPlans({ docId: streamingDocId, op });
+    },
+    [streamingDocId],
   );
   const streamingPlanStore = useMemo<StreamingPlanStore>(
     () => ({ state: streamingPlanState, dispatch: dispatchStreamingPlan }),
-    [streamingPlanState],
+    [streamingPlanState, dispatchStreamingPlan],
   );
 
   const handleGenerateStreaming = useCallback((config: StreamingZonePlannerConfig) => {
@@ -244,10 +272,15 @@ export function useLevelDesignView() {
 
   // ── Handlers ──
 
+  // Single-flight: the Create button disables on isCreating, but Enter in the
+  // name input calls this directly, and state lags a second keypress — a ref does not.
+  const creatingRef = useRef(false);
   const handleCreateDoc = useCallback(async () => {
-    if (!newDocName.trim()) return;
+    if (!newDocName.trim() || creatingRef.current) return;
+    creatingRef.current = true;
     setIsCreating(true);
     const result = await createDoc({ name: newDocName.trim(), description: '' });
+    creatingRef.current = false;
     setIsCreating(false);
     if (!result.ok) {
       toast.error(`Could not create the level design: ${result.error}`);
@@ -298,12 +331,14 @@ export function useLevelDesignView() {
   const handleGenerateRoomCode = useCallback((room: RoomNode) => {
     if (!activeDoc) return;
     const prompt = buildRoomCodegenPrompt(room, activeDoc, ctx);
+    codegenDocIdRef.current = activeDoc.id;
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
 
   const handleGenerateAllCode = useCallback(() => {
     if (!activeDoc) return;
     const prompt = buildNarrativeCodegenPrompt(activeDoc, ctx);
+    codegenDocIdRef.current = activeDoc.id;
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
 
@@ -326,6 +361,7 @@ export function useLevelDesignView() {
       return;
     }
     const prompt = buildReconcilePrompt(divergence, activeDoc, ctx);
+    codegenDocIdRef.current = activeDoc.id;
     codegenCli.sendPrompt(prompt);
   }, [activeDoc, ctx, codegenCli]);
 

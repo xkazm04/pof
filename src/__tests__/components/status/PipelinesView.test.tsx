@@ -197,4 +197,16 @@ describe('PipelinesView - next-up worklist', () => {
     const pressed = [...container.querySelectorAll('button[aria-pressed="true"]')].map((b) => b.textContent ?? '');
     expect(pressed.some((t) => t.startsWith('other-gate'))).toBe(true);
   });
+
+  it('un-presses an engine chip when a route is addressed afterwards (Back/Forward arrival)', async () => {
+    const { container, rerender } = render(<PipelinesView onFocusCatalog={vi.fn()} />);
+    await waitFor(() => expect(lane(container, 'items')).toBeTruthy());
+    const engine = () => chip(container, 'Claude')!;
+    fireEvent.click(engine());
+    expect(engine().getAttribute('aria-pressed')).toBe('true');
+    rerender(<PipelinesView onFocusCatalog={vi.fn()} route="text" />);
+    expect(engine().getAttribute('aria-pressed')).toBe('false');
+    const pressed = container.querySelectorAll('button[aria-pressed="true"]');
+    expect(pressed.length).toBe(1);
+  });
 });

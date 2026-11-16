@@ -1,7 +1,8 @@
+import type { EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
 import type { ModuleScore, Recommendation } from '@/types/evaluator';
 
 export interface ProjectHealthDashboardProps {
-  onNavigateTab?: (tab: string) => void;
+  onNavigateTab?: (tab: EvaluatorTabId) => void;
 }
 
 export interface RegressionAlert {

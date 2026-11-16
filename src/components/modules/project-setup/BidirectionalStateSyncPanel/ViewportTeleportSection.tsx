@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, MapPin, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 import { ACCENT_CYAN, OPACITY_8 } from '@/lib/chart-colors';
 import type { UE5EditorSnapshot } from '@/types/ue5-bridge';
+import { parseViewTarget } from './helpers';
 import type { ViewportTarget } from './types';
 
 export function ViewportTeleportSection({
@@ -42,14 +43,16 @@ export function ViewportTeleportSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            id="bss-viewport-panel"
             className="overflow-hidden"
           >
             <div className="px-4 pb-3 space-y-2">
               <div className="grid grid-cols-3 gap-1.5">
                 {(['x', 'y', 'z'] as const).map((axis) => (
                   <div key={axis}>
-                    <label className="text-2xs font-bold text-text-muted uppercase">{axis}</label>
+                    <label htmlFor={`bss-view-${axis}`} className="text-2xs font-bold text-text-muted uppercase">{axis}</label>
                     <input
+                      id={`bss-view-${axis}`}
                       type="number"
                       value={viewTarget[axis]}
                       onChange={(e) => setViewTarget((v) => ({ ...v, [axis]: e.target.value }))}
@@ -61,8 +64,9 @@ export function ViewportTeleportSection({
               <div className="grid grid-cols-4 gap-1.5">
                 {(['pitch', 'yaw', 'roll'] as const).map((r) => (
                   <div key={r}>
-                    <label className="text-2xs font-bold text-text-muted uppercase">{r}</label>
+                    <label htmlFor={`bss-view-${r}`} className="text-2xs font-bold text-text-muted uppercase">{r}</label>
                     <input
+                      id={`bss-view-${r}`}
                       type="number"
                       value={viewTarget[r]}
                       onChange={(e) => setViewTarget((v) => ({ ...v, [r]: e.target.value }))}
@@ -71,8 +75,9 @@ export function ViewportTeleportSection({
                   </div>
                 ))}
                 <div>
-                  <label className="text-2xs font-bold text-text-muted uppercase">FOV</label>
+                  <label htmlFor="bss-view-fov" className="text-2xs font-bold text-text-muted uppercase">FOV</label>
                   <input
+                    id="bss-view-fov"
                     type="number"
                     value={viewTarget.fov}
                     onChange={(e) => setViewTarget((v) => ({ ...v, fov: e.target.value }))}
@@ -83,7 +88,9 @@ export function ViewportTeleportSection({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleViewportPush}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors"
+                  disabled={parseViewTarget(viewTarget) === null}
+                  title={parseViewTarget(viewTarget) === null ? 'Every field needs a number, and FOV must be between 0 and 180' : undefined}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold border transition-colors disabled:opacity-40"
                   style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}${OPACITY_8}`, color: ACCENT_CYAN }}
                 >
                   <MapPin className="w-3 h-3" /> Teleport Camera

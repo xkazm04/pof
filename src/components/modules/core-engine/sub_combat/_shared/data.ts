@@ -157,6 +157,7 @@ export const FEEDBACK_PARAMS: FeedbackParam[] = [
   { id: 'shakeScale', label: 'Scale', category: 'Shake', min: 0, max: 2, step: 0.05, defaultValue: 0.8, unit: 'x' },
   { id: 'shakeDecay', label: 'Decay', category: 'Shake', min: 0.1, max: 2, step: 0.05, defaultValue: 0.5, unit: 's' },
   { id: 'hitstopDuration', label: 'Duration', category: 'Hitstop', min: 0, max: 0.2, step: 0.005, defaultValue: 0.05, unit: 's' },
+  { id: 'hitstopTimeDilation', label: 'Time Dilation', category: 'Hitstop', min: 0, max: 1, step: 0.05, defaultValue: 0.1, unit: 'x' },
   { id: 'hitstopEase', label: 'Ease Curve', category: 'Hitstop', min: 0, max: 1, step: 0.05, defaultValue: 0.5, unit: '' },
   { id: 'vfxScale', label: 'VFX Scale', category: 'Particles', min: 0, max: 3, step: 0.1, defaultValue: 1.5, unit: 'x' },
   { id: 'screenFlashAlpha', label: 'Screen Flash', category: 'Particles', min: 0, max: 0.5, step: 0.01, defaultValue: 0.15, unit: '' },
@@ -171,9 +172,9 @@ export interface FeedbackPreset {
 }
 
 export const FEEDBACK_PRESETS: FeedbackPreset[] = [
-  { name: 'Subtle', values: { shakeScale: 0.3, shakeDecay: 0.3, hitstopDuration: 0.02, hitstopEase: 0.3, vfxScale: 0.8, screenFlashAlpha: 0.05, sfxVolume: 0.4, sfxPitch: 1.1 }, color: ACCENT_CYAN },
-  { name: 'Normal', values: { shakeScale: 0.8, shakeDecay: 0.5, hitstopDuration: 0.05, hitstopEase: 0.5, vfxScale: 1.5, screenFlashAlpha: 0.15, sfxVolume: 0.7, sfxPitch: 1.0 }, color: ACCENT_EMERALD },
-  { name: 'Juicy', values: { shakeScale: 1.6, shakeDecay: 1.2, hitstopDuration: 0.12, hitstopEase: 0.8, vfxScale: 2.5, screenFlashAlpha: 0.35, sfxVolume: 0.95, sfxPitch: 0.85 }, color: ACCENT_ORANGE },
+  { name: 'Subtle', values: { shakeScale: 0.3, shakeDecay: 0.3, hitstopDuration: 0.02, hitstopTimeDilation: 0.3, hitstopEase: 0.3, vfxScale: 0.8, screenFlashAlpha: 0.05, sfxVolume: 0.4, sfxPitch: 1.1 }, color: ACCENT_CYAN },
+  { name: 'Normal', values: { shakeScale: 0.8, shakeDecay: 0.5, hitstopDuration: 0.05, hitstopTimeDilation: 0.1, hitstopEase: 0.5, vfxScale: 1.5, screenFlashAlpha: 0.15, sfxVolume: 0.7, sfxPitch: 1.0 }, color: ACCENT_EMERALD },
+  { name: 'Juicy', values: { shakeScale: 1.6, shakeDecay: 1.2, hitstopDuration: 0.12, hitstopTimeDilation: 0.05, hitstopEase: 0.8, vfxScale: 2.5, screenFlashAlpha: 0.35, sfxVolume: 0.95, sfxPitch: 0.85 }, color: ACCENT_ORANGE },
 ];
 
 /* ── Projectile Trajectory data ────────────────────────────────────────── */

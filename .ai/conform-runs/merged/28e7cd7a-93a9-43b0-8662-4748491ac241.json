@@ -1,0 +1,155 @@
+{
+  "schema": "conform-run/1",
+  "worker": "28e7cd7a-93a9-43b0-8662-4748491ac241",
+  "subject": "generated-video-motion-extraction",
+  "evaluatedAt": "2026-11-07T04:51:57.732843+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "animation-combo-workflow",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/content/animations/MixamoImport.tsx:33 This context gets its motion from Mixamo's captured library and from template-authored montage timings, not from generated video; a case-insensitive search of src/components/modules/content/animations for video, footage, mocap, keypoint and triangulat found nothing, so the subject's precondition (a generated clip as the motion source) does not hold here.",
+      "techniques": [
+        {
+          "technique": "contact-window-travels-with-the-clip",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/AIComboChoreographer/helpers.ts:88 Hit windows come from fixed per-type templates on abstract combo sections, not from a clip whose motion was extracted. If extracted attack clips are ever wired into the choreographer, these templates would become the 'second answer' the technique warns about."
+        },
+        {
+          "technique": "motion-source-route-by-action-class",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/content/animations/MixamoImport.tsx:33 The source is captured motion. The technique's 'when not to use' clause excludes actions that already have captured motion."
+        }
+      ],
+      "absenceTerms": [
+        "video",
+        "footage",
+        "mocap",
+        "keypoint",
+        "triangulat"
+      ]
+    },
+    {
+      "context": "visual-gen-rigging-conformance",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/lib/visual-gen/skeleton-profiles.ts:5 This context builds and binds skeletons (bone groups, rig presets, MetaHuman conform), which the golden path assigns to mesh finishing rather than to extraction; the src/lib/visual-gen directory has no panel sync, contact window, text-to-motion or row-residual code, and its only video references are footage-gate.ts (a different context) and a footage-blocking cue in reference-roles.ts.",
+      "techniques": [
+        {
+          "technique": "twist-from-extra-points-and-joint-limits",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/skeleton-profiles.ts:5 Nothing here solves rotations from triangulated points. The rig modules check whether bones exist and how weights deform, not bone roll from tracked points."
+        },
+        {
+          "technique": "own-rig-synthetic-keypoint-training",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/metahuman-conform.ts:14 The only 'keypoint' here is MetaHuman's mesh-conform target, not a detector trained on rig renders to read video."
+        },
+        {
+          "technique": "two-view-reference-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/reference-roles.ts:36 Here 'motion source' means a play blast that drives footage made for viewing (the reverse direction). The golden path's seam leaves that to generic generative-media craft, not to extraction."
+        }
+      ],
+      "absenceTerms": [
+        "panelSync",
+        "text-to-motion",
+        "row residual"
+      ]
+    },
+    {
+      "context": "visual-gen-contact-sheet-ue5-export",
+      "subject": "generated-video-motion-extraction",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/lib/visual-gen/contact-sheet.ts:2 In this context a 'contact sheet' is a grid of still entity icons sliced by index, not a multi-panel motion-source clip, and the generators and UE import code handle meshes, materials and layouts; src/lib/visual-gen has no panel sync, contact window, text-to-motion or row-residual code.",
+      "techniques": [
+        {
+          "technique": "two-view-reference-composition",
+          "verdict": "not-applicable",
+          "evidence": "src/lib/visual-gen/contact-sheet.ts:2 The multi-cell composition here is for set coherence of still icons, not for row-correspondence between two views of one instant."
+        }
+      ],
+      "absenceTerms": [
+        "panelSync",
+        "text-to-motion",
+        "row residual"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "generated-video-motion-extraction",
+      "context": "visual-gen-core",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "generated-video-motion-extraction",
+      "context": "eqs-squad-combat-spatial",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor, FormationView.tsx:8, is an import line (ROLE_DEFINITIONS, constants). It doesn't show that animation or motion sourcing is absent; the claim rests only on a grep over the wider game-systems directory, which is broader than this context's files."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T04:51:57.732843+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-video-motion-extraction"
+      ],
+      "techniques": [
+        "contact-window-travels-with-the-clip",
+        "motion-source-route-by-action-class"
+      ],
+      "deviations": 0,
+      "context": "animation-combo-workflow",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T04:51:57.732843+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-video-motion-extraction"
+      ],
+      "techniques": [
+        "own-rig-synthetic-keypoint-training",
+        "twist-from-extra-points-and-joint-limits",
+        "two-view-reference-composition"
+      ],
+      "deviations": 0,
+      "context": "visual-gen-rigging-conformance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T04:51:57.732843+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-video-motion-extraction"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "eqs-squad-combat-spatial",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T04:51:57.732843+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "generated-video-motion-extraction"
+      ],
+      "techniques": [
+        "two-view-reference-composition"
+      ],
+      "deviations": 0,
+      "context": "visual-gen-contact-sheet-ue5-export",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

@@ -2,13 +2,16 @@ import {
   STATUS_ERROR, STATUS_NEUTRAL,
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
-import type { EntityMetadata, EntityGrouping } from '@/types/game-metadata';
-import type { HeatmapCell, TimelineEvent, SankeyLink, SankeyColumn, PieSlice, GaugeMetric } from '@/types/unique-tab-improvements';
-import { parseDamageRange, weaponRoster } from '@/lib/combat/weapon-throughput';
+import type { EntityGrouping } from '@/types/game-metadata';
+import type { HeatmapCell, TimelineEvent, SankeyLink, SankeyColumn } from '@/types/unique-tab-improvements';
+import { parseDamageRange, weaponRoster, weaponThroughput } from '@/lib/combat/weapon-throughput';
 
 /* ── Weapon Categories & Tiers ─────────────────────────────────────────── */
 
 export type WeaponCategory = 'Sword' | 'Axe' | 'Mace' | 'Bow' | 'Staff' | 'Dagger' | 'Polearm';
+
+/** Display order of weapon categories - the one list every selector and grouping reads. */
+export const WEAPON_CATEGORIES: readonly WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 export type WeaponTier = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
 
 const TIER_COLORS: Record<WeaponTier, string> = {
@@ -103,21 +106,8 @@ export const WEAPONS: Weapon[] = [
   w('pl-celestial', 'Celestial Partisan',      'Polearm','Legendary','26-38', '1.6s', '13%', 'Holy reach weapon with AoE smite on finisher.'),
 ];
 
-/** Weapon count by category for quick reference. */
-export const WEAPON_COUNT = WEAPONS.length;
-
-/* ── Weapon Metadata for ScalableSelector ──────────────────────────────── */
-
-export const WEAPON_METADATA: EntityMetadata[] = WEAPONS.map((wp) => ({
-  id: wp.id,
-  name: wp.name,
-  category: wp.category,
-  tier: wp.tier,
-  tags: [wp.category.toLowerCase(), wp.tier.toLowerCase(), ...(wp.element ? [wp.element.toLowerCase()] : [])],
-}));
-
 export const WEAPON_GROUPINGS: EntityGrouping[] = [
-  { field: 'category', label: 'Category', order: ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'] },
+  { field: 'category', label: 'Category', order: [...WEAPON_CATEGORIES] },
   { field: 'tier', label: 'Tier', order: ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'] },
 ];
 
@@ -181,8 +171,6 @@ export const COMBO_SEQUENCES: ComboSequence[] = [
   { id: 'cb-pl-dragon',  name: 'Dragon Dance',          weaponCategory: 'Polearm', hits: 5, totalTime: '3.0s', dps: 295, chain: ['Thrust', 'Sweep', 'Vault', 'Dive', 'Impale'] },
 ];
 
-export const COMBO_COUNT = COMBO_SEQUENCES.length;
-
 /* ── Helpers ──────────────────────────────────────────────────────────── */
 
 /**
@@ -198,29 +186,71 @@ export function parseDamageMidpoint(dmg: string): number | null {
 /** The weapon table ranked under the one weapon-DPS law (canon crit, no target). */
 export const WEAPON_ROSTER = weaponRoster(WEAPONS, { categoryOrder: WEAPON_GROUPINGS[0].order });
 
+/** Mean expected hit (canon kernel, no armour) of each weapon category. */
+const CATEGORY_EXPECTED_HIT: ReadonlyMap<string, number> = new Map(
+  WEAPON_CATEGORIES.map((cat) => {
+    const hits = WEAPONS.filter((w) => w.category === cat).flatMap((w) => {
+      const t = weaponThroughput(w);
+      return t.ok ? [t.data.expectedHit] : [];
+    });
+    return [cat, hits.length > 0 ? hits.reduce((s, h) => s + h, 0) / hits.length : 0] as const;
+  }),
+);
+
+/**
+ * Combo DPS on the weapon-DPS law: hits x the category's mean expected hit / total time.
+ * `ComboSequence.dps` is an authored score (6-13x this scale) and must not be shown
+ * beside weapon DPS; surfaces that sit next to weapon DPS read this instead.
+ */
+export function comboDerivedDps(c: Pick<ComboSequence, 'hits' | 'totalTime' | 'weaponCategory'>): number {
+  const seconds = Number.parseFloat(c.totalTime);
+  const hit = CATEGORY_EXPECTED_HIT.get(c.weaponCategory) ?? 0;
+  return seconds > 0 ? (c.hits * hit) / seconds : 0;
+}
+
 /* ── Damage Type Effectiveness data ────────────────────────────────────── */
 
 export const DMG_TYPES = ['Physical', 'Fire', 'Ice', 'Lightning'];
 export const ARMOR_TYPES = ['Light', 'Medium', 'Heavy', 'Magical'];
 
-export const EFFECTIVENESS_DATA: HeatmapCell[] = [
-  { row: 0, col: 0, value: 0.8, label: '1.2', tooltip: 'Physical vs Light: 1.2x (effective)' },
-  { row: 0, col: 1, value: 0.6, label: '1.0', tooltip: 'Physical vs Medium: 1.0x (neutral)' },
-  { row: 0, col: 2, value: 0.2, label: '0.5', tooltip: 'Physical vs Heavy: 0.5x (resisted)' },
-  { row: 0, col: 3, value: 0.4, label: '0.8', tooltip: 'Physical vs Magical: 0.8x (slightly resisted)' },
-  { row: 1, col: 0, value: 1.0, label: '1.5', tooltip: 'Fire vs Light: 1.5x (very effective)' },
-  { row: 1, col: 1, value: 0.7, label: '1.1', tooltip: 'Fire vs Medium: 1.1x (slightly effective)' },
-  { row: 1, col: 2, value: 0.5, label: '0.9', tooltip: 'Fire vs Heavy: 0.9x (slightly resisted)' },
-  { row: 1, col: 3, value: 0.25, label: '0.7', tooltip: 'Fire vs Magical: 0.7x (resisted)' },
-  { row: 2, col: 0, value: 0.5, label: '0.9', tooltip: 'Ice vs Light: 0.9x (slightly resisted)' },
-  { row: 2, col: 1, value: 0.85, label: '1.3', tooltip: 'Ice vs Medium: 1.3x (effective)' },
-  { row: 2, col: 2, value: 0.7, label: '1.1', tooltip: 'Ice vs Heavy: 1.1x (slightly effective)' },
-  { row: 2, col: 3, value: 0.6, label: '1.0', tooltip: 'Ice vs Magical: 1.0x (neutral)' },
-  { row: 3, col: 0, value: 0.6, label: '1.0', tooltip: 'Lightning vs Light: 1.0x (neutral)' },
-  { row: 3, col: 1, value: 0.5, label: '0.9', tooltip: 'Lightning vs Medium: 0.9x (slightly resisted)' },
-  { row: 3, col: 2, value: 0.3, label: '0.6', tooltip: 'Lightning vs Heavy: 0.6x (resisted)' },
-  { row: 3, col: 3, value: 1.0, label: '1.5', tooltip: 'Lightning vs Magical: 1.5x (very effective)' },
+/**
+ * Damage multiplier per [damage type][armour type] — the one authored table.
+ * Label, tooltip and heatmap intensity are all derived from it, so a cell cannot
+ * paint stronger than a larger multiplier (it did: Fire vs Magical 0.7x painted
+ * lighter than Lightning vs Heavy 0.6x when the three were typed by hand).
+ */
+export const EFFECTIVENESS_MULTIPLIERS: readonly (readonly number[])[] = [
+  /* Physical  */ [1.2, 1.0, 0.5, 0.8],
+  /* Fire      */ [1.5, 1.1, 0.9, 0.7],
+  /* Ice       */ [0.9, 1.3, 1.1, 1.0],
+  /* Lightning */ [1.0, 0.9, 0.6, 1.5],
 ];
+
+/** Heatmap intensity scale: 0.5x -> 0.2, 1.0x -> 0.6, 1.5x -> 1.0 (linear, monotone). */
+const EFF_MIN_MULT = 0.25;
+const EFF_SPAN = 1.25;
+
+function effectivenessVerdict(m: number): string {
+  if (m >= 1.5) return 'very effective';
+  if (m >= 1.2) return 'effective';
+  if (m > 1.0) return 'slightly effective';
+  if (m === 1.0) return 'neutral';
+  if (m >= 0.8) return 'slightly resisted';
+  return 'resisted';
+}
+
+export const EFFECTIVENESS_DATA: HeatmapCell[] = EFFECTIVENESS_MULTIPLIERS.flatMap((cols, row) =>
+  cols.map((m, col) => {
+    const label = m.toFixed(1);
+    return {
+      row,
+      col,
+      value: Math.min(1, Math.max(0, (m - EFF_MIN_MULT) / EFF_SPAN)),
+      label,
+      tooltip: `${DMG_TYPES[row]} vs ${ARMOR_TYPES[col]}: ${label}x (${effectivenessVerdict(m)})`,
+    };
+  }),
+);
 
 /* ── Combat Flow Sankey data ───────────────────────────────────────────── */
 
@@ -289,7 +319,8 @@ export const HITSTOP_ABILITIES: HitstopAbility[] = [
   { name: 'Slam', hitstop: 0.15, animDuration: 1.2, color: STATUS_ERROR },
 ];
 
-export const MAX_HITSTOP = 0.15;
+/** Scale for the hitstop bars: the largest authored hitstop (was a re-typed 0.15). */
+export const MAX_HITSTOP = Math.max(...HITSTOP_ABILITIES.map((a) => a.hitstop));
 
 /* ── Combat Metrics data ──────────────────────────────────────────────── */
 
@@ -310,21 +341,6 @@ export const KPI_CARDS: KPICard[] = [
   { label: 'Avg Combo Length', value: '2.3', barPct: 46, barColor: ACCENT_VIOLET, context: 'Mean hits per combo chain (max 5)' },
 ];
 
-export const HIT_ACCURACY_GAUGE: GaugeMetric = {
-  label: 'Hit Accuracy',
-  current: 73,
-  target: 100,
-  unit: '%',
-  trend: 'up',
-};
-
-export const ABILITY_USAGE: PieSlice[] = [
-  { label: 'MeleeAttack', pct: 45, color: ACCENT_ORANGE },
-  { label: 'Dodge', pct: 25, color: ACCENT_CYAN },
-  { label: 'Fireball', pct: 20, color: STATUS_ERROR },
-  { label: 'Other', pct: 10, color: STATUS_NEUTRAL },
-];
-
 /* ── Stagger & Status Effect data ─────────────────────────────────────── */
 
 export const STAGGER_CONFIG = {
@@ -332,8 +348,6 @@ export const STAGGER_CONFIG = {
   threshold: 100,
   decayRate: 5,
 };
-
-export const STAGGER_PIPELINE_STEPS = ['Hits Accumulate', 'Threshold Reached', 'Stun Triggered', 'Recovery'];
 
 export const STAGGER_TIMELINE: TimelineEvent[] = [
   { id: 'st1', timestamp: 0, label: '+15', category: 'hit', color: ACCENT_ORANGE, duration: 0.3 },

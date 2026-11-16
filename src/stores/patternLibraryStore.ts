@@ -40,7 +40,12 @@ interface PatternLibraryState {
   isLoading: boolean;
   isExtracting: boolean;
   isExtractingAnti: boolean;
+  /** Dashboard load / search / pattern-extraction failures (rendered with a Retry). */
   error: string | null;
+  /** Author / verify / pin / update failures: the list itself is fine, one action was not. */
+  mutationError: string | null;
+  /** Anti-pattern load / extraction failures (rendered on the Anti-Patterns tab). */
+  antiPatternError: string | null;
 
   searchQuery: string;
   moduleFilter: SubModuleId | null;
@@ -61,7 +66,8 @@ interface PatternLibraryState {
   authorPattern: (input: PatternAuthorInput) => Promise<ImplementationPattern | null>;
   verifyPattern: (id: string, verified: boolean, verifiedBy?: string) => Promise<void>;
   pinPattern: (id: string, pinned: boolean) => Promise<void>;
-  updatePattern: (id: string, patch: PatternMetaPatch) => Promise<void>;
+  /** Resolves true when the save landed, false when it failed (the failure is also written to `mutationError`). */
+  updatePattern: (id: string, patch: PatternMetaPatch) => Promise<boolean>;
 
   setSearchQuery: (q: string) => void;
   setModuleFilter: (m: SubModuleId | null) => void;
@@ -85,6 +91,8 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
     isExtracting: false,
     isExtractingAnti: false,
     error: null,
+    mutationError: null,
+    antiPatternError: null,
     searchQuery: '',
     moduleFilter: null,
     categoryFilter: null,
@@ -175,6 +183,7 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
     },
 
     authorPattern: async (input) => {
+      set({ mutationError: null });
       try {
         const { pattern } = await apiFetch<{ pattern: ImplementationPattern }>(
           '/api/pattern-library',
@@ -187,7 +196,7 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
         await get().fetchDashboard();
         return pattern;
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Failed to author pattern' });
+        set({ mutationError: err instanceof Error ? err.message : 'Failed to author pattern' });
         return null;
       }
     },
@@ -195,6 +204,7 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
     verifyPattern: async (id, verified, verifiedBy) => {
       // Optimistic: flip the flag locally first, then reconcile via fetch.
       set({
+        mutationError: null,
         patterns: get().patterns.map((p) =>
           p.id === id ? { ...p, verified, verifiedAt: verified ? new Date().toISOString() : undefined, verifiedBy: verified ? verifiedBy : undefined } : p,
         ),
@@ -207,13 +217,14 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
         });
         await get().fetchDashboard();
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Failed to verify pattern' });
+        set({ mutationError: err instanceof Error ? err.message : 'Failed to verify pattern' });
         await get().fetchDashboard();
       }
     },
 
     pinPattern: async (id, pinned) => {
       set({
+        mutationError: null,
         patterns: get().patterns.map((p) => (p.id === id ? { ...p, pinned } : p)),
       });
       try {
@@ -224,12 +235,13 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
         });
         await get().fetchDashboard();
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Failed to pin pattern' });
+        set({ mutationError: err instanceof Error ? err.message : 'Failed to pin pattern' });
         await get().fetchDashboard();
       }
     },
 
     updatePattern: async (id, patch) => {
+      set({ mutationError: null });
       try {
         const { pattern } = await apiFetch<{ pattern: ImplementationPattern }>(
           '/api/pattern-library',
@@ -242,24 +254,27 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
         set({
           patterns: get().patterns.map((p) => (p.id === id ? pattern : p)),
         });
+        return true;
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Failed to update pattern' });
+        set({ mutationError: err instanceof Error ? err.message : 'Failed to update pattern' });
+        return false;
       }
     },
 
     fetchAntiPatterns: async () => {
+      set({ antiPatternError: null });
       try {
         const data = await apiFetch<{ antiPatterns: AntiPattern[] }>(
           '/api/pattern-library?action=anti-patterns',
         );
         set({ antiPatterns: data.antiPatterns });
       } catch (err) {
-        set({ error: err instanceof Error ? err.message : 'Failed to load anti-patterns' });
+        set({ antiPatternError: err instanceof Error ? err.message : 'Failed to load anti-patterns' });
       }
     },
 
     extractAntiPatterns: async () => {
-      set({ isExtractingAnti: true, error: null });
+      set({ isExtractingAnti: true, antiPatternError: null });
       try {
         const result = await apiFetch<{ extracted: number; updated: number }>(
           '/api/pattern-library',
@@ -275,7 +290,7 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
       } catch (err) {
         set({
           isExtractingAnti: false,
-          error: err instanceof Error ? err.message : 'Anti-pattern extraction failed',
+          antiPatternError: err instanceof Error ? err.message : 'Anti-pattern extraction failed',
         });
         return { extracted: 0, updated: 0 };
       }

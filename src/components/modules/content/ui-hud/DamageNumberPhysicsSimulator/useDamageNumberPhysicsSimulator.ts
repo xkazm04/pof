@@ -3,8 +3,10 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { DEFAULT_PHYSICS, DEFAULT_COMBAT, PRESETS } from './constants';
-import { spawnParticle, updateParticle, computeReadability } from './simulation';
+import { spawnParticle, updateParticle, computeReadability, createReadabilityRun, foldReadability } from './simulation';
 import type { PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics } from './types';
+
+const DEFAULT_CANVAS_W = 520;
 
 export function useDamageNumberPhysicsSimulator() {
   const [physics, setPhysics] = useState<PhysicsConfig>({ ...DEFAULT_PHYSICS });
@@ -21,11 +23,13 @@ export function useDamageNumberPhysicsSimulator() {
   const lastTimeRef = useRef<number>(0);
   const spawnAccRef = useRef<number>(0);
   const particlesRef = useRef<DmgParticle[]>([]);
+  const readabilityRunRef = useRef(createReadabilityRun());
 
   // Keep ref in sync
   particlesRef.current = particles;
 
-  const canvasW = 520;
+  // Width of the rendered canvas (the div is 100% wide); 520 is the pre-measure fallback.
+  const [canvasW, setCanvasW] = useState(DEFAULT_CANVAS_W);
   const canvasH = 300;
 
   const updatePhysics = useCallback((updates: Partial<PhysicsConfig>) => {
@@ -49,8 +53,14 @@ export function useDamageNumberPhysicsSimulator() {
     setTotalSpawned(0);
     setMetrics({ avgOverlaps: 0, maxSimultaneous: 0, avgReadTime: 0, clutterScore: 0 });
     spawnAccRef.current = 0;
+    readabilityRunRef.current = createReadabilityRun();
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
   }, []);
+
+  // The latest `tick`, so the running chain always reads the current config
+  // without the effect restarting (and re-zeroing the clock) on every edit.
+  const tickRef = useRef<(timestamp: number) => void>(() => {});
+  const stepLatest = useCallback((timestamp: number) => tickRef.current(timestamp), []);
 
   // Main simulation loop
   const tick = useCallback((timestamp: number) => {
@@ -77,17 +87,21 @@ export function useDamageNumberPhysicsSimulator() {
             p.element === newP.element &&
             p.isCrit === newP.isCrit
           );
+          // Replace the stacked entry rather than edit it: the old object is the one the
+          // last render committed to `particles`.
           if (existing && physics.stackMode === 'accumulate') {
-            existing.amount += newP.amount;
-            existing.stackCount++;
-            existing.displayText = `${existing.stackCount}x ${Math.round(existing.amount / existing.stackCount)} = ${existing.amount}`;
+            const amount = existing.amount + newP.amount;
+            const stackCount = existing.stackCount + 1;
+            const displayText = `${stackCount}x ${Math.round(amount / stackCount)} = ${amount}`;
+            particlesRef.current = particlesRef.current.map(p => (p === existing ? { ...p, amount, stackCount, displayText } : p));
             continue;
           }
           if (existing && physics.stackMode === 'merge') {
-            existing.amount += newP.amount;
-            existing.stackCount++;
-            existing.displayText = existing.isHeal ? `+${existing.amount}` : `${existing.amount}`;
-            existing.scale = Math.min(existing.scale + 0.1, 2.0);
+            const amount = existing.amount + newP.amount;
+            const stackCount = existing.stackCount + 1;
+            const displayText = existing.isHeal ? `+${amount}` : `${amount}`;
+            // Growth is derived from stackCount in updateParticle (stackScale)
+            particlesRef.current = particlesRef.current.map(p => (p === existing ? { ...p, amount, stackCount, displayText } : p));
             continue;
           }
         }
@@ -105,15 +119,14 @@ export function useDamageNumberPhysicsSimulator() {
 
     particlesRef.current = updated;
     setParticles(updated);
-    setMetrics(computeReadability(updated, physics));
+    const folded = foldReadability(readabilityRunRef.current, computeReadability(updated, physics));
+    readabilityRunRef.current = folded.run;
+    setMetrics(folded.metrics);
 
-    animFrameRef.current = requestAnimationFrame(tick);
-  }, [physics, combat, canvasW, canvasH]);
-
-  // The loop reads the config captured when the run started (unchanged from
-  // when `toggleRunning` owned the rAF chain), so keep the latest `tick` in a
-  // ref and snapshot it at run start rather than restarting on every edit.
-  const tickRef = useRef(tick);
+    // Schedule through the ref, not this closure: a slider moved mid-run must
+    // reach the next frame (the closure froze the config captured at Play).
+    animFrameRef.current = requestAnimationFrame(stepLatest);
+  }, [physics, combat, canvasW, canvasH, stepLatest]);
   tickRef.current = tick;
 
   const toggleRunning = useCallback(() => {
@@ -145,12 +158,23 @@ export function useDamageNumberPhysicsSimulator() {
   useSuspendableEffect(() => {
     if (!isRunning) return;
     lastTimeRef.current = 0;
-    const step = tickRef.current;
-    animFrameRef.current = requestAnimationFrame(step);
+    animFrameRef.current = requestAnimationFrame(stepLatest);
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isRunning]);
+  }, [isRunning, stepLatest]);
+
+  // Track the rendered width so mob layout and spawn x follow the real canvas.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setCanvasW(w);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {

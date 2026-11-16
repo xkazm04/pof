@@ -19,6 +19,9 @@ import type { ItemEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 import { CatalogFiltersBar, type SortBy } from './CatalogFiltersBar';
 import { AddItemForm, type NewItemState } from './AddItemForm';
 import { CatalogItemGrid } from './CatalogItemGrid';
+import { buildCreateItemPrompt, itemSlug } from './createItemPrompt';
+import { itemPower } from './itemComparison';
+import { getAppOrigin } from '@/lib/constants';
 
 /* ── Main CatalogGearTab ───────────────────────────────────────────────── */
 
@@ -50,6 +53,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState<NewItemState>({ name: '', type: 'Weapon' as ItemData['type'], rarity: 'Common', description: '' });
   const [selectedItem, setSelectedItem] = useState<ItemData | null>(null);
+  const [openedVia, setOpenedVia] = useState<'keyboard' | 'pointer'>('pointer');
 
   const { execute: executeCli, isRunning: isCliRunning } = useModuleCLI({ moduleId, sessionKey: 'item-gen', label: 'Item Generator', accentColor: ACCENT });
   // Synchronous re-entrancy latch. `isCliRunning` is zustand-derived and lags one
@@ -96,17 +100,18 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
       if (sortBy === 'name') return ad.name.localeCompare(bd.name);
       if (sortBy === 'type') return ad.type.localeCompare(bd.type);
       if (sortBy === 'rarity') return (RARITY_ORDER[bd.rarity] ?? 0) - (RARITY_ORDER[ad.rarity] ?? 0);
-      if (sortBy === 'power') {
-        const pa = ad.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
-        const pb = bd.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
-        return pb - pa;
-      }
+      if (sortBy === 'power') return itemPower(bd) - itemPower(ad); // same score as the PWR badge
       return 0;
     });
   }, [entries, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy]);
 
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
-  const pageEntries = filteredEntries.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+  // A store-side shrink (delete / reset / re-seed elsewhere) can leave `currentPage` past the
+  // last page; clamp for display so the grid never renders an empty out-of-range page.
+  const page = Math.min(currentPage, Math.max(0, totalPages - 1));
+  // Persist the clamp (during render, like the guards above) so Prev/Next step from the page shown.
+  if (page !== currentPage) setCurrentPage(page);
+  const pageEntries = filteredEntries.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
 
   // Lets the empty state tell "nothing matches your filters" apart from "the catalog
   // is empty", and offers the way out of the former.
@@ -134,8 +139,8 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState(0);
 
-  const [prevFilterKey, setPrevFilterKey] = useState(() => [currentPage, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|'));
-  const filterKey = [currentPage, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|');
+  const [prevFilterKey, setPrevFilterKey] = useState(() => [page, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|'));
+  const filterKey = [page, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy].join('|');
   if (prevFilterKey !== filterKey) {
     setPrevFilterKey(filterKey);
     setFocusedIndex(0);
@@ -172,18 +177,26 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     if (next !== focusedIndex) { setFocusedIndex(next); cardRefs.current[next]?.focus(); }
   }, [focusedIndex, pageEntries.length, columnCount]);
 
+  // Close returns focus to the card the drawer was opened from (else it falls to <body>).
+  const closeDrawer = useCallback(() => {
+    const idx = pageEntries.findIndex(e => e.data.id === selectedItem?.id);
+    setSelectedItem(null);
+    if (idx >= 0) cardRefs.current[idx]?.focus();
+  }, [pageEntries, selectedItem]);
+
   const handleCreateItem = useCallback(() => {
     if (submittingRef.current || isCliRunning) return;
     if (!newItem.name.trim()) return;
     submittingRef.current = true;
-    const slug = newItem.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    // One slug names the entity id, the icon file and the CLI target, so same-named items never share a file.
+    const slug = itemSlug(newItem.name, Date.now().toString(36));
 
     // zen-perf R3: the new item enters the rendered grid immediately because the
     // store is now the single source of truth — build an ItemData, wrap it via the
     // same seed converter, and add it to the catalog store. The CLI image-gen below
     // then fills in its artwork at public/items/<slug>.webp.
     const newData: ItemData = {
-      id: `user-${slug}-${Date.now().toString(36)}`,
+      id: `user-${slug}`,
       name: newItem.name.trim(),
       type: newItem.type,
       subtype: newItem.type,
@@ -196,8 +209,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     // Surface the freshly-added item: clear filters/search and jump to the first page.
     clearFilters();
 
-    const imagePrompt = `Game item icon, ${newItem.rarity} ${newItem.type}, ${newItem.name}, ${newItem.description}, dark fantasy ARPG style, centered on black background, high detail`.slice(0, 1500);
-    const prompt = `Create a new item for the ARPG loot system:\nName: ${newItem.name}\nType: ${newItem.type}\nRarity: ${newItem.rarity}\nDescription: ${newItem.description}\n\nSteps:\n1. Call POST /api/leonardo with prompt: "${imagePrompt}"\n2. The API will return { imageUrl, generationId }\n3. Download the image from imageUrl and save to public/items/${slug}.webp\n4. Confirm the item was created with its image path\n\nItem slug: ${slug}`;
+    const prompt = buildCreateItemPrompt(newItem, slug, getAppOrigin());
     void executeCli({ type: 'checklist', moduleId, prompt, label: `Create item: ${newItem.name}` })
       .finally(() => { submittingRef.current = false; });
     setShowAddForm(false);
@@ -247,13 +259,14 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
           onGridKeyDown={handleGridKeyDown}
           hasActiveFilters={hasActiveFilters}
           onClearFilters={clearFilters}
+          onOpenVia={setOpenedVia}
         />
 
         {/* Pagination */}
-        <CatalogPagination currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} />
+        <CatalogPagination currentPage={page} totalPages={totalPages} setCurrentPage={setCurrentPage} />
 
         {/* Item Detail Drawer */}
-        <ItemDetailDrawer item={selectedItem} onClose={() => setSelectedItem(null)} />
+        <ItemDetailDrawer item={selectedItem} onClose={closeDrawer} scrollIntoView={openedVia === 'keyboard'} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

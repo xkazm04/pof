@@ -1,6 +1,6 @@
 import { ELEMENT_COLORS } from './constants';
 import type {
-  DamageElement, PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics,
+  DamageElement, WeightedElement, PhysicsConfig, CombatConfig, DmgParticle, ReadabilityMetrics,
 } from './types';
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -9,9 +9,9 @@ import type {
 
 let nextParticleId = 0;
 
-export function pickElement(weights: Record<DamageElement, number>, healPercent: number): { element: DamageElement; isHeal: boolean } {
+export function pickElement(weights: Record<WeightedElement, number>, healPercent: number): { element: DamageElement; isHeal: boolean } {
   if (Math.random() < healPercent) return { element: 'heal', isHeal: true };
-  const entries = Object.entries(weights).filter(([k]) => k !== 'heal') as [DamageElement, number][];
+  const entries = Object.entries(weights) as [WeightedElement, number][];
   const total = entries.reduce((s, [, w]) => s + w, 0);
   let r = Math.random() * total;
   for (const [el, w] of entries) {
@@ -67,9 +67,10 @@ export function spawnParticle(
     }
   }
 
+  // DamageNumberWidget.cpp InitDamageNumber: "+%.0f" heal, "CRIT! %.0f" crit, "%.0f" normal
   const displayText = isHeal
     ? `+${amount}`
-    : isCrit ? `${amount}!` : `${amount}`;
+    : isCrit ? `CRIT! ${amount}` : `${amount}`;
 
   return {
     id: nextParticleId++,
@@ -119,20 +120,26 @@ export function updateParticle(p: DmgParticle, dt: number, physics: PhysicsConfi
       break;
   }
 
-  // Collision avoidance
+  // Collision avoidance. The path above is recomputed from the spawn point every
+  // frame, so the push must accumulate in offX/offY - applied once, it was undone
+  // on the next frame and two numbers never separated beyond ~2px per neighbour.
+  let offX = p.offX ?? 0;
+  let offY = p.offY ?? 0;
   if (physics.collisionAvoidance) {
     for (const other of allParticles) {
       if (other.id === p.id || other.opacity <= 0) continue;
-      const dx = x - other.x;
-      const dy = y - other.y;
+      const dx = x + offX - other.x;
+      const dy = y + offY - other.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < physics.collisionRadius && dist > 0) {
         const pushStrength = (physics.collisionRadius - dist) / physics.collisionRadius * 2;
-        x += (dx / dist) * pushStrength;
-        y += (dy / dist) * pushStrength;
+        offX += (dx / dist) * pushStrength;
+        offY += (dy / dist) * pushStrength;
       }
     }
   }
+  x += offX;
+  y += offY;
 
   // Fade: full opacity for fadeStart%, then linear fade
   let opacity: number;
@@ -142,10 +149,14 @@ export function updateParticle(p: DmgParticle, dt: number, physics: PhysicsConfi
     opacity = 1 - ((alpha - physics.fadeStart) / (1 - physics.fadeStart));
   }
 
+  // Merge-mode growth: +0.1 per merged hit, capped at 2x. Derived from stackCount
+  // every frame so it survives the per-frame recompute below.
+  const stackScale = physics.stackMode === 'merge' ? Math.min(1 + 0.1 * (p.stackCount - 1), 2) : 1;
+
   // Crit scale burst (decays over first 20% of lifetime)
-  let scale = 1;
+  let scale = stackScale;
   if (p.isCrit && alpha < 0.2) {
-    scale = 1 + (physics.critScaleBurst - 1) * (1 - alpha / 0.2);
+    scale = stackScale * (1 + (physics.critScaleBurst - 1) * (1 - alpha / 0.2));
   }
 
   // Trail
@@ -153,7 +164,58 @@ export function updateParticle(p: DmgParticle, dt: number, physics: PhysicsConfi
     ? [{ x: p.x, y: p.y, opacity: p.opacity * 0.5 }, ...p.trail.slice(0, physics.trailLength - 1).map(t => ({ ...t, opacity: t.opacity * 0.7 }))]
     : [];
 
-  return { ...p, x, y, vx, vy, elapsed, opacity: Math.max(0, opacity), scale, trail };
+  return { ...p, x, y, vx, vy, elapsed, opacity: Math.max(0, opacity), scale, trail, offX, offY };
+}
+
+/** Approximate rendered text box (monospace bold ~0.6em per glyph), scaled like the canvas does. */
+function textBox(p: DmgParticle): { w: number; h: number } {
+  return { w: p.displayText.length * p.fontSize * 0.6 * p.scale, h: p.fontSize * p.scale };
+}
+
+export function textBoxesOverlap(a: DmgParticle, b: DmgParticle): boolean {
+  const ba = textBox(a);
+  const bb = textBox(b);
+  return Math.abs(a.x - b.x) < (ba.w + bb.w) / 2 && Math.abs(a.y - b.y) < (ba.h + bb.h) / 2;
+}
+
+/** Frames the windowed mean covers (about one second at 60fps). */
+export const READABILITY_WINDOW = 60;
+
+export interface ReadabilityRun {
+  /** Highest simultaneous count seen since the run started. */
+  peak: number;
+  /** Per-frame samples, newest last, capped at READABILITY_WINDOW. */
+  recent: { overlaps: number; simultaneous: number }[];
+}
+
+export function createReadabilityRun(): ReadabilityRun {
+  return { peak: 0, recent: [] };
+}
+
+/**
+ * Fold one frame's readability (from computeReadability, where avgOverlaps and
+ * maxSimultaneous are that frame's pair count and visible count) into a run: the
+ * returned metrics report the run peak and the windowed means, so the tiles stop
+ * flickering with the current frame.
+ */
+export function foldReadability(
+  run: ReadabilityRun,
+  frame: ReadabilityMetrics,
+): { run: ReadabilityRun; metrics: ReadabilityMetrics } {
+  const recent = [...run.recent, { overlaps: frame.avgOverlaps, simultaneous: frame.maxSimultaneous }]
+    .slice(-READABILITY_WINDOW);
+  const mean = (pick: (s: { overlaps: number; simultaneous: number }) => number) =>
+    Math.round((recent.reduce((t, s) => t + pick(s), 0) / recent.length) * 10) / 10;
+  const peak = Math.max(run.peak, frame.maxSimultaneous);
+  return {
+    run: { peak, recent },
+    metrics: {
+      ...frame,
+      maxSimultaneous: peak,
+      avgOverlaps: mean(s => s.overlaps),
+      avgSimultaneous: mean(s => s.simultaneous),
+    },
+  };
 }
 
 export function computeReadability(particles: DmgParticle[], physics: PhysicsConfig): ReadabilityMetrics {
@@ -164,10 +226,7 @@ export function computeReadability(particles: DmgParticle[], physics: PhysicsCon
   let overlaps = 0;
   for (let i = 0; i < visible.length; i++) {
     for (let j = i + 1; j < visible.length; j++) {
-      const dx = visible[i].x - visible[j].x;
-      const dy = visible[i].y - visible[j].y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 25) overlaps++;
+      if (textBoxesOverlap(visible[i], visible[j])) overlaps++;
     }
   }
 

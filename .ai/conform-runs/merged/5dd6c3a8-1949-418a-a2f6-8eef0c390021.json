@@ -1,0 +1,48 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5dd6c3a8-1949-418a-a2f6-8eef0c390021",
+ "subject": "observability-telemetry",
+ "evaluatedAt": "2026-10-30T22:31:16.678360+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "observability-telemetry",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/crash-history-db.ts:204 Imported UE crash logs are written to the crash_history table with truncation as the only transformation. No scrub runs between composition and the first write (a repo grep for redact/scrub/sanitiz over the crash analyzer, its route, store and DB found nothing), so user paths, machine facts and any secrets inside a pasted log persist in the shared SQLite file, which breaks the sanitize-before-persist one-way door.",
+   "techniques": [
+    {
+     "technique": "crash-record-storage",
+     "verdict": "deviation",
+     "evidence": "src/lib/crash-history-db.ts:204 Bounding is done well: raw log capped at 64k chars with a marker, 200 frames, and the 200-signature cap is enforced by the writer (pruneCrashHistory() runs after every insert, line 237). Aggregation keys on a signature fingerprint, and reads are defensive (the parseJson fallback, line 135ff). The sanitize-before-persist gate is missing entirely: the raw log, error message, crash_dir and machine_json are stored as received."
+    },
+    {
+     "technique": "diagnostic-access",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:253 The in-product crash viewer (list plus per-record detail) reads the actual store: GET /api/crash-analyzer calls listCrashHistory (src/app/api/crash-analyzer/route.ts:25), and the viewer states the retention bound. Gaps: no export/copy-record action, and clearCrashHistory exists in the lib but has no UI management action."
+    }
+   ],
+   "registryProposal": "crash-record-storage assumes the store holds the product's OWN crash evidence, written by a dying process. A crash-analysis tool that ingests a foreign program's crash logs (here, UE5 logs pasted into a dev tool) still needs sanitize-before-persist, bounds and defensive reads. The 'synchronous, one-file-per-record' write-path rules do not apply because the writer is healthy. The technique could state that split explicitly."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-30T22:31:16.678360+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "observability-telemetry"
+   ],
+   "techniques": [
+    "crash-record-storage",
+    "diagnostic-access"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

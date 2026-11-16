@@ -10,7 +10,7 @@ import { SubsystemGroup } from './SubsystemGroup';
 
 export function BridgeEndpointHealth() {
   const {
-    host, rcPort, setHost, setRcPort, pofPort, setPofPort, connectionStatus,
+    host, rcPort, wsPort, setHost, setRcPort, setWsPort, pofPort, setPofPort, connectionStatus,
     collapsed, health, latencyHistory, pinging, showSettings, setShowSettings,
     toggleCollapse, pingAll,
     isDisconnected, healthyCount, checkedCount,
@@ -29,7 +29,6 @@ export function BridgeEndpointHealth() {
         setShowSettings={setShowSettings}
         pingAll={pingAll}
         pinging={pinging}
-        isDisconnected={isDisconnected}
       />
 
       {/* Connection Settings */}
@@ -41,12 +40,14 @@ export function BridgeEndpointHealth() {
           setPofPort={setPofPort}
           rcPort={rcPort}
           setRcPort={setRcPort}
+          wsPort={wsPort}
+          setWsPort={setWsPort}
         />
       )}
 
       {/* Disconnected banner */}
       {isDisconnected && (
-        <ErrorBanner message="Bridge not connected — connect to ping endpoints" className="mx-4 my-2" />
+        <ErrorBanner message="Bridge reads disconnected — Ping All still works and names why each route fails" className="mx-4 my-2" />
       )}
 
       {/* Subsystem groups */}

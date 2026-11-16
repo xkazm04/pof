@@ -35,15 +35,18 @@ export function PropertyEditorRow({
   }, [currentValue]);
 
   const handlePush = useCallback(() => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(draft);
-    } catch {
-      parsed = draft; // send as string
+    if (typeof currentValue !== 'string' && !draft.trim()) return; // blank is not a value here
+    let parsed: unknown = draft; // a string property stays a string, whatever the text looks like
+    if (typeof currentValue !== 'string') {
+      try {
+        parsed = JSON.parse(draft);
+      } catch {
+        parsed = draft; // send as string
+      }
     }
     onPush(objectPath, propertyName, parsed);
     setEditing(false);
-  }, [draft, objectPath, propertyName, onPush]);
+  }, [draft, currentValue, objectPath, propertyName, onPush]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handlePush();
@@ -63,6 +66,7 @@ export function PropertyEditorRow({
             <div className="flex items-center gap-1">
               <input
                 ref={inputRef}
+                aria-label={`New value for ${propertyName}`}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleKeyDown}

@@ -24,8 +24,8 @@ export function AffixSlotPanels({ featureMap }: AffixSlotPanelsProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Affix table collapsible */}
       <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
-        <button onClick={() => setAffixOpen(v => !v)}
-          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/30 transition-colors text-left focus:outline-none">
+        <button onClick={() => setAffixOpen(v => !v)} aria-expanded={affixOpen}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/30 transition-colors text-left focus-ring-inset">
           <motion.div animate={{ rotate: affixOpen ? 90 : 0 }}><ChevronRight className="w-4 h-4 text-text-muted" /></motion.div>
           <span className="text-sm font-bold text-text">Affix System Definitions</span>
           <span className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded-md border shadow-sm ml-auto"

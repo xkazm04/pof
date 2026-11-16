@@ -32,7 +32,7 @@ interface ScoreRingProps {
  * Maps a 0-100 score to a status color.
  *
  * Delegates to `scoreBandToken`, the app's canonical band ladder
- * (>=80 green / >=60 amber / >=40 orange / red). It previously carried its own
+ * (>=80 green / >=60 amber / >=50 orange / red). It previously carried its own
  * private >=70 / >=40 ladder, which made the ring the most optimistic surface in
  * the app: 75 read green here and amber in the compliance dashboard — the same
  * number, two colours, and the more flattering one won wherever the ring was

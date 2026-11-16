@@ -12,12 +12,16 @@ export const ACCENT = ACCENT_ORANGE;
 
 /* -- Debug Commands (legacy compact list) ---------------------------------- */
 
+/** The UE project's registered Exec UFUNCTIONs (Source/PoF/Debug/ARPGCheatManager.h), with their real signatures. */
 export const DEBUG_COMMANDS = [
-  { syntax: 'godmode', description: 'Toggle invuln & infinite resources' },
-  { syntax: 'give <id> <count>', description: 'Add item to inventory by ID' },
-  { syntax: 'setlevel <n>', description: 'Set player level directly' },
-  { syntax: 'spawn <type>', description: 'Spawn enemy at cursor location' },
-  { syntax: 'killall', description: 'Purge all active enemies in cell' },
+  { syntax: 'ARPGGod', description: 'Toggle invulnerability & infinite resources' },
+  { syntax: 'ARPGSetLevel <level>', description: 'Set player level directly' },
+  { syntax: 'ARPGGiveXP <amount>', description: 'Grant experience points to the player' },
+  { syntax: 'ARPGHeal', description: 'Restore the player to full health' },
+  { syntax: 'ARPGKillAll', description: 'Kill all active enemies' },
+  { syntax: 'ARPGSpawnEnemy <blueprintPath> [level]', description: 'Spawn an enemy Blueprint at the player' },
+  { syntax: 'ARPGDamageTarget <amount>', description: 'Apply damage to the targeted actor' },
+  { syntax: 'ARPGShowStats', description: 'Print the player attribute stats' },
 ];
 
 export const FEATURE_NAMES = [
@@ -94,6 +98,8 @@ export interface ConsoleHistoryEntry {
   timestamp: number;
   status: 'pending' | 'success' | 'error';
   output?: string;
+  /** A UI action logged into the history (e.g. a failed CONNECT): shown, never recalled as a command. */
+  system?: true;
 }
 
 /* -- 12.5 Network Replication Monitor -------------------------------------- */

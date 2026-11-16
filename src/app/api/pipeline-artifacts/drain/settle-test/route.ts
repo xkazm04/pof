@@ -19,16 +19,22 @@
  */
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
 import { settleGatesFromTestRun } from '@/lib/test-gate-runner/settleFromTest';
 import { acquireLeases, releaseLeases, scopeFromKey, leaseKeysForFilter } from '@/lib/test-gate-runner/drain-lease';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as {
+    const denied = requireOperator(req);
+    if (denied) return denied;
+    const body = (await req.json().catch(() => undefined)) as {
       testName?: string; result?: unknown;
       tier?: string; catalogId?: string; entityId?: string; entityIds?: string[];
-    };
+    } | null | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const testName = typeof body.testName === 'string' ? body.testName.trim() : '';
     if (!testName) return apiError('"testName" (non-empty string) is required', 400);
     if (body.result === undefined) {

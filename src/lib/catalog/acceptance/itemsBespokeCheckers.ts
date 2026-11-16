@@ -1,5 +1,4 @@
-import { readHistory, selectedCandidate } from '@/components/layout-lab/steps/shared/genHistory';
-import { candidateAsset } from './galleryArtifact';
+import { gradeSelectedCandidate } from './galleryArtifact';
 import { templateGuard } from './template';
 import type { AcceptanceResult, Checker } from './types';
 
@@ -136,6 +135,20 @@ export const itemsAnimClipsPresent: Checker = (data) => {
   };
 };
 
+/**
+ * A GPU cost printed beside its budget, with only as many decimals as it takes to keep a cost
+ * that differs from the cap from READING as the cap. `toFixed(1)` printed 0.85 ms as "0.8" next to
+ * a 0.8 ms budget, so an over-budget step read "0.8 ms of 0.8 ms" under a FAIL. Shared by this checker, the VFX
+ * copy and the VFX view.
+ */
+export function formatGpuMs(cost: number, cap: number): string {
+  for (let d = 1; d <= 4; d++) {
+    const s = String(Number(cost.toFixed(d)));
+    if (cost === cap || s !== String(cap)) return s;
+  }
+  return String(cost);
+}
+
 /** ≥1 VFX variant is bound and the declared GPU cost fits its budget. */
 export const itemsVfxWithinBudget: Checker = (data) => {
   const variants = list(data.variants);
@@ -146,12 +159,12 @@ export const itemsVfxWithinBudget: Checker = (data) => {
     label: 'At least one VFX bound · GPU cost under budget',
     tier: 'L0',
     status: ok ? 'pass' : 'pending',
-    detail: variants.length ? `${cost.toFixed(1)} / ${cap} ms` : 'no vfx',
+    detail: variants.length ? `${formatGpuMs(cost, cap)} / ${cap} ms` : 'no vfx',
     ...(ok
       ? {}
       : {
           reason: variants.length
-            ? `VFX cost ${cost.toFixed(1)} ms exceeds the ${cap} ms budget`
+            ? `VFX cost ${formatGpuMs(cost, cap)} ms exceeds the ${cap} ms budget`
             : 'no VFX variant bound',
         }),
   };
@@ -200,47 +213,7 @@ export const itemsInventoryWired: Checker = (data) => {
  * registered `Icon 2D Art` / `3D Mesh` checkers.
  */
 export function gradeGeneratedAsset(data: Record<string, unknown>, label: string): AcceptanceResult {
-  const history = readHistory(data);
-  if (history.batches.length === 0) {
-    return {
-      label,
-      tier: 'L4',
-      status: 'deferred',
-      detail: 'no generation history',
-      reason:
-        'the artifact holds no generation history — nothing proves any candidate was ever ' +
-        'generated for this step, so the values it grades are the produce stub\'s constants. ' +
-        'Run the gallery\'s Produce so the batch (and its candidates) are recorded, then re-grade.',
-    };
-  }
-  const cand = selectedCandidate(history);
-  const kept = history.batches.reduce((n, b) => n + b.candidates.length, 0);
-  if (!cand) {
-    return {
-      label,
-      tier: 'L1',
-      status: 'fail',
-      detail: `selection ${JSON.stringify(history.selectedId)} unresolved`,
-      reason:
-        `the artifact selects candidate id ${JSON.stringify(history.selectedId)}, which is not among the ` +
-        `${kept} candidate(s) in the ${history.batches.length} kept batch(es) — the graded selection points at nothing.`,
-    };
-  }
-  const asset = candidateAsset(cand);
-  const named = cand.caption ?? cand.id;
-  if (asset) {
-    return { label, tier: 'L1', status: 'pass', detail: `${named} → ${asset}` };
-  }
-  return {
-    label,
-    tier: 'L4',
-    status: 'deferred',
-    detail: `${named} — swatch placeholder`,
-    reason:
-      `the selected candidate (${named}) is a deterministic swatch preview, not a generated asset — no image ` +
-      'or mesh was produced for this step, so the selection cannot be visually verified. Run the generator ' +
-      '(gap-loop / the provider script) so the step owns real art, then re-roll the gallery and select it.',
-  };
+  return gradeSelectedCandidate(data, label);
 }
 
 /**

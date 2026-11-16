@@ -1,6 +1,7 @@
 # PoF: Blender headless — render a UE-exported animation FBX (armature-only) to MP4.
 # Builds a box-proxy body from the armature so the retargeted motion is reviewable.
-# Usage: blender --background --python pof_fbx_render.py -- <in.fbx> <out.mp4>
+# Usage: blender --background --python-exit-code 1 --python pof_fbx_render.py -- <in.fbx> <out.mp4> <fps>
+# Always pass --python-exit-code 1: Blender exits 0 after a script exception by default.
 import math
 import sys
 
@@ -8,16 +9,30 @@ import bpy
 import mathutils
 
 argv = sys.argv[sys.argv.index("--") + 1 :]
+if len(argv) < 3:
+    print("POF_RENDER_ERROR=usage: <in.fbx> <out.mp4> <fps> (the clip's real frame rate is required)")
+    sys.exit(1)
 fbx_path, mp4_path = argv[0], argv[1]
+try:
+    clip_fps = int(round(float(argv[2])))
+    if clip_fps < 1:
+        raise ValueError(argv[2])
+except ValueError:
+    print("POF_RENDER_ERROR=fps must be a positive number, got " + repr(argv[2]))
+    sys.exit(1)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=fbx_path, automatic_bone_orientation=True)
 
 arm = next(o for o in bpy.context.scene.objects if o.type == "ARMATURE")
 scene = bpy.context.scene
-act = arm.animation_data.action
+act = arm.animation_data.action if arm.animation_data else None
+if act is None:
+    # Blender exits 0 after a script exception unless --python-exit-code is passed; say it here.
+    print("POF_RENDER_ERROR=no animation action on the imported armature")
+    sys.exit(1)
 scene.frame_start, scene.frame_end = int(act.frame_range[0]), max(int(act.frame_range[1]), int(act.frame_range[0]) + 1)
-scene.render.fps = 20
+scene.render.fps = clip_fps  # the source clip's rate, never a guess: 30 fps UE exports play 1:1
 
 # Proxy only the MAIN deform bones — UE skeletons carry ik_/root/twist/finger helper
 # bones that render as giant or noisy boxes.

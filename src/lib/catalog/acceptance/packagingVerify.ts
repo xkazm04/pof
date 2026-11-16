@@ -73,6 +73,8 @@ export interface PackagingVerifyRow {
 export interface PackagingVerifySummary {
   verified: number;
   passed: number;
+  /** A content hold (`foldContentHold`) outranked the package verdict — author-owed work. */
+  pending: number;
   deferred: number;
   /** Only a folded-in half can fail: a static check that errored, or the content checker. */
   failed: number;
@@ -114,7 +116,7 @@ export function verifyPackagingAll(
 ): PackagingVerifySummary {
   const apply = opts?.apply !== false;
   const results: PackagingVerifyRow[] = [];
-  let verified = 0, passed = 0, deferred = 0, failed = 0, skipped = 0, changed = 0;
+  let verified = 0, passed = 0, pending = 0, deferred = 0, failed = 0, skipped = 0, changed = 0;
   const touched = createTouched();
 
   for (const a of deps.listArtifacts(filter)) {
@@ -128,6 +130,7 @@ export function verifyPackagingAll(
 
     verified++;
     if (verdict.status === 'pass') passed++;
+    else if (verdict.status === 'pending') pending++;
     else if (verdict.status === 'fail') failed++;
     else if (verdict.status === 'deferred') deferred++;
 
@@ -139,7 +142,7 @@ export function verifyPackagingAll(
   }
   touched.flush(deps.syncLifecycle);
 
-  return { verified, passed, deferred, failed, skipped, changed, results, exempt: deps.listExemptions?.(filter) ?? [] };
+  return { verified, passed, pending, deferred, failed, skipped, changed, results, exempt: deps.listExemptions?.(filter) ?? [] };
 }
 
 // ── default (server) deps — real registry / artifacts db / filesystem ──

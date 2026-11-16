@@ -27,11 +27,14 @@ export function LootTableSearchFilters({
           value={searchQuery}
           onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
           placeholder="Search items..."
+          aria-label="Search loot entries"
           className="w-full pl-7 pr-2 py-1 rounded text-2xs font-mono bg-surface-deep/50 border border-border/40 text-text focus:outline-none focus:ring-1 focus:ring-current/50"
         />
       </div>
       <div className="flex gap-1">
         <button
+          type="button"
+          aria-pressed={sourceFilter === 'all'}
           onClick={() => { setSourceFilter('all'); setPage(0); }}
           className="text-2xs font-mono px-2 py-1 rounded border transition-all cursor-pointer"
           style={{
@@ -45,6 +48,8 @@ export function LootTableSearchFilters({
         {LOOT_SOURCES.map(src => (
           <button
             key={src}
+            type="button"
+            aria-pressed={sourceFilter === src}
             onClick={() => { setSourceFilter(src); setPage(0); }}
             className="text-2xs font-mono px-2 py-1 rounded border transition-all capitalize cursor-pointer"
             style={{

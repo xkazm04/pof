@@ -53,7 +53,7 @@ export function FlowNodesTab({
         <div className="space-y-4">
           <BlueprintPanel color={ACCENT} className="p-4 group">
             <SectionHeader label="HUD Architecture Hub" color={ACCENT} icon={Monitor} />
-            <button onClick={() => onToggleNode(ROOT_SCREEN_NODE)} className="w-full text-left relative z-10 focus:outline-none">
+            <button type="button" onClick={() => onToggleNode(ROOT_SCREEN_NODE)} aria-expanded={expandedNode === ROOT_SCREEN_NODE} className="focus-ring w-full text-left relative z-10 rounded-lg">
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-sm transition-colors hover:bg-surface-hover/30" style={{ borderColor: `${withOpacity(ACCENT, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT, OPACITY_10)}` }}>
                 <motion.div animate={{ rotate: expandedNode === ROOT_SCREEN_NODE ? 90 : 0 }}>
                   <ChevronRight className="w-4 h-4" style={{ color: ACCENT }} />

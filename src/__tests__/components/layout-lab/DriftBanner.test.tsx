@@ -55,6 +55,16 @@ describe('DriftBanner', () => {
     expect(getByTestId('drift-adopt')).toBeTruthy(); // adoption is still the reconciliation
   });
 
+  it('keeps its controls outside the live region (the announcement is the message only)', () => {
+    const { container } = render(
+      <DriftBanner t={LIGHT} step="Economy" drift={drift} hasHistory onAdopt={() => {}} />,
+    );
+    const live = container.querySelectorAll('[role="status"], [role="alert"]');
+    expect(live.length).toBe(1);
+    expect(live[0].textContent).toContain('Server truth differs');
+    expect(container.querySelectorAll('[role="status"] button, [role="status"] input, [role="alert"] button, [role="alert"] input').length).toBe(0);
+  });
+
   it('hides the replace-history control when the step has no candidate archive', () => {
     const { queryByTestId } = render(
       <DriftBanner t={LIGHT} step="Economy" drift={drift} hasHistory={false} onAdopt={() => {}} />,

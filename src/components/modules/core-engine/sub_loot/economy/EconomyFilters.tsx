@@ -27,6 +27,7 @@ export function EconomyFilters({
             <button
               key={tier}
               onClick={() => { setTierFilter(tier); setPage(0); }}
+              aria-pressed={isActive}
               className="text-2xs font-mono px-2 py-0.5 rounded border transition-all cursor-pointer"
               style={{
                 borderColor: isActive ? color : withOpacity(color, OPACITY_30),
@@ -42,6 +43,7 @@ export function EconomyFilters({
       <div className="flex gap-1">
         <button
           onClick={() => { setSourceFilter('all'); setPage(0); }}
+          aria-pressed={sourceFilter === 'all'}
           className="text-2xs font-mono px-2 py-0.5 rounded border transition-all capitalize cursor-pointer"
           style={{
             borderColor: sourceFilter === 'all' ? ACCENT_EMERALD : withOpacity(ACCENT_EMERALD, OPACITY_30),
@@ -55,6 +57,7 @@ export function EconomyFilters({
           <button
             key={src}
             onClick={() => { setSourceFilter(src); setPage(0); }}
+            aria-pressed={sourceFilter === src}
             className="text-2xs font-mono px-2 py-0.5 rounded border transition-all capitalize cursor-pointer"
             style={{
               borderColor: sourceFilter === src ? ACCENT_EMERALD : withOpacity(ACCENT_EMERALD, OPACITY_30),

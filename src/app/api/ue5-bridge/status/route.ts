@@ -9,6 +9,7 @@
 
 import { NextRequest } from 'next/server';
 import { ue5Connection } from '@/lib/ue5-bridge/connection-manager';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,15 +53,18 @@ export async function GET(request: NextRequest) {
           clearInterval(keepalive);
           unsubscribe();
         }
-      }, 30_000);
+      }, UI_TIMEOUTS.sseKeepalive);
 
       // Cleanup on client disconnect
-      request.signal.addEventListener('abort', () => {
+      const teardown = () => {
         isStreamClosed = true;
         clearInterval(keepalive);
         unsubscribe();
         try { controller.close(); } catch { /* already closed */ }
-      });
+      };
+      // An abort that already happened never fires the event.
+      if (request.signal.aborted) teardown();
+      else request.signal.addEventListener('abort', teardown);
     },
   });
 

@@ -1,0 +1,115 @@
+{
+ "schema": "conform-run/1",
+ "worker": "94cd1077-eeb1-4f90-a82c-7dd3fe0af499",
+ "subject": "eval-harness",
+ "evaluatedAt": "2026-11-08T23:16:55.512974+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-database",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/pipeline-artifacts-db.ts:414 A drain or re-verify that changes only the verdict on unchanged content overwrites status, tier and reason in place, so a pass that later reads fail leaves no earlier record and run-to-run flips cannot be seen.",
+   "techniques": [
+    {
+     "technique": "measurement-revision",
+     "verdict": "deviation",
+     "evidence": "src/lib/pipeline-artifacts-db.ts:414 Revisions are archived only on content change, and the comment at lines 407-408 says verdict-only writes are skipped on purpose. A search of CREATE TABLE names containing gate, drain, verdict or artifact found no artifact status history, only judge and craft verdict history. The technique requires a revision to be an additional record, not an edit."
+    },
+    {
+     "technique": "candidate-write-access",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/route.ts:41 The producer cannot write its own status on a gradable step. This covers the status field only; the checker that reads the submitted data has its own gap, recorded on pipeline-acceptance-engine."
+    },
+    {
+     "technique": "assertion-vs-judgment",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/settle/route.ts:88 The settle preview grades against an in-memory stage and persists nothing, matching the dry-mode rule. One exception: rowToArtifact reports a corrupt row as status fail, distinguished only by a CORRUPT: reason prefix, rather than as a separate error outcome."
+    }
+   ]
+  },
+  {
+   "context": "pipeline-acceptance-engine",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:109 Any non-empty string the producer writes into a candidate's asset fields makes the gallery gate pass at L1 as a real generated asset, with no check that the file exists, so the candidate can assert the result it is measured on.",
+   "techniques": [
+    {
+     "technique": "candidate-write-access",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:109 The gate reads imageUrl, glbUrl, assetUrl and assetPath from data the producer submits. Searches of galleryArtifact, bindGeneratedIcons, bindIconsAll, artifactCommit and artifact-validation found no existence check, and staticVerify, regrade, settlePlan, resolveStepAcceptance and artifactCommit never read these fields."
+    },
+    {
+     "technique": "judge-stability",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:166 The attribution emits the score and optional model but drops the rubric version, and rubricVersion appears nowhere in non-test code under src/lib/catalog or layout-lab, so a superseded verdict's score travels without its instrument identity. The bridge does stop old-rubric verdicts from condemning at line 96. Anchor sets and drift measurement sit outside this context and were not judged."
+    },
+    {
+     "technique": "assertion-vs-judgment",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:197 Deterministic checkers run first and the judge can only down-grade a shape pass. pythonDrain.ts:164 also keeps a transport failure out of the verdict, as a third outcome."
+    },
+    {
+     "technique": "certification-levels",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:33 What was not observed is deferred at the level that would observe it rather than passed. Caveat: gradeSelectedCandidate does not consult autoSelected, so an auto-picked real asset still passes the L1 selection gate, and only the ProvenanceStrip discloses that."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "eval-harness",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "step-shared-primitives",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "catalog-browser-ui",
+   "reason": "This context is the lab's navigation and coaching UI. A search of 14 of its files for rubric, scenario, holdout, pairwise, win-rate, golden and judge hit only CatalogMatrix, PipelineRail and globalCoachModel; I read the globalCoachModel matches, which only pass verdicts through the shared acceptance resolver, and did not open the other two. That leaves no scoring code to judge, and the judge term rules out a not-applicable verdict, so I decline rather than guess."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T23:16:55.512974+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "assertion-vs-judgment",
+    "candidate-write-access",
+    "measurement-revision"
+   ],
+   "deviations": 1,
+   "context": "catalog-database",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T23:16:55.512974+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "assertion-vs-judgment",
+    "candidate-write-access",
+    "certification-levels",
+    "judge-stability"
+   ],
+   "deviations": 1,
+   "context": "pipeline-acceptance-engine",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -697,6 +697,8 @@ def main():
     bpy.ops.object.select_all(action="DESELECT")
     low.select_set(True)
     bpy.context.view_layer.objects.active = low
+    if os.path.isfile(args.output):
+        os.remove(args.output)  # a stale file must never read as this run's output
     bpy.ops.export_scene.gltf(
         filepath=args.output,
         export_format="GLB",

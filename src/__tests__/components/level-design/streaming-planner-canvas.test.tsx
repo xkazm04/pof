@@ -1,0 +1,113 @@
+/**
+ * What the streaming planner draws on its grid has to agree with the plan it draws.
+ */
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, cleanup, screen, fireEvent } from '@testing-library/react';
+import { ZoneCell } from '@/components/modules/content/level-design/StreamingZonePlanner/ZoneCell';
+import { CELL_SIZE } from '@/components/modules/content/level-design/StreamingZonePlanner/constants';
+import { ZoneGrid } from '@/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid';
+import { TransitionLines } from '@/components/modules/content/level-design/StreamingZonePlanner/TransitionLines';
+import { TRANSITION_STYLES } from '@/components/modules/content/level-design/StreamingZonePlanner/constants';
+import type { TransitionLine } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
+import type { StreamingZone } from '@/components/modules/content/level-design/StreamingZonePlanner/types';
+
+const motion = vi.hoisted(() => ({ reduced: false }));
+vi.mock('framer-motion', () => ({ useReducedMotion: () => motion.reduced }));
+
+afterEach(() => { cleanup(); motion.reduced = false; });
+
+const ZONE: StreamingZone = {
+  id: 'z', name: 'Town', type: 'town', gridX: 2, gridY: 3, loadPriority: 'normal', alwaysLoaded: false, preloadRadius: 1,
+};
+
+describe('ZoneCell preload ring', () => {
+  it.each([1, 2])('radius %i is the square of cells centred on the zone', (preloadRadius) => {
+    const { container } = render(
+      <svg><ZoneCell zone={{ ...ZONE, preloadRadius }} selectedZoneId="z" linkingFrom={null} paintType={null} handleCellClick={() => {}} /></svg>,
+    );
+    const ring = container.querySelector('rect[stroke-dasharray="8,8"]')!;
+    const x = Number(ring.getAttribute('x'));
+    const y = Number(ring.getAttribute('y'));
+    const size = Number(ring.getAttribute('width'));
+    expect(x + size / 2).toBe(ZONE.gridX * CELL_SIZE + CELL_SIZE / 2);
+    expect(y + size / 2).toBe(ZONE.gridY * CELL_SIZE + CELL_SIZE / 2);
+    expect(size).toBe((preloadRadius * 2 + 1) * CELL_SIZE - 8);
+  });
+});
+
+const LINE: TransitionLine = {
+  id: 't', fromId: 'a', toId: 'b', style: 'seamless', triggerType: 'proximity', condition: '',
+  x1: 0, y1: 0, x2: 72, y2: 0, fromName: 'Town', toName: 'Forest',
+};
+
+describe('TransitionLines', () => {
+  it.each(Object.keys(TRANSITION_STYLES) as TransitionLine['style'][])('%s draws in the colour the list names it', (style) => {
+    const { container } = render(<svg><TransitionLines lines={[{ ...LINE, style }]} deleteTransition={() => {}} /></svg>);
+    expect(container.querySelector('line')!.getAttribute('stroke')).toBe(TRANSITION_STYLES[style].color);
+  });
+});
+
+describe('TransitionLines condition badge', () => {
+  const CONDITION = 'Collect 3 Rune Fragments From The Deep';
+
+  it('a long condition is upper-cased like a short one, and the badge wraps the text it shows', () => {
+    const { container } = render(<svg><TransitionLines lines={[{ ...LINE, condition: CONDITION }]} deleteTransition={() => {}} /></svg>);
+    const text = container.querySelector('text')!.textContent!;
+    expect(text).toBe(text.toUpperCase());
+    expect(text.length).toBeLessThan(CONDITION.length);
+    const width = Number(container.querySelector('rect')!.getAttribute('width'));
+    expect(width).toBeLessThan(CONDITION.length * 6);
+  });
+});
+
+describe('ZoneGrid keyboard', () => {
+  const setup = () => {
+    const handleCellClick = vi.fn();
+    render(
+      <ZoneGrid gridSize={7} paintType={null} linkingFrom={null} transitionLines={[]} zones={[ZONE]}
+        zoneAt={(x, y) => (x === ZONE.gridX && y === ZONE.gridY ? ZONE : null)}
+        handleCellClick={handleCellClick} deleteTransition={() => {}} selectedZoneId={null} />,
+    );
+    return { handleCellClick, grid: screen.getByRole('application', { name: /zone grid, 1 zones?/i }) };
+  };
+
+  it('is one tab stop; arrows move a cursor, clamped at the edge, Enter acts on its cell', () => {
+    const { handleCellClick, grid } = setup();
+    expect(grid.getAttribute('tabindex')).toBe('0');
+    fireEvent.keyDown(grid, { key: 'ArrowUp' });
+    fireEvent.keyDown(grid, { key: 'ArrowRight' });
+    fireEvent.keyDown(grid, { key: 'ArrowDown' });
+    fireEvent.keyDown(grid, { key: 'Enter' });
+    expect(handleCellClick).toHaveBeenCalledWith(1, 1);
+  });
+
+  it('announces the cell under the cursor by zone name', () => {
+    const { grid } = setup();
+    fireEvent.focus(grid);
+    for (const key of ['ArrowRight', 'ArrowRight', 'ArrowDown', 'ArrowDown', 'ArrowDown']) fireEvent.keyDown(grid, { key });
+    expect(screen.getByRole('status').textContent).toMatch(/Town/);
+  });
+});
+
+describe('reduced motion', () => {
+  const cell = <svg><ZoneCell zone={ZONE} selectedZoneId="z" linkingFrom={null} paintType={null} handleCellClick={() => {}} /></svg>;
+  const lines = <svg><TransitionLines lines={[LINE]} deleteTransition={() => {}} /></svg>;
+
+  it('runs the line and ring animations by default', () => {
+    expect(render(cell).container.querySelectorAll('animate').length).toBe(1);
+    expect(render(lines).container.querySelectorAll('animate').length).toBe(1);
+  });
+
+  it('drops them when the user asked for reduced motion', () => {
+    motion.reduced = true;
+    expect(render(cell).container.querySelectorAll('animate').length).toBe(0);
+    expect(render(lines).container.querySelectorAll('animate').length).toBe(0);
+  });
+});
+
+describe('transition line affordance', () => {
+  it('its hit area says what it links and how to remove it', () => {
+    const { container } = render(<svg><TransitionLines lines={[LINE]} deleteTransition={() => {}} /></svg>);
+    expect(container.querySelector('title')!.textContent).toMatch(/Town to Forest.*right-click to remove/i);
+  });
+});

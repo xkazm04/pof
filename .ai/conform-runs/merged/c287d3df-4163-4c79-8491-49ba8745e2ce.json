@@ -1,0 +1,60 @@
+{
+ "schema": "conform-run/1",
+ "worker": "c287d3df-4163-4c79-8491-49ba8745e2ce",
+ "subject": "guest-language-introspection",
+ "evaluatedAt": "2026-10-30T22:26:33.214007+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "debug-performance",
+   "subject": "guest-language-introspection",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_debug/console/ConsoleSection.tsx:44 This context is a React dashboard that forwards UE console command strings to an external engine over the /api/ue5-bridge HTTP bridge. It implements no language engine and has no guest-visible global, so the subject's precondition does not hold. A search of sub_debug found 0 hits for $debug, createRealm, hiddenClass, setStackLimit, newGlobal, bytecode and disassemble. A search of all of src/ found no isolated-vm, quickjs, vm.createContext, new Function( or ShadowRealm.",
+   "techniques": [
+    {
+     "technique": "flag-gated-debug-global",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/console/ConsoleSection.tsx:43 The console works on the host side over HTTP to an external UE process. No guest global is injected anywhere."
+    },
+    {
+     "technique": "representation-probes",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/_shared/data.ts:71 The catalog lists UE stat and show console commands, which report rates and overlays. They are not pure queries about an object's shape, its elements or a string's representation in a guest language."
+    },
+    {
+     "technique": "guest-settable-limits-and-switches",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_debug/_shared/data.ts:78 The only settable knobs are gameplay console cheats and world commands. There is no recursion, stack or optimizer limit that a guest language can set."
+    }
+   ],
+   "absenceTerms": [
+    "$debug",
+    "createRealm",
+    "hiddenClass",
+    "setStackLimit",
+    "newGlobal"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-30T22:26:33.214007+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "guest-language-introspection"
+   ],
+   "techniques": [
+    "flag-gated-debug-global",
+    "guest-settable-limits-and-switches",
+    "representation-probes"
+   ],
+   "deviations": 0,
+   "context": "debug-performance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

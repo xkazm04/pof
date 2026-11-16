@@ -188,11 +188,21 @@ export function setBudgetConfig(config: BudgetConfig): BudgetConfig {
 
 // ── Aggregation helpers ──────────────────────────────────────────────────────
 
-/** Sum of cost where the recorded_at date prefix matches (UTC). */
-function sumCostForPrefix(prefix: string, len: number): number {
+/**
+ * Sum of cost where recorded_at starts with `prefix` (a UTC day or month key).
+ *
+ * Expressed as the half-open range `[prefix, successor(prefix))` rather than
+ * `substr(recorded_at, 1, n) = prefix`: under binary collation the two select exactly
+ * the same rows, but only the range can use `idx_cli_spend_recorded`. The substr form
+ * was a full scan of an append-only table on every CLI pre-flight.
+ */
+function sumCostForPrefix(prefix: string): number {
+  const upper = prefix.slice(0, -1) + String.fromCharCode(prefix.charCodeAt(prefix.length - 1) + 1);
   const row = getDb()
-    .prepare(`SELECT COALESCE(SUM(cost_usd), 0) AS c FROM cli_spend WHERE substr(recorded_at, 1, ?) = ?`)
-    .get(len, prefix) as { c: number };
+    .prepare(
+      `SELECT COALESCE(SUM(cost_usd), 0) AS c FROM cli_spend WHERE recorded_at >= ? AND recorded_at < ?`,
+    )
+    .get(prefix, upper) as { c: number };
   return row.c;
 }
 
@@ -205,8 +215,8 @@ export function getBudgetStatus(): BudgetStatus {
   const today = dayKey(now, ENFORCED_BUDGET_ZONE); // YYYY-MM-DD
   const month = monthKey(now, ENFORCED_BUDGET_ZONE); // YYYY-MM
 
-  const todaySpendUsd = sumCostForPrefix(today, 10);
-  const monthSpendUsd = sumCostForPrefix(month, 7);
+  const todaySpendUsd = sumCostForPrefix(today);
+  const monthSpendUsd = sumCostForPrefix(month);
 
   const dailyRemainingUsd = config.dailyLimitUsd != null ? config.dailyLimitUsd - todaySpendUsd : null;
   const monthlyRemainingUsd = config.monthlyLimitUsd != null ? config.monthlyLimitUsd - monthSpendUsd : null;

@@ -10,6 +10,7 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { MOTION_CONFIG, motionSafe } from '@/lib/motion';
+import { useNavigationStore } from '@/stores/navigationStore';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '../_shared/design';
 import { CLASS_TREE, type ClassNode } from '../_shared/data';
 
@@ -32,6 +33,7 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
   // The junction dot pulses opacity only — non-positional, so the root
   // MotionConfig would keep it looping for a motion-sensitive user.
   const prefersReduced = useReducedMotion();
+  const navigateToModule = useNavigationStore((s) => s.navigateToModule);
 
   return (
     <motion.div
@@ -72,6 +74,9 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
         {/* Expand toggle */}
         {hasChildren ? (
           <button onClick={() => setExpanded(!expanded)}
+            type="button"
+            aria-expanded={expanded}
+            aria-label={`${expanded ? 'Collapse' : 'Expand'} ${node.name}`}
             className="p-0.5 rounded transition-colors hover:bg-surface/50 cursor-pointer"
             style={{ color: node.color }}>
             <motion.div animate={{ rotate: expanded ? 90 : 0 }} transition={MOTION_CONFIG.micro}>
@@ -87,11 +92,14 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
           className="relative flex items-center gap-2 group cursor-default"
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
+          onFocus={() => setHovered(true)}
+          onBlur={() => setHovered(false)}
           whileHover={{ scale: 1.02 }}
         >
           {/* Class name chip */}
           <span
-            className="relative text-sm font-mono font-bold px-3 py-1.5 rounded-md border transition-all overflow-hidden"
+            tabIndex={node.headerFile ? 0 : undefined}
+            className="relative text-sm font-mono font-bold px-3 py-1.5 rounded-md border transition-all overflow-hidden focus-ring"
             style={{
               borderColor: withOpacity(node.color, OPACITY_25),
               backgroundColor: withOpacity(node.color, OPACITY_8),
@@ -122,12 +130,15 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
 
           {/* Cross-reference link */}
           {node.crossRef && (
-            <span
+            <button
+              type="button"
+              onClick={() => navigateToModule(node.crossRef!)}
+              title={`Open the ${node.crossRef} module`}
               className="flex items-center gap-1 text-xs font-mono font-bold px-2 py-0.5 rounded border cursor-pointer hover:brightness-125 transition-all"
               style={{ backgroundColor: withOpacity(STATUS_ERROR, OPACITY_8), color: STATUS_ERROR, borderColor: withOpacity(STATUS_ERROR, OPACITY_20) }}>
               <ExternalLink className="w-2.5 h-2.5" />
               {node.crossRef}
-            </span>
+            </button>
           )}
 
           {/* Hover tooltip */}

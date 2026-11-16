@@ -163,12 +163,21 @@ export interface BoneGroupVerdict {
 }
 
 /**
+ * Vendor prefixes that carry no anatomical meaning. The ONE prefix rule: `bone-conform.ts`
+ * imports this, so the gate and the conform read a name the same way. It does not feed
+ * {@link classifyNaming}, which still treats only `mixamorig:` as the table-mapped Mixamo
+ * vocabulary (routing `mixamorig1:` there would unbind it, the table matches exact names).
+ */
+export const VENDOR_PREFIX = /^(?:mixamorig\d*|tripo|armature|root)[:_.-]+/i;
+
+/**
  * Split a joint name into lowercase word tokens.
  * `mixamorig:LeftHandThumb1` → `['left','hand','thumb']`, `upperarm_l` → `['upperarm','l']`.
  */
 function tokenize(name: string): string[] {
   return name
-    .replace(/^mixamorig[:_]?/i, '')
+    .replace(VENDOR_PREFIX, '')
+    .replace(/^mixamorig\d*/i, '')
     .replace(/([a-z\d])([A-Z])/g, '$1 $2')
     .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
     .split(/[^A-Za-z]+/)

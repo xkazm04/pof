@@ -36,7 +36,9 @@ function scalarOf(p: MaterialParameter): ParentScalar {
     max = Math.max(max, d);
   }
   if (max <= min) max = min + 1;
-  return { name: p.name, min, max, defaultValue: d, step: (max - min) / 100 };
+  // Round away binary noise (2.2 / 100 = 0.022000000000000002): the step is
+  // printed verbatim into the prompt's `step=` and the ClampMin/UI metadata.
+  return { name: p.name, min, max, defaultValue: d, step: Number(((max - min) / 100).toPrecision(6)) };
 }
 
 function namesOf(entry: MaterialEntry, type: MaterialParameter['type']): string[] {
@@ -65,7 +67,7 @@ export function parentParamDefaults(parent: ParentMaterialRef): Record<string, n
  * The parent's scalars as sliders. A name the configurator already decodes
  * (Roughness, Metallic, …) keeps its plain-language decoder; any other gets a
  * generic one naming the parent. A slider without a manifest default rests at
- * its minimum but dispatches nothing until it is moved.
+ * its minimum but reads "not overridden" and dispatches nothing until it is moved.
  */
 export function parentParamDefs(parent: ParentMaterialRef): ParamDef[] {
   const asset = parent.path.split('/').pop() ?? parent.path;
@@ -78,6 +80,7 @@ export function parentParamDefs(parent: ParentMaterialRef): ParamDef[] {
       max: s.max,
       defaultValue: s.defaultValue ?? s.min,
       step: s.step,
+      ...(s.defaultValue === null ? { unset: true } : {}),
       plain: known?.plain ?? {
         label: s.name,
         explanation: `A scalar the ${asset} master exposes; the instance overrides it.`,

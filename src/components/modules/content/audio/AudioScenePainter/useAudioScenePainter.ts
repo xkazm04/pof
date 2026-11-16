@@ -10,7 +10,7 @@ import { useElementSize } from '@/hooks/useElementSize';
 import { resolveMembership } from '@/lib/audio-scene-ops';
 import type { ListenerPoint } from '@/lib/audio-scene-audition';
 import { useSceneBuffer } from '@/components/modules/content/audio/AudioView/useSceneBuffer';
-import { MINIMAP_W, MINIMAP_H, ZONE_COLORS } from './constants';
+import { MINIMAP_W, MINIMAP_H, NEW_ZONE_PALETTE, DRAG_THRESHOLD_PX } from './constants';
 import type { AudioScenePainterProps, PaintMode, DrawState, SceneDraft } from './types';
 
 export function useAudioScenePainter({
@@ -59,6 +59,14 @@ export function useAudioScenePainter({
   // without one the painter builds its own over the write callbacks.
   /** True once a pointer gesture has actually moved something. */
   const gestureDirty = useRef(false);
+  /**
+   * Screen-space origin of the current item press. A press stays a CLICK until the
+   * pointer travels DRAG_THRESHOLD_PX from here; before that nothing is staged, so
+   * a selection click with hand jitter never writes the scene.
+   */
+  const pressOrigin = useRef({ x: 0, y: 0 });
+  const pastThreshold = useCallback((e: { clientX: number; clientY: number }) => gestureDirty.current
+    || Math.hypot(e.clientX - pressOrigin.current.x, e.clientY - pressOrigin.current.y) >= DRAG_THRESHOLD_PX, []);
 
   const serverScene = useMemo<SceneDraft>(() => ({ zones, emitters }), [zones, emitters]);
 
@@ -124,7 +132,12 @@ export function useAudioScenePainter({
       return;
     }
     const target = e.target as SVGElement;
-    if (target !== svgRef.current && target.tagName !== 'rect') {
+    // Background, grid rects, and zone BODIES of either shape reach the tools. A
+    // zone body only gets here outside select mode (select-mode presses are owned
+    // by `handleZoneMouseDown`). Matching on tagName alone let a rect zone through
+    // but swallowed a press on a circle zone, so nothing could be placed inside it.
+    const onZoneBody = target.hasAttribute?.('data-zone-id') ?? false;
+    if (target !== svgRef.current && target.tagName !== 'rect' && !onZoneBody) {
       return;
     }
 
@@ -174,7 +187,7 @@ export function useAudioScenePainter({
     onSelectEmitter(null);
   }, [paintMode, getSVGPoint, baseScene, runCommit, onSelectEmitter, onSelectZone, view]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent | MouseEvent) => {
     if (listenerDrag.current) {
       setListener(getSVGPoint(e));
       return;
@@ -186,6 +199,7 @@ export function useAudioScenePainter({
     }
 
     if (resizeState) {
+      if (!pastThreshold(e)) return;
       const pt = getSVGPoint(e);
       const dx = pt.x - resizeState.startX;
       const dy = pt.y - resizeState.startY;
@@ -206,6 +220,7 @@ export function useAudioScenePainter({
     }
 
     if (dragState) {
+      if (!pastThreshold(e)) return;
       const pt = getSVGPoint(e);
       gestureDirty.current = true;
       const x = pt.x - dragState.offsetX;
@@ -215,7 +230,7 @@ export function useAudioScenePainter({
         ? { kind: 'moveZone', id: dragState.id, x, y }
         : { kind: 'moveEmitter', id: dragState.id, x, y }]);
     }
-  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, stageOps]);
+  }, [drawState, resizeState, isPanning, dragState, getSVGPoint, stageOps, pastThreshold]);
 
   const handleMouseUp = useCallback(() => {
     listenerDrag.current = false;
@@ -245,7 +260,7 @@ export function useAudioScenePainter({
           attenuationRadius: 200,
           occlusionMode: 'medium',
           priority: 5,
-          color: Object.values(ZONE_COLORS)[base.zones.length % Object.values(ZONE_COLORS).length],
+          color: NEW_ZONE_PALETTE[base.zones.length % NEW_ZONE_PALETTE.length],
         };
         runCommit([{ kind: 'addZone', zone: newZone }]);
         onSelectZone(id);
@@ -270,12 +285,35 @@ export function useAudioScenePainter({
     setIsPanning(false);
   }, [drawState, baseScene, runCommit, onSelectZone, onSelectEmitter]);
 
+  // A gesture outlives the svg: the toolbar, minimap and zoom cluster overlay the
+  // canvas, so the pointer crossing one fires svg `mouseleave`, which must NOT end
+  // the drag/resize/draw. Move and up are also tracked on the window; presses that
+  // land inside the svg are still handled by its own React handlers (no double run).
+  const moveRef = useRef(handleMouseMove);
+  const upRef = useRef(handleMouseUp);
+  useEffect(() => {
+    moveRef.current = handleMouseMove;
+    upRef.current = handleMouseUp;
+  }, [handleMouseMove, handleMouseUp]);
+  useEffect(() => {
+    const outsideSvg = (e: MouseEvent) => !(e.target instanceof Node && svgRef.current?.contains(e.target));
+    const move = (e: MouseEvent) => { if (outsideSvg(e)) moveRef.current(e); };
+    const up = (e: MouseEvent) => { if (outsideSvg(e)) upRef.current(); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+  }, []);
+
   // ── Item interaction ──
 
   const handleZoneMouseDown = useCallback((e: React.MouseEvent, zoneId: string) => {
     if (paintMode !== 'select') return;
     e.stopPropagation();
     const pt = getSVGPoint(e);
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
     const zone = sceneZones.find((z) => z.id === zoneId);
     if (!zone) return;
     setDragState({ id: zoneId, type: 'zone', offsetX: pt.x - zone.x, offsetY: pt.y - zone.y });
@@ -287,6 +325,7 @@ export function useAudioScenePainter({
     if (paintMode !== 'select') return;
     e.stopPropagation();
     const pt = getSVGPoint(e);
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
     const em = sceneEmitters.find((em) => em.id === emitterId);
     if (!em) return;
     setDragState({ id: emitterId, type: 'emitter', offsetX: pt.x - em.x, offsetY: pt.y - em.y });
@@ -297,6 +336,7 @@ export function useAudioScenePainter({
   const handleResizeStart = useCallback((e: React.MouseEvent, zoneId: string, handle: string) => {
     e.stopPropagation();
     const pt = getSVGPoint(e);
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
     const zone = sceneZones.find((z) => z.id === zoneId);
     if (!zone) return;
     setResizeState({ zoneId, handle, startX: pt.x, startY: pt.y, origW: zone.width, origH: zone.height });
@@ -313,6 +353,44 @@ export function useAudioScenePainter({
     runCommit([{ kind: 'deleteEmitter', id: emitterId }]);
     if (selectedEmitterId === emitterId) onSelectEmitter(null);
   }, [runCommit, selectedEmitterId, onSelectEmitter]);
+
+  // ── Keyboard editing of a focused item ──
+  // Enter/Space selects, Delete/Backspace removes, arrows nudge (Shift = 10). Nudges
+  // stage into the same op buffer a drag uses and commit once, on key release.
+  const nudgeDirty = useRef(false);
+  const handleItemKeyDown = useCallback((e: React.KeyboardEvent, kind: 'zone' | 'emitter', id: string) => {
+    if (paintMode !== 'select') return;
+    const select = () => {
+      if (kind === 'zone') { onSelectZone(id); onSelectEmitter(null); } else { onSelectEmitter(id); onSelectZone(null); }
+    };
+    const step = e.shiftKey ? 10 : 1;
+    const arrows: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step],
+    };
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault(); e.stopPropagation(); select();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault(); e.stopPropagation();
+      if (kind === 'zone') deleteZone(id); else deleteEmitter(id);
+      containerRef.current?.focus();
+    } else if (arrows[e.key]) {
+      e.preventDefault(); e.stopPropagation();
+      const item = kind === 'zone' ? baseScene().zones.find((z) => z.id === id) : baseScene().emitters.find((em) => em.id === id);
+      if (!item) return;
+      const [dx, dy] = arrows[e.key];
+      nudgeDirty.current = true;
+      select();
+      stageOps([kind === 'zone'
+        ? { kind: 'moveZone', id, x: item.x + dx, y: item.y + dy }
+        : { kind: 'moveEmitter', id, x: item.x + dx, y: item.y + dy }]);
+    }
+  }, [paintMode, baseScene, stageOps, onSelectZone, onSelectEmitter, deleteZone, deleteEmitter, containerRef]);
+
+  const handleItemKeyUp = useCallback((e: React.KeyboardEvent) => {
+    if (!e.key.startsWith('Arrow') || !nudgeDirty.current) return;
+    nudgeDirty.current = false;
+    runCommit();
+  }, [runCommit]);
 
   // ── Zoom / pan viewport controls ──
   // The painter applies `view` as a `translate … scale` transform on the inner
@@ -448,6 +526,8 @@ export function useAudioScenePainter({
     resetView,
     fitToContent,
     handleKeyDown,
+    handleItemKeyDown,
+    handleItemKeyUp,
     minimap,
     handleMinimapDown,
     majorGrid,

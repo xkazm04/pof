@@ -39,6 +39,19 @@ function sanitizeConfigPatch(body: Record<string, unknown>): Partial<GateNotifyC
   return patch;
 }
 
+/**
+ * Why a webhook URL cannot be stored, or null when it is acceptable. The server fetches
+ * it, so only a well-formed http(s) URL is kept; empty clears the webhook. A policy on
+ * private/loopback hosts is deliberately NOT applied here (a local receiver is legitimate).
+ */
+function webhookUrlError(url: string): string | null {
+  if (url === '') return null;
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { return 'webhookUrl must be an absolute http(s) URL'; }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return 'webhookUrl must use http or https';
+  return null;
+}
+
 /** A representative pass→fail regression used by the "Send test" button. */
 const SAMPLE_PAYLOAD: EventPayload<'gate.verdict.changed'> = {
   catalogId: 'demo',
@@ -58,6 +71,10 @@ export async function POST(request: Request) {
   } catch {
     return apiError('invalid JSON body', 400);
   }
+  // A body that is not a JSON object is the caller's error (400), never a saved empty patch.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
   const action = (body.action as string) ?? 'save';
 
   try {
@@ -65,6 +82,8 @@ export async function POST(request: Request) {
       case 'save': {
         const patch = sanitizeConfigPatch(body);
         if (!patch) return apiError('invalid notify config fields', 400);
+        const urlProblem = patch.webhookUrl === undefined ? null : webhookUrlError(patch.webhookUrl);
+        if (urlProblem) return apiError(urlProblem, 400);
         return apiSuccess({ config: setGateNotifyConfig(patch) });
       }
       case 'test': {

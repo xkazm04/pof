@@ -78,8 +78,10 @@ function BatchBlock({ t, batch, n, latest, divider, selectedId, onSelect, column
             : <em style={{ color: t.muted }}>no direction given</em>}
         </span>
         <button
+          type="button"
           onClick={() => setShowPrompt((v) => !v)}
-          className={t.fontMono}
+          aria-expanded={showPrompt}
+          className={`focus-ring ${t.fontMono}`}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: t.muted, textDecoration: 'underline' }}
         >
           {showPrompt ? 'hide prompt' : 'view prompt'}
@@ -100,7 +102,7 @@ function BatchBlock({ t, batch, n, latest, divider, selectedId, onSelect, column
               data-testid={`candidate-${c.id}`}
               onClick={() => onSelect(c.id)}
               aria-pressed={sel}
-              aria-label={`Batch ${n} candidate ${i + 1}${sel ? ' (selected)' : ''}${batch.direction ? ` — ${batch.direction}` : ''}`}
+              aria-label={`Batch ${n} candidate ${i + 1}${sel ? ' (selected)' : ''}${c.caption ? ` — ${c.caption}` : ''}${batch.direction ? ` — ${batch.direction}` : ''}`}
               title={batch.direction || batch.prompt}
               style={{ display: 'grid', gap: 4, cursor: 'pointer', background: 'transparent', border: 'none', padding: 0, textAlign: 'left' }}
             >

@@ -166,7 +166,7 @@ function Legend() {
       </span>
       <span aria-hidden="true" style={{ width: 1, height: 14, background: 'var(--lab-line)' }} />
       <span title="The PARALLEL craft axis on each cell's second line: how the output measures against real AAA practice (A0 UNGAUGED, A1 HOBBY, A2 INDIE, A3 AA, A4 AAA-PARITY). ^ = at the medium's recorded roof (an achievement — e.g. 3D meshes cap at A2 by market assumption). ~ = content changed since it was gauged. Orthogonal to the R-ladder and provably display-only.">
-        <span style={{ color: 'var(--lab-text)' }}>A0–A4</span> craft · ^ at roof · ~ stale
+        <span style={{ color: 'var(--lab-text)' }}>A0–A4</span> craft · ^ at roof · ~ stale · n/m partly gauged
       </span>
     </div>
   );
@@ -404,7 +404,7 @@ export function PipelinesView({
         const e = perLens.get(cc.lens) ?? { toRoof: 0, gauged: 0, cells: 0 };
         e.toRoof += d;
         e.cells += 1;
-        if (cc.craft.level !== 'A0' && cc.craft.state !== 'stale') e.gauged += 1;
+        if (cc.craft.level !== 'A0' && cc.craft.state !== 'stale' && !cc.coverage) e.gauged += 1;
         perLens.set(cc.lens, e);
       }
     }
@@ -437,7 +437,7 @@ export function PipelinesView({
       <div role="group" aria-label="Highlight steps by production readiness" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)' }}>
         <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)', alignSelf: 'center', width: 56 }}>readiness</span>
         {LADDER.map((level: ReadinessLevel) => {
-          const active = highlight?.kind === 'readiness' && highlight.value === level;
+          const active = activeHighlight?.kind === 'readiness' && activeHighlight.value === level;
           const count = rungCounts.get(level) ?? 0;
           const name = READINESS_NAME[level];
           return (
@@ -454,7 +454,7 @@ export function PipelinesView({
           );
         })}
         {(['waiting', 'blocked'] as const).map((state: ReadinessState) => {
-          const active = highlight?.kind === 'state' && highlight.value === state;
+          const active = activeHighlight?.kind === 'state' && activeHighlight.value === state;
           const count = stateCounts.get(state) ?? 0;
           const waiting = state === 'waiting';
           return (
@@ -508,7 +508,7 @@ export function PipelinesView({
             key={e.name}
             label={e.name}
             count={e.count}
-            active={highlight?.kind === 'engine' && highlight.value === e.name}
+            active={activeHighlight?.kind === 'engine' && activeHighlight.value === e.name}
             title={`Highlight the ${e.count} step${e.count === 1 ? '' : 's'} powered by ${e.name}`}
             onClick={() => toggle('engine', e.name)}
           />

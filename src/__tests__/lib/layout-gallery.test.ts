@@ -45,7 +45,7 @@ describe('scanSeeds', () => {
   it('generates at the preview cap even for a 512x512 spec', () => {
     const spec = specOf({ gridWidth: 512, gridHeight: 512 });
     const [c] = scanSeeds(spec, { count: 1 });
-    const direct = generatePreview(previewConfigFromSpec({ ...spec, seedLabel: c.seedLabel }));
+    const direct = generatePreview(previewConfigFromSpec({ ...spec, seedLabel: c.seedLabel, seedValue: c.seedValue }));
     expect(direct.width).toBeLessThanOrEqual(DEFAULT_MAX_PREVIEW_SIZE);
     expect(c.stats).toEqual(direct.stats);
   });

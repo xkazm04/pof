@@ -30,7 +30,7 @@ describe('Input tab - one resolved binding state drives every surface', () => {
     renderTab();
     expect(screen.getByLabelText('Space: unbound')).toBeTruthy();
     expect(screen.getByLabelText('Ctrl: IA_Dodge')).toBeTruthy();
-    expect(screen.getByText('19 bindings active')).toBeTruthy();
+    expect(screen.getByText('19 keys bound')).toBeTruthy();
     expect(screen.queryByText(/conflicts? detected/i)).toBeNull();
     cleanup();
 
@@ -41,7 +41,7 @@ describe('Input tab - one resolved binding state drives every surface', () => {
   it('case 4 (render): a conflicting rebind is counted from the resolved keyMap everywhere', () => {
     store.getState().setBindingOverride('IA_Dodge', 'W');
     renderTab();
-    expect(screen.getByText('18 bindings active')).toBeTruthy();
+    expect(screen.getByText('18 keys bound')).toBeTruthy();
     expect(screen.getByLabelText('Space: unbound')).toBeTruthy();
     expect(screen.getByText('1 conflict')).toBeTruthy();
     cleanup();

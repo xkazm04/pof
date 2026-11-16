@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { getAudioScene } from '@/lib/audio-scene-db';
 import { listSets } from '@/lib/audio-asset-db';
 import { getAudioDb } from '@/lib/audio-db-conn';
@@ -30,9 +30,13 @@ function resolveAssetBindings(): AudioAssetBindings {
 
 // POST: generate code from an audio scene document
 export async function POST(req: NextRequest) {
+  // A malformed or non-object body is a 400, not the catch-all 500 below.
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
+
   try {
-    const body = await req.json();
-    const { sceneId, moduleName, apiMacro } = body;
+    const { sceneId, moduleName, apiMacro } = body as { sceneId?: number; moduleName?: string; apiMacro?: string };
 
     if (!sceneId) return apiError('sceneId required', 400);
 

@@ -53,6 +53,7 @@ import { useNavigationStore } from '@/stores/navigationStore';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import type { CLISessionState } from '@/components/cli/store/cliPanelStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { useTaskDAGStore } from '@/stores/taskDAGStore';
 
 /** Renders the attribution the hook yields, beside the renderer, in one tree. */
 function AttributionProbe() {
@@ -205,5 +206,36 @@ describe('the maximized terminal is attributed to the pane the user SEES', () =>
       navigate(cat, sub);
       expect(attribution(container)).toBe(visiblePane(container));
     }
+  });
+});
+
+describe('a workflow node terminal is kept mounted off-screen', () => {
+  beforeEach(() => {
+    useNavigationStore.setState({ activeCategory: null, activeSubModule: null });
+    useCLIPanelStore.setState({ sessions: {}, tabOrder: [], maximizedTabId: null });
+    useTaskDAGStore.setState({ activeExecution: null });
+  });
+
+  it('mounts the running node tab, hidden, while the user is on another module', () => {
+    seedSession('tab-node', 'arpg-loot');
+    useCLIPanelStore.setState({ maximizedTabId: null });
+    navigate('evaluator', null);
+    const { container } = render(<Harness />);
+    expect(container.querySelector('[data-testid="terminal-tab-node"]')).toBeNull();
+
+    act(() => {
+      useTaskDAGStore.setState({
+        activeExecution: {
+          id: 'e', workflowId: 'w', workflowName: 'W', status: 'running',
+          nodeStates: { n: { nodeId: 'n', status: 'running', retryCount: 0, sessionTabId: 'tab-node' } },
+          totalNodes: 1, completedNodes: 0, failedNodes: 0, runningNodeIds: ['n'],
+          currentStepLabel: '', startedAt: '2026-11-08T00:00:00.000Z',
+        },
+      });
+    });
+
+    const el = container.querySelector('[data-testid="terminal-tab-node"]');
+    expect(el?.getAttribute('data-visible')).toBe('false');
+    act(() => { useTaskDAGStore.setState({ activeExecution: null }); });
   });
 });

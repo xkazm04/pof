@@ -2,19 +2,19 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { CheckCircle2, Layers } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
 import type { SubGenreId } from '@/types/telemetry';
 import { GenreTemplateGallery } from '@/components/modules/core-engine/GenreTemplateGallery';
-import { SUB_GENRE_STYLES } from './constants';
+import { SUB_GENRE_STYLES, FALLBACK_SUB_GENRE_STYLE } from './constants';
 import { formatSubGenreName } from './helpers';
 
 export function AcceptedGenres({ genres }: { genres: SubGenreId[] }) {
   const prefersReduced = useReducedMotion();
   const [openGenre, setOpenGenre] = useState<SubGenreId | null>(null);
   const openStyle = openGenre
-    ? SUB_GENRE_STYLES[openGenre] ?? { color: 'var(--text-muted)', icon: Layers }
+    ? SUB_GENRE_STYLES[openGenre] ?? FALLBACK_SUB_GENRE_STYLE
     : null;
   return (
     <motion.div
@@ -38,7 +38,7 @@ export function AcceptedGenres({ genres }: { genres: SubGenreId[] }) {
       </p>
       <div className="flex flex-wrap gap-2">
         {genres.map(g => {
-          const style = SUB_GENRE_STYLES[g] ?? { color: 'var(--text-muted)', icon: Layers };
+          const style = SUB_GENRE_STYLES[g] ?? FALLBACK_SUB_GENRE_STYLE;
           const Icon = style.icon;
           const isOpen = openGenre === g;
           return (

@@ -1,6 +1,7 @@
 'use client';
 
 import { MCP_FORM_RADIUS } from '@/components/blender-mcp/McpFormControls';
+import { SUCCESS_TEXT, WARNING_TEXT, ERROR_TEXT } from '@/lib/blender-mcp/status-tokens';
 import type { LodPlan, LodGrade, LodLevelGrade, Lod0Verdict } from '@/lib/visual-gen/lod-plan';
 
 /**
@@ -10,9 +11,9 @@ import type { LodPlan, LodGrade, LodLevelGrade, Lod0Verdict } from '@/lib/visual
  */
 
 const fmt = (n: number) => n.toLocaleString('en-US');
-const OK = 'text-green-400';
-const WARN = 'text-amber-400';
-const BAD = 'text-red-400';
+const OK = SUCCESS_TEXT;
+const WARN = WARNING_TEXT;
+const BAD = ERROR_TEXT;
 const MUTED = 'text-text-muted';
 
 const LOD0_LABEL: Record<Lod0Verdict, [string, string]> = {

@@ -121,3 +121,55 @@ describe('after a real store restore', () => {
     expect(filterAdoptSuggestions(suggestions, undone)).toHaveLength(2);
   });
 });
+
+describe('planAdoption — the caution states what the evidence licenses', () => {
+  const plan = (over: Partial<ABTest>) => {
+    const r = planAdoption({ test: test(over), variants });
+    if (!r.ok) throw new Error('plan refused');
+    return r.data;
+  };
+
+  it('a weak-band win is a lead, with its counts and basis', () => {
+    const caution = plan({ variantASuccesses: 5, variantBSuccesses: 8 }).caution;
+    expect(caution).toMatch(/lead, not a result/);
+    expect(caution).toMatch(/10 vs 10/);
+    expect(caution).toMatch(/self-reported/);
+  });
+
+  it('a no-band win says no reliable difference was detected', () => {
+    expect(plan({ variantASuccesses: 5, variantBSuccesses: 6 }).caution).toMatch(/No reliable difference/);
+  });
+
+  it('a strong win carries no caution', () => {
+    expect(plan({ variantASuccesses: 1, variantBSuccesses: 9 }).caution).toBeNull();
+  });
+
+  it('a contested win still leads with the contest', () => {
+    const p = plan({ variantASuccesses: 9, variantBSuccesses: 5 });
+    expect(p.contested).toBe(true);
+    expect(p.caution).toMatch(/favours the other/);
+  });
+});
+
+describe('filterAdoptSuggestions — one card per item, naming the winner the action adopts', () => {
+  const adopt = (variantId: string): EvolutionSuggestion => ({
+    type: 'adopt-winner', moduleId: mod, checklistItemId: 'ac-1', message: `${variantId} won`, variantId, confidence: 0.9,
+  });
+  const older = test({ id: 'old', winnerId: 'vb', concludedAt: '2026-01-02T00:00:00.000Z' });
+  const newer = test({ id: 'new', winnerId: 'vc', concludedAt: '2026-02-01T00:00:00.000Z' });
+  const three = [variant('va', true), variant('vb'), variant('vc')];
+
+  it('drops the suggestion for a winner a newer test replaced', () => {
+    const kept = filterAdoptSuggestions([adopt('vb'), adopt('vc')], three, [older, newer]);
+    expect(kept.map((s) => s.variantId)).toEqual(['vc']);
+  });
+
+  it('keeps one card when two tests crowned the same winner', () => {
+    const again = test({ id: 'again', winnerId: 'vb', concludedAt: '2026-03-01T00:00:00.000Z' });
+    expect(filterAdoptSuggestions([adopt('vb'), adopt('vb')], three, [older, again])).toHaveLength(1);
+  });
+
+  it('without loaded tests it still only hides the served version', () => {
+    expect(filterAdoptSuggestions([adopt('va'), adopt('vb')], three).map((s) => s.variantId)).toEqual(['vb']);
+  });
+});

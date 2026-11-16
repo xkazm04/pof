@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { COACH_LADDER, COACH_PRIORITY_RANK, pickLadderIssue } from '@/components/layout-lab/coachLadder';
+import { COACH_HINT, COACH_LADDER, COACH_PRIORITY_RANK, pickLadderIssue } from '@/components/layout-lab/coachLadder';
 import { pickEntityIssue } from '@/components/layout-lab/globalCoachModel';
 import { pickNextActionableStep } from '@/components/layout-lab/nextActionableStep';
 import type { StepDisplayStatus, StepDrift } from '@/components/layout-lab/hooks/useEntityArtifacts';
@@ -64,5 +64,33 @@ describe('the two coaches agree', () => {
     expect(entity?.step).toBe('B');
     expect(entity?.priority).toBe('drift');
     expect(entity?.actionWord).toBe('Review');
+  });
+});
+
+describe('one verb per rung across both coaches', () => {
+  // The step under test sits at index 1 (index 0 keeps the declared "Start here" variant).
+  const by = (status: StepDisplayStatus) => statuses(['pass', status, 'pass', 'pass']);
+  const rungs: Array<[string, StepDisplayStatus]> = [
+    ['fail', 'fail'], ['pending', 'pending'], ['deferred', 'deferred'], ['unproduced', 'unproduced'],
+  ];
+
+  it.each(rungs)('NextStepCoach names the %s rung with COACH_HINT.actionWord', (priority, status) => {
+    const next = pickNextActionableStep(steps, by(status), noDrift);
+    expect(next?.actionWord).toBe(COACH_HINT[priority as keyof typeof COACH_HINT].actionWord);
+  });
+
+  it('names the drift rung with COACH_HINT.actionWord', () => {
+    expect(pickNextActionableStep(steps, by('pass'), drift('B'))?.actionWord).toBe(COACH_HINT.drift.actionWord);
+  });
+
+  it('keeps "Start here" for an index-0 step that is not yet finished', () => {
+    expect(pickNextActionableStep(steps, statuses(['unproduced', 'pass', 'pass', 'pass']), noDrift)?.actionWord).toBe('Start here');
+    expect(pickNextActionableStep(steps, statuses(['pending', 'pass', 'pass', 'pass']), noDrift)?.actionWord).toBe('Start here');
+  });
+
+  it('describes pending as held (acceptance names what is missing), not as resolving', () => {
+    const hint = pickNextActionableStep(steps, by('pending'), noDrift)?.plainHint ?? '';
+    expect(hint).toMatch(/held/);
+    expect(hint).not.toMatch(/resolving/);
   });
 });

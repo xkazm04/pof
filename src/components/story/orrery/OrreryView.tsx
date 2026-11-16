@@ -9,12 +9,16 @@
  * of geometry lives behind the stage's camera, and every derived fact lives in the model.
  *
  * Ported from the winning prototype of the `storymap` design contest (variant A/3, "Orrery"),
- * chosen by the owner for its compactness and the smoothness of its navigation. Two themes ship:
- * `orrery` is a faithful translation of the winner, `blueprint` re-themes it into PoF's house
- * surface. They differ in hue and surface only — every structural value is shared.
+ * chosen by the owner for its compactness and the smoothness of its navigation.
+ *
+ * **`blueprint` is the product theme.** The owner reviewed both against the real fixtures and kept
+ * the house surface. The `orrery` palette is retained only as the REGRESSION REFERENCE the style
+ * contract measures against (`scripts/orrery-contract.mjs`): it is the one rendering whose computed
+ * styles can still be compared to the contest winner's, which is how we know a later edit has not
+ * quietly undone the design. It is not offered as a product choice.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { OrreryChrome } from './OrreryChrome';
 import { OrreryPanel } from './OrreryPanel';
@@ -22,8 +26,10 @@ import { OrreryStage, type OrreryStageControls } from './OrreryStage';
 import './themes/orrery.css';
 import './themes/blueprint.css';
 
-import { buildOrreryModel, type LineDetail, type NodeIx } from '@/lib/story/orrery';
-import type { StoryGraph } from '@/lib/story/types';
+import { buildOrreryModel, type LineDetail, type NodeIx, type OrreryModel } from '@/lib/story/orrery';
+import { buildMergedModel, withLeads } from '@/lib/story/orrery/walk';
+import type { MergedEvidence } from '@/lib/story/evidence';
+import type { StoryFinding, StoryGraph } from '@/lib/story/types';
 
 export type OrreryTheme = 'orrery' | 'blueprint';
 
@@ -38,6 +44,20 @@ export interface OrreryDataset {
   key: string;
   label: string;
   graph: StoryGraph;
+  /** Where the graph is stored, when it is (`/api/story/graphs`): what the Walk control needs. */
+  project?: string;
+  graphId?: string;
+  /** The stored canonical hash: the `currentHash` merged evidence is read against. */
+  hash?: string;
+}
+
+/** What an `extra` overlay (the Walk control) is told about the surface it floats over. */
+export interface OrreryExtraContext {
+  model: OrreryModel;
+  datasetKey: string;
+  selected: NodeIx;
+  lens: string | null;
+  onLens: (lens: string | null) => void;
 }
 
 export interface OrreryViewProps {
@@ -47,6 +67,15 @@ export interface OrreryViewProps {
   onActiveKeyChange?: (key: string) => void;
   theme?: OrreryTheme;
   className?: string;
+  /**
+   * Evidence override for the ACTIVE dataset: imported + sampled, merged (`mergeEvidence`). When
+   * given, the lens reads it instead of the document's own `evidence`.
+   */
+  evidence?: MergedEvidence | null;
+  /** Walker LEADS for the active dataset: an Audit group of their own, never in the total. */
+  leads?: readonly StoryFinding[] | null;
+  /** An overlay control floated over the wheel (the Walk control). */
+  renderExtra?: (ctx: OrreryExtraContext) => ReactNode;
 }
 
 const DEFAULT_LAYERS: OrreryLayerToggles = {
@@ -60,8 +89,11 @@ export function OrreryView({
   datasets,
   activeKey,
   onActiveKeyChange,
-  theme = 'orrery',
+  theme = 'blueprint',
   className,
+  evidence,
+  leads,
+  renderExtra,
 }: OrreryViewProps) {
   const [ownKey, setOwnKey] = useState(() => datasets[0]?.key ?? '');
   const key = activeKey ?? ownKey;
@@ -86,10 +118,15 @@ export function OrreryView({
 
   // The model is a pure function of the document, so it is memoised on the document alone. It is
   // the single authority for every derived fact on this surface; nothing below recomputes one.
-  const model = useMemo(
-    () => (dataset ? buildOrreryModel(dataset.graph, dataset.key) : null),
-    [dataset],
-  );
+  // An evidence override (a finished walk) rebuilds it over the merged evidence; leads add one
+  // Audit group of their own.
+  const model = useMemo(() => {
+    if (!dataset) return null;
+    const base = evidence
+      ? buildMergedModel(dataset.graph, dataset.key, evidence)
+      : buildOrreryModel(dataset.graph, dataset.key, { currentHash: dataset.hash });
+    return leads ? withLeads(base, leads) : base;
+  }, [dataset, evidence, leads]);
 
   const chooseDataset = useCallback(
     (next: string) => {
@@ -177,6 +214,7 @@ export function OrreryView({
         onHelp={setHelp}
         onZoom={handleZoom}
         onFit={handleFit}
+        extra={renderExtra?.({ model, datasetKey: dataset.key, selected, lens, onLens: setLens })}
       />
       <div data-role="orrery-main">
         <OrreryStage

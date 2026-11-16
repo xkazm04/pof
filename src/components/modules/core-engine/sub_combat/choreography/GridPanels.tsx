@@ -18,7 +18,7 @@ export function ArchetypePalette({ selectedArchetype, onSelectArchetype, placeLe
         const color = ARCHETYPE_COLORS[arch.id] ?? ACCENT_CYAN;
         const isActive = selectedArchetype === arch.id;
         return (
-          <button key={arch.id} onClick={() => onSelectArchetype(arch.id)}
+          <button key={arch.id} type="button" aria-pressed={isActive} onClick={() => onSelectArchetype(arch.id)}
             className="flex items-center gap-1.5 w-full px-2 py-1 text-xs font-mono font-bold rounded-md border transition-colors text-left"
             style={{ borderColor: isActive ? color : 'var(--border)', backgroundColor: isActive ? `${withOpacity(color, OPACITY_10)}` : 'transparent', color: isActive ? color : 'var(--text-muted)' }}>
             <span className="w-4 h-4 rounded-sm flex items-center justify-center text-xs"
@@ -30,13 +30,13 @@ export function ArchetypePalette({ selectedArchetype, onSelectArchetype, placeLe
       <div className="h-px bg-border/30" />
       <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Level</div>
       <div className="flex items-center gap-1">
-        <input type="range" min={1} max={20} value={placeLevel} onChange={(e) => onPlaceLevel(Number(e.target.value))}
+        <input type="range" min={1} max={20} value={placeLevel} aria-label="Placed enemy level" onChange={(e) => onPlaceLevel(Number(e.target.value))}
           className="flex-1 h-1 rounded-full appearance-none bg-border cursor-pointer" style={{ accentColor: ACCENT_CYAN }} />
         <span className="text-xs font-mono font-bold w-5 text-center" style={{ color: ACCENT_CYAN }}>{placeLevel}</span>
       </div>
       <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Player Lv</div>
       <div className="flex items-center gap-1">
-        <input type="range" min={1} max={20} value={playerLevel} onChange={(e) => onPlayerLevel(Number(e.target.value))}
+        <input type="range" min={1} max={20} value={playerLevel} aria-label="Player level" onChange={(e) => onPlayerLevel(Number(e.target.value))}
           className="flex-1 h-1 rounded-full appearance-none bg-border cursor-pointer" style={{ accentColor: ACCENT_EMERALD }} />
         <span className="text-xs font-mono font-bold w-5 text-center" style={{ color: ACCENT_EMERALD }}>{playerLevel}</span>
       </div>

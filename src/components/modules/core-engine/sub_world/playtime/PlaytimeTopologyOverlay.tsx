@@ -15,10 +15,32 @@ import {
 } from '../_shared/data';
 import type { PlaytimePathMode } from '../_shared/data';
 
-const SVG_W = 560;
-const SVG_H = 340;
 const TOPO_OX = 50;
 const TOPO_OY = 20;
+/* Half the width of a node's time badge, and how far it reaches below the node. */
+const BADGE_HALF_W = 26;
+const BADGE_DROP = 22;
+const VIEW_PADDING = 12;
+
+/* Fitted to the node data, like TopologyGraph: a fixed 560 x 340 frame left the
+   zones at x 750 and 900 outside the panel, which clips its overflow. */
+const VIEW_BOX = (() => {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of TOPOLOGY_NODES) {
+    const r = (n.size ?? 22) / 2;
+    const nx = n.x! + TOPO_OX;
+    const ny = n.y! + TOPO_OY;
+    const halfW = Math.max(r, BADGE_HALF_W);
+    minX = Math.min(minX, nx - halfW);
+    maxX = Math.max(maxX, nx + halfW);
+    minY = Math.min(minY, ny - r);
+    maxY = Math.max(maxY, ny + r + BADGE_DROP);
+  }
+  return {
+    x: minX - VIEW_PADDING, y: minY - VIEW_PADDING,
+    w: maxX - minX + VIEW_PADDING * 2, h: maxY - minY + VIEW_PADDING * 2,
+  };
+})();
 
 interface OverlayProps {
   mode: PlaytimePathMode;
@@ -38,6 +60,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange, world }: OverlayPr
         <div className="flex items-center gap-1 bg-surface-deep rounded-full p-0.5 border border-border/40">
           <button
             type="button"
+            aria-pressed={mode === 'critical'}
             onClick={() => onModeChange('critical')}
             className="px-2.5 py-1 text-xs font-mono uppercase tracking-[0.15em] rounded-full transition-all"
             style={mode === 'critical' ? { backgroundColor: withOpacity(ACCENT_ORANGE, OPACITY_15), color: ACCENT_ORANGE, boxShadow: `${GLOW_MD} ${withOpacity(ACCENT_ORANGE, OPACITY_20)}` } : { color: 'var(--text-muted)' }}
@@ -46,6 +69,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange, world }: OverlayPr
           </button>
           <button
             type="button"
+            aria-pressed={mode === 'all'}
             onClick={() => onModeChange('all')}
             className="px-2.5 py-1 text-xs font-mono uppercase tracking-[0.15em] rounded-full transition-all"
             style={mode === 'all' ? { backgroundColor: withOpacity(ACCENT_ORANGE, OPACITY_15), color: ACCENT_ORANGE, boxShadow: `${GLOW_MD} ${withOpacity(ACCENT_ORANGE, OPACITY_20)}` } : { color: 'var(--text-muted)' }}
@@ -56,7 +80,13 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange, world }: OverlayPr
       </div>
 
       <div className="flex justify-center min-h-[240px] bg-surface-deep/30 rounded-lg p-2">
-        <svg width={SVG_W} height={SVG_H} viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="overflow-visible">
+        <svg
+          viewBox={`${VIEW_BOX.x} ${VIEW_BOX.y} ${VIEW_BOX.w} ${VIEW_BOX.h}`}
+          className="w-full h-auto"
+          style={{ maxWidth: VIEW_BOX.w }}
+          role="img"
+          aria-label={`Zone topology with cumulative playtime, ${mode === 'critical' ? 'critical path' : 'all paths'}`}
+        >
           {/* Edges */}
           {TOPOLOGY_EDGES.map((edge) => {
             const src = TOPOLOGY_NODES.find(n => n.id === edge.from);

@@ -3,6 +3,12 @@ import {
   ITEM_ATTR_SCHEMA,
   ITEM_ATTR_KEYS,
   ITEMS_BESPOKE_CHECKERS,
+  MIN_ANIM_CLIPS,
+  MIN_SFX_CUES,
+  DEFAULT_TRI_CAP,
+  DEFAULT_VFX_MS_CAP,
+  REQUIRED_PBR_MAPS,
+  formatGpuMs,
 } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
 import { gradeGallerySelection } from '@/lib/catalog/acceptance/galleryArtifact';
 import { readHistory } from './shared/genHistory';
@@ -65,6 +71,7 @@ function declared(entity: LabEntity, step: string): string[] {
  * Produce actually writes.
  */
 export type { ItemAttr } from '@/lib/catalog/acceptance/itemsBespokeCheckers';
+export { formatGpuMs };
 export { ITEM_ATTR_SCHEMA };
 /** Attribute key list — derived from the schema; drives accept() / copy completeness. */
 const ATTR_KEYS = ITEM_ATTR_KEYS;
@@ -322,7 +329,7 @@ function iconCopy(data: Record<string, unknown>): AcceptanceCopy {
 }
 
 function meshCopy(data: Record<string, unknown>): AcceptanceCopy {
-  const tris = Number(data.tris ?? 0), cap = Number(data.cap ?? 6000);
+  const tris = Number(data.tris ?? 0), cap = Number(data.cap ?? DEFAULT_TRI_CAP);
   if (tris === 0) {
     return { why: 'No mesh has been generated yet — the inventory preview will fall back to an icon-only state.',
       suggestion: 'Run Produce to generate a base mesh and auto-LODs.' };
@@ -336,14 +343,14 @@ function meshCopy(data: Record<string, unknown>): AcceptanceCopy {
 
 function materialCopy(data: Record<string, unknown>): AcceptanceCopy {
   const maps = (data.maps ?? []) as string[];
-  const need = ['Albedo', 'Normal', 'ORM'];
+  const need: readonly string[] = REQUIRED_PBR_MAPS;
   const missing = need.filter((m) => !maps.includes(m));
   if (maps.length === 0) {
     return { why: 'No PBR maps yet — the mesh has no surface to render.',
       suggestion: 'Run Produce to author the Albedo / Normal / ORM set.' };
   }
   if (missing.length > 0) {
-    return { why: `${missing.length === 1 ? 'The' : ''} ${missing.join(', ')} map${missing.length === 1 ? ' is' : 's are'} missing.`,
+    return { why: `The ${missing.join(', ')} map${missing.length === 1 ? ' is' : 's are'} missing.`,
       suggestion: 'Re-run Produce to fill the missing PBR channels.' };
   }
   return generatedAssetCopy(data, 'a texture set', 'texture generator (gap-loop / the material provider script)');
@@ -354,18 +361,18 @@ function animationsCopy(data: Record<string, unknown>): AcceptanceCopy {
   return clips.length === 0
     ? { why: 'No clips retargeted yet — the item cannot be picked up, equipped, or idled.',
         suggestion: 'Run Produce to retarget pickup / equip / idle from SK_Mannequin.' }
-    : { why: `Only ${clips.length} clip(s) present — pickup and equip are required at minimum.`,
+    : { why: `Only ${clips.length} clip(s) present — at least ${MIN_ANIM_CLIPS} (pickup and equip) are required.`,
         suggestion: 'Re-run Produce to add the missing clips.' };
 }
 
 function vfxCopy(data: Record<string, unknown>): AcceptanceCopy {
   const variants = (data.variants ?? []) as unknown[];
-  const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? 0.8);
+  const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? DEFAULT_VFX_MS_CAP);
   if (variants.length === 0) {
     return { why: 'No Niagara variants exist — the item has no visual reactions.',
       suggestion: 'Run Produce to author the idle / equip / use variants.' };
   }
-  return { why: `GPU cost (${cost.toFixed(1)}ms) sits over the ${cap}ms frame budget — performance regressions on lower tiers.`,
+  return { why: `GPU cost (${formatGpuMs(cost, cap)}ms) sits over the ${cap}ms frame budget — performance regressions on lower tiers.`,
     suggestion: 'Re-run Produce with cheaper modules.',
     fixDirection: `keep GPU cost under ${cap}ms by reducing emitter counts` };
 }
@@ -375,15 +382,22 @@ function sfxCopy(data: Record<string, unknown>): AcceptanceCopy {
   return cues.length === 0
     ? { why: 'No SoundCues imported — the item is silent on pickup, equip, and use.',
         suggestion: 'Run Produce to import a randomizing SoundCue set.' }
-    : { why: `Only ${cues.length} cue(s) bound — pickup / equip / use coverage requires three.`,
+    : { why: `Only ${cues.length} cue(s) bound — pickup / equip / use coverage requires ${MIN_SFX_CUES}.`,
         suggestion: 'Re-run Produce to fill the missing cues.' };
 }
 
 function inventoryCopy(data: Record<string, unknown>): AcceptanceCopy {
-  return data.wired
-    ? { why: 'Wired to the inventory widget.', suggestion: '' }
-    : { why: 'The item is not yet registered with the inventory widget — it will not appear in the grid.',
-        suggestion: 'Run Produce to register slot rules and stack size.' };
+  // Mirrors itemsInventoryWired: `wired === true` AND a non-empty slot. A wired artifact with no
+  // slot used to read "Wired to the inventory widget." under a PENDING banner.
+  if (data.wired !== true) {
+    return { why: 'The item is not yet registered with the inventory widget — it will not appear in the grid.',
+      suggestion: 'Run Produce to register slot rules and stack size.' };
+  }
+  if (data.slot == null || String(data.slot).length === 0) {
+    return { why: 'The item is wired to the inventory widget but declares no slot category — the grid cannot place it.',
+      suggestion: 'Re-run Produce so the binding names its slot category (e.g. Weapon).' };
+  }
+  return { why: 'Wired to the inventory widget.', suggestion: '' };
 }
 
 function tooltipCopy(data: Record<string, unknown>): AcceptanceCopy {

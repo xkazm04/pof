@@ -2,6 +2,7 @@ import {
   Zap, RefreshCw, Eye, Palette, Sun, Sparkles, Gem, Droplets,
   ChevronDown, ChevronRight,
 } from 'lucide-react';
+import { useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SurfaceType } from '../MaterialParameterConfigurator';
 import { MODULE_COLORS } from '@/lib/constants';
@@ -9,21 +10,15 @@ import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_WARNING } from '@/lib/chart-color
 import { SURFACE_LABELS, SURFACE_COLORS, FEATURE_LABELS } from './constants';
 import { PropertyBar } from './PropertyBar';
 import { AdjustSlider } from './AdjustSlider';
-import type { AnalyzedProperties } from './types';
+import type { AnalyzedProperties, StyleOverrides } from './types';
 
 interface AnalysisResultsProps {
   analysis: AnalyzedProperties;
   effectiveAnalysis: AnalyzedProperties;
   adjustmentsOpen: boolean;
   setAdjustmentsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  overrideRoughness: number | null;
-  setOverrideRoughness: React.Dispatch<React.SetStateAction<number | null>>;
-  overrideMetallic: number | null;
-  setOverrideMetallic: React.Dispatch<React.SetStateAction<number | null>>;
-  overrideEmissive: number | null;
-  setOverrideEmissive: React.Dispatch<React.SetStateAction<number | null>>;
-  overrideSurface: SurfaceType | null;
-  setOverrideSurface: React.Dispatch<React.SetStateAction<SurfaceType | null>>;
+  overrides: StyleOverrides;
+  setOverride: <K extends keyof StyleOverrides>(key: K, value: StyleOverrides[K] | null) => void;
   handleAnalyze: () => void;
   isAnalyzing: boolean;
   handleGenerate: () => void;
@@ -35,19 +30,14 @@ export function AnalysisResults({
   effectiveAnalysis,
   adjustmentsOpen,
   setAdjustmentsOpen,
-  overrideRoughness,
-  setOverrideRoughness,
-  overrideMetallic,
-  setOverrideMetallic,
-  overrideEmissive,
-  setOverrideEmissive,
-  overrideSurface,
-  setOverrideSurface,
+  overrides,
+  setOverride,
   handleAnalyze,
   isAnalyzing,
   handleGenerate,
   isGenerating,
 }: AnalysisResultsProps) {
+  const adjustmentsId = useId();
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -71,14 +61,19 @@ export function AnalysisResults({
           <Palette className="w-3 h-3 text-text-muted" />
           <span className="text-2xs font-medium text-text-muted">Color Palette</span>
         </div>
-        <div className="flex gap-1.5">
+        {/* The hex value was a hover-only tooltip: unreachable by keyboard and silent to a
+            screen reader. Each swatch is a named, focusable list item; the tooltip opens on focus too. */}
+        <div role="list" aria-label="Color palette" className="flex gap-1.5">
           {effectiveAnalysis!.colorPalette.map((color, i) => (
             <div
               key={i}
-              className="flex-1 h-8 rounded-lg border border-border relative group"
+              role="listitem"
+              tabIndex={0}
+              aria-label={`Colour ${i + 1}: ${color}`}
+              className="focus-ring flex-1 h-8 rounded-lg border border-border relative group"
               style={{ backgroundColor: color }}
             >
-              <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
+              <div aria-hidden="true" className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block group-focus-visible:block z-10">
                 <div className="bg-surface-deep border border-border rounded px-1.5 py-0.5 text-2xs text-text-muted whitespace-nowrap font-mono">
                   {color}
                 </div>
@@ -101,7 +96,7 @@ export function AnalysisResults({
         >
           {SURFACE_LABELS[effectiveAnalysis!.surfaceType]}
         </span>
-        <span className="text-2xs text-text-muted/60">
+        <span className="text-2xs text-text-muted">
           {(effectiveAnalysis!.surfaceConfidence * 100).toFixed(0)}% confidence
         </span>
         <div className="flex-1" />
@@ -139,17 +134,21 @@ export function AnalysisResults({
       {/* Adjustments panel */}
       <div className="rounded-xl border border-border overflow-hidden">
         <button
+          type="button"
           onClick={() => setAdjustmentsOpen(!adjustmentsOpen)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
+          aria-expanded={adjustmentsOpen}
+          aria-controls={adjustmentsId}
+          className="focus-ring-inset w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
         >
           {adjustmentsOpen ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
           <span className="text-2xs font-medium text-text">Refine Parameters</span>
-          <span className="text-2xs text-text-muted/60">Adjust before generating</span>
+          <span className="text-2xs text-text-muted">Adjust before generating</span>
         </button>
 
         <AnimatePresence>
           {adjustmentsOpen && (
             <motion.div
+              id={adjustmentsId}
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -162,12 +161,14 @@ export function AnalysisResults({
                   <label className="text-2xs font-medium text-text-muted block mb-1">Surface Type</label>
                   <div className="flex flex-wrap gap-1">
                     {(Object.keys(SURFACE_LABELS) as SurfaceType[]).map((st) => {
-                      const isActive = (overrideSurface ?? analysis.surfaceType) === st;
+                      const isActive = (overrides.surfaceType ?? analysis.surfaceType) === st;
                       return (
                         <button
                           key={st}
-                          onClick={() => setOverrideSurface(st === analysis.surfaceType ? null : st)}
-                          className={`px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
+                          type="button"
+                          onClick={() => setOverride('surfaceType', st === analysis.surfaceType ? null : st)}
+                          aria-pressed={isActive}
+                          className={`focus-ring px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
                             isActive
                               ? 'border-amber-500/30 text-amber-400'
                               : 'border-border text-text-muted hover:text-text'
@@ -184,27 +185,27 @@ export function AnalysisResults({
                 {/* Parameter sliders */}
                 <AdjustSlider
                   label="Roughness"
-                  value={overrideRoughness ?? analysis.roughness}
+                  value={overrides.roughness ?? analysis.roughness}
                   defaultValue={analysis.roughness}
                   min={0} max={1} step={0.05}
-                  onChange={setOverrideRoughness}
-                  onReset={() => setOverrideRoughness(null)}
+                  onChange={(v) => setOverride('roughness', v)}
+                  onReset={() => setOverride('roughness', null)}
                 />
                 <AdjustSlider
                   label="Metallic"
-                  value={overrideMetallic ?? analysis.metallic}
+                  value={overrides.metallic ?? analysis.metallic}
                   defaultValue={analysis.metallic}
                   min={0} max={1} step={0.05}
-                  onChange={setOverrideMetallic}
-                  onReset={() => setOverrideMetallic(null)}
+                  onChange={(v) => setOverride('metallic', v)}
+                  onReset={() => setOverride('metallic', null)}
                 />
                 <AdjustSlider
                   label="Emissive Intensity"
-                  value={overrideEmissive ?? analysis.emissiveIntensity}
+                  value={overrides.emissiveIntensity ?? analysis.emissiveIntensity}
                   defaultValue={analysis.emissiveIntensity}
                   min={0} max={20} step={0.5}
-                  onChange={setOverrideEmissive}
-                  onReset={() => setOverrideEmissive(null)}
+                  onChange={(v) => setOverride('emissiveIntensity', v)}
+                  onReset={() => setOverride('emissiveIntensity', null)}
                 />
               </div>
             </motion.div>

@@ -18,7 +18,7 @@ function renderWithStatuses() {
 describe('FeatureConstellation', () => {
   it('renders the constellation SVG with feature nodes once statuses load', async () => {
     renderWithStatuses();
-    await waitFor(() => expect(screen.getByRole('img', { name: /feature constellation/i })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('group', { name: /feature constellation/i })).toBeTruthy());
     // A foundational feature node is rendered as SVG text
     expect(screen.getByText('AARPGCharacterBase')).toBeTruthy();
   });
@@ -31,7 +31,7 @@ describe('FeatureConstellation', () => {
 
   it('shows the status legend and a "do this next" recommendation', async () => {
     renderWithStatuses();
-    await screen.findByRole('img', { name: /feature constellation/i });
+    await screen.findByRole('group', { name: /feature constellation/i });
     expect(screen.getByText(/Blocked path/i)).toBeTruthy();
     // "Do this next" appears in both the legend and the callout
     expect(screen.getAllByText(/Do this next/i).length).toBeGreaterThanOrEqual(1);

@@ -45,7 +45,16 @@ export interface Comparison {
   winCounts: number[];
 }
 
-const EMPTY: Comparison = { rows: [], winnerIndex: -1, winCounts: [] };
+/**
+ * The ONE power score of an item: numeric stat sum + 10 per affix. Shown as the
+ * card's PWR badge AND used by the grid's "Sort: Power", so the sort can never
+ * order items against their own badges.
+ */
+export function itemPower(item: Pick<ItemData, 'stats' | 'affixes'>): number {
+  return item.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0) + (item.affixes?.length ?? 0) * 10;
+}
+
+const EMPTY: Comparison ={ rows: [], winnerIndex: -1, winCounts: [] };
 
 export function buildComparison(items: ItemData[]): Comparison {
   if (items.length < 2) return EMPTY;

@@ -208,3 +208,21 @@ describe('genHistory model', () => {
     });
   });
 });
+
+describe('readHistory — malformed stored batches', () => {
+  it('drops batches and candidates it cannot read instead of letting selection throw', () => {
+    const h = readHistory({
+      [GEN_HISTORY_KEY]: {
+        selectedId: 'b1-c0',
+        batches: [
+          { id: 'b0' },
+          null,
+          { id: 'b1', at: 'x', direction: '', prompt: '', candidates: [null, { id: 'b1-c0', swatch: 's', payload: { selected: 0 } }] },
+        ],
+      },
+    });
+    expect(h.batches.map((b) => b.id)).toEqual(['b1']);
+    expect(selectedCandidate(h)?.id).toBe('b1-c0');
+    expect(nextSeq(h)).toBe(2);
+  });
+});

@@ -9,7 +9,7 @@ import { useLabPipelineStore } from '../labPipelineStore';
 import { CatalogTree } from '../CatalogTree';
 import { useDerivedLifecycle } from '../useDerivedLifecycle';
 import { NextStepCoach } from '../NextStepCoach';
-import { coachVerdictOf } from '@/components/layout-lab/stepRecord';
+import { coachVerdictOf, contentOf } from '@/components/layout-lab/stepRecord';
 import { EntityDrainResult } from '@/components/layout-lab/EntityDrainResult';
 import { PipelineRail } from '../PipelineRail';
 import { DriftBanner } from '../DriftBanner';
@@ -133,8 +133,9 @@ export function Baseline(props: Props) {
             variant="accent" mono style={{ flex: 1 }}
             onClick={() => populateItemDemo(entity, produce,
               // Fill gaps only — overwriting an existing artifact would wipe
-              // the generative steps' kept batch history (and sync the wipe).
-              (id, step) => !!useLabPipelineStore.getState().byEntity[id]?.[step])}
+              // the generative steps' kept batch history (and sync the wipe). A failure
+              // marker holds no content (`stepRecord`), so it is a gap, not an artifact.
+              (id, step) => !!contentOf(useLabPipelineStore.getState().byEntity[id]?.[step]))}
           >
             Populate demo
           </Button>

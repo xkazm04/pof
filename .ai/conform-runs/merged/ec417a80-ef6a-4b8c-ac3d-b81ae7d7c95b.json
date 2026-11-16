@@ -1,0 +1,133 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ec417a80-ef6a-4b8c-ac3d-b81ae7d7c95b",
+  "subject": "codebase-scanning",
+  "evaluatedAt": "2026-11-08T00:13:01.905819+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "gdd-compliance",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:63 The Codebase Archeologist scan list clips to 100 rows, while the header on line 52 still prints the full hit count with no 'showing 100 of N' notice, so every finding past 100 disappears without being disclosed.",
+      "techniques": [
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:63 The cap is not disclosed (the technique asks for 'showing 15 of 50; 35 withheld'). Also, ChurnTab.tsx:16 renders an empty churn array as 'No git history found', so a failed git sensor and a repo with no history read the same way."
+        },
+        {
+          "technique": "causes-beside-the-finding-count",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:91 The emission count is published as 'issues' with no count of independent causes beside it. OverviewTab.tsx:8 then turns raw severity counts straight into a health score."
+        },
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:86 A finding is located by file:line only and quotes no matched content (the AntiPatternHit type has no content field). Each Scan replaces the whole analysis (index.tsx:50), so findings have no first-seen age or verdict history across sweeps."
+        },
+        {
+          "technique": "incremental-scanning",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/GDDComplianceView/EvidenceStrip.tsx:25 GDD compliance evidence shows its age against a named staleness threshold, so findings do not stand forever."
+        }
+      ]
+    },
+    {
+      "context": "localization-pipeline",
+      "subject": "codebase-scanning",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/components/modules/evaluator/LocalizationPipelineView/HazardCard.tsx:69 src/lib/localization/scan-engine.ts:108 emits a quoted `evidence` snippet for each hazard, but HazardCard shows only description, suggestion and file:line, so the operator never sees the matched content and must open the source to judge the claim.",
+      "techniques": [
+        {
+          "technique": "finding-lifecycle",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/HazardCard.tsx:69 The hazard's quoted evidence is dropped on screen. QAFindingCard.tsx:69 does quote sourceText and translatedText, so the gap is specific to hazards."
+        },
+        {
+          "technique": "sensor-pipeline",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/evaluator/LocalizationPipelineView/OverviewTab.tsx:156 The preview cap is disclosed. Coverage honesty is also visible elsewhere: index.tsx:142 prints files scanned and a 'stopped at the file/size cap' notice, ReadinessTab.tsx:30 says an empty scan 'is not a pass', and QATab.tsx:32 separates 'no translations' from 'passed QA'."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "codebase-scanning",
+      "context": "blueprint-transpiler-game-systems",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "codebase-scanning",
+      "context": "audio-generation-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable anchors are incidental. The audio one is a description paragraph and the materials one is a fetch call for image analysis, and neither shows that no code scanning exists. The grep terms (finding, antiPattern, codebase, detector) are narrow for this subject, and I couldn't confirm "
+    },
+    {
+      "subject": "codebase-scanning",
+      "context": "material-style-tools",
+      "reason": "withdrawn after review: reviewer (sonnet): The not-applicable anchors are incidental. The audio one is a description paragraph and the materials one is a fetch call for image analysis, and neither shows that no code scanning exists. The grep terms (finding, antiPattern, codebase, detector) are narrow for this subject, and I couldn't confirm "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T00:13:01.905819+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [
+        "causes-beside-the-finding-count",
+        "finding-lifecycle",
+        "incremental-scanning",
+        "sensor-pipeline"
+      ],
+      "deviations": 1,
+      "context": "gdd-compliance",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T00:13:01.905819+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [
+        "finding-lifecycle",
+        "sensor-pipeline"
+      ],
+      "deviations": 1,
+      "context": "localization-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T00:13:01.905819+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "audio-generation-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T00:13:01.905819+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "codebase-scanning"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "material-style-tools",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

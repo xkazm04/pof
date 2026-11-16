@@ -31,7 +31,7 @@ export async function GET(req?: NextRequest) {
  * POST /api/project-rules?action=restore-defaults re-writes the shipped canon.
  * That is the ONLY path that puts `CANON_SEED` back: emptying the table no longer
  * resurrects it, so restoring has to be something the caller asked for by name.
- * The body is ignored for this action.
+ * The body is ignored for this action. Behind requireOperator: it overwrites edited rows in bulk.
  *
  * Canon drift review — `{ ids: string[] }`, behind requireOperator (they overwrite rows in bulk):
  * - ?action=adopt-shipped  write the shipped rule over each row (the replaced row is archived first)
@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
   try {
     const action = req.nextUrl.searchParams.get('action');
     if (action === 'restore-defaults') {
+      // Overwrites every edited seed rule with no archive; same guard as the drift actions below.
+      const denied = requireOperator(req);
+      if (denied) return denied;
       return apiSuccess(restoreCanonSeed());
     }
     const review = action ? DRIFT_ACTIONS[action] : undefined;
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
     if (action) return apiError(`Unknown action "${action}"`, 400);
     // One check shared with the editor: schema, registered profile, and a scope that reaches a
     // prompt (`global` or a registered catalog) — an unknown scope used to be stored with 200.
-    const parsed = validateRuleDraft(await req.json(), allCatalogPipelines());
+    const parsed = validateRuleDraft(await req.json().catch(() => undefined), allCatalogPipelines());
     if (!parsed.ok) return apiError(parsed.error, 400);
     const rule: ProjectRule = {
       id: parsed.data.id,

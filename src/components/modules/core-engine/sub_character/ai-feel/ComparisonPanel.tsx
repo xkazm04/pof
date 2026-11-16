@@ -10,6 +10,9 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { ComparisonRow } from './ComparisonRow';
 import { CATEGORY_COLORS } from './constants';
 
+/** Fields where a higher value really is "faster" — gravity, air control, jump and the like are not. */
+const SPEED_FIELDS = new Set(['movement.maxWalkSpeed', 'movement.maxSprintSpeed']);
+
 /* ── A/B Comparison Panel ────────────────────────────────────────────────── */
 
 interface ComparisonPanelProps {
@@ -31,7 +34,7 @@ export function ComparisonPanel({
 }: ComparisonPanelProps) {
   return (
     <BlueprintPanel color={ACCENT_CYAN} className="p-3">
-      <button onClick={onToggle} className="w-full flex items-center gap-2 mb-2">
+      <button type="button" onClick={onToggle} aria-expanded={showComparison} className="w-full flex items-center gap-2 mb-2 focus-ring rounded">
         <SectionHeader icon={ArrowLeftRight} label="A/B Comparison" color={ACCENT_CYAN} />
         <motion.div animate={{ rotate: showComparison ? 180 : 0 }} className="ml-auto">
           <ChevronDown className="w-4 h-4 text-text-muted" />
@@ -81,14 +84,14 @@ export function ComparisonPanel({
             {/* Summary stats */}
             <div className="flex items-center gap-4 mt-2 pt-2 border-t border-border/30 px-2 text-xs font-mono text-text-muted">
               <span>
-                Faster: <span className="font-bold" style={{ color: STATUS_SUCCESS }}>
-                  {comparison.filter((c) => c.category === 'Movement' && c.delta > 0).length}
-                </span> params
+                {comparePreset.name} faster on <span className="font-bold" style={{ color: STATUS_SUCCESS }}>
+                  {comparison.filter((c) => SPEED_FIELDS.has(c.field) && c.delta > 0).length}
+                </span> speed params
               </span>
               <span>
-                Slower: <span className="font-bold" style={{ color: STATUS_ERROR }}>
-                  {comparison.filter((c) => c.category === 'Movement' && c.delta < 0).length}
-                </span> params
+                slower on <span className="font-bold" style={{ color: STATUS_ERROR }}>
+                  {comparison.filter((c) => SPEED_FIELDS.has(c.field) && c.delta < 0).length}
+                </span> speed params
               </span>
               <span>
                 Total changes: <span className="font-bold" style={{ color: STATUS_WARNING }}>

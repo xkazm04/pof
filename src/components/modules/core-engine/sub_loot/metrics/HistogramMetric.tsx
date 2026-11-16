@@ -2,6 +2,8 @@
 
 import { RARITY_TIERS, TOTAL_WEIGHT, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_25, OPACITY_50 } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
+import type { MetricReading } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
 
 const BAR_W = 4;
 const BAR_GAP = 1.5;
@@ -18,7 +20,8 @@ const BARS = RARITY_TIERS.map((tier, i) => ({
 
 const SVG_W = RARITY_TIERS.length * (BAR_W + BAR_GAP) - BAR_GAP;
 
-export function HistogramMetric() {
+/** Bars are the rarity weight split; the printed bracket count is the view's reading. */
+export function HistogramMetric({ reading }: { reading: MetricReading }) {
   return (
     <div className="flex items-center gap-1.5">
       <svg width={SVG_W} height={MAX_H} viewBox={`0 0 ${SVG_W} ${MAX_H}`} aria-hidden="true">
@@ -37,9 +40,9 @@ export function HistogramMetric() {
           </rect>
         ))}
       </svg>
-      <div className="text-[10px] font-mono leading-tight">
-        <span className="font-bold" style={{ color: ACCENT }}>{RARITY_TIERS.length}</span>
-        <span style={{ color: withOpacity(ACCENT, OPACITY_50) }}> brackets</span>
+      <div className={`${TEXT_SCALE.meta} font-mono leading-tight`}>
+        <span className="font-bold" style={{ color: ACCENT }}>{reading.value ?? '?'}</span>
+        <span style={{ color: withOpacity(ACCENT, OPACITY_50) }}> {reading.unit}</span>
       </div>
     </div>
   );

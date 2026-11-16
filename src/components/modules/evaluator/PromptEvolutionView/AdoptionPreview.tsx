@@ -29,7 +29,7 @@ export function AdoptionPreview({
         </p>
       )}
       {plan.diff.before !== null && !plan.diff.identical && (
-        <PromptDiffView before={plan.diff.before} after={plan.diff.after} maxHeightClass="max-h-48" />
+        <PromptDiffView before={plan.diff.before} after={plan.diff.after} maxHeightClass="max-h-48" beforeLabel="Current" afterLabel="Winner" />
       )}
       {plan.diff.identical && <p className="text-xs text-text-muted">The wording is identical to the current one.</p>}
       <div className="flex items-center gap-2">

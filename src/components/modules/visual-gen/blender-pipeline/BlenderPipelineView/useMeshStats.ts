@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { meshStatsScript, readMeshStats, type MeshStat } from '@/lib/blender-mcp/scripts/mesh-stats';
 
 export type MeshStatsState =

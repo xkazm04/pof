@@ -184,6 +184,11 @@ export interface AtlasPlan {
   reason?: string;
 }
 
+/** The member with the lowest density — the one a starved plan is about. */
+function worstName(members: AtlasMember[]): string {
+  return members.reduce((a, b) => (b.densityPxPerM < a.densityPxPerM ? b : a)).name;
+}
+
 /**
  * Plan one shared atlas for a kit of props — the pro workflow's "why not have them use
  * one material" step, sized by texel density rather than by eye.
@@ -254,6 +259,10 @@ export function planKitAtlas(members: KitMember[], targetPxPerM: number = DEFAUL
       ? `the kit wanted more atlas than the ${MAX_BAKE_SIZE} px ceiling allows, so every cell was ` +
         `reduced to fit — the worst member now gets ${achievedPxPerM.toFixed(0)} ${TEXEL_DENSITY_UNIT} ` +
         `against a ${target} target. Split the kit across two atlases to hold the target.`
-      : undefined,
+      : starved
+        ? `${worstName(planned)} is too large for one ${MAX_BAKE_SIZE} px cell, so it gets ` +
+          `${achievedPxPerM.toFixed(0)} ${TEXEL_DENSITY_UNIT} against a ${target} target. Split it into ` +
+          `a kit or give it a seamless tiling material.`
+        : undefined,
   };
 }

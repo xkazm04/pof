@@ -1,0 +1,109 @@
+{
+ "schema": "conform-run/1",
+ "worker": "581211b0-3021-42fa-92cd-70cb58e7e419",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T23:31:43.575494+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 The import test replaces the store's shipped importCrashLog with a helper that skips merge-by-id, detectPatterns/computeStats, isLoading and the error arm, but its comment (lines 35-36) says only the HTTP hop is bypassed, so every assertion through it tests a program no user runs.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 Seeded action is a fork of src/stores/crashAnalyzerStore.ts:97-145. The real action merges by id, recomputes patterns and stats, and sets isLoading/error; the helper does none of that."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:77 The engine test checks that the answer names its producer (origin 'none', nearest similarity below the floor), so 'undiagnosed' cannot come from a default value."
+    }
+   ]
+  },
+  {
+   "context": "catalog-core-infrastructure",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/ue-schema.ts:61 ueSchema() serves a committed JSON snapshot of UE headers that records no fingerprint of the headers it came from, and ue-schema-parity checks step fields against it with only a manual refresh note, so a UE header change leaves the parity suite green against yesterday's schema.",
+   "techniques": [
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/ue-schema.ts:61 The derived fixture names no inputs and nothing checks whether it is fresh; the rebuild is the manual `npm run snapshot:ue-schema` (ue-schema-parity.test.ts:3)."
+    },
+    {
+     "technique": "derived-selection-must-be-measured",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/ue-schema-parity.test.ts:14 Floors on the snapshot size and on the declared-step count stop the parity loop from selecting zero cases (the snapshot had been `{}` for four months)."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/headless.test.ts:10 The suite that persists declares its own per-process throwaway DB instead of silently inheriting the operator's ~/.pof/pof.db."
+    },
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/catalog/headless-submit-query-count.test.ts:28 The read counter wraps and delegates to the real listVerdicts over a real SQLite file, so the count measures the shipped path."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "topbar-and-activity",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "harness-autonomy",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "cross-module-features",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:31:43.575494+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T23:31:43.575494+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "derived-selection-must-be-measured",
+    "fixture-economics",
+    "isolation-lanes"
+   ],
+   "deviations": 1,
+   "context": "catalog-core-infrastructure",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

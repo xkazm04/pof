@@ -10,6 +10,7 @@ vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: 
 
 import { startDrainWorker, stopDrainWorker, getWorkerStatus, runDrainTick } from '@/lib/test-gate-runner/worker';
 import { acquireLeases, releaseLeases, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
+const EV = { kind: 'scenario' as const, at: '2026-01-01T00:00:00.000Z' };
 
 const job = (id: string): GateJob => ({ catalogId: 'items', entityId: id, step: 'Test Gate', tier: 'L3', testName: 'T' });
 const summary = (results: DrainSummary['results']): DrainSummary => ({
@@ -45,7 +46,7 @@ describe('drain worker', () => {
   it('a tick drains the collected jobs and records the summary', async () => {
     const j1 = job('a'), j2 = job('b');
     collectDeferred.mockReturnValue([j1, j2]);
-    drainJobs.mockResolvedValue(summary([{ job: j1, skipped: 'unavailable' }, { job: j2, verdict: { status: 'pass', detail: 'ok' } }]));
+    drainJobs.mockResolvedValue(summary([{ job: j1, skipped: 'unavailable' }, { job: j2, verdict: { status: 'pass', detail: 'ok', evidence: EV } }]));
 
     startDrainWorker({ intervalMs: 999_999, cooldownMs: 10_000 });
     await runDrainTick(1_000);
@@ -62,8 +63,8 @@ describe('drain worker', () => {
     const j1 = job('a'), j2 = job('b');
     collectDeferred.mockReturnValue([j1, j2]);
     // tick 1: j1 skipped (→ cooldown), j2 ran (→ cleared)
-    drainJobs.mockResolvedValueOnce(summary([{ job: j1, skipped: 'no test name in deferred reason' }, { job: j2, verdict: { status: 'pass', detail: 'ok' } }]));
-    drainJobs.mockResolvedValue(summary([{ job: j2, verdict: { status: 'pass', detail: 'ok' } }]));
+    drainJobs.mockResolvedValueOnce(summary([{ job: j1, skipped: 'no test name in deferred reason' }, { job: j2, verdict: { status: 'pass', detail: 'ok', evidence: EV } }]));
+    drainJobs.mockResolvedValue(summary([{ job: j2, verdict: { status: 'pass', detail: 'ok', evidence: EV } }]));
 
     startDrainWorker({ intervalMs: 999_999, cooldownMs: 10_000 });
     await runDrainTick(1_000);

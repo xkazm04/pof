@@ -43,7 +43,9 @@ export function BlueprintInspector() {
 
   const fetchBlueprint = useCallback(async () => {
     const trimmed = path.trim();
-    if (!trimmed) return;
+    // Same guard as the Inspect button's `disabled` — Enter is a second door
+    // into this fetch and must not bypass it.
+    if (!trimmed || loading || isDisconnected) return;
 
     setLoading(true);
     setError(null);
@@ -60,7 +62,7 @@ export function BlueprintInspector() {
     }
 
     setLoading(false);
-  }, [path, pofPort]);
+  }, [path, pofPort, loading, isDisconnected]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') fetchBlueprint();
@@ -92,7 +94,8 @@ export function BlueprintInspector() {
           onChange={(e) => setPath(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="/Game/Blueprints/BP_MyCharacter"
-          className="flex-1 bg-transparent text-xs font-mono text-text placeholder:text-text-muted/50
+          aria-label="Blueprint asset path — press Enter to inspect"
+          className="flex-1 bg-transparent text-xs font-mono text-text placeholder:text-text-subtle
                      outline-none border-none"
           data-testid="blueprint-inspector-path-input"
         />
@@ -133,6 +136,7 @@ export function BlueprintInspector() {
               <div key={section.id}>
                 <button
                   onClick={() => toggleSection(section.id)}
+                  aria-expanded={isOpen}
                   className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/3 transition-colors"
                   data-testid={`blueprint-section-${section.id}-toggle`}
                 >
@@ -175,7 +179,7 @@ export function BlueprintInspector() {
           <p className="text-xs text-text-muted">
             Enter a blueprint asset path to inspect its anatomy
           </p>
-          <p className="text-xs text-text-muted/50 mt-1">
+          <p className="text-xs text-text-subtle mt-1">
             e.g. /Game/Blueprints/BP_MyCharacter
           </p>
         </div>

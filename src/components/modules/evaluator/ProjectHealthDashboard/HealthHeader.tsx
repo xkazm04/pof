@@ -7,6 +7,7 @@ import { RadialScoreGauge } from './RadialScoreGauge';
 export function HealthHeader({
   lastScan,
   isLoading,
+  loadFailed,
   scanHistory,
   showHistoryOverlay,
   setShowHistoryOverlay,
@@ -15,6 +16,8 @@ export function HealthHeader({
   lastScan: EvaluatorReport | null;
   /** The scan history is still loading. */
   isLoading: boolean;
+  /** The history failed to load, so whether scans exist is not known. */
+  loadFailed: boolean;
   scanHistory: EvaluatorReport[];
   showHistoryOverlay: boolean;
   setShowHistoryOverlay: (v: boolean) => void;
@@ -30,7 +33,7 @@ export function HealthHeader({
 
       <div className="flex-1 min-w-0">
         <h3 className="text-sm font-semibold text-text">
-          {lastScan ? 'Project Health' : 'No scans yet'}
+          {lastScan ? 'Project Health' : loadFailed ? 'Scan history unavailable' : isLoading ? 'Loading scan history' : 'No scans yet'}
         </h3>
         {lastScan ? (
           <p className="text-xs text-text-muted mt-0.5 line-clamp-2">

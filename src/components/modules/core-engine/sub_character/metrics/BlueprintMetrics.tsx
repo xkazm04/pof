@@ -7,15 +7,13 @@ import {
 } from '@/lib/chart-colors';
 import { NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import { resolveStack } from '@/lib/feel-adjustment-layers';
-import { cameraMetricValues, findBasePreset } from '@/lib/character/inspector-fields';
+import { cameraMetricValues, findBasePreset, inspectorRows } from '@/lib/character/inspector-fields';
 import { useCharacterBlueprintStore, useResolvedBindings } from '@/stores/characterBlueprintStore';
 import {
   CLASS_TREE,
   SCALING_PROPS,
   HITBOX_ZONES,
   INPUT_BINDINGS,
-  COMPARISON_CHARACTERS,
-  COMPARISON_STATS,
   ACCENT,
 } from '../_shared/data';
 import { countNodes, countLeafTypes } from './metric-helpers';
@@ -33,27 +31,31 @@ export function ClassHierarchyMetric() {
   );
 }
 
-/** Stacked mini bars for HP, Speed, Armor */
+/** Metric bars per Inspector field: label, field name, color. */
+const PROPERTY_BARS = [
+  { label: 'Spd', name: 'MaxWalkSpeed', color: ACCENT_CYAN },
+  { label: 'Dmg', name: 'BaseDamage', color: STATUS_ERROR },
+  { label: 'Arm', name: 'ArmLength', color: ACCENT_EMERALD },
+] as const;
+
+/** Stacked mini bars for MaxWalkSpeed / BaseDamage / ArmLength — from the same feel stack the Property Inspector edits. */
 export function PropertiesMetric() {
-  const player = COMPARISON_CHARACTERS.find(c => c.id === 'player') ?? COMPARISON_CHARACTERS[0];
-  const statLookup = (name: string) => {
-    const idx = COMPARISON_STATS.findIndex(s => s.stat === name);
-    return idx >= 0 ? { stat: COMPARISON_STATS[idx], val: player.values[idx] } : null;
-  };
-  const hp = statLookup('HP');
-  const spd = statLookup('Speed');
-  const arm = statLookup('Armor');
-  const bars = [
-    hp && { label: 'HP', stat: hp.stat, val: hp.val, color: STATUS_ERROR },
-    spd && { label: 'Spd', stat: spd.stat, val: spd.val, color: ACCENT_CYAN },
-    arm && { label: 'Arm', stat: arm.stat, val: arm.val, color: ACCENT_EMERALD },
-  ].filter(Boolean) as { label: string; stat: typeof COMPARISON_STATS[0]; val: number; color: string }[];
+  const baseFeelPresetId = useCharacterBlueprintStore((s) => s.baseFeelPresetId);
+  const feelLayers = useCharacterBlueprintStore((s) => s.feelLayers);
+  const bars = useMemo(() => {
+    const { rows } = inspectorRows(findBasePreset(baseFeelPresetId).profile, feelLayers);
+    return PROPERTY_BARS.flatMap((b) => {
+      const row = rows.find((r) => r.name === b.name);
+      if (!row || typeof row.current !== 'number' || !row.max) return [];
+      return [{ ...b, value: row.current, pct: (row.current / row.max) * 100 }];
+    });
+  }, [baseFeelPresetId, feelLayers]);
   return (
     <div className="flex flex-col gap-1" style={{ width: 60 }}>
       {bars.map((b) => (
-        <div key={b.label} className="flex items-center gap-1">
+        <div key={b.label} data-testid={`properties-metric-${b.label}`} data-value={b.value} title={`${b.name} ${b.value}`} className="flex items-center gap-1">
           <span className="text-[8px] font-mono text-text-muted w-4 shrink-0">{b.label}</span>
-          <NeonBar pct={(b.val / b.stat.maxVal) * 100} color={b.color} height={3} />
+          <NeonBar pct={b.pct} color={b.color} height={3} />
         </div>
       ))}
     </div>

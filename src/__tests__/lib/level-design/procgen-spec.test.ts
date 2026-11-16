@@ -63,7 +63,7 @@ describe('ProcgenSpec — one shape, with an explicit seed', () => {
     const cfg = previewConfigFromSpec(s);
     expect(cfg).toEqual({
       algorithm: 'bsp', gridWidth: 64, gridHeight: 64,
-      roomCountMin: 6, roomCountMax: 12, corridorWidth: 2, seed: 'dark-keep',
+      roomCountMin: 6, roomCountMax: 12, corridorWidth: 2, seed: 'dark-keep', seedValue: s.seedValue,
       ensureConnected: false,
     });
     expect(previewConfigFromSpec(s, 256).maxPreviewSize).toBe(256);

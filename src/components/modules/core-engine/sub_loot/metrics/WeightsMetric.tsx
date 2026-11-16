@@ -20,7 +20,8 @@ const SLICES = (() => {
     const large = sliceAngle > Math.PI ? 1 : 0;
     return {
       name: tier.name,
-      weight: tier.weight,
+      // Share of the total weight - the same denominator as the slice angle (and HistogramMetric's label).
+      share: ((tier.weight / TOTAL_WEIGHT) * 100).toFixed(0),
       color: tier.color,
       d: `M${CX},${CY} L${x1},${y1} A${R},${R} 0 ${large} 1 ${x2},${y2} Z`,
     };
@@ -44,7 +45,7 @@ export function WeightsMetric() {
           stroke="transparent"
           style={{ filter: `drop-shadow(0 0 2px ${withOpacity(s.color, OPACITY_25)})` }}
         >
-          <title>{s.name}: {s.weight}%</title>
+          <title>{s.name}: {s.share}%</title>
         </path>
       ))}
     </svg>

@@ -3,15 +3,14 @@
 import { useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
-import { tryApiFetch } from '@/lib/api-utils';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
-import { useBlenderStore, type ScriptJob, type ScriptStatus } from './useBlenderStore';
+import { SUCCESS_TEXT, ERROR_TEXT } from '@/lib/blender-mcp/status-tokens';
+import { useBlenderStore, SCRIPT_HISTORY_CAP, type ScriptJob, type ScriptStatus } from './useBlenderStore';
 
 const STATUS_CONFIG: Record<ScriptStatus, { icon: typeof Loader2; color: string; label: string }> = {
   idle: { icon: Loader2, color: 'text-text-muted', label: 'Idle' },
   running: { icon: Loader2, color: 'text-[var(--visual-gen)]', label: 'Running' },
-  completed: { icon: CheckCircle, color: 'text-emerald-400', label: 'Done' },
-  failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
+  completed: { icon: CheckCircle, color: SUCCESS_TEXT, label: 'Done' },
+  failed: { icon: AlertCircle, color: ERROR_TEXT, label: 'Failed' },
 };
 
 function ScriptCard({ job }: { job: ScriptJob }) {
@@ -38,11 +37,18 @@ function ScriptCard({ job }: { job: ScriptJob }) {
         <StatusIcon
           size={14}
           className={`${config.color} ${job.status === 'running' ? 'animate-spin' : ''}`}
+          aria-hidden="true"
         />
         <span className="text-xs font-medium text-text flex-1">{job.scriptName}</span>
+        <span className={`text-xs ${config.color}`}>{config.label}</span>
         <span className="text-xs text-text-muted">{elapsed}s</span>
-        <button onClick={() => removeScript(job.id)} className="text-text-muted hover:text-text">
-          <X size={12} />
+        <button
+          type="button"
+          onClick={() => removeScript(job.id)}
+          aria-label={`Remove ${job.scriptName} from the list`}
+          className="focus-ring rounded text-text-muted hover:text-text"
+        >
+          <X size={12} aria-hidden="true" />
         </button>
       </div>
       {job.output && (
@@ -51,56 +57,19 @@ function ScriptCard({ job }: { job: ScriptJob }) {
         </pre>
       )}
       {job.error && (
-        <div className="px-3 py-2 text-xs text-red-400">{job.error}</div>
+        <div className={`px-3 py-2 text-xs ${ERROR_TEXT}`}>{job.error}</div>
       )}
     </div>
   );
 }
 
-/**
- * THE dispatcher for `/api/blender-mcp/execute`.
- *
- * Every Python script PoF sends to Blender must go through here, because this
- * is also what records it in the Script History panel — the panel presented to
- * the user as the record of what PoF ran in their Blender. Call sites that
- * fetched the route directly were invisible there (the panel would still say
- * "No scripts have been run yet" after a real dispatch), and several of them
- * discarded the `Result` entirely, so a failed script and a successful one were
- * indistinguishable on screen.
- *
- * `src/__tests__/lib/blender-mcp/execute-dispatch-guard.test.ts` enforces this:
- * a NEW raw fetch of the execute route fails the build.
- */
-export async function executeViaMCP(scriptName: string, scriptCode: string) {
-  const { addScript, updateScript } = useBlenderStore.getState();
-  const jobId = addScript(scriptName, []);
-
-  const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: scriptCode }),
-  });
-
-  if (result.ok) {
-    updateScript(jobId, {
-      status: 'completed',
-      output: result.data.output,
-      completedAt: Date.now(),
-    });
-  } else {
-    updateScript(jobId, {
-      status: 'failed',
-      error: result.error,
-      completedAt: Date.now(),
-    });
-  }
-
-  return result;
-}
+/** The dispatcher lives in `@/lib/blender-mcp/dispatch`; re-exported for compatibility. */
+export { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 
 export function ScriptRunner() {
   const scripts = useBlenderStore((s) => s.scripts);
   const clearCompleted = useBlenderStore((s) => s.clearCompleted);
+  const droppedCount = useBlenderStore((s) => s.droppedCount);
 
   if (scripts.length === 0) {
     return (
@@ -126,14 +95,20 @@ export function ScriptRunner() {
         </h3>
         {hasCompleted && (
           <button
+            type="button"
             onClick={clearCompleted}
-            className="flex items-center gap-1 text-xs text-text-muted hover:text-text"
+            className="focus-ring rounded flex items-center gap-1 text-xs text-text-muted hover:text-text"
           >
-            <Trash2 size={10} />
+            <Trash2 size={10} aria-hidden="true" />
             Clear finished
           </button>
         )}
       </div>
+      {droppedCount > 0 && (
+        <p className="text-xs text-text-muted" data-testid="script-history-dropped">
+          {droppedCount} older {droppedCount === 1 ? 'script was' : 'scripts were'} dropped (history keeps the newest {SCRIPT_HISTORY_CAP}).
+        </p>
+      )}
       <div className="space-y-2">
         {scripts.map((job) => (
           <ScriptCard key={job.id} job={job} />

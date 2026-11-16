@@ -1,0 +1,53 @@
+{
+ "schema": "conform-run/1",
+ "worker": "77ffcaf8-ca67-47f2-a61d-95fe92d188d1",
+ "subject": "usage-analytics",
+ "evaluatedAt": "2026-11-02T22:27:13.292718+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "session-analytics-reporting",
+   "subject": "usage-analytics",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/WeeklyDigestView/ModuleLeaderboard.tsx:12 The per-module usage reports are built only from modules that emitted sessions. A module nobody worked in drops out of the report instead of showing as an explicit zero, so 'unused' looks the same as 'unmeasured'.",
+   "techniques": [
+    {
+     "technique": "coverage-from-registries",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/WeeklyDigestView/ModuleLeaderboard.tsx:12 The leaderboard lists the top 8 of the modules that emitted. moduleActivity is built in src/lib/weekly-digest.ts:56 from the emitted rows only; MODULE_LABELS is imported but used only for labels, never as the frame. SessionAnalyticsDashboard's 'Modules Active' card (index.tsx:95) and the 'Module Performance' list also count only modules with sessions. The time axis is zero-filled (day keys, months) but the module axis is not, which is the 'an exhaustiveness check closes only the axis it encodes' trap."
+    },
+    {
+     "technique": "activation-and-funnel-honesty",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/ModuleStatsRow.tsx:100 Rates are measured from completed outcomes (a CLI task succeeding or failing), not from visits. Each percentage is shown next to its own count: the with/without-context success rates carry their sample sizes in parentheses, and each module row shows its session total (line 63)."
+    },
+    {
+     "technique": "privacy-scrubbing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/SessionAnalyticsDashboard/RecentSessionRow.tsx:22 Records do carry free-form prompt text, but the insight is computed and shown only on the user's own machine. A search of these files found no fetch, sendBeacon or keepalive egress; the only network calls go to the app's own local API through relative URLs. This is the golden path's local-first option, so no payload leaves the device."
+    }
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-02T22:27:13.292718+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "usage-analytics"
+   ],
+   "techniques": [
+    "activation-and-funnel-honesty",
+    "coverage-from-registries",
+    "privacy-scrubbing"
+   ],
+   "deviations": 1,
+   "context": "session-analytics-reporting",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

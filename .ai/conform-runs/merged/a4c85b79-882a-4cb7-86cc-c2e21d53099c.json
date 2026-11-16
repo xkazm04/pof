@@ -1,0 +1,114 @@
+{
+ "schema": "conform-run/1",
+ "worker": "a4c85b79-882a-4cb7-86cc-c2e21d53099c",
+ "subject": "agent-runtime-assembly",
+ "evaluatedAt": "2026-11-04T01:04:11.454581+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "visual-gen-core",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/visual-gen/generate/status/route.ts:84 A 3D generation outlives a turn, but its job lives only in an in-process Map (tripo/trellis/hunyuan job stores). The caller, including the model through the pof_asset_generate_status MCP tool, keeps the jobId and polls it, so after a restart the handle points at nothing: the standard says to persist a durable row before returning and to serve a bounded projection instead.",
+   "techniques": [
+    {
+     "technique": "bounded-projection-of-external-work",
+     "verdict": "deviation",
+     "evidence": "src/app/api/visual-gen/generate/status/route.ts:84 The handle lives in the caller's context and the model polls it (tools/pof-mcp/src/tools/assets.ts:88). The job store is an in-memory Map (src/lib/visual-gen/tripo-job-store.ts:86), so a restart loses it. This is the 'naive integration' the technique names."
+    },
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/app/api/visual-gen/generate/status/route.ts:19 A job that was running when the process died comes back as 'not found', not as closed with an unknown outcome, even though a paid provider task may still deliver. The recover route only partly offsets this."
+    }
+   ]
+  },
+  {
+   "context": "project-ops-api",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/session-log/route.ts:46 Every CLI agent session for the project that is 'started' with no terminal row gets a definite 'cancelled' row with success=0 (src/lib/session-log-db.ts:109-110). That includes runs orphaned by an earlier crash or reload whose outcome nobody knows. The vocabulary started|completed|cancelled has no 'outcome unknown' state, so unknown is stored as a failure value.",
+   "techniques": [
+    {
+     "technique": "indeterminate-closure-on-interruption",
+     "verdict": "deviation",
+     "evidence": "src/app/api/session-log/route.ts:46 Open runs are closed as cancelled with success 0. The technique asks for an indeterminate closure instead of a definite failure-like verdict."
+    }
+   ]
+  },
+  {
+   "context": "module-cli-orchestration-hooks",
+   "subject": "agent-runtime-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/hooks/useChecklistCLI.ts:100 While an agent run is in flight, a second dispatch is dropped silently: the guard returns with no queue, injection or user signal, and the comment says the terminal itself drops dispatches while streaming. Input that arrives mid-run vanishes instead of joining the running unit at a model-call boundary.",
+   "techniques": [
+    {
+     "technique": "additive-input-at-the-call-boundary",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useChecklistCLI.ts:100 A mid-run dispatch is discarded with no trace. useModuleCLI.sendPrompt (src/hooks/useModuleCLI.ts:185) dispatches without checking isRunning into a terminal that, by the comment at useChecklistCLI.ts:97, drops input while streaming."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "quality-evaluation-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "agent-runtime-assembly",
+   "context": "blender-mcp-bridge",
+   "reason": "This is a TCP transport to a Blender addon, so it mostly belongs to the mcp-tools and subprocess side, not runtime assembly. It does hold create/poll Rodin generation jobs (src/lib/blender-mcp/service.ts, the poll_rodin_job_status mapping), which could bring bounded-projection into scope. I did not trace who polls those jobs or whether they are durable, so I can judge neither not-applicable nor deviation."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T01:04:11.454581+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "bounded-projection-of-external-work",
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "visual-gen-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:04:11.454581+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "indeterminate-closure-on-interruption"
+   ],
+   "deviations": 1,
+   "context": "project-ops-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T01:04:11.454581+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-runtime-assembly"
+   ],
+   "techniques": [
+    "additive-input-at-the-call-boundary"
+   ],
+   "deviations": 1,
+   "context": "module-cli-orchestration-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

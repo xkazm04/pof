@@ -32,8 +32,9 @@ export function AlertsSection({ alerts }: { alerts: BalanceAlert[] }) {
         {alerts.map((alert, i) => {
           const style = SEVERITY_STYLE[alert.severity];
           return (
-            <div key={i} className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${style.bg} ${style.border}`}>
+            <div key={i} data-severity={alert.severity} className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${style.bg} ${style.border}`}>
               <AlertTriangle className={`w-3 h-3 ${style.text} flex-shrink-0 mt-0.5`} />
+              <span className={`text-xs font-semibold uppercase tracking-wide flex-shrink-0 ${style.text}`}>{style.label}</span>
               <span className="text-2xs text-text-muted/80">{alert.message}</span>
             </div>
           );

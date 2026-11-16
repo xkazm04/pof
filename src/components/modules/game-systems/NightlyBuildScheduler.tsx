@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { useProjectStore } from '@/stores/projectStore';
-import { DEFAULT_SCHEDULE, type BuildSchedule } from '@/lib/packaging/build-scheduler';
+import { DEFAULT_SCHEDULE, parseTimeOfDay, type BuildSchedule } from '@/lib/packaging/build-scheduler';
 import type { BuildProfile } from '@/lib/packaging/build-profiles';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO } from '@/lib/chart-colors';
 
@@ -30,11 +30,27 @@ interface ScheduleStatus {
 }
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const OUTCOME_COLOR: Record<NonNullable<ScheduleState['lastOutcome']>, string> = {
   success: STATUS_SUCCESS,
   failed: STATUS_ERROR,
   skipped: STATUS_INFO,
 };
+
+/**
+ * The weekday list after pressing `day`. Empty `days` means EVERY day, so every
+ * button reads on: pressing one turns that day off (the other six stay). Turning
+ * off the last selected day would produce `[]` - every day, the opposite of the
+ * press - so it is refused (null). Selecting the seventh day normalizes to `[]`.
+ */
+export function nextScheduleDays(days: number[], day: number): number[] | null {
+  const current = days.length === 0 ? [0, 1, 2, 3, 4, 5, 6] : days;
+  const next = current.includes(day)
+    ? current.filter((d) => d !== day)
+    : [...current, day].sort((a, b) => a - b);
+  if (next.length === 0) return null;
+  return next.length === 7 ? [] : next;
+}
 
 function fmtTime(iso: string | null): string {
   if (!iso) return '—';
@@ -49,12 +65,22 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
 
   const [status, setStatus] = useState<ScheduleStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  // A failed read and a refused write each SAY so - never a silent snap-back to
+  // the last-known (or default 'off') schedule.
+  const [readError, setReadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // The time being typed; committed once on blur / Enter, and only when valid.
+  const [timeDraft, setTimeDraft] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const qs = projectPath ? `?projectPath=${encodeURIComponent(projectPath)}` : '';
       setStatus(await apiFetch<ScheduleStatus>(`/api/packaging/schedule${qs}`));
-    } catch { /* keep last-known status */ }
+      setReadError(null);
+    } catch (e) {
+      // Keep the last-known status on screen, but say it could not be refreshed.
+      setReadError(errorText(e));
+    }
   }, [projectPath]);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -69,6 +95,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
 
   const save = useCallback(async (patch: Partial<BuildSchedule>) => {
     setBusy(true);
+    setActionError(null);
     try {
       await apiFetch('/api/packaging/schedule', {
         method: 'POST',
@@ -76,13 +103,16 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
         body: JSON.stringify({ action: 'save', projectPath, projectName, ueVersion, ...patch }),
       });
       await refresh();
-    } catch { /* surfaced via stale status */ } finally {
+    } catch (e) {
+      setActionError(`Save failed: ${errorText(e)}`);
+    } finally {
       setBusy(false);
     }
   }, [projectPath, projectName, ueVersion, refresh]);
 
   const runNow = useCallback(async () => {
     setBusy(true);
+    setActionError(null);
     try {
       await apiFetch('/api/packaging/schedule', {
         method: 'POST',
@@ -90,16 +120,23 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
         body: JSON.stringify({ action: 'run-now', projectPath, projectName, ueVersion }),
       });
       await refresh();
-    } catch { /* ignore */ } finally {
+    } catch (e) {
+      setActionError(`Run now failed: ${errorText(e)}`);
+    } finally {
       setBusy(false);
     }
   }, [projectPath, projectName, ueVersion, refresh]);
 
+  const commitTime = () => {
+    if (timeDraft === null || busy) return;
+    const next = timeDraft;
+    if (!parseTimeOfDay(next) || next === schedule.time) { setTimeDraft(null); return; }
+    void save({ time: next }).then(() => setTimeDraft(null));
+  };
+
   const toggleDay = (day: number) => {
-    const days = schedule.days.includes(day)
-      ? schedule.days.filter((d) => d !== day)
-      : [...schedule.days, day].sort((a, b) => a - b);
-    save({ days });
+    const days = nextScheduleDays(schedule.days, day);
+    if (days) save({ days });
   };
 
   const running = status?.running ?? false;
@@ -137,9 +174,12 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
           <Clock className="w-3.5 h-3.5 text-text-muted" />
           <input
             type="time"
-            value={schedule.time}
+            aria-label="Build time"
+            value={timeDraft ?? schedule.time}
             disabled={busy}
-            onChange={(e) => save({ time: e.target.value })}
+            onChange={(e) => setTimeDraft(e.target.value)}
+            onBlur={commitTime}
+            onKeyDown={(e) => { if (e.key === 'Enter') commitTime(); }}
             className="bg-background border border-border-bright rounded px-2 py-1 text-xs text-text font-mono outline-none focus-ring"
             data-testid="pof-nightly-time"
           />
@@ -152,6 +192,10 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
             return (
               <button
                 key={day}
+                data-testid={`pof-nightly-day-${day}`}
+                type="button"
+                aria-label={DAY_NAMES[day]}
+                aria-pressed={on}
                 onClick={() => toggleDay(day)}
                 disabled={busy}
                 title={every ? 'Every day' : undefined}
@@ -168,6 +212,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
 
         <select
           value={schedule.profileId ?? ''}
+          aria-label="Build profile"
           disabled={busy}
           onChange={(e) => save({ profileId: e.target.value || null })}
           className="bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus-ring"
@@ -195,7 +240,7 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
       {/* Status row */}
       <div className="flex items-center justify-between gap-3 text-2xs text-text-muted flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
-          <span>{status?.describe ?? describePending()}</span>
+          <span>{status?.describe ?? (readError ? 'Schedule unknown' : describePending())}</span>
           {schedule.enabled && <span>Next: <span className="text-text font-mono">{fmtTime(status?.nextRunAt ?? null)}</span></span>}
           <span className="flex items-center gap-1">
             <GitCommitHorizontal className="w-3 h-3" />
@@ -220,11 +265,21 @@ export function NightlyBuildScheduler({ profiles }: { profiles: BuildProfile[] }
         </button>
       </div>
 
+      {(readError || actionError) && (
+        <div className="text-2xs" style={{ color: STATUS_ERROR }} role="alert" data-testid="pof-nightly-error">
+          {actionError ?? `Could not load the schedule: ${readError}`}
+        </div>
+      )}
+
       {outcome && status?.state.lastReason && (
         <div className="text-2xs text-text-muted border-t border-border pt-2">{status.state.lastReason}</div>
       )}
     </div>
   );
+}
+
+function errorText(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }
 
 function describePending(): string {

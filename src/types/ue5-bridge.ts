@@ -185,16 +185,16 @@ export interface PropertyWatchUpdate {
 }
 
 /**
- * Closed outcome vocabulary for one write on the live channel. The plugin
- * sends no ack for `set.property`, so socket delivery plus the watch read-back
- * is all the truth there is:
+ * Closed outcome vocabulary for one write on the live channel, settled by the
+ * plugin's `set.ack` or, failing that, the watch read-back:
  *  - `dropped`    the frame never left (socket not OPEN)
  *  - `unobserved` sent; no read-back on this exact key since the write
  *  - `pending`    read-back still equals the base (UE has not applied it yet)
- *  - `confirmed`  read-back equals the written value (converged - NOT a conflict)
- *  - `diverged`   read-back is neither base nor written - the only conflict
+ *  - `confirmed`  the editor acked the write, or read-back equals the written value
+ *  - `diverged`   read-back is neither base nor written, or the editor applied and altered it - the only conflict
+ *  - `rejected`   the editor refused the write; `error` says why
  */
-export type SyncWriteOutcome = 'dropped' | 'unobserved' | 'pending' | 'confirmed' | 'diverged';
+export type SyncWriteOutcome = 'dropped' | 'unobserved' | 'pending' | 'confirmed' | 'diverged' | 'rejected';
 
 /** One entry of the WS client's write ledger, keyed `objectPath::propertyName`. */
 export interface SyncWrite {
@@ -211,8 +211,10 @@ export interface SyncWrite {
   /** Client-side arrival sequence of the write (never a UE timestamp). */
   seq: number;
   outcome: SyncWriteOutcome;
-  /** The read-back that settled `outcome`, once one arrived. */
+  /** The read-back or acked value that settled `outcome`, once one arrived. */
   inbound?: unknown;
+  /** Why the editor refused the write (`rejected` only). */
+  error?: string;
 }
 
 /** A diverged write: all three points of the compare, as typed values. */
@@ -230,6 +232,19 @@ export interface WriteReceipt {
   key: string;
   sent: boolean;
   seq: number;
+}
+
+/** The plugin's verdict on one `set.property`; `requestId` echoes the write's seq. */
+export interface WriteAck {
+  requestId: number;
+  objectPath: string;
+  propertyName: string;
+  ok: boolean;
+  /** The editor's value after the write, as ExportText. */
+  value?: unknown;
+  /** The write applied but the editor holds a different value (clamped by PostEditChange). */
+  adjusted?: boolean;
+  error?: string;
 }
 
 /** Aggregated live editor state used by the hook/store bridge. */
@@ -252,13 +267,14 @@ export type WSInboundMessage =
   | { type: 'property.update'; payload: PropertyWatchUpdate }
   | { type: 'event.pie'; payload: { action: string; sessionId?: string } }
   | { type: 'event.selection'; payload: { actors: SelectedActor[] } }
+  | { type: 'set.ack'; payload: WriteAck }
   | { type: 'pong' };
 
 /** Outbound messages from the web client to UE5 plugin. */
 export type WSOutboundMessage =
   | { type: 'subscribe.property'; payload: PropertyWatchRequest }
   | { type: 'unsubscribe.property'; payload: { watchId: string } }
-  | { type: 'set.property'; payload: { objectPath: string; propertyName: string; value: unknown } }
+  | { type: 'set.property'; payload: { objectPath: string; propertyName: string; value: unknown; requestId: number } }
   | { type: 'request.snapshot' }
   | { type: 'ping' };
 

@@ -43,14 +43,69 @@ export function clamp(v: number, min: number, max: number): number {
 
 // ── Scripted combat sequence ────────────────────────────────────────────────
 
+/** Scripted combat hit table, shared by the damage numbers and the enemy bar fade. */
+const COMBAT_HITS: Array<{ time: number; amount: number; element: string; isCrit: boolean; isHeal: boolean }> = [
+  { time: 0.5, amount: 247, element: 'Physical', isCrit: false, isHeal: false },
+  { time: 1.2, amount: 892, element: 'Fire',     isCrit: true,  isHeal: false },
+  { time: 2.0, amount: 156, element: 'Ice',      isCrit: false, isHeal: false },
+  { time: 2.8, amount: 1203, element: 'Lightning', isCrit: true, isHeal: false },
+  { time: 3.5, amount: 310, element: 'Physical', isCrit: false, isHeal: false },
+  { time: 4.2, amount: 567, element: 'Fire',     isCrit: false, isHeal: false },
+  { time: 5.0, amount: 728, element: 'Ice',      isCrit: true,  isHeal: false },
+  { time: 5.6, amount: 200, element: 'Heal',     isCrit: false, isHeal: true },
+  { time: 6.2, amount: 350, element: 'Heal',     isCrit: false, isHeal: true },
+];
+
+/** The scripted enemy dies here (enemyHealth reaches 0). */
+export const ENEMY_DEATH_TIME = 6.0;
+
+/**
+ * Enemy health-bar opacity at loop time `time`, stepping the UE fade FSM
+ * (EnemyHealthBarWidget: Hidden -> FadingIn -> Visible -> FadingOut; damage re-enters
+ * FadingIn or resets the timer; FadeOutDelay ends Visible). Death starts FadingOut.
+ */
+export function enemyBarAlpha(time: number, theme: HudTheme): number {
+  const t = ((time % CYCLE_DURATION) + CYCLE_DURATION) % CYCLE_DURATION;
+  const hits = COMBAT_HITS.filter((h) => !h.isHeal && h.time < ENEMY_DEATH_TIME).map((h) => h.time);
+  const STEP = 0.01;
+  type State = 'hidden' | 'in' | 'visible' | 'out';
+  let state: State = 'hidden';
+  let alpha = 0;
+  let sinceDamage = 0;
+  let dead = false;
+  let nextHit = 0;
+  const steps = Math.round(t / STEP);
+  for (let i = 0; i <= steps; i++) {
+    const now = i * STEP;
+    while (nextHit < hits.length && hits[nextHit] <= now + 1e-9) {
+      sinceDamage = 0;
+      state = state === 'hidden' || state === 'out' ? 'in' : 'visible';
+      nextHit++;
+    }
+    if (!dead && now >= ENEMY_DEATH_TIME - 1e-9) { dead = true; state = alpha <= 0 ? 'hidden' : 'out'; }
+    if (i === steps) break;
+    if (state === 'in') {
+      alpha += STEP / Math.max(theme.fadeInDuration, 0.01);
+      if (alpha >= 1) { alpha = 1; state = 'visible'; }
+    } else if (state === 'visible') {
+      sinceDamage += STEP;
+      if (sinceDamage >= theme.fadeOutDelay) state = 'out';
+    } else if (state === 'out') {
+      alpha -= STEP / Math.max(theme.fadeOutDuration, 0.01);
+      if (alpha <= 0) { alpha = 0; state = 'hidden'; }
+    }
+  }
+  return clamp(alpha, 0, 1);
+}
+
 export function getCombatEvents(time: number, theme: HudTheme): {
   playerHealth: number;
   enemyHealth: number;
   damageEvents: DamageEvent[];
 } {
   const t = time % CYCLE_DURATION;
+  const cycle = Math.floor(time / CYCLE_DURATION);
   const events: DamageEvent[] = [];
-  let nextId = Math.floor(time / CYCLE_DURATION) * 100;
 
   // Player health timeline: starts 100%, takes damage, heals, takes more
   let playerHealth: number;
@@ -72,17 +127,7 @@ export function getCombatEvents(time: number, theme: HudTheme): {
   else enemyHealth = 0;
 
   // Spawn damage numbers at scripted times
-  const hitTimes: Array<{ time: number; amount: number; element: string; isCrit: boolean; isHeal: boolean }> = [
-    { time: 0.5, amount: 247, element: 'Physical', isCrit: false, isHeal: false },
-    { time: 1.2, amount: 892, element: 'Fire',     isCrit: true,  isHeal: false },
-    { time: 2.0, amount: 156, element: 'Ice',      isCrit: false, isHeal: false },
-    { time: 2.8, amount: 1203, element: 'Lightning', isCrit: true, isHeal: false },
-    { time: 3.5, amount: 310, element: 'Physical', isCrit: false, isHeal: false },
-    { time: 4.2, amount: 567, element: 'Fire',     isCrit: false, isHeal: false },
-    { time: 5.0, amount: 728, element: 'Ice',      isCrit: true,  isHeal: false },
-    { time: 5.6, amount: 200, element: 'Heal',     isCrit: false, isHeal: true },
-    { time: 6.2, amount: 350, element: 'Heal',     isCrit: false, isHeal: true },
-  ];
+  const hitTimes = COMBAT_HITS;
 
   // Seeded pseudo-random for consistent offsets
   const seededRand = (seed: number) => {
@@ -90,19 +135,25 @@ export function getCombatEvents(time: number, theme: HudTheme): {
     return x - Math.floor(x);
   };
 
-  for (const hit of hitTimes) {
-    const age = t - hit.time;
-    if (age >= 0 && age < theme.damageLifetime) {
+  // A hit spawned late in the previous loop is still alive into this one when its
+  // lifetime outlasts the wrap (DamageLifetime up to 3.0s vs the 6.2s heal).
+  // Ids are (loop, hit index): stable for the event's whole life.
+  for (const spawnCycle of [cycle - 1, cycle]) {
+    if (spawnCycle < 0) continue;
+    hitTimes.forEach((hit, i) => {
+      const age = t + (cycle - spawnCycle) * CYCLE_DURATION - hit.time;
+      if (age < 0 || age >= theme.damageLifetime) return;
       events.push({
-        id: nextId++,
+        id: spawnCycle * 100 + i,
         amount: hit.amount,
         element: hit.element,
         isCrit: hit.isCrit,
         isHeal: hit.isHeal,
         spawnTime: hit.time,
+        age,
         offsetX: (seededRand(hit.time * 7.1) - 0.5) * 2 * theme.horizontalSpread,
       });
-    }
+    });
   }
 
   return { playerHealth, enemyHealth, damageEvents: events };
@@ -178,7 +229,7 @@ export function parseUE5Config(text: string, base: HudTheme): HudImportResult {
     if (!f && !c) return bad('not a float or FLinearColor declaration');
     const name = (f ?? c)![1];
     const p = HUD_PARAM_BY_UE_NAME.get(name);
-    if (!p) { out.unknown.push(name); return; }
+    if (!p) { if (!out.unknown.includes(name)) out.unknown.push(name); return; }
     if (seen.has(name)) return bad(`duplicate declaration of ${name}`);
     if (p.kind === 'float' && !f) return bad(`${name} is a float, got a color`);
     if (p.kind === 'color' && !c) return bad(`${name} is a color, got a float`);

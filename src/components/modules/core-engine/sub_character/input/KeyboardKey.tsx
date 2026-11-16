@@ -36,6 +36,7 @@ export function KeyboardKey({ kd, binding, conflict }: Props) {
     <motion.div
       whileHover={{ scale: 1.08, y: -2 }}
       whileTap={{ scale: 0.95, y: 1 }}
+      role="img"
       aria-label={`${kd.key}: ${binding ? (conflict ?? [binding.action]).join(' & ') : 'unbound'}`}
       className={`relative flex items-center justify-center rounded-md text-xs font-mono font-bold border cursor-default transition-all ${
         kd.widthClass ?? 'w-8'

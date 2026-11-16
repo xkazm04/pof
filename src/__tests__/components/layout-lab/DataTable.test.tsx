@@ -98,6 +98,14 @@ describe('ArchetypeStep table view via DataTable', () => {
     expect(screen.queryByText('— missing')).toBeNull();
   });
 
+  it('offers a break after each underscore in ids and headers without adding text', () => {
+    const { container } = render(
+      <DataTable t={t} columns={[{ key: 'spread_deg' }]} rows={[{ values: { spread_deg: 'machine_pistol' } }]} />,
+    );
+    expect(container.querySelectorAll('wbr').length).toBe(2);
+    expect(container.textContent).toBe('spread_degmachine_pistol');
+  });
+
   it('follows rowsKey into a nested row container', () => {
     const nested: StepSpec = {
       archetype: 'rules', label: 'Hazards',
@@ -121,5 +129,27 @@ describe('ArchetypeStep table view via DataTable', () => {
     fireEvent.click(screen.getByRole('button', { name: /Produce Bad Table/ }));
     expect(screen.getByTestId('view-shape-mismatch')).toBeTruthy();
     expect(screen.queryByText('— missing')).toBeNull();
+  });
+});
+
+describe('DataTable semantics', () => {
+  afterEach(cleanup);
+
+  it('exposes row mode as a table with column headers and cells', () => {
+    render(<DataTable t={t} testId="tbl" columns={[{ key: 'a' }, { key: 'b' }]} header={['Tier', '']}
+      rows={[{ label: 'one', values: { a: 1, b: 2 } }]} />);
+    const table = screen.getByRole('table');
+    expect(table.getAttribute('data-testid')).toBe('tbl');
+    expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Tier', 'a', 'b']);
+    expect(screen.getAllByRole('row')).toHaveLength(2);
+    expect(screen.getByRole('rowheader').textContent).toBe('one');
+    expect(screen.getAllByRole('cell').map((c) => c.textContent)).toEqual(['1', '2']);
+  });
+
+  it('exposes key-value mode as a table of labelled rows', () => {
+    render(<DataTable t={t} columns={[{ key: 'Damage', unit: 'hp' }]} values={{ Damage: 34 }} header={['Attribute', 'Value']} />);
+    expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Attribute', 'Value']);
+    expect(screen.getByRole('rowheader').textContent).toBe('Damage');
+    expect(screen.getByRole('cell').textContent).toBe('34 hp');
   });
 });

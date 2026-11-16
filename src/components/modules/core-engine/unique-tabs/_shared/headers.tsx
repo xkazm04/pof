@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { isFeatureDone } from '@/lib/feature-done';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -18,7 +19,7 @@ import { STATUS_COLORS } from './constants';
 
 export function StatusDot({ status }: { status: FeatureStatus }) {
   const sc = STATUS_COLORS[status];
-  const isActive = status === 'implemented' || status === 'improved';
+  const isActive = isFeatureDone(status);
   const prefersReduced = useReducedMotion();
   return (
     <span className="flex items-center gap-1.5">
@@ -61,7 +62,7 @@ export function TabHeader({ icon: Icon, title, implemented, total, accent, child
         <div className="flex flex-col">
           <span className="text-sm font-bold text-text tracking-wide">{title}</span>
           <span className="text-sm text-text-muted">
-            <span className="font-mono font-medium" style={{ color: implemented === total ? STATUS_SUCCESS : accent }}>{implemented}</span>
+            <span className="font-mono font-medium" style={{ color: total > 0 && implemented >= total ? STATUS_SUCCESS : accent }}>{implemented}</span>
             <span className="opacity-60">/{total} deployed</span>
           </span>
         </div>

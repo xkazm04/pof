@@ -1,12 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
 import type { RoomNode } from '@/types/level-design';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { levelBlockoutScript } from '@/lib/blender-mcp/scripts/level-blockout';
 import type { BlockoutRoom } from '@/lib/blender-mcp/scripts/level-blockout';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
-import { ROOM_W, ROOM_H, ROOM_TYPE_CONFIG } from './constants';
+import { ROOM_W, ROOM_H, roomTypeConfig } from './constants';
 import type { LevelFlowEditorProps } from './types';
 
 export function useLevelFlowEditor({
@@ -48,9 +47,13 @@ export function useLevelFlowEditor({
 
   const addRoom = useCallback(() => {
     const id = `room-${Date.now()}-${++roomSeqRef.current}`;
+    // `Room <count+1>` collides once a room was deleted; take the next free number.
+    const taken = new Set(rooms.map((r) => r.name));
+    let n = rooms.length + 1;
+    while (taken.has(`Room ${n}`)) n++;
     const newRoom: RoomNode = {
       id,
-      name: `Room ${rooms.length + 1}`,
+      name: `Room ${n}`,
       type: 'combat',
       description: '',
       encounterDesign: '',
@@ -246,7 +249,7 @@ export function useLevelFlowEditor({
         ];
       };
       const blockoutRooms: BlockoutRoom[] = rooms.map((room) => {
-        const cfg = ROOM_TYPE_CONFIG[room.type];
+        const cfg = roomTypeConfig(room.type);
         return {
           id: room.id,
           name: room.name,
@@ -259,11 +262,7 @@ export function useLevelFlowEditor({
         };
       });
       const code = levelBlockoutScript({ rooms: blockoutRooms, wallHeight: 3 });
-      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
+      const result = await executeViaMCP('Level flow blockout', code);
       if (result.ok) {
         setBlenderResult({ message: result.data.output || `Blockout created: ${rooms.length} rooms`, isError: false });
       } else {

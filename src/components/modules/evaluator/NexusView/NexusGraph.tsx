@@ -1,13 +1,29 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
+import { useId, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_VIOLET, MODULE_COLORS, OPACITY_20,
 } from '@/lib/chart-colors';
-import { zoomViewBox } from '@/lib/topology/moduleGraph';
+import { zoomViewBox, edgePath } from '@/lib/topology/moduleGraph';
 import { NODE_W, NODE_H } from './constants';
 import type { LayerId } from './constants';
 import type { NexusNode, NexusEdge } from './types';
+
+/**
+ * Pattern-success heat bands, highest first. The node heat bar (NexusGraph) and the
+ * legend (NexusView) both read THIS list, so every colour drawn has a legend entry.
+ */
+export const PATTERN_HEAT_BANDS = [
+  { min: 0.7, color: STATUS_SUCCESS, label: '70%+' },
+  { min: 0.4, color: STATUS_WARNING, label: '40-69%' },
+  { min: 0, color: STATUS_ERROR, label: 'under 40%' },
+] as const;
+
+export function patternHeatColor(rate: number): string {
+  return (PATTERN_HEAT_BANDS.find((b) => rate >= b.min) ?? PATTERN_HEAT_BANDS[PATTERN_HEAT_BANDS.length - 1]).color;
+}
 
 export function NexusGraph({
   edges,
@@ -36,25 +52,54 @@ export function NexusGraph({
   // <svg>, which cropped the graph inside this overflow-hidden frame. Edge
   // endpoints come from the nodes' own centres.
   const byId = new Map(nodes.map((n) => [n.moduleId as string, n]));
+  // SMIL <animate> sits outside framer's reducedMotion policy and the CSS reset.
+  const reduceMotion = useReducedMotion() ?? false;
+  // Per-instance marker / filter ids (LRU-hidden modules stay mounted beside others).
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const ARROW = `nexus-arrow-${uid}`;
+  const ARROW_BLOCKED = `nexus-arrow-blocked-${uid}`;
+  const GLOW_RED = `nexus-glow-red-${uid}`;
+  const GLOW_PURPLE = `nexus-glow-purple-${uid}`;
+
+  // canvas-accessibility: the map is ONE tab stop with a roving cursor, not one stop
+  // per module. Arrows / Home / End move the cursor; Enter / Space select.
+  const [cursor, setCursor] = useState(0);
+  const active = Math.min(cursor, Math.max(0, nodes.length - 1));
+  const moveTo = (i: number, target: Element | null) => {
+    const next = (i + nodes.length) % nodes.length;
+    setCursor(next);
+    const sibling = target?.parentElement?.querySelectorAll<SVGGElement>(':scope > g[role="button"]')[next];
+    sibling?.focus();
+  };
+  const onNodeKey = (e: KeyboardEvent<SVGGElement>, i: number, toggle: () => void) => {
+    const step: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    else if (e.key in step) { e.preventDefault(); moveTo(i + step[e.key], e.currentTarget); }
+    else if (e.key === 'Home') { e.preventDefault(); moveTo(0, e.currentTarget); }
+    else if (e.key === 'End') { e.preventDefault(); moveTo(nodes.length - 1, e.currentTarget); }
+  };
+
   return (
     <div className="bg-background border border-border rounded-lg overflow-hidden relative">
       <svg
         width="100%"
         viewBox={zoomViewBox(svgWidth, svgHeight, zoom)}
+        role="group"
+        aria-label={`Nexus map: ${nodes.length} modules, ${edges.length} connections. Arrow keys move between modules, Enter selects.`}
       >
         <defs>
-          <marker id="nexus-arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <marker id={ARROW} viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill="var(--text-muted)" />
           </marker>
-          <marker id="nexus-arrow-blocked" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <marker id={ARROW_BLOCKED} viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_BLOCKER} />
           </marker>
           {/* Glow filters */}
-          <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={GLOW_RED} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={GLOW_PURPLE} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
@@ -65,19 +110,7 @@ export function NexusGraph({
           const fromNode = byId.get(edge.from);
           const toNode = byId.get(edge.to);
           if (!fromNode || !toNode) return null;
-          const dx = toNode.cx - fromNode.cx;
-          const dy = toNode.cy - fromNode.cy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const ux = dx / dist;
-          const uy = dy / dist;
-          const x1 = fromNode.cx + ux * (NODE_W / 2 + 4);
-          const y1 = fromNode.cy + uy * (NODE_H / 2 + 4);
-          const x2 = toNode.cx - ux * (NODE_W / 2 + 10);
-          const y2 = toNode.cy - uy * (NODE_H / 2 + 10);
-          const mx = (x1 + x2) / 2;
-          const my = (y1 + y2) / 2;
-          const perpX = -uy * 20;
-          const perpY = ux * 20;
+          const geo = edgePath({ x: fromNode.cx, y: fromNode.cy }, { x: toNode.cx, y: toNode.cy }, NODE_W, NODE_H);
           const isHighlighted = highlightModule === edge.from || highlightModule === edge.to;
           const opacity = highlightModule ? (isHighlighted ? 1 : 0.12) : 0.4;
 
@@ -90,24 +123,24 @@ export function NexusGraph({
           return (
             <g key={`${edge.from}->${edge.to}`}>
               <path
-                d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
+                d={geo.d}
                 fill="none"
                 stroke={edge.hasBlockers ? STATUS_BLOCKER : 'var(--text-muted)'}
                 strokeWidth={Math.min(3, 0.5 + edge.count * 0.5)}
                 strokeDasharray={edge.hasBlockers ? '4 2' : undefined}
                 opacity={opacity}
-                markerEnd={edge.hasBlockers ? 'url(#nexus-arrow-blocked)' : 'url(#nexus-arrow)'}
+                markerEnd={`url(#${edge.hasBlockers ? ARROW_BLOCKED : ARROW})`}
                 className="transition-opacity duration-base"
               />
               {/* Edge count label */}
               {isHighlighted && (
-                <text x={mx + perpX} y={my + perpY - 6} fill="var(--text-muted-hover)" fontSize="9" textAnchor="middle">
+                <text x={geo.labelX} y={geo.labelY - 6} fill="var(--text-muted-hover)" fontSize="9" textAnchor="middle">
                   {edge.count} deps
                 </text>
               )}
               {/* Layer 3: session duration annotation */}
               {showSessionAnnotation && avgMs > 0 && (
-                <text x={mx + perpX} y={my + perpY + 8} fill={STATUS_INFO} fontSize="8" textAnchor="middle" opacity="0.8">
+                <text x={geo.labelX} y={geo.labelY + 8} fill={STATUS_INFO} fontSize="8" textAnchor="middle" opacity="0.8">
                   ~{avgMs > 60000 ? `${Math.round(avgMs / 60000)}m` : `${Math.round(avgMs / 1000)}s`}
                 </text>
               )}
@@ -116,7 +149,7 @@ export function NexusGraph({
         })}
 
         {/* Nodes */}
-        {nodes.map((node) => {
+        {nodes.map((node, i) => {
           const isSelected = selectedModule === node.moduleId;
           const isHighlighted = highlightModule === node.moduleId;
           const connectedToHighlight = highlightModule
@@ -127,9 +160,7 @@ export function NexusGraph({
 
           // Layer 1: pattern heat
           const showPatternHeat = activeLayers.has('patterns') && node.patternSuccessRate !== null;
-          const patternColor = node.patternSuccessRate !== null
-            ? node.patternSuccessRate >= 0.7 ? STATUS_SUCCESS : node.patternSuccessRate >= 0.4 ? STATUS_WARNING : STATUS_ERROR
-            : undefined;
+          const patternColor = node.patternSuccessRate !== null ? patternHeatColor(node.patternSuccessRate) : undefined;
 
           // Layer 2: critical findings in the newest deep eval (null = never evaluated: no glow)
           const showBuildGlow = activeLayers.has('builds') && (node.criticalFindings ?? 0) > 0;
@@ -143,10 +174,17 @@ export function NexusGraph({
           return (
             <g
               key={node.moduleId}
-              onClick={() => setSelectedModule(isSelected ? null : node.moduleId)}
+              role="button"
+              tabIndex={i === active ? 0 : -1}
+              aria-pressed={isSelected}
+              aria-label={`${node.label}: ${node.implementedCount} of ${node.featureCount} features implemented${node.blockedCount > 0 ? `, ${node.blockedCount} blocked` : ''}.`}
+              onClick={() => { setCursor(i); setSelectedModule(isSelected ? null : node.moduleId); }}
+              onKeyDown={(e) => onNodeKey(e, i, () => setSelectedModule(isSelected ? null : node.moduleId))}
               onMouseEnter={() => setHoveredModule(node.moduleId)}
               onMouseLeave={() => setHoveredModule(null)}
-              className="cursor-pointer"
+              onFocus={() => { setCursor(i); setHoveredModule(node.moduleId); }}
+              onBlur={() => setHoveredModule(null)}
+              className="cursor-pointer focus-ring"
               opacity={dimmed ? 0.2 : 1}
               style={{ transition: 'opacity 200ms' }}
             >
@@ -162,9 +200,9 @@ export function NexusGraph({
                   stroke={MODULE_COLORS.evaluator}
                   strokeWidth={2}
                   opacity={0.6}
-                  filter="url(#glow-red)"
+                  filter={`url(#${GLOW_RED})`}
                 >
-                  <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" />
+                  {!reduceMotion && <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite" />}
                 </rect>
               )}
 
@@ -180,7 +218,7 @@ export function NexusGraph({
                   stroke={ACCENT_VIOLET}
                   strokeWidth={1.5}
                   opacity={0.5}
-                  filter="url(#glow-purple)"
+                  filter={`url(#${GLOW_PURPLE})`}
                 />
               )}
 

@@ -11,7 +11,25 @@ export function formatDateRange(start: string, end: string): string {
   const e = new Date(end + 'T12:00:00');
   e.setDate(e.getDate() - 1); // end is exclusive
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  if (s.getFullYear() !== e.getFullYear()) {
+    return `${s.toLocaleDateString('en', opts)}, ${s.getFullYear()} — ${e.toLocaleDateString('en', opts)}, ${e.getFullYear()}`;
+  }
   return `${s.toLocaleDateString('en', opts)} — ${e.toLocaleDateString('en', opts)}, ${s.getFullYear()}`;
+}
+
+// ── Success rate (a week with no sessions has none) ──────────────────────────
+
+/** The week's success rate, or a dash when no session was measured: never a fabricated 0%. */
+export function successRateText(d: Pick<WeeklyDigest, 'totalSessions' | 'successRate'>): string {
+  return d.totalSessions > 0 ? `${Math.round(d.successRate * 100)}%` : '—';
+}
+
+/** Points moved vs the previous week; undefined unless BOTH weeks had sessions. */
+export function successRateDelta(
+  d: Pick<WeeklyDigest, 'totalSessions' | 'successRate' | 'prevWeekSessions' | 'prevWeekSuccessRate'>,
+): number | undefined {
+  if (d.totalSessions === 0 || d.prevWeekSessions === 0) return undefined;
+  return Math.round((d.successRate - d.prevWeekSuccessRate) * 100);
 }
 
 // ── Markdown export ──────────────────────────────────────────────────────────
@@ -31,7 +49,7 @@ export function formatDigestMarkdown(d: WeeklyDigest, landed?: WeekLanded): stri
   lines.push('');
   lines.push(`## Stats`);
   lines.push(`- **Sessions:** ${d.totalSessions} (${d.totalSessions - d.prevWeekSessions >= 0 ? '+' : ''}${d.totalSessions - d.prevWeekSessions} vs last week)`);
-  lines.push(`- **Success Rate:** ${Math.round(d.successRate * 100)}%`);
+  lines.push(`- **Success Rate:** ${successRateText(d)}`);
   lines.push(`- **Checklist:** ${checklistLine(d, landed)}`);
   lines.push(`- **Time Invested:** ${formatDuration(d.totalTimeMs)}`);
   lines.push(`- **Current Streak:** ${d.currentStreak} | **Best:** ${d.longestStreak}`);
@@ -112,7 +130,7 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest,
   // Stat boxes
   const stats = [
     { label: 'Sessions', value: d.totalSessions.toString(), color: STATUS_INFO },
-    { label: 'Success Rate', value: `${Math.round(d.successRate * 100)}%`, color: MODULE_COLORS.setup },
+    { label: 'Success Rate', value: successRateText(d), color: MODULE_COLORS.setup },
     { label: 'Checklist', value: landed ? `${landed.count} landed` : `${d.checklistCompleted}/${d.checklistTotal}`, color: ACCENT_VIOLET },
     { label: 'Time', value: formatDuration(d.totalTimeMs), color: MODULE_COLORS.content },
   ];
@@ -229,6 +247,7 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest,
       const text = `${a.icon} ${a.title}`;
       ctx.font = '12px system-ui, -apple-system, sans-serif';
       const tw = ctx.measureText(text).width + 20;
+      if (ax + tw > W - 40) { ax = 40; y += 30; }
 
       ctx.fillStyle = `${OVERLAY_WHITE}${OPACITY_5}`;
       roundRect(ctx, ax, y - 2, tw, 24, 12);
@@ -238,7 +257,6 @@ export function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest,
       ctx.fillText(text, ax + 10, y + 13);
 
       ax += tw + 8;
-      if (ax > W - 100) { ax = 40; y += 30; }
     }
     y += 30;
   }

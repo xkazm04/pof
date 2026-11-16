@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Circle, Loader2, Play, Square, X } from 'lucide-react';
 import { formatEffortTime } from '@/lib/implementation-planner/effort-estimator';
+import { featureKeyName } from '@/lib/implementation-planner/plan-generator';
 import type { BuildSessionStep } from '@/lib/implementation-planner/build-session';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MODULE_COLORS } from '@/lib/chart-colors';
@@ -12,7 +13,6 @@ const PRESETS = [
   { label: '2h', minutes: 120 },
   { label: '4h', minutes: 240 },
 ];
-const shortName = (key: string) => key.slice(key.indexOf('::') + 2);
 
 type StepMark = 'landed' | 'running' | 'queued';
 
@@ -32,7 +32,7 @@ function StepMeta({ step }: { step: BuildSessionStep }) {
   return (
     <>
       <span className="text-2xs text-text-muted">
-        {step.unlockedBy ? `unlocked by ${shortName(step.unlockedBy)}` : 'ready now'}
+        {step.unlockedBy ? `unlocked by ${featureKeyName(step.unlockedBy)}` : 'ready now'}
       </span>
       <span className="text-2xs font-mono text-text-muted w-12 text-right">~{formatEffortTime(step.minutes)}</span>
     </>
@@ -108,8 +108,8 @@ export function BuildSessionPanel({ session, onClose }: { session: UseBuildSessi
               ))}
               {excluded.map((key) => (
                 <li key={key} className="flex items-center gap-2 text-xs text-text-muted">
-                  <input type="checkbox" checked={false} onChange={() => session.toggleStep(key)} aria-label={`Include ${shortName(key)}`} />
-                  <span className="flex-1 truncate line-through">{shortName(key)}</span>
+                  <input type="checkbox" checked={false} onChange={() => session.toggleStep(key)} aria-label={`Include ${featureKeyName(key)}`} />
+                  <span className="flex-1 truncate line-through">{featureKeyName(key)}</span>
                   <span className="text-2xs">deselected</span>
                 </li>
               ))}

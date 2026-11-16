@@ -127,3 +127,28 @@ describe('write receipt names its rung', () => {
     expect(warn.textContent ?? '').toContain('Source/PoF/PoF.Build.cs');
   });
 });
+
+describe('write receipt is bound to the code it describes', () => {
+  it('disappears when a different class is transpiled into the same button', async () => {
+    apiFetch
+      .mockResolvedValueOnce(plan())
+      .mockResolvedValueOnce({ written: ['a.h', 'a.cpp'], moduleInBuild: true, uprojectFile: 'MyGame.uproject' });
+    tryApiFetch.mockResolvedValue({ ok: false, error: 'fetch failed' });
+
+    const view = renderButton();
+    await writeIt();
+    await screen.findByTestId('write-receipt');
+
+    view.rerender(
+      <WriteToProjectButton
+        className="AOther"
+        header={HEADER.replace('AHero', 'AOther')}
+        source="// other body"
+        projectPath="C:/proj"
+        moduleName="PoF"
+        onModuleChange={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId('write-receipt')).toBeNull();
+  });
+});

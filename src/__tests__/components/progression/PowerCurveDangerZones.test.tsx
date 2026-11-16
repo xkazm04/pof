@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
 import { PowerCurveDangerZones } from '@/components/modules/core-engine/sub_progression/analysis/PowerCurveDangerZones';
+import { STATUS_TOKENS } from '@/lib/status-token';
 
 afterEach(cleanup);
 
@@ -36,5 +37,15 @@ describe('PowerCurveDangerZones', () => {
     expect(container.querySelector('[role="status"]')).toBeTruthy();
     expect(container.querySelector('polyline')).toBeNull();
     expect(container.innerHTML).not.toContain('NaN');
+  });
+});
+
+describe('PowerCurveDangerZones zone bands', () => {
+  it('a Hard final sample colours the last band; it is not dropped', () => {
+    const { container } = render(<PowerCurveDangerZones playerPower={[100, 100, 10]} enemyDifficulty={[100, 100, 100]} />);
+    const fills = Array.from(container.querySelectorAll('rect')).map((r) => r.getAttribute('fill'));
+    expect(fills).toHaveLength(2);
+    expect(fills[0]).toBe(STATUS_TOKENS.warn.color);
+    expect(fills[1]).toBe(STATUS_TOKENS.bad.color);
   });
 });

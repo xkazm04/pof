@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
+import { logger } from '@/lib/logger';
 import { getAppOrigin } from '@/lib/constants';
 import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
 import { hexToLinearRgb, type MaterialChannel } from '@/lib/visual-gen/material-boundary';
@@ -23,6 +25,18 @@ export interface DeriveMapsOutcome {
 }
 
 const TEXTURE_MAPS_ENDPOINT = '/api/texture-maps';
+
+/**
+ * An uploaded map is a `blob:` URL from `URL.createObjectURL`; the browser keeps
+ * its bytes alive until it is revoked. Release one the moment the store stops
+ * holding it (replace, clear, reset), as the asset viewer's store already does.
+ * Served URLs are never touched.
+ */
+function releaseBlobUrl(url: string | null | undefined): void {
+  if (url && url.startsWith('blob:') && typeof URL.revokeObjectURL === 'function') {
+    URL.revokeObjectURL(url);
+  }
+}
 
 export interface SendToBlenderResult {
   name: string;
@@ -61,14 +75,21 @@ const MATERIALS_ENDPOINT = '/api/visual-gen/materials';
  * slider. Named fields only — an unknown key in the row is not silently adopted.
  */
 function toPbrParams(raw: Record<string, unknown>): PBRParams {
-  const num = (key: keyof PBRParams, fallback: number) =>
-    typeof raw[key] === 'number' ? (raw[key] as number) : fallback;
+  // The route stores any params object, so a row is clamped to the editor's
+  // slider ranges here: a NaN or out-of-range number would otherwise reach the
+  // slider, the preview and both exports unchanged.
+  const num = (key: keyof PBRParams, fallback: number, max: number) => {
+    const v = raw[key];
+    return typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(0, v)) : fallback;
+  };
+  const colour = raw.baseColor;
   return {
-    baseColor: typeof raw.baseColor === 'string' ? raw.baseColor : DEFAULT_PARAMS.baseColor,
-    metallic: num('metallic', DEFAULT_PARAMS.metallic),
-    roughness: num('roughness', DEFAULT_PARAMS.roughness),
-    normalStrength: num('normalStrength', DEFAULT_PARAMS.normalStrength),
-    aoStrength: num('aoStrength', DEFAULT_PARAMS.aoStrength),
+    // `<input type="color">` and hexToLinearRgb both need #rrggbb.
+    baseColor: typeof colour === 'string' && /^#[0-9a-f]{6}$/i.test(colour) ? colour : DEFAULT_PARAMS.baseColor,
+    metallic: num('metallic', DEFAULT_PARAMS.metallic, 1),
+    roughness: num('roughness', DEFAULT_PARAMS.roughness, 1),
+    normalStrength: num('normalStrength', DEFAULT_PARAMS.normalStrength, 2),
+    aoStrength: num('aoStrength', DEFAULT_PARAMS.aoStrength, 1),
   };
 }
 
@@ -186,7 +207,9 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   setPreviewMesh: (mesh) => set({ previewMesh: mesh }),
 
   setTexture: (channel, url, provenance) => {
-    const key = `${channel}Texture` as keyof MaterialState;
+    const key = `${channel}Texture` as const;
+    const previous = get()[key];
+    if (previous !== url) releaseBlobUrl(previous);
     set((s) => ({
       [key]: url,
       textureHighlightTick: {
@@ -216,7 +239,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ albedoBase64, persist: true }),
     });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      logger.warn(`[material-lab] derive maps: ${result.error}`);
+      return result;
+    }
 
     const outcome: DeriveMapsOutcome = { filled: [], skipped: [], refused: result.data.refused };
     for (const map of result.data.maps) {
@@ -242,6 +268,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       // reads as "you have no presets", which is a lie. The caller renders the
       // error with a retry instead.
       set({ presetsLoading: false });
+      logger.warn(`[material-lab] load presets: ${result.error}`);
       return result;
     }
     const presets = result.data.map(toPreset);
@@ -263,7 +290,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     });
     // The preset joins the list only once the row exists — an optimistic entry
     // that vanished on the next reload would be exactly the bug being fixed.
-    if (!result.ok) return result;
+    if (!result.ok) {
+      logger.warn(`[material-lab] save preset: ${result.error}`);
+      return result;
+    }
 
     const preset = toPreset(result.data);
     set((s) => ({ presets: [preset, ...s.presets], activePresetId: preset.id }));
@@ -282,7 +312,10 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
-    if (!result.ok) return result;
+    if (!result.ok) {
+      logger.warn(`[material-lab] delete preset: ${result.error}`);
+      return result;
+    }
 
     set((s) => ({
       presets: s.presets.filter((p) => p.id !== id),
@@ -291,7 +324,11 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
     return ok(true as const);
   },
 
-  reset: () =>
+  reset: () => {
+    const s = get();
+    for (const url of [s.albedoTexture, s.normalTexture, s.metallicTexture, s.roughnessTexture, s.aoTexture]) {
+      releaseBlobUrl(url);
+    }
     set({
       params: { ...DEFAULT_PARAMS },
       activePresetId: null,
@@ -302,7 +339,8 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       aoTexture: null,
       textureHighlightTick: { albedo: 0, normal: 0, metallic: 0, roughness: 0, ao: 0 },
       textureProvenance: {},
-    }),
+    });
+  },
 
   sendToBlender: async (materialName?: string) => {
     const state = get();
@@ -336,12 +374,11 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       textures: plan.textures,
     });
 
-    const result = await tryApiFetch<unknown>('/api/blender-mcp/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
-    if (!result.ok) return result;
+    const result = await executeViaMCP('Send material to Blender', code);
+    if (!result.ok) {
+      logger.warn(`[material-lab] send to Blender: ${result.error}`);
+      return result;
+    }
     return ok({ name, plan });
   },
 }));

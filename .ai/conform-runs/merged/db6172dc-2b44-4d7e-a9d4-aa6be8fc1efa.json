@@ -1,0 +1,65 @@
+{
+ "schema": "conform-run/1",
+ "worker": "db6172dc-2b44-4d7e-a9d4-aa6be8fc1efa",
+ "subject": "engine-string-representation",
+ "evaluatedAt": "2026-11-09T23:58:38.840216+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "localization-pipeline",
+   "subject": "engine-string-representation",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/LocalizationPipelineView/useLocalizationPipelineView.ts:14 This context is a React view over localization records. It handles text only as ordinary host JavaScript strings (toLowerCase/includes), not as the engine's own string value, so none of the subject's preconditions hold here; a case-insensitive search of the context directory for interner, latin1, vtable, utf16, zero-copy and narrowest returned zero files.",
+   "techniques": [
+    {
+     "technique": "compile-time-static-string-table",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/LocalizationPipelineView/index.tsx:36 'String Tables' here means UE5 localization StringTable assets shown in a tab. It is not an engine's compile-time table of well-known names, and no closed vocabulary is minted here."
+    },
+    {
+     "technique": "zero-copy-slice-string",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/LocalizationPipelineView/OverviewTab.tsx:156 The only slice in the context slices a UI array for a preview. No substring view over an immutable owner is built."
+    },
+    {
+     "technique": "narrowest-encoding-at-construction",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/LocalizationPipelineView/useLocalizationPipelineView.ts:14 Text stays as V8 host strings. The context makes no encoding choice of its own."
+    },
+    {
+     "technique": "dual-encoding-symbol-interner",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/LocalizationPipelineView/types.ts:1 There is no compiler and no identifier interning. Names are TS string-literal union types."
+    }
+   ],
+   "absenceTerms": [
+    "interner",
+    "latin1",
+    "vtable",
+    "utf16"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T23:58:38.840216+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "engine-string-representation"
+   ],
+   "techniques": [
+    "compile-time-static-string-table",
+    "dual-encoding-symbol-interner",
+    "narrowest-encoding-at-construction",
+    "zero-copy-slice-string"
+   ],
+   "deviations": 0,
+   "context": "localization-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

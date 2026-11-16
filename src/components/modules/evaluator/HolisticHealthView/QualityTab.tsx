@@ -2,8 +2,9 @@ import { Gauge, AlertTriangle } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import type { QualityPoint } from '@/types/project-health';
-import { ACCENT_EMERALD, STATUS_WARNING } from '@/lib/chart-colors';
-import { LineChartSimple } from './charts';
+import { ACCENT_EMERALD } from '@/lib/chart-colors';
+import { scoreStatusToken } from '@/lib/status-token';
+import { LineChartSimple, ChartEmpty } from './charts';
 
 export function QualityTab({ qualityHistory }: { qualityHistory: QualityPoint[] }) {
   return (
@@ -21,6 +22,9 @@ export function QualityTab({ qualityHistory }: { qualityHistory: QualityPoint[] 
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
           Issues Trend
         </h3>
+        {qualityHistory.length === 0 && (
+          <ChartEmpty>No scans yet. Run a project scan to track critical and high issues over time.</ChartEmpty>
+        )}
         <div className="space-y-1.5">
           {qualityHistory.map((q) => (
             <div key={q.label} className="flex items-center gap-3">
@@ -36,7 +40,7 @@ export function QualityTab({ qualityHistory }: { qualityHistory: QualityPoint[] 
                   <span className="text-2xs text-emerald-400">No issues</span>
                 )}
               </div>
-              <ProgressRing value={q.overallScore} size={24} strokeWidth={2.5} color={q.overallScore >= 70 ? ACCENT_EMERALD : STATUS_WARNING} />
+              <ProgressRing value={q.overallScore} size={24} strokeWidth={2.5} color={scoreStatusToken(q.overallScore).color} />
             </div>
           ))}
         </div>

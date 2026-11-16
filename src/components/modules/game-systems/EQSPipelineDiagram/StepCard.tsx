@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import {
   ArrowRight, ChevronDown, ChevronRight,
 } from 'lucide-react';
@@ -16,7 +17,8 @@ export function StepCard({ step, expanded, onToggle, buttonRef }: {
   buttonRef?: React.Ref<HTMLButtonElement>;
 }) {
   const KindIcon = KIND_ICONS[step.kind];
-  const detailId = `eqs-step-${step.id}-detail`;
+  // Per-mount, so two mounted diagrams can't point aria-controls at each other.
+  const detailId = `eqs-step-${step.id}-detail-${useId()}`;
 
   return (
     <div

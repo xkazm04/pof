@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import type { KeyboardEvent } from 'react';
 import { isFeatureDone } from '@/lib/constellation/layout';
 import type { ConstellationNode } from '@/lib/constellation/layout';
 import { PLAN_STATUS_COLORS, STATUS_BLOCKER, STATUS_INFO } from '@/lib/chart-colors';
@@ -11,15 +12,25 @@ import { truncate } from './helpers';
 // ── Node ─────────────────────────────────────────────────────────────────────
 
 export function ConstellationNodeG({
-  node, index, isNext, dimmed, onHoverStart, onHoverEnd,
+  node, index, isNext, glowId, dimmed, onHoverStart, onHoverEnd,
+  tabStop = false, onFocusNode, onBlurNode, onKeyDown,
 }: {
   node: ConstellationNode;
   index: number;
   isNext: boolean;
+  /** The owning svg's per-instance glow filter id. */
+  glowId: string;
   dimmed: boolean;
   onHoverStart: () => void;
   onHoverEnd: () => void;
+  /** Roving tabindex: exactly one node is the map's tab stop. */
+  tabStop?: boolean;
+  onFocusNode?: () => void;
+  onBlurNode?: () => void;
+  onKeyDown?: (e: KeyboardEvent<SVGGElement>) => void;
 }) {
+  // SMIL <animate> sits outside framer's reducedMotion policy and the CSS reset.
+  const reduceMotion = useReducedMotion() ?? false;
   const color = PLAN_STATUS_COLORS[node.status] ?? PLAN_STATUS_COLORS.unknown;
   const done = isFeatureDone(node.status);
   const x = node.x - NODE_W / 2;
@@ -27,6 +38,7 @@ export function ConstellationNodeG({
   const blockerLabel = node.blockers.length > 0
     ? `Blocked by ${node.blockers[0].featureName}${node.blockers.length > 1 ? ` +${node.blockers.length - 1}` : ''}`
     : null;
+  const label = `${node.featureName} — ${STATUS_LABEL[node.status]}${blockerLabel ? ` · ${blockerLabel}` : ''}`;
 
   return (
     <motion.g
@@ -35,14 +47,22 @@ export function ConstellationNodeG({
       transition={{ duration: MOTION.base, delay: Math.min(index * 0.02, 0.4) }}
       onHoverStart={onHoverStart}
       onHoverEnd={onHoverEnd}
+      role="group"
+      data-constellation-node=""
+      tabIndex={tabStop ? 0 : -1}
+      aria-label={label}
+      onFocus={onFocusNode}
+      onBlur={onBlurNode}
+      onKeyDown={onKeyDown}
+      className="focus-ring"
       style={{ cursor: 'default' }}
     >
-      <title>{`${node.featureName} — ${STATUS_LABEL[node.status]}${blockerLabel ? ` · ${blockerLabel}` : ''}`}</title>
+      <title>{label}</title>
 
       {/* "Do this next" pulsing ring */}
       {isNext && (
-        <rect x={x - 4} y={y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={12} fill="none" stroke={STATUS_INFO} strokeWidth={2} filter="url(#cst-glow)">
-          <animate attributeName="opacity" values="0.35;0.95;0.35" dur="1.8s" repeatCount="indefinite" />
+        <rect x={x - 4} y={y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={12} fill="none" stroke={STATUS_INFO} strokeWidth={2} filter={`url(#${glowId})`}>
+          {!reduceMotion && <animate attributeName="opacity" values="0.35;0.95;0.35" dur="1.8s" repeatCount="indefinite" />}
         </rect>
       )}
 
@@ -53,7 +73,7 @@ export function ConstellationNodeG({
         stroke={color}
         strokeWidth={done ? 2 : 1.25}
         opacity={done ? 1 : 0.92}
-        style={done ? { filter: 'url(#cst-glow)' } : undefined}
+        style={done ? { filter: `url(#${glowId})` } : undefined}
       />
       {/* Status accent bar (left) */}
       <rect x={x} y={y} width={3.5} height={NODE_H} rx={1.5} fill={color} opacity={node.isBlocked ? 0.5 : 0.9} />

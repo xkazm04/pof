@@ -114,9 +114,9 @@ export function BiomeScatterPanel({ onGenerate, isGenerating }: BiomeScatterPane
               onClick={() => setSeedInput(String(Math.floor(Math.random() * SEED_ROLL_MAX)))}
               title="Randomize seed"
               aria-label="Randomize seed"
-              className="px-3 rounded-lg border border-violet-900/50 text-violet-400 hover:text-violet-200"
+              className="px-3 rounded-lg border border-violet-900/50 text-violet-400 hover:text-violet-200 focus-ring"
             >
-              <Dice5 className="w-4 h-4" />
+              <Dice5 className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
           <span
@@ -131,9 +131,10 @@ export function BiomeScatterPanel({ onGenerate, isGenerating }: BiomeScatterPane
       </div>
 
       <button
+        type="button"
         onClick={handleGenerate}
         disabled={isGenerating || !inputsValid}
-        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 focus-ring"
         style={{
           backgroundColor: `${MODULE_COLORS.content}20`,
           color: MODULE_COLORS.content,
@@ -141,9 +142,9 @@ export function BiomeScatterPanel({ onGenerate, isGenerating }: BiomeScatterPane
         }}
       >
         {isGenerating ? (
-          <><Loader2 className="w-5 h-5 animate-spin" /> Scattering…</>
+          <><Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> Scattering…</>
         ) : (
-          <><Trees className="w-5 h-5" /> Scatter Props (UE)</>
+          <><Trees className="w-5 h-5" aria-hidden="true" /> Scatter Props (UE)</>
         )}
       </button>
 

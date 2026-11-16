@@ -77,4 +77,27 @@ describe('PreflightPanel — asset-validation check', () => {
       expect(tile.getAttribute('data-status')).toBe('warn');
     });
   });
+
+  it('a tile with issues is a disclosure that reports its state; one without is not a button', async () => {
+    mockPreflightByCheck();
+    render(<PreflightPanel {...props} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('pof-preflight-check-config-sanity').getAttribute('data-status')).toBe('pass'),
+    );
+    fireEvent.click(screen.getByTestId('pof-preflight-run-asset-validation'));
+    await waitFor(() =>
+      expect(screen.getByTestId('pof-preflight-check-asset-validation').getAttribute('data-status')).toBe('warn'),
+    );
+
+    // config-sanity has no issues: nothing to disclose, so no do-nothing button.
+    expect(screen.getByTestId('pof-preflight-check-config-sanity').querySelector('button')).toBeNull();
+
+    const toggle = screen.getByTestId('pof-preflight-check-asset-validation').querySelector('button')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    const listId = toggle.getAttribute('aria-controls');
+    expect(listId).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(document.getElementById(listId!)?.textContent).toContain('Fixing up 2 redirectors');
+  });
 });

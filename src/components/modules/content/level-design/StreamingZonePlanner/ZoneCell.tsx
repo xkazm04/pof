@@ -1,3 +1,4 @@
+import { useReducedMotion } from 'framer-motion';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_WARNING, OVERLAY_WHITE } from '@/lib/chart-colors';
 import { CELL_SIZE, ZONE_TYPES, PRIORITY_COLORS } from './constants';
@@ -14,6 +15,7 @@ interface ZoneCellProps {
 }
 
 export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom, paintType, handleCellClick }: ZoneCellProps) {
+  const reduceMotion = useReducedMotion();
   const cfg = ZONE_TYPES[zone.type];
   const isSelected = selectedZoneId === zone.id;
   const isLinkTarget = linkingFrom !== null && linkingFrom !== zone.id;
@@ -25,13 +27,14 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
       onClick={() => handleCellClick(zone.gridX, zone.gridY)}
       style={{ cursor: paintType ? 'crosshair' : linkingFrom ? 'crosshair' : 'pointer' }}
     >
+      <title>{zone.name}</title>
       {/* Preload radius indicator (animated radar ring) */}
       {isSelected && zone.preloadRadius > 0 && (
         <g>
           {/* Inner fill area */}
           <rect
-            x={cx - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
-            y={cy - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
+            x={cx - zone.preloadRadius * CELL_SIZE + 4}
+            y={cy - zone.preloadRadius * CELL_SIZE + 4}
             width={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             height={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             rx={12}
@@ -40,8 +43,8 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
           />
           {/* Pulsing border */}
           <rect
-            x={cx - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
-            y={cy - (zone.preloadRadius - 0.5) * CELL_SIZE + 4}
+            x={cx - zone.preloadRadius * CELL_SIZE + 4}
+            y={cy - zone.preloadRadius * CELL_SIZE + 4}
             width={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             height={(zone.preloadRadius * 2) * CELL_SIZE + CELL_SIZE - 8}
             rx={12}
@@ -51,7 +54,7 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
             strokeDasharray="8,8"
             className="pointer-events-none"
           >
-            <animate attributeName="stroke-dashoffset" from="32" to="0" dur="2s" repeatCount="indefinite" />
+            {!reduceMotion && <animate attributeName="stroke-dashoffset" from="32" to="0" dur="2s" repeatCount="indefinite" />}
           </rect>
         </g>
       )}
@@ -143,15 +146,14 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
       <text
         x={cx + CELL_SIZE / 2}
         y={cy + CELL_SIZE / 2 + 14}
-        style={{ fontSize: 11 }}
+        style={{ fontSize: 12 }}
         fill="var(--text)"
         textAnchor="middle"
         fontFamily="monospace"
         fontWeight={600}
-        letterSpacing={0.5}
         className="uppercase pointer-events-none"
       >
-        {zone.name.length > 10 ? zone.name.slice(0, 8) + '…' : zone.name}
+        {zone.name.length > 9 ? zone.name.slice(0, 8) + '…' : zone.name}
       </text>
 
       {/* Priority dot / scanline */}
@@ -177,7 +179,7 @@ export function ZoneCell({ zone, selectedZoneId, isResident = false, linkingFrom
       <text
         x={cx + 8}
         y={cy + CELL_SIZE - 10}
-        style={{ fontSize: 11 }}
+        style={{ fontSize: 12 }}
         fill="var(--text-muted)"
         fontFamily="monospace"
         fontWeight={600}

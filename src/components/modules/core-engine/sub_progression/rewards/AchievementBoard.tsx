@@ -56,6 +56,7 @@ export function AchievementBoard() {
     <BlueprintPanel color={ACCENT} className="p-5">
       <SectionHeader icon={Trophy} label="Achievement Board" color={ACCENT} />
 
+      <p data-testid="basis-achievements" className="mt-2 text-2xs font-mono text-text-muted">Illustrative sample progress, not tracked from a real player.</p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2.5">
         {ACHIEVEMENT_CATEGORIES.map((cat, ci) => {
           const Icon = cat.icon;

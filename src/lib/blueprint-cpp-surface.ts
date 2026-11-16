@@ -18,7 +18,7 @@
  * Pure (no React/I/O), like `replication-scaffolder.ts`.
  */
 
-import { blueprintTypeToCpp } from '@/lib/blueprint-parser';
+import { blueprintTypeToCpp, editSpecifier } from '@/lib/blueprint-parser';
 import { hasSpecifier } from '@/lib/cpp-semantic-parser';
 import { buildReplicationInfo, onRepHandlerName, replicationSpecifier } from '@/lib/replication-scaffolder';
 import type {
@@ -171,7 +171,9 @@ export function deriveCppSurface(asset: BlueprintAsset): CppSurface {
 
   const properties: CppSurfaceProperty[] = asset.variables.map((v) => {
     const specifiers: string[] = [];
-    if (v.isExposedToEditor) specifiers.push(EDITOR_EXPOSURE_SPECIFIERS[0]);
+    // Narrowed by the export's CPF_DisableEditOn* flags — always emitting
+    // EditAnywhere widened every default-only variable to per-instance editing.
+    if (v.isExposedToEditor) specifiers.push(editSpecifier(v));
     if (v.isReplicated) specifiers.push(replicationSpecifier({ name: v.name, repNotify: v.isRepNotify }));
     specifiers.push('BlueprintReadWrite');
     if (v.category) specifiers.push(`Category = "${v.category}"`);

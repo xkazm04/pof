@@ -8,6 +8,10 @@ const UE_KEY_NAMES: Record<string, string> = {
   Up: 'Up', Down: 'Down', Left: 'Left', Right: 'Right',
   '1': 'One', '2': 'Two', '3': 'Three', '4': 'Four', '5': 'Five',
   '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine', '0': 'Zero',
+  // Punctuation and named keys `normalizeKeyEvent` can capture whose EKeys name differs.
+  '-': 'Hyphen', '=': 'Equals', '[': 'LeftBracket', ']': 'RightBracket', '\\': 'Backslash',
+  ';': 'Semicolon', "'": 'Apostrophe', ',': 'Comma', '.': 'Period', '/': 'Slash', '`': 'Tilde',
+  Backspace: 'BackSpace', Meta: 'LeftCommand',
 };
 
 const ueKey = (key: string) => UE_KEY_NAMES[key] ?? key;

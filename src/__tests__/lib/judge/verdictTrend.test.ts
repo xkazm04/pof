@@ -28,6 +28,42 @@ describe('buildVerdictTrend — did my fix actually improve this?', () => {
     expect(buildVerdictTrend([v(80, '2026-07-01 00:00'), v(80, '2026-07-02 00:00')]).direction).toBe('unchanged');
   });
 
+  it('states no direction across a rubric bump or a model swap — only comparable judgments trend', () => {
+    // Same rubric + model: a real comparison.
+    const same = buildVerdictTrend([
+      v(50, '2026-07-01 00:00', { rubricVersion: 4 }),
+      v(70, '2026-07-02 00:00', { rubricVersion: 4 }),
+    ]);
+    expect(same.direction).toBe('improved');
+    expect(same.comparable).toBe(2);
+
+    // A rubric bump is a ruler change, not movement.
+    const bumped = buildVerdictTrend([
+      v(50, '2026-07-01 00:00', { rubricVersion: 3 }),
+      v(90, '2026-07-02 00:00', { rubricVersion: 4 }),
+    ]);
+    expect(bumped.direction).toBe('none');
+    expect(bumped.delta).toBeNull();
+    expect(bumped.points).toHaveLength(2);
+
+    // A model swap at the same rubric is also a different instrument.
+    const swapped = buildVerdictTrend([
+      v(50, '2026-07-01 00:00', { rubricVersion: 4, model: 'sonnet' }),
+      v(90, '2026-07-02 00:00', { rubricVersion: 4, model: 'opus' }),
+    ]);
+    expect(swapped.direction).toBe('none');
+
+    // The trailing comparable run still trends after a bump.
+    const after = buildVerdictTrend([
+      v(40, '2026-07-01 00:00', { rubricVersion: 3 }),
+      v(60, '2026-07-02 00:00', { rubricVersion: 4 }),
+      v(55, '2026-07-03 00:00', { rubricVersion: 4 }),
+    ]);
+    expect(after.comparable).toBe(2);
+    expect(after.direction).toBe('regressed');
+    expect(after.delta).toBe(-5);
+  });
+
   it('has NO trend from a single judgment — and says so instead of implying one', () => {
     const t = buildVerdictTrend([v(72, '2026-07-01 00:00')]);
     expect(t.delta).toBeNull();

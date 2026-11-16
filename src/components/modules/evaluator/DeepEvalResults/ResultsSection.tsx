@@ -41,6 +41,7 @@ export function ResultsSection({
   onBatchFix,
   onRunSingle,
   isFixRunning,
+  isRunning = false,
   fixTargetId,
 }: {
   result: DeepEvalResult;
@@ -60,9 +61,13 @@ export function ResultsSection({
   onBatchFix: (moduleFindings: ModuleFindings) => void;
   onRunSingle: (moduleId: SubModuleId) => void;
   isFixRunning: boolean;
+  /** A deep-eval job is running (disables per-module Re-evaluate). */
+  isRunning?: boolean;
   /** The finding id or `module:<id>` currently being fixed, or null. */
   fixTargetId: string | null;
 }) {
+  const failed = new Set(result.failedModules);
+  const completedCount = result.modulesEvaluated.filter((m) => !failed.has(m)).length;
   return (
     <div data-testid="pof-module-evaluator-result-summary" className="space-y-4">
       {/* Regression summary banner — what changed since the last scan */}
@@ -117,8 +122,11 @@ export function ResultsSection({
               })}
           </div>
 
-          <span className="text-2xs text-text-muted ml-auto">
-            {result.modulesEvaluated.length} modules / {result.passesRun.length} passes / {formatDuration(result.duration)}
+          <span data-testid="pof-deep-eval-module-count" className="text-2xs text-text-muted ml-auto">
+            {completedCount === result.modulesEvaluated.length
+              ? `${completedCount} modules`
+              : `${completedCount} of ${result.modulesEvaluated.length} modules evaluated (${result.modulesEvaluated.length - completedCount} failed)`}
+            {' '}/ {result.passesRun.length} passes / {formatDuration(result.duration)}
           </span>
         </div>
       </SurfaceCard>
@@ -159,6 +167,7 @@ export function ResultsSection({
             onBatchFix={() => onBatchFix(mod)}
             onRunSingle={() => onRunSingle(mod.moduleId)}
             isFixRunning={isFixRunning}
+            isRunning={isRunning}
             fixTargetId={fixTargetId}
           />
         ))}
@@ -178,13 +187,21 @@ export function ResultsSection({
         </div>
       )}
 
-      {/* Empty: the whole scan found nothing */}
-      {result.findings.totalFindings === 0 && (
-        <div className="bg-surface border rounded-lg p-8 text-center" style={{ borderColor: statusBorder(STATUS_SUCCESS, 0.12) }}>
+      {/* Empty: the scan found nothing in the modules it actually measured. A failed module
+          has zero findings because it was never evaluated, so it is not counted as clean, and
+          a run where every module failed shows no clean panel at all. */}
+      {result.findings.totalFindings === 0 && completedCount > 0 && (
+        <div
+          data-testid="pof-deep-eval-clean"
+          className="bg-surface border rounded-lg p-8 text-center"
+          style={{ borderColor: statusBorder(STATUS_SUCCESS, 0.12) }}
+        >
           <Check className="w-8 h-8 mx-auto mb-3" style={{ color: STATUS_SUCCESS }} />
           <h3 className="text-sm font-semibold text-text mb-1">No Issues Found</h3>
           <p className="text-xs text-text-muted">
-            All evaluated modules passed the deep analysis checks.
+            {completedCount === result.modulesEvaluated.length
+              ? `All ${completedCount} evaluated module${completedCount !== 1 ? 's' : ''} passed the deep analysis checks.`
+              : `The ${completedCount} of ${result.modulesEvaluated.length} modules that completed passed the deep analysis checks.`}
           </p>
         </div>
       )}

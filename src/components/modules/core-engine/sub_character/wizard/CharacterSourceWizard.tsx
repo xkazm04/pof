@@ -69,7 +69,12 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
 
   const appOrigin = useMemo(() => getAppOrigin(), []);
 
+  // The source picker locks while a step's task is in flight: a switch would reset
+  // the rail and drop the step attribution, so the running task's result was lost.
+  const stepRunning = isRunning || steps.includes('running');
+
   const pickSource = useCallback((s: CharacterSource) => {
+    if (stepRunning) return;
     setSource((prev) => {
       // Switching to a different source invalidates any prepared/wired work: the
       // step-1 "Prepare Source" dispatch ran for the *old* source, so leaving the
@@ -83,11 +88,19 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
       return s;
     });
     setAssets(SOURCE_DEFAULTS[s]);
-  }, []);
+  }, [stepRunning]);
 
   const setAsset = useCallback((key: keyof SetupAssets, value: string) => {
     setAssets((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  // execute() resolves false when nothing launched (spend preflight declined): no run
+  // will ever complete the step, so it goes back to idle instead of spinning forever.
+  const revertIfNotDispatched = useCallback((step: 1 | 2 | 3, dispatched: boolean | void) => {
+    if (dispatched !== false || activeStepRef.current !== step) return;
+    activeStepRef.current = null;
+    markStep(step, 'idle');
+  }, [markStep]);
 
   const dispatchEnable = useCallback(() => {
     if (dispatchLockRef.current || isRunning) return;
@@ -95,8 +108,9 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
     activeStepRef.current = 1;
     markStep(1, 'running');
     void execute(TaskFactory.quickAction(moduleId, ENABLE_PROMPT[source], 'Prepare Source'))
+      .then((dispatched) => revertIfNotDispatched(1, dispatched))
       .finally(() => { dispatchLockRef.current = false; });
-  }, [isRunning, execute, moduleId, source, markStep]);
+  }, [isRunning, execute, moduleId, source, markStep, revertIfNotDispatched]);
 
   const dispatchWire = useCallback(() => {
     if (dispatchLockRef.current || isRunning) return;
@@ -104,8 +118,9 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
     activeStepRef.current = 2;
     markStep(2, 'running');
     void execute(TaskFactory.characterSetup(moduleId, { source, ...assets }, appOrigin, 'Wire Character'))
+      .then((dispatched) => revertIfNotDispatched(2, dispatched))
       .finally(() => { dispatchLockRef.current = false; });
-  }, [isRunning, execute, moduleId, source, assets, appOrigin, markStep]);
+  }, [isRunning, execute, moduleId, source, assets, appOrigin, markStep, revertIfNotDispatched]);
 
   const dispatchVerify = useCallback(() => {
     if (dispatchLockRef.current || isRunning) return;
@@ -113,8 +128,9 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
     activeStepRef.current = 3;
     markStep(3, 'running');
     void execute(TaskFactory.checklist(moduleId, 'ac-6', '', 'Verify Locomotes', appOrigin))
+      .then((dispatched) => revertIfNotDispatched(3, dispatched))
       .finally(() => { dispatchLockRef.current = false; });
-  }, [isRunning, execute, moduleId, appOrigin, markStep]);
+  }, [isRunning, execute, moduleId, appOrigin, markStep, revertIfNotDispatched]);
 
   return (
     <div
@@ -140,7 +156,9 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
                 key={s.id}
                 type="button"
                 onClick={() => pickSource(s.id)}
-                className="flex flex-col gap-1 p-2.5 rounded-lg text-left transition-all hover:brightness-110"
+                aria-pressed={active}
+                disabled={stepRunning}
+                className="flex flex-col gap-1 p-2.5 rounded-lg text-left transition-all hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{
                   backgroundColor: withOpacity(ACCENT, active ? OPACITY_20 : OPACITY_8),
                   border: `1px solid ${withOpacity(ACCENT, active ? OPACITY_50 : OPACITY_12)}`,
@@ -154,7 +172,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
             );
           })}
         </div>
-        <DispatchButton onClick={dispatchEnable} isRunning={isRunning} icon={Wand2} label="Prepare Source" />
+        <DispatchButton onClick={dispatchEnable} isRunning={steps[0] === 'running'} disabled={isRunning} icon={Wand2} label="Prepare Source" />
         <StepResult status={steps[0]} runningLabel="Preparing source…" />
       </Step>
 
@@ -173,7 +191,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
             />
           </label>
         ))}
-        <DispatchButton onClick={dispatchWire} isRunning={isRunning} disabled={!reachable(2)} icon={ArrowRight} label="Wire Characters" />
+        <DispatchButton onClick={dispatchWire} isRunning={steps[1] === 'running'} disabled={isRunning || !reachable(2)} icon={ArrowRight} label="Wire Characters" />
         <StepResult status={steps[1]} runningLabel="Wiring characters…" />
       </Step>
 
@@ -183,7 +201,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
           Launches the slice, screenshots it, and asks Gemini whether the character is a humanoid in a
           natural pose (not T-posed) and the enemy is visually distinct.
         </p>
-        <DispatchButton onClick={dispatchVerify} isRunning={isRunning} disabled={!reachable(3)} icon={Eye} label="Verify Locomotes" />
+        <DispatchButton onClick={dispatchVerify} isRunning={steps[2] === 'running'} disabled={isRunning || !reachable(3)} icon={Eye} label="Verify Locomotes" />
         <StepResult status={steps[2]} runningLabel="Verifying locomotion…" />
       </Step>
     </div>

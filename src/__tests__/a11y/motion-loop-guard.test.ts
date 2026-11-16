@@ -97,10 +97,6 @@ const POSITIONAL_ONLY_LOOPS: Record<string, Exemption> = {
     animates: ['y'],
     why: 'Scan line travels down the wireframe on y (deliberately framer-driven to avoid per-frame state).',
   },
-  'components/modules/core-engine/sub_character/simulator/feedback/ConfigPanel.tsx': {
-    animates: ['rotate'],
-    why: 'Run-in-progress spinner — rotate only.',
-  },
   'components/modules/core-engine/sub_character/simulator/predictive/PredictiveBalanceSimulator.tsx': {
     animates: ['rotate'],
     why: 'Two run-in-progress spinners — rotate only.',
@@ -116,10 +112,6 @@ const POSITIONAL_ONLY_LOOPS: Record<string, Exemption> = {
   'components/modules/core-engine/sub_loot/economy/BeaconVisualizer.tsx': {
     animates: ['y'],
     why: 'Beam highlight travels up each bar on y.',
-  },
-  'components/modules/core-engine/unique-tabs/index.tsx': {
-    animates: ['rotate'],
-    why: 'Loading ring — rotate only.',
   },
 };
 

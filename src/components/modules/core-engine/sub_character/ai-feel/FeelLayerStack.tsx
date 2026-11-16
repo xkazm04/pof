@@ -13,6 +13,7 @@ import {
 import {
   withOpacity, OPACITY_8, OPACITY_15, OPACITY_25, ACCENT_EMERALD,
 } from '@/lib/chart-colors';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { LayerModifierEditor } from './LayerModifierEditor';
 import { ACCENT } from './constants';
@@ -40,6 +41,7 @@ export function FeelLayerStack({ basePreset }: FeelLayerStackProps) {
   const clearFeelLayers = useCharacterBlueprintStore((s) => s.clearFeelLayers);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export function FeelLayerStack({ basePreset }: FeelLayerStackProps) {
           {layers.length > 0 && (
             <button
               type="button"
-              onClick={clearFeelLayers}
+              onClick={() => setConfirmClear(true)}
               className="text-2xs font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text px-1.5 py-1 rounded focus-ring"
             >
               Clear
@@ -225,6 +227,14 @@ export function FeelLayerStack({ basePreset }: FeelLayerStackProps) {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={clearFeelLayers}
+        title="Clear the whole adjustment stack?"
+        description={`This removes all ${layers.length} ${layers.length === 1 ? 'layer' : 'layers'}, including Playground curve edits and layers adopted from UE. It cannot be undone.`}
+        confirmLabel="Clear all layers"
+      />
     </BlueprintPanel>
   );
 }

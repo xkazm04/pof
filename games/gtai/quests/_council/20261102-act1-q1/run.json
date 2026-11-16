@@ -1,0 +1,19 @@
+{
+  "runId": "20261102-act1-q1",
+  "act": "act1",
+  "goal": "The first quest of Act 1. Introduce the player to the story direction. Don Fax, leader of the robot gang underground, notices Rivet after the factory and hires him for a hitman mission: sabotage a project in a guarded dock storage that is tied to the humans and the army. Through Don Fax and his place, introduce the supporting characters: a nurse, a gunsmith and a scientist.",
+  "constraints": "1. The player knows none of the characters yet. Characters keep only their names and positions from earlier drafts; do not reuse any personality, voice or look from earlier drafts. Invent them fresh.\n2. Don Fax leads the robot gang underground. He notices Rivet and hires him as a hitman. Don Fax's place hosts three supporting characters, introduced in this quest (ids `nurse`, `gunsmith`, `scientist`; give each a proper name in `name`). Each gets their own side questline in later sessions, so plant a hook for each here without starting their questline:\n   - the nurse: heals Rivet, and can later become his love interest;\n   - the gunsmith: gives Rivet his first weapon in this quest, and later becomes his buddy through personal requests;\n   - the scientist: wants to find out what is wrong with Rivet's head, and later teaches him to handle the voices.\n3. The mission: sabotage a project in a guarded dock storage tied to the humans and the army. No timer. Human enemies are weak (one hit kills them, and they fire weak bullets), so use many enemies in several waves.\n4. Beats: the quest picks up straight from the factory intro (Rivet just survived the line accident and took apart the police) and passes on to the next steps.\n5. Lines: Rivet has just gone mad. He is extremely nervous, unsure and unstable. His first lines are a monologue to himself, before a payphone rings with Don Fax on the other line.\n6. Mechanics introduced in this quest: the payphone job router and heat. Nothing else. No car is drivable: the Gearbox soul unlocks only after the scientist's first quest, so do not unlock or use any soul in this quest.\n7. The voices of the dead may be heard but not understood yet; they are a symptom to Rivet, not a power.",
+  "createdAt": "2026-11-02T17:17:43.452Z",
+  "voices": [],
+  "ledger": [],
+  "economyRevision": 2,
+  "shape": {
+    "variants": 1,
+    "freshCast": true,
+    "maxNew": 4,
+    "lines": [
+      12,
+      22
+    ]
+  }
+}

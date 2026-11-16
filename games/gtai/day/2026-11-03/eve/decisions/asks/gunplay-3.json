@@ -1,0 +1,28 @@
+{
+  "id": "gunplay-3",
+  "lane": "gunplay",
+  "question": "Quest 1's real dock fight in the D5 print, armored contractors (2.5 pistol rounds), Rivet with the table pistol and the shared hit feel. Every contractor burst is now told: he stops, a dashed vermilion aim line tracks Rivet for 0.18 s, then goes solid with a cream glint on the muzzle for 0.17 s (the lock: the aim no longer moves), then 4 slowed rounds (13.5 m/s) go down the locked line. Should the locked burst stay on the drawn line (tight) or spray the rifle's full 8-degree cone? In the dodge clips a scripted player strafes across the line on each lock.",
+  "options": [
+    {
+      "key": "A",
+      "label": "Tight: the burst keeps 0.3 of the cone, so the told line is the danger zone",
+      "tradeoff": "honest tell: standing still eats 60/60 rounds, strafing on the lock 17/48 (the rest is crossfire from a 2nd gunner); the read decides",
+      "frames": [
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\pistol_fight_dodge_s0.3\\pistol_fight_dodge_s0.3_32ppm.mp4",
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\pistol_fight_dodge_s0.3\\dodge-pass-n0820.png",
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\pistol_fight_tell\\tell-n0750.png"
+      ]
+    },
+    {
+      "key": "B",
+      "label": "Full cone: the rifle's 8-degree spray down the locked line (quest 1's own spread)",
+      "tradeoff": "softer: standing still eats 25/60, strafing 9/48; luck matters more than the read and the line under-draws the danger",
+      "frames": [
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\pistol_fight_dodge_s1.0\\pistol_fight_dodge_s1.0_32ppm.mp4",
+        "C:\\Users\\kazda\\kiro\\gtai-masters\\eve\\gunplay\\pistol_fight_tell\\pistol_fight_tell_32ppm.mp4"
+      ]
+    }
+  ],
+  "default": "A",
+  "asked": "22:52"
+}

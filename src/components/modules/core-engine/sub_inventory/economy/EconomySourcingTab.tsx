@@ -7,13 +7,13 @@ import { STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS, STATUS_INFO, STATUS_SUBDU
   withOpacity, OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_25,
 } from '@/lib/chart-colors';
 import { motion } from 'framer-motion';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
-import { ItemDetailDrawer } from '../catalog/ItemDetailDrawer';
+import { BlueprintPanel, SectionHeader, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
+import { ItemDetailDrawer } from '@/components/modules/core-engine/sub_inventory/catalog/ItemDetailDrawer';
 import {
   ACCENT, DUMMY_ITEMS, RARITY_COLORS, ALL_ITEM_TYPES,
   INVENTORY_GOLD_VALUE, CLEANUP_SUGGESTIONS,
-} from '../_shared/data';
-import type { ItemData } from '../_shared/data';
+} from '@/components/modules/core-engine/sub_inventory/_shared/data';
+import type { ItemData } from '@/components/modules/core-engine/sub_inventory/_shared/data';
 import { CraftingRecipeSection, DropSourceSection, RarityDistributionSection, EconomySankeySection } from './EconomySections';
 import { aggregateMetrics, type PackingMetrics } from '@/lib/spatial-inventory';
 import { spatialItemLookup, useAllStashTabs } from '@/stores/spatialInventoryStore';
@@ -150,7 +150,8 @@ function InventoryCapacitySection() {
             Frag: <span className="font-bold" style={{ color: STATUS_WARNING }}>{Math.round(metrics.fragmentation * 100)}%</span>
           </p>
           <p className="text-sm font-mono text-text-muted">
-            Total Value: <span className="font-bold" style={{ color: STATUS_WARNING, textShadow: `0 0 12px ${withOpacity(STATUS_WARNING, OPACITY_25)}` }}>{INVENTORY_GOLD_VALUE}g</span>
+            {/* Catalog items carry no gold value, so a populated stash shows the sample figure, labelled. */}
+            Total Value{metrics.usedCells === 0 ? '' : ' (sample)'}: <span className="font-bold" style={{ color: STATUS_WARNING, textShadow: `0 0 12px ${withOpacity(STATUS_WARNING, OPACITY_25)}` }}>{metrics.usedCells === 0 ? 0 : INVENTORY_GOLD_VALUE}g</span>
           </p>
         </div>
         {/* Cleanup suggestions */}

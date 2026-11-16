@@ -89,9 +89,9 @@ function strictnessContract(cls: DeliverableClass): string {
     `properties of the asset, never on a quota. The bar is high:`,
     `- Correctness is the FLOOR, not a passing grade. An asset that is functional but generic, or`,
     `  that a lead would hand back for polish before shipping, is competent-placeholder work — that`,
-    `  is roughly 40-70, not a pass.`,
-    `- Reserve 90-100 for work that could ship AS-IS in the reference games. 70-89 = a solid`,
-    `  placeholder that still needs a polish pass. Below 70 = not yet usable.`,
+    `  is roughly 40-${BANDS.placeholder}, not a pass.`,
+    `- Reserve ${BANDS.shippable}-100 for work that could ship AS-IS in the reference games. ${BANDS.placeholder}-${BANDS.shippable - 1} = a solid`,
+    `  placeholder that still needs a polish pass. Below ${BANDS.placeholder} = not yet usable.`,
     `- Judge CRAFT, not just whether it is technically valid. Ask: would this sit in that shipped`,
     `  product without looking out of place? Where it would not, say specifically why.`,
     `- When the asset does not clearly meet the professional bar, do not give it the benefit of the`,
@@ -183,16 +183,17 @@ export function buildRubricPrompt(cls: DeliverableClass, opts: {
 export interface JudgeResult {
   dimensions: Record<string, number>;
   score: number;
+  /** DERIVED from the clamped score (`pass` only if `score >= BANDS.shippable`) - the score is the authority. */
   verdict: 'pass' | 'fail';
+  /** What the model itself wrote in its `verdict` field, kept for diagnostics only. */
+  modelVerdict: 'pass' | 'fail';
   findings: string;
   fix: string;
 }
 
-/** Extract the first COMPLETE brace-balanced JSON object from text (string-aware, so braces
+/** Extract the COMPLETE brace-balanced object that opens at `start` (string-aware, so braces
  *  or quotes inside "findings" don't confuse it — the greedy-regex approach did). */
-function firstJsonObject(raw: string): string | null {
-  const start = raw.indexOf('{');
-  if (start < 0) return null;
+function balancedObjectAt(raw: string, start: number): string | null {
   let depth = 0, inStr = false, esc = false;
   for (let i = start; i < raw.length; i++) {
     const c = raw[i];
@@ -207,21 +208,59 @@ function firstJsonObject(raw: string): string | null {
   return null;
 }
 
+/** Every top-level candidate object in `raw`, left to right, that JSON.parse accepts. A braced
+ *  aside in the judge's prose (`the {silhouette} reads`) is not JSON and is skipped rather than
+ *  ending the search — the first-brace-only scan returned null there and lost a paid draw. */
+function* jsonObjects(raw: string): Generator<Record<string, unknown>> {
+  let from = 0;
+  for (;;) {
+    const start = raw.indexOf('{', from);
+    if (start < 0) return;
+    const text = balancedObjectAt(raw, start);
+    if (!text) { from = start + 1; continue; } // an unclosed brace in prose — look past it
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch { parsed = undefined; }
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      yield parsed as Record<string, unknown>;
+      from = start + text.length;
+    } else {
+      from = start + 1;
+    }
+  }
+}
+
+/** A 0-100 judge score: rounded and clamped. */
+const clampScore = (n: number): number => Math.max(0, Math.min(100, Math.round(n)));
+
+/** Per-dimension scores held to the SAME 0-100 rule as the overall score. The verdict route
+ *  refuses a dimension outside 0-100 or not a number, and that 400 lands after the draw was
+ *  paid for, so the parser only ever returns what the route will admit: finite numbers are
+ *  clamped, anything else is dropped. */
+function sanitizeDimensions(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = clampScore(v);
+  }
+  return out;
+}
+
 /** Parse the judge's JSON verdict out of raw CLI stdout (tolerant of stray text before/after). */
 export function parseJudgeResult(raw: string): JudgeResult | null {
-  const json = firstJsonObject(raw);
-  if (!json) return null;
-  try {
-    const o = JSON.parse(json) as Partial<JudgeResult>;
-    if (typeof o.score !== 'number' || (o.verdict !== 'pass' && o.verdict !== 'fail')) return null;
+  // The verdict is the first object that carries a numeric score and a pass/fail verdict.
+  for (const o of jsonObjects(raw) as Iterable<Partial<JudgeResult>>) {
+    if (typeof o.score !== 'number' || (o.verdict !== 'pass' && o.verdict !== 'fail')) continue;
+    const score = clampScore(o.score);
     return {
-      dimensions: (o.dimensions as Record<string, number>) ?? {},
-      score: Math.max(0, Math.min(100, Math.round(o.score))),
-      verdict: o.verdict,
+      dimensions: sanitizeDimensions(o.dimensions),
+      score,
+      // The rubric states verdict = pass only if overall >= BANDS.shippable: derive it ONCE here so
+      // every harness reads the same verdict for the same draw, whatever the model wrote.
+      verdict: score >= BANDS.shippable ? 'pass' : 'fail',
+      modelVerdict: o.verdict,
       findings: String(o.findings ?? ''),
       fix: String(o.fix ?? ''),
     };
-  } catch {
-    return null;
   }
+  return null;
 }

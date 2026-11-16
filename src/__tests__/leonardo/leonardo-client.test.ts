@@ -153,25 +153,30 @@ describe('generateImage advanced controls (ControlNet / inpaint)', () => {
   });
 });
 
+// The poll, download and delete of both modes are covered in leonardo-variation-download-delete.test.ts.
+const variationDone = (url: string, method: string) => {
+  if (method === 'GET' && url.includes('/variations/')) {
+    return { body: { generated_image_variation_generic: [{ status: 'COMPLETE', url: 'https://cdn.leonardo.ai/v.png' }] } };
+  }
+  return { body: {} };
+};
+const FAST = { pollIntervalMs: 1, maxPollAttempts: 2 };
+
 describe('unzoomImage', () => {
-  it('POSTs the generated-image id to /variations/unzoom and returns the job id', async () => {
-    const { calls } = installFetch((url, method) => {
-      if (method === 'POST' && url.endsWith('/variations/unzoom')) {
-        return { body: { sdUnzoomJob: { id: 'uz-1' } } };
-      }
-      return { body: {} };
-    });
-    const res = await unzoomImage('img-7');
+  const started = (url: string, method: string) =>
+    method === 'POST' && url.endsWith('/variations/unzoom') ? { body: { sdUnzoomJob: { id: 'uz-1' } } } : variationDone(url, method);
+
+  it('POSTs the generated-image id to /variations/unzoom', async () => {
+    const { calls } = installFetch(started);
+    const res = await unzoomImage('img-7', FAST);
     const post = calls.find((c) => c.url.endsWith('/variations/unzoom'));
     expect(post!.body).toMatchObject({ id: 'img-7', isVariation: false });
-    expect(res.unzoomJobId).toBe('uz-1');
+    expect(res.variationId).toBe('uz-1');
   });
 
   it('forwards an optional prompt for the extended region', async () => {
-    const { calls } = installFetch((url) =>
-      url.endsWith('/variations/unzoom') ? { body: { sdUnzoomJob: { id: 'uz-2' } } } : { body: {} },
-    );
-    await unzoomImage('img-8', { prompt: 'more dungeon floor' });
+    const { calls } = installFetch(started);
+    await unzoomImage('img-8', { ...FAST, prompt: 'more dungeon floor' });
     const post = calls.find((c) => c.url.endsWith('/variations/unzoom'));
     expect((post!.body as Record<string, unknown>).prompt).toBe('more dungeon floor');
   });
@@ -183,17 +188,14 @@ describe('unzoomImage', () => {
 });
 
 describe('upscaleImage', () => {
-  it('POSTs the image id + style to /universal-upscaler', async () => {
-    const { calls } = installFetch((url, method) => {
-      if (method === 'POST' && url.endsWith('/universal-upscaler')) {
-        return { body: { universalUpscaler: { id: 'up-1' } } };
-      }
-      return { body: {} };
-    });
-    const res = await upscaleImage('img-7', 'GENERAL');
-    const post = calls.find((c) => c.url.endsWith('/universal-upscaler'));
+  it('POSTs the image id + style to /variations/universal-upscaler', async () => {
+    const { calls } = installFetch((url, method) =>
+      method === 'POST' && url.endsWith('/variations/universal-upscaler') ? { body: { universalUpscaler: { id: 'up-1' } } } : variationDone(url, method),
+    );
+    const res = await upscaleImage('img-7', 'GENERAL', FAST);
+    const post = calls.find((c) => c.url.endsWith('/variations/universal-upscaler'));
     expect(post!.body).toEqual({ generatedImageId: 'img-7', upscalerStyle: 'GENERAL' });
-    expect(res.upscaleJobId).toBe('up-1');
+    expect(res.variationId).toBe('up-1');
   });
 });
 

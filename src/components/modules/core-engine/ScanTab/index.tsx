@@ -93,7 +93,9 @@ export function ScanTab({ moduleId }: ScanTabProps) {
             return (
               <button
                 key={pass}
+                type="button"
                 onClick={() => togglePass(pass)}
+                aria-pressed={isActive}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all"
                 style={isActive
                   ? { backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}40` }
@@ -270,10 +272,21 @@ export function ScanTab({ moduleId }: ScanTabProps) {
         <div className="flex flex-col items-center gap-3 py-10 text-center">
           <ScanSearch className="w-8 h-8 text-text-muted" style={{ opacity: 0.4 }} />
           <div>
-            <p className="text-sm text-text-muted">No scan results yet</p>
-            <p className="text-xs text-text-muted mt-1">
-              Select evaluation passes and run a scan to analyze the {moduleLabel} module for issues.
-            </p>
+            {resolvedFindings.length > 0 ? (
+              <>
+                <p className="text-sm text-text-muted">No open findings</p>
+                <p className="text-xs text-text-muted mt-1">
+                  {`All ${resolvedFindings.length} finding${resolvedFindings.length !== 1 ? 's are' : ' is'} resolved. Re-scan to check the ${moduleLabel} module again.`}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-text-muted">No scan results yet</p>
+                <p className="text-xs text-text-muted mt-1">
+                  Select evaluation passes and run a scan to analyze the {moduleLabel} module for issues.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

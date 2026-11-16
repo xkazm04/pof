@@ -6,11 +6,7 @@ import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD,
 } from '@/lib/chart-colors';
 import type { GraphNode, HeatmapConfig, BudgetBar } from '@/types/unique-tab-improvements';
-import type { EntityMetadata } from '@/types/game-metadata';
-import {
-  computeZonePlaytime, computeCumulativePath,
-  type WorldModel, type ZonePlaytimeEstimate, type CumulativePath,
-} from '@/lib/world/world-model';
+import type { WorldModel } from '@/lib/world/world-model';
 
 /* ── Canonical Zone Names ──────────────────────────────────────────────────── */
 
@@ -71,31 +67,6 @@ export const ZONES: ZoneRecord[] = [
   { id: 'z-ashen', name: ZONE_NAMES.ASHEN_FOREST, displayName: 'Ashen Forest', cx: 58, cy: 16, type: 'combat', status: 'active', levelRange: '3-5', levelMin: 3, levelMax: 5, connections: ['z4'], group: 'combat', color: ACCENT_ORANGE, topoSize: 22, topoX: 300, topoY: 30 },
 ];
 
-/* ── Entity Metadata ─────────────────────────────────────────────────────── */
-
-function zoneTier(z: ZoneRecord): string {
-  if (z.levelMax <= 5) return 'Starter';
-  if (z.levelMax <= 20) return 'Mid';
-  if (z.levelMax <= 35) return 'High';
-  return 'Endgame';
-}
-
-export const ZONE_METADATA: EntityMetadata[] = ZONES.map(z => ({
-  id: z.id,
-  name: z.name,
-  category: z.type === 'hub' ? 'Hub' : z.type === 'boss' ? 'Boss' : 'Combat',
-  tags: [
-    z.type,
-    z.status,
-    z.group,
-    ...(z.type === 'boss' ? ['endgame'] : []),
-    ...(z.levelMin <= 1 ? ['beginner-friendly'] : []),
-  ],
-  level: z.levelMin,
-  levelMax: z.levelMax,
-  tier: zoneTier(z),
-}));
-
 /* ── Canonical Zone Edges ──────────────────────────────────────────────────── */
 
 export interface ZoneEdge {
@@ -118,7 +89,7 @@ export const ZONE_EDGES: ZoneEdge[] = [
   { fromId: 'z2', toId: 'z4', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '1.8s', navMeshContinuity: false },
   { fromId: 'z3', toId: 'z5', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '0.6s', navMeshContinuity: false },
   { fromId: 'z4', toId: 'z6', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '2.4s', navMeshContinuity: false },
-  { fromId: 'z5', toId: 'z6', edgeType: 'portal', locked: true, criticalPath: true, transitionType: 'Portal', estTime: '0.8s', navMeshContinuity: false },
+  { fromId: 'z5', toId: 'z6', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '0.8s', navMeshContinuity: false },
   { fromId: 'z-tatooine', toId: 'z-nar-shaddaa', edgeType: 'portal', locked: false, criticalPath: true, transitionType: 'Loading', estTime: '2.0s', navMeshContinuity: false },
   { fromId: 'z-tatooine', toId: 'z-kashyyyk', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Loading', estTime: '2.2s', navMeshContinuity: false },
   { fromId: 'z-nar-shaddaa', toId: 'z-kashyyyk', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '1.8s', navMeshContinuity: false },
@@ -220,6 +191,13 @@ export const ASSET_FEATURES = [
   'Foliage instancing',
   'Water system (plugin)',
 ];
+
+/** Features Region Details shows per zone type. Names come from the arpg-world matrix the panel reads. */
+export const ZONE_TYPE_FEATURES: Record<ZoneRecord['type'], string[]> = {
+  hub: ['Zone layout design', 'Zone transitions'],
+  combat: ['Enemy spawn placement', 'NavMesh coverage'],
+  boss: ['Boss encounter', 'Environmental hazards'],
+};
 
 /* ── 10.2 Enemy Density Heatmap Data ──────────────────────────────────────── */
 
@@ -422,18 +400,19 @@ export interface FastTravelNode {
 
 export const FAST_TRAVEL_NODES: FastTravelNode[] = [
   { name: 'Sanctuary Waypoint', zone: ZONE_NAMES.SANCTUARY, discovered: true, travelTimes: [{ to: 'Woods Gate', seconds: 8 }, { to: 'Cave Entrance', seconds: 12 }] },
-  { name: 'Woods Gate', zone: ZONE_NAMES.WHISPER_WOODS, discovered: true, travelTimes: [{ to: 'Sanctuary Waypoint', seconds: 8 }, { to: 'Camp Outskirts', seconds: 15 }] },
+  { name: 'Woods Gate', zone: ZONE_NAMES.WHISPER_WOODS, discovered: true, travelTimes: [{ to: 'Sanctuary Waypoint', seconds: 8 }, { to: 'Camp Outskirts', seconds: 15 }, { to: 'Ashen Crossing', seconds: 10 }] },
   { name: 'Cave Entrance', zone: ZONE_NAMES.CRYSTAL_CAVES, discovered: true, travelTimes: [{ to: 'Sanctuary Waypoint', seconds: 12 }, { to: 'Core Rift', seconds: 18 }] },
-  { name: 'Camp Outskirts', zone: ZONE_NAMES.BANDIT_CAMP, discovered: false, travelTimes: [{ to: 'Woods Gate', seconds: 15 }, { to: 'Keep Gates', seconds: 20 }] },
+  { name: 'Camp Outskirts', zone: ZONE_NAMES.BANDIT_CAMP, discovered: false, travelTimes: [{ to: 'Woods Gate', seconds: 15 }, { to: 'Keep Gates', seconds: 20 }, { to: 'Ashen Crossing', seconds: 12 }] },
   { name: 'Core Rift', zone: ZONE_NAMES.DEEP_CORE, discovered: false, travelTimes: [{ to: 'Cave Entrance', seconds: 18 }, { to: 'Keep Gates', seconds: 22 }] },
   { name: 'Keep Gates', zone: ZONE_NAMES.RUINED_KEEP, discovered: false, travelTimes: [{ to: 'Camp Outskirts', seconds: 20 }, { to: 'Core Rift', seconds: 22 }] },
   { name: 'Ashen Crossing', zone: ZONE_NAMES.ASHEN_FOREST, discovered: false, travelTimes: [{ to: 'Woods Gate', seconds: 10 }, { to: 'Camp Outskirts', seconds: 12 }] },
 ];
 
 // Derived: Fast travel coverage per zone from FAST_TRAVEL_NODES
-export const FAST_TRAVEL_COVERAGE: { zone: string; pct: number }[] = ZONES.map(z => {
+// Zones with no travel node are absent: "not authored" must not read as "0% discovered".
+export const FAST_TRAVEL_COVERAGE: { zone: string; pct: number }[] = ZONES.flatMap(z => {
   const node = FAST_TRAVEL_NODES.find(n => n.zone === z.name);
-  return { zone: z.name, pct: node?.discovered ? 100 : 0 };
+  return node ? [{ zone: z.name, pct: node.discovered ? 100 : 0 }] : [];
 });
 
 /* ── 10.10 Zone Progression Timeline Data ──────────────────────────────────── */
@@ -488,10 +467,3 @@ export const STATIC_WORLD: WorldModel = {
     return boss ? [[z.id, boss.phases]] : [];
   })),
 };
-
-/** Per-zone playtime of the static world (derived from the model; kept for existing consumers). */
-export const ZONE_PLAYTIME: ZonePlaytimeEstimate[] = computeZonePlaytime(STATIC_WORLD);
-
-/** Cumulative paths of the static world for both modes (derived from the model). */
-export const CRITICAL_PATH: CumulativePath = computeCumulativePath(STATIC_WORLD, 'critical');
-export const ALL_PATHS: CumulativePath = computeCumulativePath(STATIC_WORLD, 'all');

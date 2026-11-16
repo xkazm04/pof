@@ -11,6 +11,8 @@ import {
 import { EXPANDED_ENTRIES } from '../_shared/data';
 import type { LootEditorEntryExpanded, LootSource } from '../_shared/data';
 import { generateUE5LootTableJson, generateUE5LootTableCpp } from '../_shared/codegen';
+import { copyToClipboard } from '@/lib/clipboard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { BlueprintPanel } from '../_shared/design';
 import { rarityColor } from '../_shared/rarityBadge';
 import { LOOT_TABLE_EDITOR_PAGE_SIZE } from './loot-table-editor-constants';
@@ -119,6 +121,11 @@ export function LootTableEditor() {
     });
   }, [editorEntries]);
 
+  // End of a slider gesture: the next weight change must push its own undo snapshot.
+  const commitEditorWeight = useCallback(() => {
+    lastWeightEditIdRef.current = null;
+  }, []);
+
   const addEditorEntry = useCallback(() => {
     // crypto.randomUUID() is collision-free even for two "+ Add" clicks within
     // the same millisecond. Raw Date.now() (1ms resolution) produced duplicate
@@ -153,13 +160,14 @@ export function LootTableEditor() {
     setShowEditorJson, setShowReExport, setPage,
   });
 
-  const handleCopyReExport = useCallback((format: 'json' | 'cpp') => {
+  const handleCopyReExport = useCallback(async (format: 'json' | 'cpp') => {
     const text = format === 'json'
       ? generateUE5LootTableJson(editorEntries, nothingWeight)
       : generateUE5LootTableCpp(editorEntries, nothingWeight);
-    navigator.clipboard.writeText(text);
+    // Claim "Copied" only when the clipboard write actually succeeded.
+    if (!(await copyToClipboard(text))) return;
     setCopiedReExport(true);
-    setTimeout(() => setCopiedReExport(false), 2000);
+    setTimeout(() => setCopiedReExport(false), UI_TIMEOUTS.copyFeedback);
   }, [editorEntries, nothingWeight]);
 
   return (
@@ -199,8 +207,10 @@ export function LootTableEditor() {
         groupedEntries={groupedEntries}
         sourceFilter={sourceFilter}
         editorTotalWeight={editorTotalWeight}
+        nothingWeight={nothingWeight}
         filteredEntries={filteredEntries}
         onUpdateWeight={updateEditorWeight}
+        onWeightCommit={commitEditorWeight}
         onRemoveEntry={removeEditorEntry}
       />
 

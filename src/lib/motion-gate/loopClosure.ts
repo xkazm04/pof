@@ -37,6 +37,11 @@ export interface LoopMetrics {
   rootTravelMm: number;
   /** Frame count, for reporting. */
   frames: number;
+  /** Per-clip motion amplitude: the furthest any joint strays from its frame-0 root-relative
+   *  position. A frozen export is 0 here AND on all three seam axes, so the seam axes alone
+   *  read it as a perfect loop. Optional: older extractors do not emit it, and an absent value
+   *  means "not measured", never "has motion". */
+  motionRangeMm?: number;
 }
 
 export interface LoopThresholds {
@@ -50,6 +55,8 @@ export interface LoopThresholds {
   /** Seam velocity allowance. */
   velJumpPassMm: number;
   velJumpWarnMm: number;
+  /** Motion amplitude below this is a frozen clip, not a loop: fail. */
+  motionFloorMm: number;
 }
 
 /**
@@ -65,6 +72,9 @@ export const DEFAULT_LOOP_THRESHOLDS: LoopThresholds = {
   worstJointWarnMm: 80,
   velJumpPassMm: 15,
   velJumpWarnMm: 50,
+  // A frozen/T-pose export measures ~0; a breathing idle sits in the cm range. 2 mm is a
+  // conservative floor that only a motionless clip falls under (recalibrate on real idles).
+  motionFloorMm: 2,
 };
 
 /** Whether the clip was authored to loop. A one-shot is not graded on loop closure. */
@@ -120,6 +130,14 @@ export function scoreLoopClosure(
   }
 
   const t = { ...DEFAULT_LOOP_THRESHOLDS, ...thresholds };
+  if (metrics.motionRangeMm !== undefined && metrics.motionRangeMm < t.motionFloorMm) {
+    return {
+      verdict: 'fail',
+      worstAxis: null,
+      reason: `No motion — joints move at most ${mm(metrics.motionRangeMm)}; a frozen clip is not a loop.`,
+      metrics,
+    };
+  }
   const axes = [
     {
       key: 'poseGap' as const,
@@ -171,6 +189,11 @@ const NUMERIC_KEYS: Record<string, keyof LoopMetrics> = {
   FRAMES: 'frames',
 };
 
+/** Optional markers: absent from older extractors, so a missing one is not a parse error. */
+const OPTIONAL_KEYS: Record<string, keyof LoopMetrics> = {
+  MOTION_RANGE_MM: 'motionRangeMm',
+};
+
 /**
  * Parse the extractor's marker block out of a script's stdout. Mirrors
  * `mesh-critique.parseCritiqueMetrics`: tolerant of surrounding log noise, strict about
@@ -195,7 +218,7 @@ export function parseLoopMetrics(stdout: string): ParsedLoopMetrics {
     if (eq < 0) continue;
     const key = line.slice(MARKER.length, eq);
     const raw = line.slice(eq + 1).trim();
-    const field = NUMERIC_KEYS[key];
+    const field = NUMERIC_KEYS[key] ?? OPTIONAL_KEYS[key];
     if (!field) continue;
     const value = Number(raw);
     if (!Number.isFinite(value)) {
@@ -217,6 +240,7 @@ export function parseLoopMetrics(stdout: string): ParsedLoopMetrics {
       velJumpMm: found.get('velJumpMm')!,
       rootTravelMm: found.get('rootTravelMm')!,
       frames: found.get('frames')!,
+      ...(found.has('motionRangeMm') ? { motionRangeMm: found.get('motionRangeMm')! } : {}),
     },
   };
 }

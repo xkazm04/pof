@@ -8,7 +8,7 @@ const exclusionCount = ELITE_MODIFIERS.reduce((sum, m) => sum + (m.excludes?.len
 
 export function ModifiersMetric() {
   return (
-    <div className="text-[10px] font-mono leading-tight">
+    <div className="text-2xs font-mono leading-tight">
       <span className="font-bold" style={{ color: ACCENT_ORANGE }}>{modCount}</span>
       <span style={{ color: withOpacity(ACCENT_ORANGE, OPACITY_50) }}> modifiers / </span>
       <span className="font-bold" style={{ color: ACCENT_ORANGE }}>{exclusionCount}</span>

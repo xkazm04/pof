@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as previewModule from '@/lib/level-design/procgen-preview';
 import {
-  findLayoutRemedies, applyRemedy, REMEDY_SEED_SCAN, REMEDY_PREVIEW_BUDGET,
+  findLayoutRemedies, applyRemedy, REMEDY_SEED_SCAN, REMEDY_PREVIEW_BUDGET, REMEDY_VERIFY_SIZE,
   type LayoutDiagnosis, type LeverRemedy,
 } from '@/lib/level-design/layout-remedies';
 import {
@@ -21,7 +21,7 @@ import {
 import type { PreviewAlgorithm } from '@/lib/level-design/algo-params';
 import { hashSeed } from '@/lib/level-design/frandom-stream';
 
-const { generatePreview, DEFAULT_MAX_PREVIEW_SIZE } = previewModule;
+const { generatePreview } = previewModule;
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -85,7 +85,7 @@ describe('every remedy is verified', () => {
     for (const [s, r] of remedies) {
       const patched = applyRemedy(s, r);
       expect(patched.seedValue).toBe(s.seedValue);
-      const stats = statsOf(patched);
+      const stats = generatePreview(previewConfigFromSpec(patched, REMEDY_VERIFY_SIZE)).stats;
       expect(stats.regions).toBe(1);
       expect(r.after).toEqual(stats);
     }
@@ -154,7 +154,7 @@ describe('a connected layout needs nothing', () => {
 });
 
 describe('budget and purity', () => {
-  it('stays within the preview budget at the preview cap, never mutates, and is deterministic', () => {
+  it('stays within the preview budget at the verification size, never mutates, and is deterministic', () => {
     const call = vi.spyOn(previewModule, 'generatePreview');
     for (const s of [...specMatrix(), spec({ algorithm: 'cellular', seed: fragmentedCellularSeed() })]) {
       const frozen = deepFreeze(structuredClone(s));
@@ -162,7 +162,7 @@ describe('budget and purity', () => {
       const a = findLayoutRemedies(frozen);
       expect(call.mock.calls.length).toBeLessThanOrEqual(REMEDY_PREVIEW_BUDGET);
       for (const [config] of call.mock.calls) {
-        expect(config.maxPreviewSize === undefined || config.maxPreviewSize <= DEFAULT_MAX_PREVIEW_SIZE).toBe(true);
+        expect(config.maxPreviewSize === undefined || config.maxPreviewSize <= REMEDY_VERIFY_SIZE).toBe(true);
       }
       expect(findLayoutRemedies(frozen)).toEqual(a);
     }

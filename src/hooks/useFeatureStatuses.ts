@@ -114,7 +114,12 @@ function freshCache(): CacheEntry | null {
 async function loadStatuses(gen: number): Promise<CacheEntry> {
   const projectId = activeProjectId();
   const url = projectId ? `${ENDPOINT}?projectId=${encodeURIComponent(projectId)}` : ENDPOINT;
-  const result = await tryApiFetch<{ statuses: FeatureStatusRow[]; scope?: ProjectScopeReport }>(url);
+  const raw = await tryApiFetch<{ statuses: FeatureStatusRow[]; scope?: ProjectScopeReport }>(url);
+  // An ok envelope with no `data` is a malformed answer, not an empty table: settle
+  // it as a failure so no consumer is left on the rejected shared flight.
+  const result = raw.ok && raw.data == null
+    ? { ok: false as const, error: 'The server answered without any status data.' }
+    : raw;
   const map = new Map<string, string>();
   const rows = result.ok ? (result.data.statuses ?? []) : EMPTY_ROWS;
   if (result.ok) {

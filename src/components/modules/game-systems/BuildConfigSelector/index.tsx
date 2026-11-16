@@ -22,6 +22,7 @@ import { PLATFORM_ICONS } from './constants';
 import { ProfileEditor } from './ProfileEditor';
 import { AddPlatformButtons } from './AddPlatformButtons';
 import { PreflightGateBlock } from './PreflightGateBlock';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { packageFlow, INITIAL_PACKAGE_FLOW, type PackageFlowEvent, type PackageFlowState } from '@/lib/packaging/package-flow';
 
 // ---------- Main component ----------
@@ -29,6 +30,9 @@ import { packageFlow, INITIAL_PACKAGE_FLOW, type PackageFlowEvent, type PackageF
 export function BuildConfigSelector() {
   const [profiles, setProfiles] = useState<BuildProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  // A failed read is not "no profiles": without this the panel offered "No build
+  // profiles yet" and create buttons over profiles that may exist.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Partial<BuildProfile> | null>(null);
 
@@ -39,14 +43,19 @@ export function BuildConfigSelector() {
   // UAT commands are a pure, deterministic function of (profile, projectPath,
   // projectName, ueVersion) — the same generator the server used to run per
   // profile over a chatty POST loop. Computed client-side; identical output.
-  const uatCommands = useMemo(() => {
+  // A profile the generator rejects keeps its reason: a card with no command section
+  // must not look the same as one that has no command.
+  const { uatCommands, uatErrors } = useMemo(() => {
     const cmds: Record<string, string> = {};
+    const errors: Record<string, string> = {};
     for (const p of profiles) {
       try {
         cmds[p.id] = generateUATCommand(p, projectPath, projectName, ueVersion);
-      } catch { /* skip command generation failures */ }
+      } catch (e) {
+        errors[p.id] = e instanceof Error ? e.message : String(e);
+      }
     }
-    return cmds;
+    return { uatCommands: cmds, uatErrors: errors };
   }, [profiles, projectPath, projectName, ueVersion]);
 
   const [cookRequest, setCookRequest] = useState<{
@@ -93,8 +102,10 @@ export function BuildConfigSelector() {
     try {
       const data = await apiFetch<{ profiles: BuildProfile[] }>('/api/packaging/profiles');
       setProfiles(data.profiles ?? []);
+      setLoadError(null);
     } catch (e) {
       console.error('Failed to fetch profiles:', e);
+      setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -102,31 +113,36 @@ export function BuildConfigSelector() {
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
-  // Save profile
-  const handleSave = useCallback(async (profile: Partial<BuildProfile>) => {
+  // A write that did not land says so, with the reason and a Retry that re-runs it.
+  const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
+  const runAction = useCallback(async (label: string, run: () => Promise<void>) => {
     try {
-      await apiFetch('/api/packaging/profiles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'save', profile }),
-      });
-      setShowEditor(false);
-      setEditingProfile(null);
-      fetchProfiles();
+      await run();
+      setActionError(null);
     } catch (e) {
-      console.error('Failed to save profile:', e);
+      console.error(`Failed to ${label}:`, e);
+      const reason = e instanceof Error ? e.message : String(e);
+      setActionError({ message: `Could not ${label}: ${reason}`, retry: () => { void runAction(label, run); } });
     }
-  }, [fetchProfiles]);
+  }, []);
+
+  // Save profile
+  const handleSave = useCallback((profile: Partial<BuildProfile>) => runAction('save profile', async () => {
+    await apiFetch('/api/packaging/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', profile }),
+    });
+    setShowEditor(false);
+    setEditingProfile(null);
+    fetchProfiles();
+  }), [fetchProfiles, runAction]);
 
   // Delete profile
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await apiFetch(`/api/packaging/profiles?id=${id}`, { method: 'DELETE' });
-      fetchProfiles();
-    } catch (e) {
-      console.error('Failed to delete profile:', e);
-    }
-  }, [fetchProfiles]);
+  const handleDelete = useCallback((id: string) => runAction('delete profile', async () => {
+    await apiFetch(`/api/packaging/profiles?id=${id}`, { method: 'DELETE' });
+    fetchProfiles();
+  }), [fetchProfiles, runAction]);
 
   // Set default
   const handleSetDefault = useCallback(async (id: string) => {
@@ -229,12 +245,25 @@ export function BuildConfigSelector() {
           <button
             onClick={fetchProfiles}
             disabled={loading}
+            aria-label="Refresh build profiles"
             className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <InlineErrorRetry message={`Build profiles could not be read: ${loadError}`} onRetry={fetchProfiles} />
+      )}
+
+      {actionError && (
+        <InlineErrorRetry
+          message={actionError.message}
+          onRetry={actionError.retry}
+          onDismiss={() => setActionError(null)}
+        />
+      )}
 
       {/* Add platform buttons */}
       <AddPlatformButtons
@@ -258,7 +287,7 @@ export function BuildConfigSelector() {
       )}
 
       {/* Profile cards */}
-      {profiles.length === 0 && !loading ? (
+      {loadError && profiles.length === 0 ? null : profiles.length === 0 && !loading ? (
         <div className="text-center py-8 space-y-3">
           <Wrench className="w-6 h-6 text-text-muted mx-auto" />
           <div className="text-xs text-text-muted">No build profiles yet</div>
@@ -286,6 +315,7 @@ export function BuildConfigSelector() {
               key={p.id}
               profile={p}
               uatCommand={uatCommands[p.id]}
+              uatError={uatErrors[p.id]}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onSetDefault={handleSetDefault}

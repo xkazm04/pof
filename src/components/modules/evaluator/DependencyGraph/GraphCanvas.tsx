@@ -1,10 +1,10 @@
+import { useId } from 'react';
 import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_BLOCKER, OPACITY_20 } from '@/lib/chart-colors';
-import { zoomViewBox } from '@/lib/topology/moduleGraph';
+import { zoomViewBox, edgePath } from '@/lib/topology/moduleGraph';
 import { NODE_W, NODE_H } from './constants';
 import type { ModuleNode, Edge } from './types';
 
 interface GraphCanvasProps {
-  svgRef: React.RefObject<SVGSVGElement | null>;
   svgWidth: number;
   svgHeight: number;
   zoom: number;
@@ -21,7 +21,6 @@ interface GraphCanvasProps {
 }
 
 export function GraphCanvas({
-  svgRef,
   svgWidth,
   svgHeight,
   zoom,
@@ -39,22 +38,27 @@ export function GraphCanvas({
   // every zoom level stays fully visible inside the overflow-hidden frame.
   // Edge endpoints come from the nodes' own centres — one derivation of geometry.
   const centres = new Map(nodes.map((n) => [n.moduleId as string, { x: n.cx, y: n.cy }]));
+  // Per-instance marker ids: `#arrow` is also declared elsewhere (ComboChainGraph) and
+  // LRU-hidden modules stay mounted, so a global id can resolve to a foreign marker.
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const ARROW = `dg-arrow-${uid}`;
+  const ARROW_BLOCKED = `dg-arrow-blocked-${uid}`;
+  const ARROW_CLEARED = `dg-arrow-cleared-${uid}`;
 
   return (
     <div className="bg-background border border-border rounded-lg overflow-hidden">
       <svg
-        ref={svgRef}
         width="100%"
         viewBox={zoomViewBox(svgWidth, svgHeight, zoom)}
       >
         <defs>
-          <marker id="arrow" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <marker id={ARROW} viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill="var(--text-muted)" />
           </marker>
-          <marker id="arrow-blocked" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <marker id={ARROW_BLOCKED} viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_BLOCKER} />
           </marker>
-          <marker id="arrow-cleared" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+          <marker id={ARROW_CLEARED} viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_SUCCESS} />
           </marker>
         </defs>
@@ -65,23 +69,8 @@ export function GraphCanvas({
           const toCenter = centres.get(edge.to);
           if (!fromCenter || !toCenter) return null;
 
-          // Shorten line to stop at node border
-          const dx = toCenter.x - fromCenter.x;
-          const dy = toCenter.y - fromCenter.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const ux = dx / dist;
-          const uy = dy / dist;
-
-          const x1 = fromCenter.x + ux * (NODE_W / 2 + 4);
-          const y1 = fromCenter.y + uy * (NODE_H / 2 + 4);
-          const x2 = toCenter.x - ux * (NODE_W / 2 + 10);
-          const y2 = toCenter.y - uy * (NODE_H / 2 + 10);
-
-          // Curve control point (perpendicular offset for overlapping edges)
-          const mx = (x1 + x2) / 2;
-          const my = (y1 + y2) / 2;
-          const perpX = -uy * 20;
-          const perpY = ux * 20;
+          // Shortened to the node borders and bowed: the shared derivation.
+          const geo = edgePath(fromCenter, toCenter, NODE_W, NODE_H);
 
           const edgeId = `${edge.from}->${edge.to}`;
           // A build preview lights the edges it would clear, over any module highlight.
@@ -93,19 +82,19 @@ export function GraphCanvas({
           return (
             <g key={edgeId} data-preview-cleared={isCleared || undefined}>
               <path
-                d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
+                d={geo.d}
                 fill="none"
                 stroke={isCleared ? STATUS_SUCCESS : blocked ? STATUS_BLOCKER : 'var(--text-muted)'}
                 strokeWidth={isCleared ? 3 : Math.min(3, 0.5 + edge.count * 0.5)}
                 strokeDasharray={blocked ? '4 2' : undefined}
                 opacity={opacity}
-                markerEnd={isCleared ? 'url(#arrow-cleared)' : blocked ? 'url(#arrow-blocked)' : 'url(#arrow)'}
+                markerEnd={`url(#${isCleared ? ARROW_CLEARED : blocked ? ARROW_BLOCKED : ARROW})`}
                 className="transition-opacity duration-base"
               />
               {isHighlighted && (
                 <text
-                  x={mx + perpX}
-                  y={my + perpY - 6}
+                  x={geo.labelX}
+                  y={geo.labelY - 6}
                   fill="var(--text-muted-hover)"
                   fontSize="9"
                   textAnchor="middle"

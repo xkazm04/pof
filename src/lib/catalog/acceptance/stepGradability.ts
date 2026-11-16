@@ -83,6 +83,11 @@ export function bespokeCheckerFor(catalogId: string, step: string): Checker | nu
   return BESPOKE_CHECKERS[catalogId]?.[step] ?? null;
 }
 
+/** The step labels a catalog grades through a bespoke checker (empty for a catalog with none). */
+export function bespokeStepLabels(catalogId: string): string[] {
+  return Object.keys(BESPOKE_CHECKERS[catalogId] ?? {});
+}
+
 /**
  * Classify a (catalog, step) into exactly one of the four states above.
  *

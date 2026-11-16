@@ -208,28 +208,11 @@ export interface StepSpec {
    * and the server's submit all go through it, and a submit to an inapplicable step is refused.
    */
   profiles?: readonly string[];
-  /**
-   * RETIRED — do not author. Enforced by spec-linter rule (l).
-   *
-   * Zero of the registered steps ever used it, and the SIGNATURE is why: `copy` is handed
-   * only the artifact `data`, never the graded `AcceptanceResult`. So an authored `why` /
-   * `suggestion` structurally cannot name the checker's status or its own `reason`, while
-   * the derived fallback always does (`steps/shared/genericFixCopy.ts` composes
-   * `base.reason` verbatim). Authoring it therefore either makes a step's banner strictly
-   * LESS honest than the fallback it replaces, or duplicates the checker's cause-derivation
-   * in a second place that can drift out of step with the verdict it explains.
-   *
-   * Step-bespoke copy that does work already exists: the Items table
-   * (`steps/itemsSteps.ts` → `ITEM_STEP_COPY`, applied inside the checker where the base
-   * verdict is in scope). For everything else `fixDirectionFor` is the SINGLE source of a
-   * step's corrective direction. If a step genuinely needs bespoke copy, change this
-   * signature to take the `AcceptanceResult` first — as a deliberate act — rather than
-   * authoring against a shape that cannot see the verdict.
-   *
-   * Still declared only because `withGenericFixCopy` reads it; with rule (l) green that
-   * branch is provably dead and should be deleted the next time that file is touched.
-   */
-  copy?: (data: Record<string, unknown>) => StepFixCopy;
+  // `copy` (a per-step banner-copy override) was REMOVED: it received only the artifact `data`,
+  // never the graded `AcceptanceResult`, so authored copy could not name the checker's status or
+  // `reason` and made a banner LESS honest than the derived fallback (`genericFixCopy`). Zero steps
+  // ever authored it; spec-linter rule (l) now guards against its reintroduction. Step-bespoke copy
+  // that works lives in the Items table (`ITEM_STEP_COPY`, applied inside the checker).
   /** Optional L2 static (UE codebase-analysis) checks, run server/CLI-side against the UE root.
    *  Entity-aware because the symbol/row names derive from the entity. */
   staticChecks?: (entity: LabEntity) => UeChecker[];

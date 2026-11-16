@@ -1,0 +1,78 @@
+{
+ "schema": "conform-run/1",
+ "worker": "5109fb3f-4b12-415d-bbc1-9f9d65d10eb9",
+ "subject": "templates-scaffolding",
+ "evaluatedAt": "2026-11-02T22:15:30.753988+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ability-blueprint",
+   "subject": "templates-scaffolding",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:63 The picker card reports the template's raw rule count, but adoption (index.tsx loadTemplate) runs bindRulesToAbility and drops rules that target other abilities. Confirm can therefore create fewer rules than the preview showed, which is a preview showing something other than the instance. Adoption also persists no template id, version or provenance stamp.",
+   "techniques": [
+    {
+     "technique": "adoption-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:63 The preview counts tpl.tagRules and never runs the binding that adoption applies, so it does not show the mapped result. Clicking a card adopts immediately with no review step."
+    },
+    {
+     "technique": "instance-upgrade",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/index.tsx:103 The only provenance is a transient React state that stores the display name, not the stable id, and it has no version or answers. The persisted spec carries only the five editor slices (useAbilitySpecBinding.ts:52), so no stamp exists to act as a merge base and no out-of-date offer is possible. TemplatePicker.tsx:40 also matches the active entry by tpl.name."
+    },
+    {
+     "technique": "template-anatomy",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:21 The contract has the identity/browse layer (id, name, description, tags) and a payload, but no version field. It also has no declared parameter surface: variants are separate sibling entries, not dimensions. 'Templates version; instances remember' is not realized."
+    },
+    {
+     "technique": "readiness-prerequisites",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/index.tsx:91 A template needs a bound ability as its sibling entity. When none is bound, adoption silently binds the template's rules to the seed tag 'Ability.Fire.Fireball' and does not block or name the prerequisite. The dropped-rules notice is shown, but it lives only in transient state and is not recorded durably."
+    },
+    {
+     "technique": "template-portability",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/index.tsx:99 Tag-rule payloads are role patterns ('Ability.*') that are resolved onto the adopter's bound ability at adoption. Rules naming another ability are dropped with a named reason. Caveat: the loadout ships the author's ability names verbatim (index.tsx:102)."
+    },
+    {
+     "technique": "catalog-curation",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/ability/tag-rules.test.ts:61 A small curated core of six source-authored entries with distinct intents. Every entry passes through one test door that checks binding correctness and that no Ability.* rule leaks. Retirement and predicate counts are not modelled, but this catalog is source-only and small."
+    },
+    {
+     "technique": "integrity-and-provenance",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-presets.ts:155 The catalog is a compiled source literal. It is never seeded, fetched or crossed over a trust boundary, so there is no manifest or verifier to key."
+    }
+   ],
+   "registryProposal": "The standard assumes an interview with a parameter surface. In-editor 'archetype preset' catalogs, where you pick one entry and it overwrites a working draft, sit between templates and draft-editing. A note on whether the zero-dimension preset is in scope, and on overwriting unsaved edits during adoption, would make verdicts on such galleries less ambiguous."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-02T22:15:30.753988+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "templates-scaffolding"
+   ],
+   "techniques": [
+    "adoption-lifecycle",
+    "catalog-curation",
+    "instance-upgrade",
+    "integrity-and-provenance",
+    "readiness-prerequisites",
+    "template-anatomy",
+    "template-portability"
+   ],
+   "deviations": 1,
+   "context": "ability-blueprint",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -39,10 +39,13 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
   const [xpTableTab, setXpTableTab] = useState<'table' | 'csv' | 'struct' | 'loader'>('table');
   const [levelOverrides] = useState<Map<number, Partial<{ xpRequired: number; hpBonus: number; manaBonus: number }>>>(new Map());
 
-  const progressionRows = useMemo(
-    () => generateProgressionTable(MAX_LEVEL, baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule),
-    [baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule],
-  );
+  const progressionRows = useMemo(() => {
+    // Pin to the declared input ranges at export; the inputs stay free while typing.
+    const pin = (v: number, lo: number, hi: number) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : lo);
+    return generateProgressionTable(
+      MAX_LEVEL, baseXp, curveExp, pin(hpPerLevel, 1, 100), pin(manaPerLevel, 1, 100), pin(attrPointsPerLevel, 0, 10), levelOverrides, schedule,
+    );
+  }, [baseXp, curveExp, hpPerLevel, manaPerLevel, attrPointsPerLevel, levelOverrides, schedule]);
   const leadRewardAt = useMemo(() => new Map(schedule.map((g) => [g.level, g.rewards[0]])), [schedule]);
 
   const xpTableOutput = useMemo(() => {
@@ -50,9 +53,9 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
       case 'table': return '';
       case 'csv': return progressionToCSV(progressionRows);
       case 'struct': return progressionToUE5Struct();
-      case 'loader': return progressionToUE5Loader();
+      case 'loader': return progressionToUE5Loader(baseXp, curveExp);
     }
-  }, [xpTableTab, progressionRows]);
+  }, [xpTableTab, progressionRows, baseXp, curveExp]);
 
   const getCopyText = useCallback(() => {
     return xpTableTab === 'table' ? progressionToCSV(progressionRows) : xpTableOutput;
@@ -64,7 +67,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(1)}.csv`;
+    a.download = `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(2)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [progressionRows, baseXp, curveExp]);
@@ -96,6 +99,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <span className="text-2xs font-mono text-text-muted w-14">HP/Lvl</span>
           <input
             type="number" min={1} max={100} step={1} value={hpPerLevel}
+            aria-label="HP per level"
             onChange={e => setHpPerLevel(Number(e.target.value))}
             className="flex-1 bg-surface-deep/50 border border-border/40 rounded px-2 py-1 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
           />
@@ -104,6 +108,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <span className="text-2xs font-mono text-text-muted w-14">Mana/Lvl</span>
           <input
             type="number" min={1} max={100} step={1} value={manaPerLevel}
+            aria-label="Mana per level"
             onChange={e => setManaPerLevel(Number(e.target.value))}
             className="flex-1 bg-surface-deep/50 border border-border/40 rounded px-2 py-1 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
           />
@@ -112,6 +117,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <span className="text-2xs font-mono text-text-muted w-14">Attr Pts</span>
           <input
             type="number" min={0} max={10} step={1} value={attrPointsPerLevel}
+            aria-label="Attribute points per level"
             onChange={e => setAttrPointsPerLevel(Number(e.target.value))}
             className="flex-1 bg-surface-deep/50 border border-border/40 rounded px-2 py-1 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
           />
@@ -129,6 +135,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <button
             key={tab.id}
             onClick={() => setXpTableTab(tab.id)}
+            aria-pressed={xpTableTab === tab.id}
             className="px-2.5 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all border"
             style={{
               backgroundColor: xpTableTab === tab.id ? `${ACCENT}${OPACITY_15}` : 'transparent',
@@ -201,7 +208,7 @@ export function XpTableGenerator({ baseXp, curveExp, schedule = SHIPPED_SCHEDULE
           <div className="px-3 py-1.5 bg-surface-deep/50 border-b border-border/30 flex items-center gap-2">
             <Code className="w-3 h-3 text-text-muted" />
             <span className="text-2xs font-mono text-text-muted">
-              {xpTableTab === 'csv' ? `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(1)}.csv` :
+              {xpTableTab === 'csv' ? `DT_ProgressionCurve_Base${baseXp}_Exp${curveExp.toFixed(2)}.csv` :
                xpTableTab === 'struct' ? 'Framework/FProgressionCurveRow.h' :
                'Player/ARPGPlayerCharacter_DataTable.cpp'}
             </span>

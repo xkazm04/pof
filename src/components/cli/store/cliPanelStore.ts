@@ -181,7 +181,30 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
             .map((tid) => sessions[tid])
             .filter((s): s is CLISessionState => !!s && !s.isRunning)
             .sort((a, b) => a.lastActivityAt - b.lastActivityAt);
-          if (idle.length > 0) return idle[0].id;
+          if (idle.length > 0) {
+            const reused = idle[0];
+            // A keyed caller finds its tab (and its completion) by sessionKey, so the
+            // recycled tab takes the new identity and leaves the old conversation.
+            if (opts?.sessionKey) {
+              set((state) => ({
+                sessions: {
+                  ...state.sessions,
+                  [reused.id]: {
+                    ...reused,
+                    label: opts.label || reused.label,
+                    accentColor: opts.accentColor || reused.accentColor,
+                    moduleId: opts.moduleId,
+                    sessionKey: opts.sessionKey,
+                    projectPath: opts.projectPath || null,
+                    claudeSessionId: null,
+                  },
+                },
+                activeTabId: reused.id,
+                maximizedTabId: reused.id,
+              }));
+            }
+            return reused.id;
+          }
         }
 
         const session: CLISessionState = {

@@ -1,6 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, withinPercent, selected } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, atMost, selected } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
@@ -9,7 +9,8 @@ import { budgetWithinCap } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** snake_case token for the per-entity build script name (Weathered Stone → weathered_stone). */
 const snake = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
@@ -324,11 +325,10 @@ registerCatalogPipeline({
       // (perfBudget.target) — ±20% of 200 alone would pass a 240-instruction shader.
       accept: allOf(
         budgetWithinCap('perfBudget', 'instructionCount', 'target', 'Instruction count within the declared shader budget'),
-        withinPercent(
+        atMost(
           'instructionCount',
-          'Shader instruction count within ±20% of target (200)',
-          200,
-          20,
+          'Shader instruction count at most 240 (200 target + 20%)',
+          240,
         ),
       ),
     },

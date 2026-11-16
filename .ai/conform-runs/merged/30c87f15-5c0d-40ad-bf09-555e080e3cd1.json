@@ -1,0 +1,218 @@
+{
+ "schema": "conform-run/1",
+ "worker": "30c87f15-5c0d-40ad-bf09-555e080e3cd1",
+ "subject": "agent-instruction-files",
+ "evaluatedAt": "2026-11-09T03:34:59.787580+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ue5-bridge-monitoring",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/TestHarnessPanel/AuthorTestPanel.tsx:12 The context's only contact with an agent is dispatching one per-task prompt through the shared CLI rail, which the golden path assigns to prompt-assembly, and a case-insensitive search of BridgeEndpointHealth and TestHarnessPanel for the five absence terms found zero hits, so it authors, reads and writes no instruction file.",
+   "techniques": [
+    {
+     "technique": "workspace-ancestry-isolation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/WaitingTestsTab.tsx:71 The launch goes through the shared hook with a module id and session key; this context creates no directory for an agent to run in."
+    },
+    {
+     "technique": "capability-coverage-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/waitingTests.ts:5 The comment describes a human UI beside an agent tool; nothing here is an instruction surface that plans agent work or names its means."
+    }
+   ],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "copilot-instructions",
+    "instruction file"
+   ]
+  },
+  {
+   "context": "status-health-dashboard",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/status/capabilityModel.ts:24 The status models are pure aggregations over JSON and arguments and the components render them, and a case-insensitive search of src/app/_dev-inspector, src/components/status and src/lib/status for the five absence terms found zero hits; the only related text is a docblock pointing at a skill file in personalLoop.ts, which is not one of this context's listed files.",
+   "techniques": [
+    {
+     "technique": "capability-coverage-contract",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/status/capabilityModel.ts:2 Capability here means a class of game content the stack can generate, not an affordance an agent could be told about."
+    },
+    {
+     "technique": "line-earning",
+     "verdict": "not-applicable",
+     "evidence": "src/app/_dev-inspector/devLocate.ts:11 The one agent-facing output is a file reference copied on demand, not a line in an always-loaded floor."
+    }
+   ],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "copilot-instructions",
+    "instruction file"
+   ]
+  },
+  {
+   "context": "quality-evaluation-api",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/app/api/harness/route.ts:276 The routes are HTTP surfaces whose harness start contract exposes no instruction-file setting, and a case-insensitive search of all nine route directories for the five absence terms found zero hits, with no process spawn, cwd or worktree handling in them, so the AGENTS.md handling this route reaches sits entirely in src/lib/harness, outside this context.",
+   "techniques": [
+    {
+     "technique": "workspace-ancestry-isolation",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/harness/route.ts:275 Paths are supplied by the caller and forwarded; the route creates no workspace and launches no agent itself."
+    },
+    {
+     "technique": "write-back-sink-class",
+     "verdict": "not-applicable",
+     "evidence": "src/app/api/harness/route.ts:472 The route hands off to the orchestrator and names no write destination; the learnings sink belongs to src/lib/harness and should be judged there."
+    }
+   ],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "copilot-instructions",
+    "instruction file"
+   ]
+  },
+  {
+   "context": "animation-state-machine-editor",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/animations/StateMachineEditor/applyPlan.ts:14 The editor assembles one task prompt per apply, which the golden path separates from a repo-owned file delivered by a harness, and a case-insensitive search of StateMachineEditor for the five absence terms found zero hits, so no instruction file is authored or consumed here.",
+   "techniques": [
+    {
+     "technique": "line-earning",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/animations/StateMachineEditor/applyPlan.ts:202 This restraint is paid only by the single dispatch that carries it, so the per-session admission test does not reach it."
+    },
+    {
+     "technique": "workspace-ancestry-isolation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/animations/StateMachineEditor/EditorTab.tsx:70 The context passes a prompt to the shared CLI rail and creates no directory for the agent."
+    }
+   ],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "copilot-instructions",
+    "instruction file"
+   ]
+  },
+  {
+   "context": "visual-gen-style-asset-library",
+   "subject": "agent-instruction-files",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/visual-gen/style-dna.ts:3 The prompt text in this library is addressed to image and 3D generators rather than coding agents, and a case-insensitive search of src/lib/visual-gen for the five absence terms found zero hits, so the subject's coding-harness precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "line-earning",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/prompt-chips.ts:5 These fragments are per-generation text for media models, not lines in a floor loaded by a coding agent."
+    },
+    {
+     "technique": "write-back-sink-class",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/style-dna.ts:10 State persists to a database module; no instruction tells an agent to append to a named file."
+    }
+   ],
+   "absenceTerms": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    "copilot-instructions",
+    "instruction file"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T03:34:59.787580+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "capability-coverage-contract",
+    "workspace-ancestry-isolation"
+   ],
+   "deviations": 0,
+   "context": "ue5-bridge-monitoring",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T03:34:59.787580+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "capability-coverage-contract",
+    "line-earning"
+   ],
+   "deviations": 0,
+   "context": "status-health-dashboard",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T03:34:59.787580+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "workspace-ancestry-isolation",
+    "write-back-sink-class"
+   ],
+   "deviations": 0,
+   "context": "quality-evaluation-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T03:34:59.787580+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "line-earning",
+    "workspace-ancestry-isolation"
+   ],
+   "deviations": 0,
+   "context": "animation-state-machine-editor",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T03:34:59.787580+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-instruction-files"
+   ],
+   "techniques": [
+    "line-earning",
+    "write-back-sink-class"
+   ],
+   "deviations": 0,
+   "context": "visual-gen-style-asset-library",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

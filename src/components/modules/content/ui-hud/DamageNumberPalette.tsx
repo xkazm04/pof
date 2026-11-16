@@ -3,6 +3,9 @@
 import { Swords } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_INFO, OPACITY_10 } from '@/lib/chart-colors';
+import {
+  ELEMENT_RGBA, NORMAL_FONT_SIZE, CRIT_FONT_SIZE, rgbaToCss as toCSS,
+} from '@/components/modules/content/ui-hud/DamageNumberPhysicsSimulator/constants';
 
 // ── Exact RGBA from DamageNumberWidget.h ────────────────────────────────────
 
@@ -13,19 +16,12 @@ interface ElementColor {
 }
 
 const ELEMENT_COLORS: ElementColor[] = [
-  { name: 'Physical', tag: '(default)',           rgba: [1.0, 1.0, 1.0, 1.0] },
-  { name: 'Fire',     tag: 'Damage.Fire',         rgba: [1.0, 0.3, 0.1, 1.0] },
-  { name: 'Ice',      tag: 'Damage.Ice',          rgba: [0.3, 0.6, 1.0, 1.0] },
-  { name: 'Lightning',tag: 'Damage.Lightning',    rgba: [1.0, 1.0, 0.2, 1.0] },
-  { name: 'Heal',     tag: 'bIsHeal',             rgba: [0.2, 1.0, 0.3, 1.0] },
+  { name: 'Physical', tag: '(default)',           rgba: ELEMENT_RGBA.physical },
+  { name: 'Fire',     tag: 'Damage.Fire',         rgba: ELEMENT_RGBA.fire },
+  { name: 'Ice',      tag: 'Damage.Ice',          rgba: ELEMENT_RGBA.ice },
+  { name: 'Lightning',tag: 'Damage.Lightning',    rgba: ELEMENT_RGBA.lightning },
+  { name: 'Heal',     tag: 'bIsHeal',             rgba: ELEMENT_RGBA.heal },
 ];
-
-const NORMAL_FONT_SIZE = 18;
-const CRIT_FONT_SIZE = 26;
-
-function toCSS([r, g, b, a]: [number, number, number, number]): string {
-  return `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
-}
 
 function toHex([r, g, b]: [number, number, number, number]): string {
   const h = (v: number) => Math.round(v * 255).toString(16).padStart(2, '0');
@@ -159,7 +155,7 @@ export function DamageNumberPalette() {
               </div>
               <div className="flex items-center gap-2 p-2 rounded-md bg-black/30 border border-border/40">
                 <div className="text-xs font-bold" style={{ color: toCSS(ELEMENT_COLORS[4].rgba) }}>Heal</div>
-                <code className="text-2xs font-mono text-text-muted w-24 shrink-0">{'"+ %.0f"'}</code>
+                <code className="text-2xs font-mono text-text-muted w-24 shrink-0">{'"+%.0f"'}</code>
                 <span className="ml-auto text-xs font-bold" style={{ color: toCSS(ELEMENT_COLORS[4].rgba) }}>+156</span>
               </div>
             </div>

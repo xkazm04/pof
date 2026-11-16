@@ -51,6 +51,8 @@ const GATE_TYPES: Record<VerificationGate['type'], { runtimeUnverifiable: boolea
   'ue-compile': { runtimeUnverifiable: false },
   'ue-test': { runtimeUnverifiable: true },
   'ue-visual': { runtimeUnverifiable: true },
+  'godot-test': { runtimeUnverifiable: true },
+  'godot-export': { runtimeUnverifiable: true },
 };
 
 describe('NO gate type self-certifies when nothing ran', () => {

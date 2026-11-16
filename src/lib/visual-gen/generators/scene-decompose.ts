@@ -79,10 +79,20 @@ const NOT_A_PROP_STEMS = [
   'bush', 'grass', 'tree', 'vine', 'ground', 'terrain', 'sky', 'wall', 'ceiling', 'water',
 ];
 
+/**
+ * Real props whose spelling merely begins with a scenery stem. Prefix matching is what catches
+ * `stairs`, `archway` and `bushes`, and it also caught a wallet and a bottle of vinegar.
+ */
+const PROP_WORDS_SHARING_A_STEM = new Set([
+  'wallet', 'wallets', 'archery', 'archive', 'archives', 'watering', 'waterskin', 'waterskins',
+  'waterproof', 'bushel', 'bushels', 'vinegar', 'stepladder', 'stepladders', 'stepstool',
+  'stepstools', 'groundsheet', 'groundsheets',
+]);
+
 /** Does this prop name name something the prompt excludes? Pure. */
 export function namesExcludedScenery(name: string): boolean {
   const words = name.toLowerCase().split(/[^a-z]+/).filter(Boolean);
-  return words.some((w) => NOT_A_PROP_STEMS.some((stem) => w.startsWith(stem)));
+  return words.some((w) => !PROP_WORDS_SHARING_A_STEM.has(w) && NOT_A_PROP_STEMS.some((stem) => w.startsWith(stem)));
 }
 
 /** Beyond this a "count" is a texture, not a prop set worth spawning individually. */
@@ -155,6 +165,7 @@ function readMaterial(raw: string | undefined): PhysicsMaterial {
 export function parseSceneDecomposeReply(text: string): DecomposeReply {
   const props: DecomposedProp[] = [];
   const seen = new Map<string, number>();
+  const usedIds = new Set<string>();
   let skipped = 0;
   const excluded: string[] = [];
   let sawRow = false;
@@ -180,11 +191,19 @@ export function parseSceneDecomposeReply(text: string): DecomposeReply {
       continue;
     }
 
-    const base = slug(name);
-    const n = (seen.get(base) ?? 0) + 1;
+    // A name with no latin letter or digit slugs to nothing, and a name may itself spell
+    // another row's suffix ("Crate 2" beside two "crate" rows), so the suffix is probed.
+    const base = slug(name) || 'prop';
+    let n = (seen.get(base) ?? 0) + 1;
+    let id = n === 1 ? base : `${base}-${n}`;
+    while (usedIds.has(id)) {
+      n += 1;
+      id = `${base}-${n}`;
+    }
     seen.set(base, n);
+    usedIds.add(id);
     props.push({
-      id: n === 1 ? base : `${base}-${n}`,
+      id,
       name,
       box,
       longestCm,

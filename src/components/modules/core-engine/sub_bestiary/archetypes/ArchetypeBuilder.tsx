@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useId } from 'react';
 import { Wrench } from 'lucide-react';
 import { ACCENT_PURPLE_BOLD, ACCENT_EMERALD, ACCENT_RED, STATUS_SUCCESS, STATUS_ERROR, ACCENT_PURPLE,
   withOpacity, OPACITY_12, OPACITY_37, OPACITY_10, OPACITY_25, OPACITY_30,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ABILITY_POOL, BT_PRESETS, ELITE_MODIFIERS, applyModifiers } from '../_shared/data';
+import { isModifierExcluded, toggleModifier } from '@/lib/bestiary/modifier-exclusion';
 
 export function ArchetypeBuilder() {
   const [builderName, setBuilderName] = useState('Custom Enemy');
@@ -14,14 +15,11 @@ export function ArchetypeBuilder() {
   const [builderAbilities, setBuilderAbilities] = useState<string[]>([]);
   const [builderBT, setBuilderBT] = useState<typeof BT_PRESETS[number]>('Aggressive');
   const [builderModifiers, setBuilderModifiers] = useState<string[]>([]);
+  const nameId = useId();
+  const btId = useId();
 
   const toggleBuilderModifier = useCallback((modId: string) => {
-    setBuilderModifiers(prev => {
-      const mod = ELITE_MODIFIERS.find(m => m.id === modId);
-      if (prev.includes(modId)) return prev.filter(id => id !== modId);
-      const excluded = mod?.excludes ?? [];
-      return [...prev.filter(id => !excluded.includes(id)), modId];
-    });
+    setBuilderModifiers(prev => toggleModifier(prev, modId, ELITE_MODIFIERS));
   }, []);
 
   return (
@@ -31,8 +29,8 @@ export function ArchetypeBuilder() {
         {/* Form */}
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Name</label>
-            <input type="text" value={builderName} onChange={e => setBuilderName(e.target.value)}
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1" htmlFor={nameId}>Name</label>
+            <input id={nameId} type="text" value={builderName} onChange={e => setBuilderName(e.target.value)}
               className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus-ring-inset transition-colors" />
           </div>
           <div>
@@ -41,7 +39,7 @@ export function ArchetypeBuilder() {
               {(Object.keys(builderStats) as (keyof typeof builderStats)[]).map(stat => (
                 <div key={stat} className="flex items-center gap-2">
                   <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-12 text-right flex-shrink-0">{stat}</span>
-                  <input type="range" min={0} max={100} value={builderStats[stat]}
+                  <input type="range" min={0} max={100} value={builderStats[stat]} aria-label={`${stat} stat`}
                     onChange={e => setBuilderStats(prev => ({ ...prev, [stat]: parseInt(e.target.value) }))}
                     className="flex-1 h-1.5"
                     style={{ accentColor: ACCENT_PURPLE }} />
@@ -65,8 +63,8 @@ export function ArchetypeBuilder() {
             </div>
           </div>
           <div>
-            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Behavior Tree</label>
-            <select value={builderBT} onChange={e => setBuilderBT(e.target.value as typeof BT_PRESETS[number])}
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1" htmlFor={btId}>Behavior Tree</label>
+            <select id={btId} value={builderBT} onChange={e => setBuilderBT(e.target.value as typeof BT_PRESETS[number])}
               className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus-ring-inset transition-colors">
               {BT_PRESETS.map(bt => <option key={bt} value={bt}>{bt}</option>)}
             </select>
@@ -76,7 +74,7 @@ export function ArchetypeBuilder() {
             <div className="flex flex-wrap gap-1.5">
               {ELITE_MODIFIERS.map(mod => {
                 const isActive = builderModifiers.includes(mod.id);
-                const isExcluded = !isActive && mod.excludes?.some(ex => builderModifiers.includes(ex));
+                const isExcluded = isModifierExcluded(mod.id, builderModifiers, ELITE_MODIFIERS);
                 return (
                   <button key={mod.id} onClick={() => !isExcluded && toggleBuilderModifier(mod.id)}
                     disabled={isExcluded}

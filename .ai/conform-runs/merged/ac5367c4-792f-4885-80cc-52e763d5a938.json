@@ -1,0 +1,67 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ac5367c4-792f-4885-80cc-52e763d5a938",
+ "subject": "lazy-section-addressability",
+ "evaluatedAt": "2026-11-10T00:20:22.134144+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "app-navigation",
+   "subject": "lazy-section-addressability",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/stores/navigationStore.ts:46 This shell moves between mutually exclusive module panes and tabs held in store state and URL query params, not between named positions on a long, lazily assembled scroll page; searches of src/app, src/hooks and src/stores for scrollIntoView, data-anchor, anchorId, hashchange and IntersectionObserver found nothing (location.hash only appears as a pass-through in useTabParam's replaceState, and sectionId only as a visibility-toggle key in useFeatureVisibility), so the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "always-present-anchor-wrappers",
+     "verdict": "not-applicable",
+     "evidence": "src/app/page.tsx:27 The root page switches between whole shells; it does not compose an ordered list of scroll sections that would need unconditional address wrappers."
+    },
+    {
+     "technique": "external-anchor-vs-internal-id",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useTabParam.ts:6 The external address here is a query-param tab selector checked against validValues, not a hash anchor to an in-page section; there is no section-anchor namespace to split into two."
+    },
+    {
+     "technique": "scroll-to-hydrate-then-retry",
+     "verdict": "not-applicable",
+     "evidence": "src/hooks/useScrollRestoration.ts:4 Scroll handling only restores a saved scrollTop per tab. No jump resolves a target inside a section that mounts as it nears the viewport, so no retry protocol is needed."
+    },
+    {
+     "technique": "anchor-coverage-guard",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/navigationStore.ts:32 Locations are module and tab ids checked against the registry and tab-id lists, not DOM anchors whose live-page hosts could drift from a declared list."
+    }
+   ],
+   "absenceTerms": [
+    "scrollIntoView",
+    "data-anchor",
+    "anchorId",
+    "hashchange",
+    "IntersectionObserver"
+   ],
+   "registryProposal": "navigationStore.ts:30-31 says a tab jump 'lands even when that module's pane mounts later', which is the address-vs-content split applied to tabbed app shells rather than long pages. The subject's precondition ('a long page') leaves out this neighbouring case; app-shell or session-resume might be a better home for it, or this subject could state the boundary explicitly."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-10T00:20:22.134144+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "lazy-section-addressability"
+   ],
+   "techniques": [
+    "always-present-anchor-wrappers",
+    "anchor-coverage-guard",
+    "external-anchor-vs-internal-id",
+    "scroll-to-hydrate-then-retry"
+   ],
+   "deviations": 0,
+   "context": "app-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -26,6 +26,8 @@ export function AttackRingSvg({ outerPoints, innerPoints, innerRing, outerR, inn
         height={SVG_SIZE}
         viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
         className="rounded-lg border border-border/30 bg-surface-deep/50"
+        role="img"
+        aria-label={`Attack ring: ${outerPoints.length} points at ${attackDist} UU around the target${innerRing ? `, plus ${innerPoints.length} inner-ring points at ${Math.round(attackDist * 0.5)} UU` : ''} (${totalPoints} total)`}
         data-testid="attack-ring-svg"
       >
         {/* Grid lines */}
@@ -36,13 +38,14 @@ export function AttackRingSvg({ outerPoints, innerPoints, innerRing, outerR, inn
             cy={SVG_CENTER}
             r={MAX_DRAW_RADIUS * f}
             fill="none"
-            stroke="rgba(255,255,255,0.04)"
+            stroke="var(--border)"
+            strokeOpacity={0.3}
             strokeWidth={1}
           />
         ))}
         {/* Crosshair */}
-        <line x1={SVG_PADDING} y1={SVG_CENTER} x2={SVG_SIZE - SVG_PADDING} y2={SVG_CENTER} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
-        <line x1={SVG_CENTER} y1={SVG_PADDING} x2={SVG_CENTER} y2={SVG_SIZE - SVG_PADDING} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
+        <line x1={SVG_PADDING} y1={SVG_CENTER} x2={SVG_SIZE - SVG_PADDING} y2={SVG_CENTER} stroke="var(--border)" strokeOpacity={0.4} strokeWidth={1} />
+        <line x1={SVG_CENTER} y1={SVG_PADDING} x2={SVG_CENTER} y2={SVG_SIZE - SVG_PADDING} stroke="var(--border)" strokeOpacity={0.4} strokeWidth={1} />
 
         {/* Outer ring circle */}
         <circle
@@ -166,7 +169,7 @@ export function AttackRingSvg({ outerPoints, innerPoints, innerRing, outerR, inn
         )}
 
         {/* Total points badge */}
-        <rect x={4} y={4} width={70} height={20} rx={4} fill="rgba(0,0,0,0.5)" />
+        <rect x={4} y={4} width={70} height={20} rx={4} fill="var(--surface-deep)" fillOpacity={0.85} />
         <text x={8} y={17} className="text-[11px] font-mono font-bold" fill={ACCENT_CYAN}>
           {totalPoints} pts
         </text>

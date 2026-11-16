@@ -5,7 +5,7 @@ import { Search } from 'lucide-react';
 import { RARITY_COLORS, type ItemData } from '../../_shared/data';
 import { useInventoryItems } from '../../_shared/useInventoryItems';
 import { getItemFootprint } from '@/lib/spatial-inventory';
-import { setDragIntent } from './spatialDragState';
+import { getDragIntent, setDragIntent } from './spatialDragState';
 import {
   withOpacity, OPACITY_8, OPACITY_15, OPACITY_25, OPACITY_50,
   STATUS_SUBDUED, OVERLAY_WHITE,
@@ -15,14 +15,17 @@ interface Props {
   accent: string;
 }
 
-const TYPE_OPTIONS = ['all', 'Weapon', 'Armor', 'Accessory', 'Consumable', 'Material', 'Quest'] as const;
+/** Rows rendered at once; the overflow is announced, never silently dropped. */
+const PALETTE_ROW_CAP = 40;
+
+const TYPE_OPTIONS =['all', 'Weapon', 'Armor', 'Accessory', 'Consumable', 'Material', 'Quest'] as const;
 
 export function SpatialStashPalette({ accent }: Props) {
   const [q, setQ] = useState('');
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>('all');
 
   const catalogItems = useInventoryItems();
-  const items = useMemo(() => {
+  const matches = useMemo(() => {
     let pool: ItemData[] = catalogItems;
     if (type !== 'all') pool = pool.filter((i) => i.type === type);
     if (q) {
@@ -33,8 +36,9 @@ export function SpatialStashPalette({ accent }: Props) {
           i.subtype.toLowerCase().includes(lower),
       );
     }
-    return pool.slice(0, 40);
+    return { shown: pool.slice(0, PALETTE_ROW_CAP), total: pool.length };
   }, [catalogItems, q, type]);
+  const { shown: items, total } = matches;
 
   return (
     <div className="flex flex-col gap-2 w-full max-w-[280px]">
@@ -44,6 +48,7 @@ export function SpatialStashPalette({ accent }: Props) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search items…"
+          aria-label="Search stash palette items"
           className="w-full text-xs font-mono px-2 py-1 rounded-md bg-surface-deep border outline-none"
           style={{ borderColor: withOpacity(accent, OPACITY_25) }}
         />
@@ -72,6 +77,11 @@ export function SpatialStashPalette({ accent }: Props) {
         {items.map((item) => (
           <PaletteRow key={item.id} item={item} />
         ))}
+        {total > items.length && (
+          <p role="status" className="text-xs font-mono text-text-muted py-1">
+            Showing {items.length} of {total} — search or filter to reach the rest.
+          </p>
+        )}
         {items.length === 0 && (
           <p className="text-[10px] font-mono text-text-muted py-2">No items match.</p>
         )}
@@ -93,9 +103,23 @@ function PaletteRow({ item }: RowProps) {
     setDragIntent({ kind: 'new', itemId: item.id, footprint: fp, rotated: false });
   };
   const onDragEnd = () => setDragIntent(null);
+  // Keyboard path: Enter/Space picks the footprint up; the grid then owns the
+  // arrow / Enter / Escape / R keys until it is placed or cancelled.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    // While something is carried, Enter belongs to the grid (it drops the item).
+    if (getDragIntent() || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragIntent({ kind: 'new', itemId: item.id, footprint: fp, rotated: false });
+  };
   return (
     <div
       draggable
+      data-palette-row
+      tabIndex={0}
+      role="button"
+      aria-label={`Pick up ${item.name} (${fp.w}×${fp.h}) to place in the stash`}
+      onKeyDown={onKeyDown}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className="flex items-center gap-2 px-2 py-1 rounded-md border cursor-grab active:cursor-grabbing"

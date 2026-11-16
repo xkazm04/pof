@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { CraftedAffix, ItemBase } from './data';
-import type { CurrencyId, CraftingActionId } from './types';
+import type { CraftingActionId } from './types';
 import {
-  applyCraft, canAfford as walletCanAfford, defaultWallet, deriveLocks, zeroWallet,
+  applyCraft, craftRefusal, defaultWallet, deriveLocks, zeroWallet,
 } from './craftingKernel';
 import type { CraftState } from './craftingKernel';
 
 type Ledger = Omit<CraftState, 'affixes'>;
-
-/** How long a craft button flashes after it fires (unchanged from the pre-kernel engine). */
-const CRAFT_FLASH_MS = 400;
 
 const freshLedger = (): Ledger => ({ wallet: defaultWallet(), totalSpent: zeroWallet(), craftCount: 0, log: [] });
 
@@ -33,9 +31,9 @@ export function useCraftingEngine(
   const [craftFlash, setCraftFlash] = useState<string | null>(null);
   const { prefixLocked, suffixLocked } = useMemo(() => deriveLocks(craftedAffixes), [craftedAffixes]);
 
-  const canAfford = useCallback(
-    (action: { costs: Partial<Record<CurrencyId, number>> }): boolean => walletCanAfford(ledger.wallet, action.costs),
-    [ledger.wallet],
+  const refusalFor = useCallback(
+    (actionId: CraftingActionId) => craftRefusal({ affixes: craftedAffixes, wallet: ledger.wallet }, actionId, selectedBase.rarity),
+    [craftedAffixes, ledger.wallet, selectedBase.rarity],
   );
 
   const executeCraft = useCallback((actionId: CraftingActionId) => {
@@ -47,7 +45,7 @@ export function useCraftingEngine(
     setLedger(next);
     if (affixes !== craftedAffixes) setCraftedAffixes(affixes);
     setCraftFlash(actionId);
-    setTimeout(() => setCraftFlash(null), CRAFT_FLASH_MS);
+    setTimeout(() => setCraftFlash(null), UI_TIMEOUTS.craftFlash);
   }, [craftedAffixes, ledger, selectedBase.rarity, setCraftedAffixes]);
 
   const resetWallet = useCallback(() => setLedger(freshLedger()), []);
@@ -56,6 +54,6 @@ export function useCraftingEngine(
     wallet: ledger.wallet, prefixLocked, suffixLocked, craftLog: ledger.log, showCraftPanel,
     craftFlash, totalSpent: ledger.totalSpent, craftCount: ledger.craftCount,
     setShowCraftPanel,
-    canAfford, executeCraft, resetWallet,
+    refusalFor, executeCraft, resetWallet,
   };
 }

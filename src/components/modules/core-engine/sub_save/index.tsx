@@ -21,6 +21,7 @@ import { AutoSaveConfigPanel } from './advanced/AutoSaveConfig';
 import { VersionHistory } from './versions/VersionHistory';
 import { DataRecoveryTool } from './advanced/DataRecoveryTool';
 import { ACCENT, VERSIONS, FEATURE_NAMES } from './_shared/data';
+import { SampleDataNotice } from './_shared/design';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 import type { SubModuleId } from '@/types/modules';
@@ -82,6 +83,8 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           {/* The project's real save class, audited against the design + canon */}
           <SaveHeaderAudit moduleId={moduleId} />
 
+          <SampleDataNotice>Memory banks, file size, budget and save diff are illustrative sample data, not read from your project.</SampleDataNotice>
+
           {/* Schema tree + Memory banks */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <SchemaTree expandedGroups={expandedGroups} toggleGroup={toggleGroup} />
@@ -105,6 +108,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
 
       {activeTab === 'slots' && (
         <VisibleSection moduleId={moduleId} sectionId="preview">
+          <SampleDataNotice>Slots and integrity checks are illustrative sample data, not read from your project.</SampleDataNotice>
           <SlotManagement />
           <IntegrityValidator />
         </VisibleSection>
@@ -138,6 +142,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
 
       {activeTab === 'advanced' && (
         <VisibleSection moduleId={moduleId} sectionId="breakdown">
+          <SampleDataNotice>Cloud sync, serialization timings, auto-save settings and recovery results are illustrative sample data, not read from your project.</SampleDataNotice>
           <CloudSyncSection />
           <SerializationProfiler />
           <AutoSaveConfigPanel />

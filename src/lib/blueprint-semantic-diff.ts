@@ -23,6 +23,8 @@
 import { deriveCppSurface, isEditorExposed } from '@/lib/blueprint-cpp-surface';
 import { parseHeader, hasSpecifier, type ParsedFunction } from '@/lib/cpp-semantic-parser';
 import { onRepHandlerName } from '@/lib/replication-scaffolder';
+import { definedNames } from '@/lib/blueprint-transpiler/overwrite-review';
+import { overrideDeclaration } from '@/lib/blueprint-cpp-codegen';
 import type {
   SemanticDiffResult,
   SemanticChange,
@@ -42,15 +44,32 @@ const COMPARED_DIMENSIONS = [
   'Function names (both directions)',
   'Function parameter arity, parameter types and return type',
   'Custom events and RepNotify handlers (declared or missing)',
+  'Engine event overrides (BeginPlay / Tick / EndPlay) declared or defined in C++',
 ];
 
 const NOT_COMPARED = [
-  'Event graph node logic — only the node count is summarised, never matched against C++ overrides',
+  'Event graph node logic — override presence is checked, the nodes behind each event are never matched against C++',
   'Custom event and RepNotify handler parameter lists — only their presence is checked',
   'Function bodies — no C++ statement is parsed, so identical declarations may still behave differently',
   'Default values, categories and tooltips',
   'Whether the C++ compiles at all',
 ];
+
+/** Said only when the input held no definition: declarations alone prove less. */
+const NO_SOURCE_NOT_COMPARED = 'Function definitions — the input held no ClassName::Function() definition, so only declarations were read';
+
+/** Said only when a definition was present and was read. */
+const DEFINITION_DIMENSION = 'Definition presence of each declared Blueprint function (ClassName::Function)';
+
+/** Names declared `<name>(...) override` in the text, comments stripped first. */
+function declaredOverrideNames(cpp: string): Set<string> {
+  const src = cpp.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  const names = new Set<string>();
+  const re = /\b([A-Za-z_]\w*)\s*\([^)]*\)\s*(?:const\s*)?(?:noexcept\s*)?override\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src)) !== null) names.add(m[1]);
+  return names;
+}
 
 /** Compare declared C++ types ignoring spacing, `const` and reference-ness. */
 function normalizeType(t: string): string {
@@ -330,6 +349,47 @@ export function computeSemanticDiff(
     });
   }
 
+  // Engine overrides the event graph drives (BeginPlay/Tick/EndPlay…). parseHeader
+  // reads UFUNCTIONs only, so presence is scanned from the comment-stripped text:
+  // an `override` declaration or a `Class::Name(` definition both count.
+  const presentOverrides = declaredOverrideNames(existingCpp);
+  for (const name of definedNames(existingCpp, surface.cppClassName)) presentOverrides.add(name);
+  for (const { override, node } of surface.overrides) {
+    if (presentOverrides.has(override.name)) continue;
+    changes.push({
+      id: `change-${changeId++}`,
+      type: 'add',
+      scope: 'event',
+      name: override.name,
+      description: `Event "${override.name}" drives ${node.name} in the Blueprint but the C++ declares no override for it`,
+      blueprintSide: `Event ${override.name}`,
+      conflictLevel: 'compatible',
+      resolution: `Declare ${overrideDeclaration(override)} so the Blueprint startup logic runs in C++`,
+    });
+  }
+
+  // Definitions. The rung is what was INSPECTED: only when the pasted text
+  // carries `ClassName::Function(...) {` definitions are they read, and a
+  // declared Blueprint function with no definition is then a change.
+  const defined = new Set(definedNames(existingCpp, surface.cppClassName));
+  const definitionsRead = defined.size > 0;
+  if (definitionsRead) {
+    for (const fn of surface.functions) {
+      if (fn.origin !== 'bp-function' || !cppFunctions.has(fn.name) || defined.has(fn.name)) continue;
+      changes.push({
+        id: `change-${changeId++}`,
+        type: 'modify',
+        scope: 'function',
+        name: fn.name,
+        description: `Function "${fn.name}" is declared but never defined in the C++ source (${surface.cppClassName}::${fn.name})`,
+        blueprintSide: `${fn.name}() — ${fn.graph.nodes.length} nodes`,
+        cppSide: renderCppSignature(cppFunctions.get(fn.name)!),
+        conflictLevel: 'compatible',
+        resolution: `Define ${surface.cppClassName}::${fn.name} in the .cpp — an undefined UFUNCTION fails to link`,
+      });
+    }
+  }
+
   // Determine overall conflict level
   const hasConflict = changes.some((c) => c.conflictLevel === 'conflict');
   const hasCompatible = changes.some((c) => c.conflictLevel === 'compatible');
@@ -340,11 +400,12 @@ export function computeSemanticDiff(
     cppSummary: `${cppFunctions.size} functions, ${cppProperties.size} properties detected`,
     overallConflict: hasConflict ? 'conflict' : hasCompatible ? 'compatible' : 'none',
     timestamp: now,
-    // Declaration-level comparison only: it can show that both sides DECLARE
-    // and DEFINE the same members with the same signatures. It cannot show
-    // structural or behavioural equivalence, and it never compiles anything.
-    fidelityRung: 'declared-and-defined',
-    comparedDimensions: COMPARED_DIMENSIONS,
-    notCompared: NOT_COMPARED,
+    // The rung is what was inspected, never above it. Header-only input was
+    // only parsed; definitions read from a present source reach
+    // declared-and-defined. Neither shows structural or behavioural
+    // equivalence, and nothing is compiled.
+    fidelityRung: definitionsRead ? 'declared-and-defined' : 'parsed',
+    comparedDimensions: definitionsRead ? [...COMPARED_DIMENSIONS, DEFINITION_DIMENSION] : COMPARED_DIMENSIONS,
+    notCompared: definitionsRead ? NOT_COMPARED : [NO_SOURCE_NOT_COMPARED, ...NOT_COMPARED],
   };
 }

@@ -11,6 +11,9 @@
  *  - a current-rubric non-human PASS below `BANDS.shippable` — the rubric itself says
  *    `verdict = "pass" only if overall >= 90` and `scripts/judge-run.ts` derives the verdict from
  *    the median band; a pass below it contradicts its own score.
+ *  - a current-rubric non-human PASS that itemises NO dimension: the rubric's output contract
+ *    requires per-dimension scores and "the weakest dimension caps the score" cannot be audited
+ *    without them, so a bare holistic number must not elevate a step to verified-green.
  * A FAIL is admitted at any score and any rubric: refusing a stricter condemnation would only let
  * the previous (possibly passing) verdict stand. Rows that bypass the route (direct
  * `upsertVerdict` writers) are covered on read: `verdictProvenance` reads a future-rubric row as
@@ -28,6 +31,8 @@ export interface JudgeVerdictClaim {
   verdict: 'pass' | 'fail';
   score: number;
   rubricVersion?: number;
+  /** Per-dimension scores (`dimension -> 0-100`). Required to be non-empty on a current-rubric non-human pass. */
+  dimensions?: Record<string, number>;
 }
 
 /** Admit a verdict, or say every reason it cannot be stored. */
@@ -42,6 +47,14 @@ export function admitJudgeVerdict<T extends JudgeVerdictClaim>(v: T): Result<T, 
   if (v.verdict === 'pass' && rubric === RUBRIC_VERSION && v.judge !== 'human' && v.score < BANDS.shippable) {
     reasons.push(
       `a rubric v${RUBRIC_VERSION} pass must score >= ${BANDS.shippable} (BANDS.shippable); ${v.score} is a fail under its own rubric`,
+    );
+  }
+  if (
+    v.verdict === 'pass' && rubric === RUBRIC_VERSION && v.judge !== 'human' &&
+    (!v.dimensions || Object.keys(v.dimensions).length === 0)
+  ) {
+    reasons.push(
+      `a rubric v${RUBRIC_VERSION} pass must itemise its dimensions (none given) — a holistic score with no per-dimension evidence cannot be admitted`,
     );
   }
   return reasons.length ? err(reasons) : ok(v);

@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { checkLocalPath } from '@/app/api/filesystem/_lib/pathGuard';
 
 // ── Types ──
@@ -40,6 +42,8 @@ export interface AssetScanResult {
   assets: ScannedAsset[];
   dependencies: AssetDependencyEdge[];
   totalSizeBytes: number;
+  /** True when the walk stopped at its file cap: `assets` and the totals are partial. */
+  truncated: boolean;
   scanDurationMs: number;
 }
 
@@ -67,7 +71,9 @@ async function directoryExists(dirPath: string): Promise<boolean> {
  */
 function inferAssetType(relativePath: string, fileName: string): AssetType {
   const nameUpper = fileName.toUpperCase();
-  const pathUpper = relativePath.toUpperCase();
+  // Leading slash: a folder directly under Content/ has none of its own, and the
+  // folder checks below match on `/NAME/`.
+  const pathUpper = `/${relativePath.toUpperCase()}`;
 
   // Extension-based first
   if (relativePath.endsWith('.umap')) return 'map';
@@ -160,20 +166,21 @@ function inferDependencies(assets: ScannedAsset[]): AssetDependencyEdge[] {
 
 /**
  * Recursively collect all .uasset and .umap files under Content/.
- * Caps at 2000 files to avoid scanning massive projects.
+ * Caps at 2000 files to avoid scanning massive projects, and reports when it did.
  */
 async function collectAssets(
   contentDir: string,
   maxFiles = 2000
-): Promise<ScannedAsset[]> {
+): Promise<{ assets: ScannedAsset[]; truncated: boolean }> {
   const results: ScannedAsset[] = [];
+  let truncated = false;
 
   async function walk(current: string) {
-    if (results.length >= maxFiles) return;
+    if (truncated) return;
     try {
       const entries = await fs.readdir(current, { withFileTypes: true });
       for (const entry of entries) {
-        if (results.length >= maxFiles) return;
+        if (truncated) return;
         const full = path.join(current, entry.name);
         if (entry.isDirectory()) {
           // Skip engine/plugin intermediate directories
@@ -182,6 +189,10 @@ async function collectAssets(
           }
           await walk(full);
         } else if (entry.isFile() && (entry.name.endsWith('.uasset') || entry.name.endsWith('.umap'))) {
+          if (results.length >= maxFiles) {
+            truncated = true;
+            return;
+          }
           try {
             const stat = await fs.stat(full);
             const fileName = path.basename(entry.name, path.extname(entry.name));
@@ -206,7 +217,7 @@ async function collectAssets(
   }
 
   await walk(contentDir);
-  return results;
+  return { assets: results, truncated };
 }
 
 // ── Main scan function ──
@@ -222,11 +233,12 @@ async function scanAssets(projectPath: string): Promise<AssetScanResult> {
       assets: [],
       dependencies: [],
       totalSizeBytes: 0,
+      truncated: false,
       scanDurationMs: Date.now() - startTime,
     };
   }
 
-  const assets = await collectAssets(contentDir);
+  const { assets, truncated } = await collectAssets(contentDir);
   const dependencies = inferDependencies(assets);
   const totalSizeBytes = assets.reduce((sum, a) => sum + a.sizeBytes, 0);
 
@@ -236,6 +248,7 @@ async function scanAssets(projectPath: string): Promise<AssetScanResult> {
     assets,
     dependencies,
     totalSizeBytes,
+    truncated,
     scanDurationMs: Date.now() - startTime,
   };
 }
@@ -243,8 +256,12 @@ async function scanAssets(projectPath: string): Promise<AssetScanResult> {
 // ── Route handler ──
 
 export async function POST(request: NextRequest) {
+  // Reads the local disk: no cross-site page, and no caller without the token when one is set.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const checked = checkLocalPath(body.projectPath, 'projectPath');
     if (!checked.ok) return apiError(checked.error, 400);
     const projectPath = checked.data;

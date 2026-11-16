@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { RecentProject } from '@/stores/projectStore';
 import { useReducedMotion } from 'framer-motion';
+import { useEscapeLayer } from '@/hooks/useHotkey';
 
 export function useTopBar() {
   const projectName = useProjectStore((s) => s.projectName);
@@ -49,24 +50,23 @@ export function useTopBar() {
     return () => document.removeEventListener('mousedown', handler);
   }, [dropdownOpen]);
 
-  // Focus-trap + Escape to close dropdown
+  // Escape closes the dropdown as a LIFO layer, so one Escape never also closes
+  // a palette or drawer stacked above it. Focus returns to the trigger.
+  useEscapeLayer('topbar-project-dropdown', dropdownOpen, () => {
+    setDropdownOpen(false);
+    setRenaming(false);
+    setConfirmDelete(false);
+    setShowSwitcher(false);
+    dropdownRef.current?.querySelector<HTMLButtonElement>('[aria-haspopup]')?.focus();
+  });
+
+  // Focus trap for the dropdown (Escape is owned by the layer above)
   useEffect(() => {
     if (!dropdownOpen) return;
     const container = dropdownRef.current;
     if (!container) return;
 
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setDropdownOpen(false);
-        setRenaming(false);
-        setConfirmDelete(false);
-        setShowSwitcher(false);
-        // Return focus to the trigger button
-        container.querySelector<HTMLButtonElement>('[aria-haspopup]')?.focus();
-        return;
-      }
-
       if (e.key !== 'Tab') return;
 
       const focusable = container.querySelectorAll<HTMLElement>(

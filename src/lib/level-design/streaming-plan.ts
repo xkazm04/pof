@@ -58,10 +58,23 @@ export type StreamingMode =
   | { kind: 'erase' }
   | { kind: 'link'; from: string };
 
+/** The undoable part of a plan: the document, never the mode or the selection. */
+export type StreamingPlanDoc = StreamingZonePlannerConfig;
+
+/** Snapshots of the document, oldest first; `future` holds what undo stepped back over, nearest first. */
+export interface StreamingPlanHistory {
+  past: StreamingPlanDoc[];
+  future: StreamingPlanDoc[];
+}
+
 export interface StreamingPlanState extends StreamingZonePlannerConfig {
   mode: StreamingMode;
   selectedZoneId: string | null;
+  history: StreamingPlanHistory;
 }
+
+/** Undo steps kept per plan. */
+export const STREAMING_HISTORY_LIMIT = 100;
 
 export type StreamingOp =
   | { type: 'setPaint'; zoneType: ZoneType }
@@ -76,7 +89,10 @@ export type StreamingOp =
   | { type: 'setZoneType'; zoneId: string; zoneType: ZoneType }
   | { type: 'updateTransition'; transitionId: string; patch: Partial<Omit<ZoneTransition, 'id'>> }
   | { type: 'deleteTransition'; transitionId: string }
-  | { type: 'select'; zoneId: string | null };
+  | { type: 'select'; zoneId: string | null }
+  /** Step the document back / forward one gesture; mode and selection are not part of the history. */
+  | { type: 'undo' }
+  | { type: 'redo' };
 
 /** The reducer's state and dispatch, handed to a planner that does not own them. */
 export interface StreamingPlanStore {
@@ -124,6 +140,7 @@ export function initialStreamingPlan(): StreamingPlanState {
     gridSize: DEFAULT_GRID_SIZE,
     mode: { kind: 'select' },
     selectedZoneId: null,
+    history: { past: [], future: [] },
   };
 }
 
@@ -166,10 +183,39 @@ function link(state: StreamingPlanState, from: string, x: number, y: number, dep
   return { ...done, transitions: [...state.transitions, transition] };
 }
 
+const docOf = (state: StreamingPlanState): StreamingPlanDoc =>
+  ({ zones: state.zones, transitions: state.transitions, gridSize: state.gridSize });
+
+/** Step through history: swap the document with the nearest snapshot; keep mode, drop a selection that no longer exists. */
+function stepHistory(state: StreamingPlanState, dir: 'undo' | 'redo'): StreamingPlanState {
+  const { past, future } = state.history;
+  const [from, to] = dir === 'undo' ? [past, future] : [future, past];
+  if (from.length === 0) return state;
+  const target = from[from.length - 1];
+  const rest = from.slice(0, -1);
+  const kept = [...to, docOf(state)];
+  const history = dir === 'undo' ? { past: rest, future: kept } : { past: kept, future: rest };
+  const selectedZoneId = target.zones.some((z) => z.id === state.selectedZoneId) ? state.selectedZoneId : null;
+  return { ...state, ...target, selectedZoneId, history };
+}
+
+/** One gesture, one undo step: any op that changed the document records the prior document. */
 export function applyStreamingOp(
   state: StreamingPlanState,
   op: StreamingOp,
   deps: StreamingOpDeps = DEFAULT_DEPS,
+): StreamingPlanState {
+  if (op.type === 'undo' || op.type === 'redo') return stepHistory(state, op.type);
+  const next = applyDocOp(state, op, deps);
+  if (next.zones === state.zones && next.transitions === state.transitions && next.gridSize === state.gridSize) return next;
+  const past = [...state.history.past, docOf(state)].slice(-STREAMING_HISTORY_LIMIT);
+  return { ...next, history: { past, future: [] } };
+}
+
+function applyDocOp(
+  state: StreamingPlanState,
+  op: Exclude<StreamingOp, { type: 'undo' | 'redo' }>,
+  deps: StreamingOpDeps,
 ): StreamingPlanState {
   switch (op.type) {
     case 'setPaint':
@@ -183,8 +229,8 @@ export function applyStreamingOp(
     case 'cellClick': {
       const { mode } = state;
       if (mode.kind === 'link') return link(state, mode.from, op.x, op.y, deps);
-      if (mode.kind === 'erase') return applyStreamingOp(state, { type: 'erase', x: op.x, y: op.y }, deps);
-      if (mode.kind === 'paint') return applyStreamingOp(state, { type: 'paint', x: op.x, y: op.y, zoneType: mode.zoneType }, deps);
+      if (mode.kind === 'erase') return applyDocOp(state, { type: 'erase', x: op.x, y: op.y }, deps);
+      if (mode.kind === 'paint') return applyDocOp(state, { type: 'paint', x: op.x, y: op.y, zoneType: mode.zoneType }, deps);
       return { ...state, selectedZoneId: zoneAt(state.zones, op.x, op.y)?.id ?? null };
     }
     case 'paint': {

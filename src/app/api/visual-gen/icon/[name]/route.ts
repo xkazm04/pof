@@ -2,15 +2,10 @@ import { NextRequest } from 'next/server';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { apiError } from '@/lib/api-utils';
+import { decodeRouteName } from '@/app/api/visual-gen/_lib/decodeName';
+import { IMAGE_MIME } from '@/app/api/visual-gen/_lib/generatedFiles';
 import { safeIconName } from '@/lib/visual-gen/generated-icons';
 import { GENERATED_FILE_CACHE_CONTROL, etagMatches, fileEtag } from '@/lib/visual-gen/generated-assets';
-
-const MIME: Record<string, string> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-};
 
 /**
  * GET /api/visual-gen/icon/:name
@@ -30,7 +25,9 @@ const MIME: Record<string, string> = {
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const safe = safeIconName(decodeURIComponent(name));
+  const decoded = decodeRouteName(name);
+  if (decoded === null) return apiError('invalid icon name', 400);
+  const safe = safeIconName(decoded);
   if (!safe) return apiError('invalid icon name', 400);
   const ext = (safe.split('.').pop() ?? '').toLowerCase();
   const dir = join(process.cwd(), 'generated', 'icons');
@@ -41,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ name
     if (!st.isFile()) return apiError('icon not found', 404);
     const etag = fileEtag(st.size, st.mtimeMs);
     const headers: Record<string, string> = {
-      'Content-Type': MIME[ext] ?? 'application/octet-stream',
+      'Content-Type': IMAGE_MIME[ext] ?? 'application/octet-stream',
       'Cache-Control': GENERATED_FILE_CACHE_CONTROL,
       ETag: etag,
       'Last-Modified': new Date(st.mtimeMs).toUTCString(),

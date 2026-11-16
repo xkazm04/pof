@@ -4,8 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Swords, ArrowUp, ArrowDown, Crosshair } from 'lucide-react';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT } from '../_shared/data';
-import { WEAPONS, COMBO_SEQUENCES } from '../_shared/data-metrics';
-import type { WeaponCategory } from '../_shared/data-metrics';
+import { WEAPONS, COMBO_SEQUENCES, WEAPON_CATEGORIES, comboDerivedDps } from '../_shared/data-metrics';
 import {
   MATCHUP_TARGETS, DUMMY_TARGET, rankForTarget, outOfBand, severityTone,
 } from '@/lib/combat/weapon-matchup';
@@ -13,7 +12,6 @@ import { FIGHT_LENGTH_CUTS, type FightLengthBand } from '@/lib/balance/encounter
 import { withOpacity, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
 
 const MAX_COMPARE = 4;
-const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const WEAPONS_BY_CATEGORY = WEAPON_CATEGORIES.map(cat => ({
   category: cat,
   weapons: WEAPONS.filter(w => w.category === cat),
@@ -55,8 +53,11 @@ export function WeaponMatchupPanel() {
     const cats = new Set(compared.map(r => r.weapon.category));
     return COMBO_SEQUENCES.filter(c => cats.has(c.weaponCategory));
   }, [compared]);
-  const shownCombos = comparedCombos.slice(0, RELATED_COMBOS_SHOWN);
-  const comboDpsMax = shownCombos.reduce((m, c) => Math.max(m, c.dps), 0) || 1;
+  const shownCombos = useMemo(
+    () => comparedCombos.slice(0, RELATED_COMBOS_SHOWN).map(c => ({ ...c, derivedDps: comboDerivedDps(c) })),
+    [comparedCombos],
+  );
+  const comboDpsMax = shownCombos.reduce((m, c) => Math.max(m, c.derivedDps), 0) || 1;
 
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
@@ -104,7 +105,7 @@ export function WeaponMatchupPanel() {
                   const sel = compareIds.includes(w.id);
                   const row = rowById.get(w.id);
                   return (
-                    <button key={w.id} type="button" onClick={() => toggleCompare(w.id)}
+                    <button key={w.id} type="button" aria-pressed={sel} onClick={() => toggleCompare(w.id)}
                       disabled={!sel && compareIds.length >= MAX_COMPARE}
                       className="px-2 py-1.5 rounded border text-xs font-mono text-left transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110"
                       style={{ borderColor: sel ? withOpacity(w.color, OPACITY_30) : 'var(--border)', backgroundColor: sel ? withOpacity(w.color, OPACITY_10) : 'transparent', color: sel ? w.color : 'var(--text-muted)' }}>
@@ -153,15 +154,15 @@ export function WeaponMatchupPanel() {
         )}
         {comparedCombos.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border/30">
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 block">Related Combos ({comparedCombos.length}) · authored DPS</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 block">Related Combos ({comparedCombos.length}) · derived DPS</span>
             <div className="space-y-1">
               {shownCombos.map(c => (
                 <div key={c.id} className="flex items-center gap-2 text-xs font-mono px-1 py-0.5">
                   <span className="text-text w-[130px] truncate">{c.name}</span>
                   <span className="text-text-muted w-[60px]">{c.weaponCategory}</span>
                   <span className="text-text-muted w-[40px]">{c.hits}h</span>
-                  <div className="flex-1"><NeonBar pct={(c.dps / comboDpsMax) * 100} color={ACCENT} /></div>
-                  <span className="font-bold w-[55px] text-right" style={{ color: ACCENT }} title="Authored value, not derived from the weapon table">{c.dps} DPS</span>
+                  <div className="flex-1"><NeonBar pct={(c.derivedDps / comboDpsMax) * 100} color={ACCENT} /></div>
+                  <span className="font-bold w-[55px] text-right" style={{ color: ACCENT }} title="Hits x category mean expected hit / combo time, on the weapon-DPS law">{c.derivedDps.toFixed(1)} DPS</span>
                 </div>
               ))}
             </div>

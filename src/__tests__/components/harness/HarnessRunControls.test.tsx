@@ -64,6 +64,12 @@ describe('controlGuards (pure)', () => {
     expect(g.reason).toContain('409');
   });
 
+  it('disables start while a run is paused, pointing at Resume', () => {
+    const g = startGuard('paused', { ...EMPTY_START_FORM, projectPath: 'p', projectName: 'n', ueVersion: '5.8' });
+    expect(g.enabled).toBe(false);
+    expect(g.reason).toContain('Resume');
+  });
+
   it('disables start with the missing required fields named', () => {
     const g = startGuard('idle', EMPTY_START_FORM);
     expect(g.enabled).toBe(false);

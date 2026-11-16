@@ -20,15 +20,26 @@ export async function POST(req: NextRequest) {
   try {
     const denied = requireOperator(req);
     if (denied) return denied;
-    const body = (await req.json().catch(() => ({}))) as {
+    const body = (await req.json().catch(() => undefined)) as {
       action?: 'start' | 'stop'; intervalMs?: number; cooldownMs?: number;
       executor?: 'bridge' | 'spawn'; port?: number;
       // Scope keys are read through `parseDrainFilter` (tier/catalogId/entityId/entityIds),
       // so the worker accepts the same entity-set batch the drain route does.
       tier?: string; catalogId?: string; entityId?: string; entityIds?: string[];
-    };
+    } | null | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     if (body.action === 'stop') return apiSuccess(stopDrainWorker());
     if (body.action !== 'start') return apiError("action must be 'start' or 'stop'", 400);
+    // `Math.max(MIN, "abc")` is NaN and `setInterval(fn, NaN)` fires ~every millisecond — a
+    // non-numeric interval used to start a drain hot-loop against the shared editor.
+    for (const knob of ['intervalMs', 'cooldownMs'] as const) {
+      const v: unknown = body[knob];
+      if (v !== undefined && (typeof v !== 'number' || !Number.isFinite(v) || v < 0)) {
+        return apiError(`${knob} must be a non-negative number of milliseconds`, 400);
+      }
+    }
 
     const filter = parseDrainFilter((k) => body[k]);
     return apiSuccess(startDrainWorker({

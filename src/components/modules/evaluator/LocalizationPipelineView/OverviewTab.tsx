@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Globe, Languages, BookOpen, ArrowRight } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
@@ -12,6 +13,8 @@ import { ReadyToShipBadge } from './ReadyToShipBadge';
 import { ExpansionFactorBars } from './ExpansionFactorBars';
 import { ReplacementCard } from './ReplacementCard';
 import { ReadinessSummaryLine } from './ReadinessTab';
+
+const REPLACEMENT_PREVIEW = 10;
 
 export function OverviewTab({
   scanResult,
@@ -42,6 +45,7 @@ export function OverviewTab({
   scanProvenance: ScanProvenance | null;
   onOpenReadiness: () => void;
 }) {
+  const [showAllReplacements, setShowAllReplacements] = useState(false);
   return (
     <div className="space-y-4">
       {/* Readiness gauge */}
@@ -53,7 +57,8 @@ export function OverviewTab({
             <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5`}>
               {localizedCount} of {totalStrings} strings use NSLOCTEXT/LOCTEXT macros
             </p>
-            {hardcoded > 0 && (
+            {/* Both kinds need conversion — the header 'Hardcoded' stat sums them too. */}
+            {hardcoded + ftextCount > 0 && (
               <p className={`${TEXT_SCALE.meta} mt-1`} style={{ color: STATUS_ERROR }}>
                 {hardcoded} hardcoded + {ftextCount} FText::FromString need conversion
               </p>
@@ -148,13 +153,18 @@ export function OverviewTab({
             LOCTEXT Replacement Suggestions ({replacements.length})
           </h3>
           <div className="space-y-2 max-h-72 overflow-y-auto">
-            {replacements.slice(0, 10).map((r) => (
+            {(showAllReplacements ? replacements : replacements.slice(0, REPLACEMENT_PREVIEW)).map((r) => (
               <ReplacementCard key={r.stringId} replacement={r} />
             ))}
-            {replacements.length > 10 && (
-              <p className="text-2xs text-text-muted text-center py-1">
-                +{replacements.length - 10} more — switch to Strings tab for full list
-              </p>
+            {replacements.length > REPLACEMENT_PREVIEW && (
+              <button
+                type="button"
+                onClick={() => setShowAllReplacements((v) => !v)}
+                aria-expanded={showAllReplacements}
+                className="focus-ring w-full text-2xs text-text-muted hover:text-text text-center py-1"
+              >
+                {showAllReplacements ? 'Show fewer' : `Show all ${replacements.length} (+${replacements.length - REPLACEMENT_PREVIEW} more)`}
+              </button>
             )}
           </div>
         </SurfaceCard>

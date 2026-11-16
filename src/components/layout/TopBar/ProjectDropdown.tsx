@@ -59,7 +59,7 @@ export function ProjectDropdown({
       <motion.div
         key="project-dropdown"
         {...(prefersReduced ? reducedDropdownMotion : dropdownMotion)}
-        role="menu"
+        role="dialog"
         aria-label="Project actions"
         className="absolute top-full left-0 mt-1 w-72 bg-surface border border-border rounded-lg shadow-xl z-50 overflow-hidden origin-top-left">
         {/* Switch Project */}
@@ -69,6 +69,7 @@ export function ProjectDropdown({
               <span className="text-xs font-medium text-text-muted">Switch Project</span>
               <button
                 onClick={() => setShowSwitcher(false)}
+                aria-label="Close project switcher"
                 className="p-0.5 text-text-muted hover:text-text hover:bg-surface-hover rounded"
               >
                 <X className="w-3 h-3" />
@@ -124,22 +125,25 @@ export function ProjectDropdown({
           <>
             {renaming ? (
               <div className="p-2 border-b border-border">
-                <label className="text-xs text-text-muted mb-1 block">Project Name</label>
+                <label htmlFor="topbar-rename-project" className="text-xs text-text-muted mb-1 block">Project Name</label>
                 <div className="flex items-center gap-1">
                   <input
                     ref={renameInputRef}
+                    id="topbar-rename-project"
                     type="text"
                     value={renameValue}
                     onChange={(e) => setRenameValue(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleRenameConfirm();
-                      if (e.key === 'Escape') setRenaming(false);
+                      // Escape backs out one level: the dropdown's document listener must not see it.
+                      if (e.key === 'Escape') { e.stopPropagation(); setRenaming(false); }
                     }}
                     className="flex-1 px-2 py-1 bg-background border border-border-bright rounded text-xs text-text outline-none focus:border-accent-strong"
                   />
                   <button
                     onClick={handleRenameConfirm}
                     disabled={!renameValue.trim()}
+                    aria-label="Save project name"
                     className="p-1 hover:bg-accent-medium rounded"
                     style={{ color: MODULE_COLORS.setup }}
                   >
@@ -147,6 +151,7 @@ export function ProjectDropdown({
                   </button>
                   <button
                     onClick={() => setRenaming(false)}
+                    aria-label="Cancel rename"
                     className="p-1 text-text-muted hover:bg-border rounded"
                   >
                     <X className="w-3.5 h-3.5" />

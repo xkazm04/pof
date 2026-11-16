@@ -1,5 +1,6 @@
 'use client';
 
+import { useId, useState } from 'react';
 import { Flame, Package, Lock, Zap, Map, Puzzle, Image, AlertTriangle } from 'lucide-react';
 import type { CookSettings } from '@/lib/packaging/build-profiles';
 import { COOK_SETTING_APPLICATION } from '@/lib/packaging/uat-command-generator';
@@ -36,6 +37,35 @@ function NotAppliedNote({ settingKey }: { settingKey: keyof CookSettings }) {
   );
 }
 
+const parseLines = (text: string) => text.split('\n').filter((l) => l.trim());
+
+/**
+ * A one-entry-per-line list field. The textarea holds its own DRAFT text, so a just
+ * typed Enter (an empty last line) survives; the parent only ever receives the
+ * parsed, non-empty entries. Parsing on every keystroke and rendering the parsed
+ * list back used to swallow the newline, so a second entry could not be typed.
+ * A list changed from outside (another profile loaded) replaces the draft.
+ */
+function ListTextarea({ id, value, onChange, placeholder, className }: {
+  id: string; value: string[]; onChange: (v: string[]) => void; placeholder: string; className: string;
+}) {
+  const [draft, setDraft] = useState(() => value.join('\n'));
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    if (parseLines(draft).join('\n') !== value.join('\n')) setDraft(value.join('\n'));
+  }
+  return (
+    <textarea
+      id={id}
+      value={draft}
+      onChange={(e) => { setDraft(e.target.value); onChange(parseLines(e.target.value)); }}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
 function Toggle({ label, description, checked, onChange, icon }: {
   label: string; description: string; checked: boolean;
   onChange: (v: boolean) => void; icon: React.ReactNode;
@@ -47,9 +77,9 @@ function Toggle({ label, description, checked, onChange, icon }: {
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="sr-only"
+          className="sr-only peer"
         />
-        <div className={`w-7 h-4 rounded-full transition-colors flex items-center ${checked ? '' : 'bg-border-bright'}`} style={checked ? { backgroundColor: MODULE_COLORS.systems } : undefined}>
+        <div className={`w-7 h-4 rounded-full transition-colors flex items-center peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-accent,var(--systems))] peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-[var(--background)] ${checked ? '' : 'bg-border-bright'}`} style={checked ? { backgroundColor: MODULE_COLORS.systems } : undefined}>
           <div className={`w-3 h-3 rounded-full bg-white transition-transform mx-0.5 ${checked ? 'translate-x-3' : 'translate-x-0'}`} />
         </div>
       </div>
@@ -70,6 +100,7 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
   const update = <K extends keyof CookSettings>(key: K, value: CookSettings[K]) => {
     onChange({ ...settings, [key]: value });
   };
+  const fieldId = useId();
 
   const inputClass = 'w-full bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50';
 
@@ -138,13 +169,14 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
       {/* Maps */}
       <Section title="Map Selection">
         <div>
-          <label className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
+          <label htmlFor={`${fieldId}-maps`} className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
             <Map className="w-3 h-3" />
             Maps to include
           </label>
-          <textarea
-            value={settings.mapsToInclude.join('\n')}
-            onChange={(e) => update('mapsToInclude', e.target.value.split('\n').filter((m) => m.trim()))}
+          <ListTextarea
+            id={`${fieldId}-maps`}
+            value={settings.mapsToInclude}
+            onChange={(v) => update('mapsToInclude', v)}
             placeholder="Leave empty to include all maps.&#10;One map per line, e.g.:&#10;/Game/Maps/MainMenu&#10;/Game/Maps/Level1"
             className={`${inputClass} mt-1 h-16 resize-none`}
           />
@@ -154,13 +186,14 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
       {/* Plugins */}
       <Section title="Plugin Management">
         <div>
-          <label className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
+          <label htmlFor={`${fieldId}-plugins`} className="text-2xs text-text-muted font-medium uppercase tracking-wider flex items-center gap-1">
             <Puzzle className="w-3 h-3" />
             Plugins to disable
           </label>
-          <textarea
-            value={settings.pluginsToDisable.join('\n')}
-            onChange={(e) => update('pluginsToDisable', e.target.value.split('\n').filter((p) => p.trim()))}
+          <ListTextarea
+            id={`${fieldId}-plugins`}
+            value={settings.pluginsToDisable}
+            onChange={(v) => update('pluginsToDisable', v)}
             placeholder="Recorded here; NOT excluded by the generated command.&#10;One per line, e.g.:&#10;OnlineSubsystemSteam"
             className={`${inputClass} mt-1 h-12 resize-none`}
           />
@@ -171,10 +204,11 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
       {/* Texture budget */}
       <Section title="Texture Streaming">
         <div>
-          <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">
+          <label htmlFor={`${fieldId}-budget`} className="text-2xs text-text-muted font-medium uppercase tracking-wider">
             Budget (MB, 0 = unlimited)
           </label>
           <input
+            id={`${fieldId}-budget`}
             type="number"
             value={settings.textureStreamingBudgetMB}
             onChange={(e) => update('textureStreamingBudgetMB', Number(e.target.value) || 0)}

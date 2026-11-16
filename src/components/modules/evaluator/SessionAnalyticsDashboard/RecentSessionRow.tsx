@@ -5,11 +5,10 @@ import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 import { Tooltip } from '@/components/ui/Tooltip';
 import type { SessionRecord } from '@/types/session-analytics';
 import { STATUS_SUCCESS, STATUS_ERROR, OPACITY_10 } from '@/lib/chart-colors';
+import { formatDuration } from '@/lib/format';
 
 export function RecentSessionRow({ session }: { session: SessionRecord }) {
-  const durationStr = session.durationMs > 60000
-    ? `${Math.round(session.durationMs / 60000)}m`
-    : `${Math.round(session.durationMs / 1000)}s`;
+  const durationStr = formatDuration(session.durationMs);
 
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 rounded hover:bg-surface-hover transition-colors">

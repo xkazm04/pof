@@ -72,7 +72,8 @@ export interface OneShotJobState {
   markCompleted: () => void;
 }
 
-const REFINEMENT_TURN_CAP = 3;
+/** Refine turns allowed before `forceMore`; the ProposalView copy and box read this, never a literal. */
+export const REFINEMENT_TURN_CAP = 3;
 
 const INITIAL: Pick<
   OneShotJobState,

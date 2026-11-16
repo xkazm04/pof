@@ -495,7 +495,7 @@ describe('fleet spec linter', () => {
 
   // ── (l) StepSpec.copy is retired — authoring it makes a banner LESS honest ─
   it('no step authors the retired StepSpec.copy (its signature cannot see the verdict)', () => {
-    const authored = steps.filter((s) => typeof s.spec.copy === 'function');
+    const authored = steps.filter((s) => typeof (s.spec as { copy?: unknown }).copy === 'function');
     expect(
       authored.map(
         (s) =>

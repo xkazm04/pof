@@ -329,8 +329,10 @@ export async function generateTwoDImage(
   const apiKey = exec.keySource ? deps.env[exec.keySource] : undefined;
 
   if (provider.id === 'qwen-image') {
-    const name = generatedImageName(provider.id, stamp, 'png'); // DashScope returns PNG
-    const outputPath = `${deps.outDir}/${name}`;
+    // The runner reports where it really wrote (extension sniffed from the bytes); the
+    // planned .png name only stands when the runner says nothing else.
+    const plannedName = generatedImageName(provider.id, stamp, 'png');
+    const outputPath = `${deps.outDir}/${plannedName}`;
     const run = deps.qwen ?? (async (spec) => {
       const { runQwenImage } = await import('@/lib/visual-gen/qwen-image-runner');
       return runQwenImage(spec, { writeFile: write });
@@ -342,6 +344,7 @@ export async function generateTwoDImage(
       return done({ ok: false, error: e instanceof Error ? e.message : String(e) });
     }
     if (!r.ok) return done({ ok: false, error: r.error ?? 'Qwen-Image failed without a reason.' });
+    const name = r.imagePath ? (r.imagePath.split(/[\\/]/).pop() || plannedName) : plannedName;
     return done({ ok: true, url: generatedImageUrl(name), name, sourceUrl: r.imageUrl, model: r.model });
   }
 

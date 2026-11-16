@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { parseVisionImage, gateInputImage, summarizeInputGate } from '@/lib/visual-gen/input-gate';
 import {
   decomposeScene,
@@ -56,7 +58,39 @@ interface Body {
 
 type CropGate = SceneDecomposeCropGate;
 
-/** Gate every prop crop. One vision call per prop, so it is opt-in at the route boundary. */
+const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/**
+ * Size ceilings, checked BEFORE the scene is decoded, cropped or sent to a vision model.
+ *
+ * Image: 16 MiB decoded. Measured 2026-11-08 over the 256 raster images under `generated/`:
+ * p50 134 KiB, p90 963 KiB, p99 3.1 MiB, max 4.2 MiB, so the ceiling is ~3.8x the largest real
+ * scene art seen and refuses only an upload no panel in this repo produces. Hint: 2000
+ * characters, a sentence or two of scene direction (the panel sends none).
+ */
+const MAX_SCENE_IMAGE_BYTES = 16 * 1024 * 1024;
+const MAX_HINT_CHARS = 2000;
+
+/** Decoded byte length of a base64 payload, without decoding it. Pure. */
+function decodedBase64Bytes(base64: string): number {
+  const pad = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - pad;
+}
+
+/** The refusal for the first field that is the wrong shape, or null. Pure. */
+function invalidField(body: Record<string, unknown>): string | null {
+  const { imageDataUrl, hint, gateCrops, seed, areaExtent, jitterDegrees } = body;
+  if (imageDataUrl !== undefined && typeof imageDataUrl !== 'string') return 'imageDataUrl must be a string';
+  if (hint !== undefined && typeof hint !== 'string') return 'hint must be a string';
+  if (gateCrops !== undefined && typeof gateCrops !== 'boolean') return 'gateCrops must be a boolean';
+  if (seed !== undefined && !isFiniteNumber(seed)) return 'seed must be a number';
+  // A non-numeric extent or jitter turns every placement into NaN, reported as a success.
+  if (areaExtent !== undefined && !(isFiniteNumber(areaExtent) && areaExtent > 0)) return 'areaExtent must be a positive number of cm';
+  if (jitterDegrees !== undefined && !(isFiniteNumber(jitterDegrees) && jitterDegrees >= 0)) return 'jitterDegrees must be a non-negative number';
+  return null;
+}
+
+/** Gate every prop crop. One vision call per prop; on unless the caller sends `gateCrops: false`. */
 async function gateCropsOf(
   scene: Buffer,
   props: readonly DecomposedProp[],
@@ -82,11 +116,24 @@ async function gateCropsOf(
 }
 
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
+
   try {
-    const body = (await request.json()) as Body;
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const invalid = invalidField(parsed);
+    if (invalid) return apiError(invalid, 400);
+    const body = parsed as Body;
     if (!body.imageDataUrl) return apiError('Missing required field: imageDataUrl', 400);
     const image = parseVisionImage(body.imageDataUrl);
     if (!image) return apiError('imageDataUrl must be a base64 image data URL', 400);
+    if (decodedBase64Bytes(image.base64) > MAX_SCENE_IMAGE_BYTES) {
+      return apiError(`imageDataUrl exceeds the ${MAX_SCENE_IMAGE_BYTES} byte ceiling`, 413);
+    }
+    if (body.hint !== undefined && body.hint.length > MAX_HINT_CHARS) {
+      return apiError(`hint exceeds the ${MAX_HINT_CHARS} character ceiling`, 413);
+    }
 
     const decomposed = await decomposeScene(image, { hint: body.hint });
     // Only a call that never happened is an outage. A scene the model LOOKED at and found

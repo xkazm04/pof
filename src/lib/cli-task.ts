@@ -51,11 +51,30 @@ let _callbackCounter = 0;
 /** In-memory callback registry — keyed by callback ID */
 const _callbackRegistry = new Map<string, TaskCallback>();
 
+/**
+ * Cap on live client callbacks. Every buildTaskPrompt registers one (previews too) and
+ * terminal runs settle server-side, so entries rarely leave via resolveCallback; the oldest
+ * are evicted past this bound (a Resubmit of a payload older than the cap reports
+ * "Unknown callback").
+ */
+export const CALLBACK_REGISTRY_MAX = 500;
+
+/** Number of callbacks currently registered (test/diagnostic probe). */
+export function callbackRegistrySize(): number {
+  return _callbackRegistry.size;
+}
+
 /** Register a callback and return its ID. */
 export function registerCallback(cb: Omit<TaskCallback, 'id'>): string {
   const id = `cb-${Date.now()}-${++_callbackCounter}`;
   const entry: TaskCallback = { ...cb, id };
   _callbackRegistry.set(id, entry);
+  // Map iterates in insertion order: the first key is the oldest registration.
+  while (_callbackRegistry.size > CALLBACK_REGISTRY_MAX) {
+    const oldest = _callbackRegistry.keys().next().value;
+    if (oldest === undefined) break;
+    _callbackRegistry.delete(oldest);
+  }
   return id;
 }
 
@@ -228,12 +247,28 @@ export function mergeCallbackBody(
   staticFields: Record<string, unknown>,
   rawPayload: string,
 ): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(rawPayload) as Record<string, unknown>;
-    return { ok: true, body: { ...parsed, ...staticFields } };
+    parsed = JSON.parse(rawPayload);
   } catch {
     return { ok: false, error: 'Invalid JSON in callback payload' };
   }
+  // The contract is a JSON OBJECT: null / an array / a primitive would spread into
+  // the static fields alone (or index keys) and post as if Claude had reported.
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { ok: false, error: 'Callback payload must be a JSON object' };
+  }
+  return { ok: true, body: { ...(parsed as Record<string, unknown>), ...staticFields } };
+}
+
+/**
+ * Headers for a callback POST. The server-side settlement (run-callbacks.ts) is a header-less
+ * caller of the operator-guarded write routes, so when `POF_OPERATOR_TOKEN` is configured it
+ * presents the same token; a browser (no `process.env` secret) sends none and stays same-origin.
+ */
+function callbackHeaders(): Record<string, string> {
+  const token = typeof window === 'undefined' ? process.env.POF_OPERATOR_TOKEN : undefined;
+  return { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 }
 
 /** POST (or PATCH) one merged callback body and read the `{ success }` API envelope. */
@@ -244,7 +279,7 @@ export async function postCallbackBody(
   try {
     const res = await fetch(req.url, {
       method: req.method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: callbackHeaders(),
       body: JSON.stringify(req.body),
       ...(signal ? { signal } : {}),
     });

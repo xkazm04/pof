@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, Copy, X } from 'lucide-react';
+import { STATUS_ERROR, STATUS_SUCCESS } from '@/lib/chart-colors';
 import { UI_TIMEOUTS } from '@/lib/constants';
 
 type CopyButtonSize = 'xs' | 'sm';
@@ -51,34 +51,45 @@ export function CopyButton({
   title,
   ...props
 }: CopyButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const [outcome, setOutcome] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+  }, []);
 
   const handleClick = useCallback(
     async (e: React.MouseEvent<HTMLButtonElement>) => {
       if (stopPropagation) e.stopPropagation();
+      let next: 'copied' | 'failed' = 'copied';
       try {
         await navigator.clipboard.writeText(text);
-        setCopied(true);
         onCopied?.();
-        setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
       } catch {
-        // clipboard write blocked — leave state false
+        next = 'failed';
       }
+      setOutcome(next);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => setOutcome('idle'), UI_TIMEOUTS.copyFeedback);
     },
     [text, stopPropagation, onCopied],
   );
+
+  const stateLabel = outcome === 'failed' ? 'Copy failed' : outcome === 'copied' ? copiedTooltip : tooltip;
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      title={title ?? (copied ? copiedTooltip : tooltip)}
-      aria-label={copied ? copiedTooltip : tooltip}
+      title={title ?? stateLabel}
+      aria-label={stateLabel}
       className={`${PADDING[size]} rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-bright ${className}`}
       {...props}
     >
-      {copied ? (
+      {outcome === 'copied' ? (
         <Check className={ICON_SIZE[size]} style={{ color: STATUS_SUCCESS }} aria-hidden />
+      ) : outcome === 'failed' ? (
+        <X className={ICON_SIZE[size]} style={{ color: STATUS_ERROR }} aria-hidden />
       ) : (
         <Copy className={ICON_SIZE[size]} aria-hidden />
       )}

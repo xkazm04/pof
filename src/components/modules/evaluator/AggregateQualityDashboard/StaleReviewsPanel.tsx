@@ -39,8 +39,9 @@ export function StaleReviewsPanel({
             type="number"
             min={1}
             max={90}
+            aria-label="Stale threshold in days"
             value={customStaleDays}
-            onChange={(e) => setCustomStaleDays(Math.max(1, parseInt(e.target.value) || 7))}
+            onChange={(e) => setCustomStaleDays(Math.min(90, Math.max(1, parseInt(e.target.value) || 7)))}
             className="w-12 px-1.5 py-1 bg-background border border-border rounded text-xs text-text text-center outline-none focus:border-border-bright transition-colors"
           />
           <span className="text-xs text-text-muted">days</span>
@@ -61,9 +62,10 @@ export function StaleReviewsPanel({
         <>
           <div className="space-y-1 mb-3">
             {staleModules.map((m) => (
-              <div
+              <button
+                type="button"
                 key={m.moduleId}
-                className="flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
+                className="w-full text-left focus-ring flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
                 onClick={() => setSelectedModule(m.moduleId)}
               >
                 <Clock className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_STALE }} />
@@ -73,7 +75,7 @@ export function StaleReviewsPanel({
                     ? `${m.daysSinceReview}d ago`
                     : 'Never reviewed'}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
           <button

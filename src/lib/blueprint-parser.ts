@@ -51,6 +51,9 @@ const TYPE_MAP: Record<string, string> = {
   'int64': 'int64',
   'float': 'float',
   'double': 'double',
+  // UE 5.0+ spells a Blueprint "Float" as PinCategory `real` (double precision
+  // unless the export's PinSubCategory says `float` — see parsePin).
+  'real': 'double',
   'name': 'FName',
   'string': 'FString',
   'text': 'FText',
@@ -79,8 +82,24 @@ export function blueprintTypeToCpp(bpType: string): string {
   if (arrayMatch) return `TArray<${blueprintTypeToCpp(arrayMatch[1])}>`;
 
   // Map<K,V>
-  const mapMatch = bpType.match(/^(?:Map|TMap)\s*<\s*(.+)\s*,\s*(.+)\s*>$/i);
-  if (mapMatch) return `TMap<${blueprintTypeToCpp(mapMatch[1])}, ${blueprintTypeToCpp(mapMatch[2])}>`;
+  // The key/value comma is the one at bracket depth 0 — a greedy regex split at
+  // the LAST comma, so a nested Map's inner comma ended up between the halves.
+  const mapMatch = bpType.match(/^(?:Map|TMap)\s*<(.+)>$/i);
+  if (mapMatch) {
+    const inner = mapMatch[1];
+    let depth = 0;
+    for (let i = 0; i < inner.length; i++) {
+      const c = inner[i];
+      if (c === '<') depth++;
+      else if (c === '>') depth--;
+      else if (c === ',' && depth === 0) {
+        const key = inner.slice(0, i).trim();
+        const value = inner.slice(i + 1).trim();
+        if (key && value) return `TMap<${blueprintTypeToCpp(key)}, ${blueprintTypeToCpp(value)}>`;
+        break;
+      }
+    }
+  }
 
   // Set<Type>
   const setMatch = bpType.match(/^(?:Set|TSet)\s*<\s*(.+)\s*>$/i);
@@ -118,7 +137,7 @@ interface RawNode {
 interface RawPin {
   PinId?: string;
   PinName?: string;
-  PinType?: { PinCategory?: string; PinSubCategoryObject?: string };
+  PinType?: { PinCategory?: string; PinSubCategory?: string; PinSubCategoryObject?: string };
   Direction?: string;
   LinkedTo?: string[];
   DefaultValue?: string;
@@ -142,8 +161,13 @@ interface RawGraph {
   [key: string]: unknown;
 }
 
+const REAL_PRECISIONS = new Set(['float', 'double']);
+
 function parsePin(raw: RawPin, nodeId: string, index: number): BlueprintPin {
+  const sub = raw.PinType?.PinSubCategory;
+  const realPrecision = raw.PinType?.PinCategory === 'real' && sub && REAL_PRECISIONS.has(sub) ? sub : undefined;
   const typeStr = raw.PinType?.PinSubCategoryObject
+    ?? realPrecision
     ?? raw.PinType?.PinCategory
     ?? 'unknown';
   const name = raw.PinName ?? 'unnamed';
@@ -209,12 +233,17 @@ function parseVariable(raw: RawVariable): BlueprintVariable {
     ? raw.VarType
     : raw.VarType?.PinCategory ?? 'unknown';
   const isRepNotify = flags.includes('CPF_RepNotify') || flags.includes('RepNotify');
+  const editScope = flags.includes('CPF_DisableEditOnInstance') || flags.includes('EditDefaultsOnly') ? 'defaults' as const
+    : flags.includes('CPF_DisableEditOnTemplate') || flags.includes('EditInstanceOnly') ? 'instance' as const
+    : undefined;
   return {
     name: raw.VarName ?? 'unnamed',
     type: varType,
     category: raw.Category || undefined,
     defaultValue: raw.DefaultValue || undefined,
-    isExposedToEditor: flags.includes('CPF_Edit') || flags.includes('EditAnywhere'),
+    isExposedToEditor: flags.includes('CPF_Edit') || flags.includes('EditAnywhere')
+      || flags.includes('EditDefaultsOnly') || flags.includes('EditInstanceOnly'),
+    ...(editScope ? { editScope } : {}),
     // RepNotify properties are inherently replicated even if CPF_Net isn't listed separately.
     isReplicated: isRepNotify || flags.includes('CPF_Net') || flags.includes('Replicated'),
     isRepNotify,
@@ -266,6 +295,11 @@ export function parseBlueprintJson(input: string | object): BlueprintAsset {
   };
 }
 
+/** The Edit* UPROPERTY specifier an exposed variable's scope demands. */
+export function editSpecifier(v: Pick<BlueprintVariable, 'editScope'>): 'EditAnywhere' | 'EditDefaultsOnly' | 'EditInstanceOnly' {
+  return v.editScope === 'defaults' ? 'EditDefaultsOnly' : v.editScope === 'instance' ? 'EditInstanceOnly' : 'EditAnywhere';
+}
+
 /**
  * Build a human-readable summary of a Blueprint asset for Claude.
  * This is what gets sent to Claude for transpilation.
@@ -281,7 +315,7 @@ export function summarizeBlueprintForPrompt(asset: BlueprintAsset): string {
     lines.push('## Variables');
     for (const v of asset.variables) {
       const flags: string[] = [];
-      if (v.isExposedToEditor) flags.push('EditAnywhere');
+      if (v.isExposedToEditor) flags.push(editSpecifier(v));
       if (v.isRepNotify) flags.push('RepNotify');
       else if (v.isReplicated) flags.push('Replicated');
       const flagStr = flags.length ? ` [${flags.join(', ')}]` : '';

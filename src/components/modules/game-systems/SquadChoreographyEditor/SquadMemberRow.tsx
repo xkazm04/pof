@@ -6,16 +6,21 @@ import { ROLE_COLORS, ROLE_ICONS } from './constants';
 import { flankColor } from './helpers';
 
 export const SquadMemberRow = memo(function SquadMemberRow({
-  member, isActive, tabIndex, onEnter, onLeave, onFocus, onBlur,
+  member, isActive, isSelected, tabIndex, onEnter, onLeave, onFocus, onBlur, onSelect,
 }: {
   member: SquadMember;
+  /** Visual highlight: hover, keyboard focus or the pinned member. */
   isActive: boolean;
+  /** The single pinned member; the only state announced as `aria-selected`. */
+  isSelected: boolean;
   /** Roving tabindex: 0 for the list's single tab stop, -1 for every other row. */
   tabIndex: number;
   onEnter: (id: string) => void;
   onLeave: () => void;
   onFocus: (id: string) => void;
   onBlur: () => void;
+  /** Enter / Space / click pins this member. */
+  onSelect: (id: string) => void;
 }) {
   const RoleIcon = ROLE_ICONS[member.role];
   const color = ROLE_COLORS[member.role];
@@ -31,7 +36,7 @@ export const SquadMemberRow = memo(function SquadMemberRow({
   return (
     <div
       role="option"
-      aria-selected={isActive}
+      aria-selected={isSelected}
       aria-label={label}
       tabIndex={tabIndex}
       className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors cursor-default focus-ring-outline"
@@ -43,6 +48,13 @@ export const SquadMemberRow = memo(function SquadMemberRow({
       onPointerLeave={onLeave}
       onFocus={() => onFocus(member.id)}
       onBlur={onBlur}
+      onClick={() => onSelect(member.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(member.id);
+        }
+      }}
       data-testid={`squad-member-row-${member.id}`}
     >
       {/* Values below are duplicated in the option's aria-label above, so the

@@ -7,6 +7,11 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { EVALUATOR_TAB_INFO } from '@/lib/evaluator/tab-glossary';
 import { type TabId } from './types';
 
+/** The one content region every evaluator tab controls (WAI-ARIA tabs pattern). */
+export const EVALUATOR_TABPANEL_ID = 'evaluator-tabpanel';
+/** DOM id of a tab chip — what the tabpanel's aria-labelledby points at. */
+export const evaluatorTabDomId = (tabId: TabId) => `evaluator-tab-${tabId}`;
+
 export function TabDivider({ label }: { label?: string } = {}) {
   return (
     <div className="flex items-center gap-1.5 flex-shrink-0 mx-1" aria-hidden="true">
@@ -120,7 +125,10 @@ export function TabButton({
   return (
     <Tooltip content={`${info.plain} — ${info.description}`} multiline placement="bottom">
       <button
+        type="button"
         role="tab"
+        id={evaluatorTabDomId(tabId)}
+        aria-controls={EVALUATOR_TABPANEL_ID}
         aria-selected={active}
         tabIndex={active ? 0 : -1}
         onClick={onClick}

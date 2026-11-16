@@ -22,7 +22,7 @@ export function FormationsMetric() {
           />
         ))}
       </svg>
-      <div className="text-[10px] font-mono leading-tight">
+      <div className="text-2xs font-mono leading-tight">
         <span className="font-bold" style={{ color: ACCENT }}>{spawnCount}</span>
         <span style={{ color: withOpacity(ACCENT, OPACITY_50) }}> spawn points</span>
       </div>

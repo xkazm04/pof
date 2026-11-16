@@ -13,6 +13,14 @@ export function clampConfigInt(value: unknown, min: number, max: number, fallbac
   return Math.min(Math.max(n, min), max);
 }
 
+const PHILOSOPHIES: readonly SimulationConfig['philosophy'][] = ['loot-driven', 'scarcity-based', 'balanced'];
+
+/** Coerce to a known philosophy (fallback: the default `loot-driven`) so the stamped
+ *  config label always equals the mechanics the engine actually simulates. */
+export function normalizePhilosophy(value: unknown): SimulationConfig['philosophy'] {
+  return PHILOSOPHIES.find((p) => p === value) ?? 'loot-driven';
+}
+
 /**
  * Normalize a raw client config — the single source of truth for EVERY
  * `runSimulation` entry point (`simulate`, `generate-code`'s re-simulate
@@ -27,7 +35,7 @@ export function normalizeSimulationConfig(raw: unknown): SimulationConfig {
     agentCount: clampConfigInt(cfg.agentCount, 1, 500, 100),
     maxLevel: clampConfigInt(cfg.maxLevel, 1, 100, 25),
     maxPlayHours: clampConfigInt(cfg.maxPlayHours, 1, 200, 80),
-    philosophy: (cfg.philosophy as SimulationConfig['philosophy']) ?? 'loot-driven',
+    philosophy: normalizePhilosophy(cfg.philosophy),
     seed: Number.isFinite(seed) ? seed : Math.floor(Math.random() * 999999),
     flowOverrides: cfg.flowOverrides as SimulationConfig['flowOverrides'],
     itemOverrides: cfg.itemOverrides as SimulationConfig['itemOverrides'],

@@ -47,6 +47,9 @@ export function buildMatrixRows(
   /** The catalog's judge verdicts, so a matrix cell carries the same judge bridge the
    *  step banner applies. Absent → no judge overlay (never a fabricated verdict). */
   verdicts: JudgeVerdict[] = [],
+  /** The live entity index (catalog store) for the shared CheckerContext's `has`, so a link-aware
+   *  step grades here exactly as it does on the rail. Absent → nothing resolves (ctx-free callers). */
+  entitiesByCatalog: Record<string, Record<string, unknown>> = {},
 ): MatrixRow[] {
   const pipeline = getCatalogPipeline(catalogId);
   return entities.map((e) => {
@@ -55,7 +58,7 @@ export function buildMatrixRows(
     const ownSet = new Set(own);
     const { serverArts, effective } = effectiveSteps(serverByEntity.get(e.id), localByEntity[e.id]);
 
-    const { artifacts, artifactByStep, displayStatus, driftByStep } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, {}, verdicts);
+    const { artifacts, artifactByStep, displayStatus, driftByStep } = deriveEntityArtifacts(catalogId, e, own, effective, serverArts, entitiesByCatalog, verdicts);
     // Precompute per-step status once (O(steps)) instead of re-deriving per cell (O(steps²)).
     const statusMap = new Map<string, StepDisplayStatus>(own.map((s, i) => [s, displayStatus(s, i)]));
 

@@ -55,6 +55,13 @@ export interface AssetSearchParams {
 
 const POLYHAVEN_API = 'https://api.polyhaven.com';
 
+/**
+ * Deadline on every call to a free source. Without one a stalled upstream held the browse route
+ * open indefinitely, and a caller's fallback (`pickBiomeTexture`) only runs on a rejection.
+ */
+const SOURCE_FETCH_TIMEOUT_MS = 30_000;
+const sourceDeadline = () => ({ signal: AbortSignal.timeout(SOURCE_FETCH_TIMEOUT_MS) });
+
 interface PolyHavenAsset {
   name: string;
   tags: string[];
@@ -71,15 +78,15 @@ const polyHavenCatalogCache = new Map<
   { fetchedAt: number; results: AssetSearchResult[] }
 >();
 
-export async function searchPolyHaven(
-  category: 'hdris' | 'textures' | 'models' = 'textures',
-): Promise<AssetSearchResult[]> {
-  const cached = polyHavenCatalogCache.get(category);
-  if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) {
-    return cached.results;
-  }
+// A search that arrives while the first fetch is still in flight joins it instead of
+// downloading the catalog again. The entry is dropped when the fetch settles, so a failure
+// is never shared with later callers.
+const polyHavenCatalogInFlight = new Map<string, Promise<AssetSearchResult[]>>();
 
-  const res = await fetch(`${POLYHAVEN_API}/assets?t=${category}`);
+async function fetchPolyHavenCatalog(
+  category: 'hdris' | 'textures' | 'models',
+): Promise<AssetSearchResult[]> {
+  const res = await fetch(`${POLYHAVEN_API}/assets?t=${category}`, sourceDeadline());
   if (!res.ok) throw new Error(`Poly Haven API error: ${res.status}`);
 
   const data = await res.json() as Record<string, PolyHavenAsset>;
@@ -99,6 +106,23 @@ export async function searchPolyHaven(
   return results;
 }
 
+export async function searchPolyHaven(
+  category: 'hdris' | 'textures' | 'models' = 'textures',
+): Promise<AssetSearchResult[]> {
+  const cached = polyHavenCatalogCache.get(category);
+  if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) {
+    return cached.results;
+  }
+  const pending = polyHavenCatalogInFlight.get(category);
+  if (pending) return pending;
+
+  const fetching = fetchPolyHavenCatalog(category).finally(() => {
+    polyHavenCatalogInFlight.delete(category);
+  });
+  polyHavenCatalogInFlight.set(category, fetching);
+  return fetching;
+}
+
 // The per-asset file tree behind the picker. Cached per id for the same reason as the
 // catalog: a re-opened picker must not re-download the listing. Failures are never cached.
 const polyHavenFilesCache = new Map<string, { fetchedAt: number; files: PolyHavenFiles }>();
@@ -109,7 +133,7 @@ export async function fetchPolyHavenFiles(id: string): Promise<PolyHavenFiles> {
   const cached = polyHavenFilesCache.get(id);
   if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) return cached.files;
 
-  const res = await fetch(`${POLYHAVEN_API}/files/${id}`);
+  const res = await fetch(`${POLYHAVEN_API}/files/${id}`, sourceDeadline());
   if (!res.ok) throw new Error(`Poly Haven files API error: ${res.status}`);
   const files = await res.json() as PolyHavenFiles;
   polyHavenFilesCache.set(id, { fetchedAt: Date.now(), files });
@@ -150,7 +174,7 @@ export async function searchAmbientCG(
   });
   if (query) params.set('q', query);
 
-  const res = await fetch(`${AMBIENTCG_API}?${params}`);
+  const res = await fetch(`${AMBIENTCG_API}?${params}`, sourceDeadline());
   if (!res.ok) throw new Error(`ambientCG API error: ${res.status}`);
 
   const data = await res.json() as AmbientCGResponse;

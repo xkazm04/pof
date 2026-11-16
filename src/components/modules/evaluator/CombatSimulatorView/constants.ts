@@ -16,10 +16,11 @@ export const EMPTY_ALERTS: BalanceAlert[] = [];
 /** Plain-language Story Mode vs. full numeric Advanced view. */
 export type ViewMode = 'simple' | 'advanced';
 
-export const SEVERITY_STYLE: Record<BalanceAlertSeverity, { bg: string; border: string; text: string }> = {
-  info: { bg: 'bg-blue-400/10', border: 'border-blue-400/20', text: 'text-blue-400' },
-  warning: { bg: 'bg-amber-400/10', border: 'border-amber-400/20', text: 'text-amber-400' },
-  critical: { bg: 'bg-red-400/10', border: 'border-red-400/20', text: 'text-red-400' },
+/** `label` is the non-colour severity cue each alert row prints (WCAG 1.4.1). */
+export const SEVERITY_STYLE: Record<BalanceAlertSeverity, { bg: string; border: string; text: string; label: string }> = {
+  info: { bg: 'bg-blue-400/10', border: 'border-blue-400/20', text: 'text-blue-400', label: 'Info' },
+  warning: { bg: 'bg-amber-400/10', border: 'border-amber-400/20', text: 'text-amber-400', label: 'Warning' },
+  critical: { bg: 'bg-red-400/10', border: 'border-red-400/20', text: 'text-red-400', label: 'Critical' },
 };
 
 /** Difficulty-band styling for the narrated Fight Report Card. */
@@ -40,11 +41,20 @@ export const TUNING_SLIDERS: { key: keyof TuningOverrides; label: string; icon: 
   { key: 'armorEffectivenessWeight', label: 'Armor Weight', icon: Shield },
 ];
 
-/** Display order + labels for grouping the ability picker by CombatAbility.type. */
-export const ABILITY_GROUPS: { type: CombatAbility['type']; label: string }[] = [
-  { type: 'melee', label: 'Melee' },
-  { type: 'ranged', label: 'Ranged' },
-  { type: 'aoe', label: 'AoE' },
-  { type: 'buff', label: 'Buff' },
-  { type: 'dodge', label: 'Dodge' },
-];
+/**
+ * Labels for grouping the ability picker by CombatAbility.type. Keyed by the union so
+ * tsc rejects a new type without a group (it would otherwise vanish from the picker
+ * while the selected count still includes it). Key order is the display order.
+ */
+const ABILITY_TYPE_LABELS: Record<CombatAbility['type'], string> = {
+  melee: 'Melee',
+  ranged: 'Ranged',
+  aoe: 'AoE',
+  buff: 'Buff',
+  dodge: 'Dodge',
+};
+
+export const ABILITY_GROUPS: { type: CombatAbility['type']; label: string }[] =
+  (Object.keys(ABILITY_TYPE_LABELS) as CombatAbility['type'][]).map((type) => ({
+    type, label: ABILITY_TYPE_LABELS[type],
+  }));

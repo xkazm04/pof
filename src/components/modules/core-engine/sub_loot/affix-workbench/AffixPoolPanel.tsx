@@ -55,7 +55,7 @@ export function AffixPoolPanel({
       {/* Filter buttons */}
       <div className="flex gap-1">
         {(['all', 'offensive', 'defensive', 'utility'] as const).map((cat) => (
-          <button key={cat} onClick={() => setPoolFilter(cat)}
+          <button key={cat} onClick={() => setPoolFilter(cat)} aria-pressed={poolFilter === cat}
             className="flex-1 px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] capitalize transition-all"
             style={{
               backgroundColor: poolFilter === cat ? withOpacity(ACCENT, OPACITY_12) : 'transparent',
@@ -69,7 +69,7 @@ export function AffixPoolPanel({
 
       {/* Search */}
       <input type="text" value={poolSearch} onChange={(e) => setPoolSearch(e.target.value)}
-        placeholder="Search affixes..."
+        placeholder="Search affixes..." aria-label="Search the affix pool"
         className="w-full px-2 py-1.5 bg-surface-deep rounded text-xs font-mono text-text placeholder-text-muted outline-none transition-colors"
         style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_15)}` }} />
 
@@ -110,7 +110,7 @@ export function AffixPoolPanel({
               </div>
               <button onClick={() => onAddAffix(entry)} disabled={!canAddMore}
                 className="p-1 rounded transition-colors disabled:opacity-30"
-                style={{ color: STATUS_SUCCESS }} title="Add to item">
+                style={{ color: STATUS_SUCCESS }} title="Add to item" aria-label={`Add ${entry.displayName}`}>
                 <Plus className="w-3 h-3" />
               </button>
             </motion.div>

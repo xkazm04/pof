@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import { CritiqueBadge } from '@/components/modules/visual-gen/asset-forge/CritiqueBadge';
-import type { ForgeMeshMetrics } from '@/components/modules/visual-gen/asset-forge/forgeJobStatus';
+import type { ForgeMeshMetrics } from '@/lib/visual-gen/forgeJobStatus';
 
 afterEach(cleanup);
 

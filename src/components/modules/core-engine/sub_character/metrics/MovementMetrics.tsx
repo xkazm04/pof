@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import {
   STATUS_SUCCESS, STATUS_ERROR,
   ACCENT_CYAN,
@@ -14,6 +15,9 @@ import {
   computeBalanceScores,
   ACCENT,
 } from '../_shared/data';
+import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
+import { findBasePreset } from '@/lib/character/inspector-fields';
+import { resolveStack } from '@/lib/feel-adjustment-layers';
 
 /** "{count} states" with mini colored dots */
 export function StatesMetric() {
@@ -31,11 +35,17 @@ export function StatesMetric() {
 
 /** "{count} paths · {distance}m" */
 export function DodgeMetric() {
-  const avgDist = 4.5; // average dodge distance in meters (derived from gameplay tuning)
+  // Dodge distance from the resolved feel stack (cm -> m), the value Apply writes to UE.
+  const baseFeelPresetId = useCharacterBlueprintStore((s) => s.baseFeelPresetId);
+  const feelLayers = useCharacterBlueprintStore((s) => s.feelLayers);
+  const avgDist = useMemo(
+    () => resolveStack(findBasePreset(baseFeelPresetId).profile, feelLayers).dodge.distance / 100,
+    [baseFeelPresetId, feelLayers],
+  );
   return (
     <div className="flex items-center gap-1.5 text-[10px] font-mono">
       <span className="font-bold" style={{ color: ACCENT_CYAN }}>
-        {avgDist}m
+        {Number(avgDist.toFixed(2))}m
       </span>
       <span className="text-text-muted">
         {DODGE_TRAJECTORIES.length} paths
@@ -59,11 +69,15 @@ export function CurveEditorMetric() {
   );
 }
 
-/** Preset name or "No preset" muted */
+/** The persisted base feel preset (what AI Feel's Apply builds on) + its layer count. */
 export function OptimizerMetric() {
+  const baseFeelPresetId = useCharacterBlueprintStore((s) => s.baseFeelPresetId);
+  const layerCount = useCharacterBlueprintStore((s) => s.feelLayers.length);
+  const preset = findBasePreset(baseFeelPresetId);
   return (
-    <span className="text-[10px] font-mono italic text-text-muted">
-      No preset
+    <span className="text-[10px] font-mono text-text-muted">
+      <span style={{ color: preset.color }}>{preset.name}</span>
+      {layerCount > 0 && <span className="ml-1">+{layerCount} {layerCount === 1 ? 'layer' : 'layers'}</span>}
     </span>
   );
 }

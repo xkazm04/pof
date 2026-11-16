@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "2ea7ddde-337c-4cd4-b032-c2a937222872",
+ "subject": "canvas-graph",
+ "evaluatedAt": "2026-11-09T05:16:04.172819+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "inventory-catalog",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:214 The spatial stash is a bounded CSS grid of fixed-pixel cells with no topology, and a case-insensitive search of the catalog directory for panX, zoom, screenToWorld, setPointerCapture and reactflow found zero hits, so no pan/zoom node surface exists here and the HTML5 drag belongs to the drag-drop subject.",
+   "techniques": [
+    {
+     "technique": "viewport-transform",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:72 Pointer maps to a cell through a fixed pixel constant; there is no camera and no scale."
+    },
+    {
+     "technique": "render-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:191 Population is bounded by the tab's cell count and nothing pans."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:319 Native HTML5 slot drag between cells, with no structural node or edge manipulation."
+    },
+    {
+     "technique": "graph-layout",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:107 Placement is a validated cell slot chosen by the user; no layout algorithm exists."
+    },
+    {
+     "technique": "edge-management",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:248 Only placed tiles render; items have no relationships. The lines in EquipmentLoadoutSection are a fixed paper-doll silhouette."
+    },
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_inventory/catalog/spatial-stash/SpatialStashGrid.tsx:211 A finite grid, not an infinite surface; its accessibility belongs to grid and drag-drop standards."
+    }
+   ],
+   "absenceTerms": [
+    "panX",
+    "zoom",
+    "screenToWorld",
+    "setPointerCapture",
+    "reactflow"
+   ]
+  },
+  {
+   "context": "animation-state-graph",
+   "subject": "canvas-graph",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachineSvg.tsx:19 This read-only generated diagram has correct shared anchor geometry and a deterministic layout, but the SVG has no role, accessible name or aria-hidden, so assistive technology gets loose text fragments and the only neighbourhood highlight is pointer-only.",
+   "techniques": [
+    {
+     "technique": "canvas-accessibility",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachineSvg.tsx:19 The file has no role, aria attribute or focus handler. A text twin exists in StateMachinePanel (group list and transitions matrix), but the drawing is not hidden in its favour and the twin has no single tab stop or roving focus."
+    },
+    {
+     "technique": "render-budget",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachinePanel.tsx:19 Hover state sits above an unmemoized SVG, the group list and the full transitions matrix, so each hover change re-renders all of them. Literal gap only: population is fixed and cost is likely small. Placement is computed once at module scope and the dash animation runs only on hovered edges."
+    },
+    {
+     "technique": "graph-layout",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_animation/state-graph/state-machine-graph-data.ts:35 Pure integer slot layout over a constant, hand-authored group list: deterministic, no arrivals, no hydration drift."
+    },
+    {
+     "technique": "edge-management",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_animation/state-graph/state-machine-graph-data.ts:66 Edge anchors use the same GN_W/GN_H constants the node rects draw with, attach at the boundary facing the other node, and hovering strengthens only the touching edges."
+    },
+    {
+     "technique": "viewport-transform",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachineSvg.tsx:40 Marks are drawn directly in viewBox units; no camera exists and no pointer coordinate is ever read, so no inverse mapping can drift."
+    },
+    {
+     "technique": "direct-manipulation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_animation/state-graph/StateMachineSvg.tsx:57 Hover is the only interaction: no drag, click, selection or connection."
+    }
+   ],
+   "registryProposal": "The golden path keeps 'memoization wherever hover or selection re-renders' in full for read-only renderers, while render-budget says its ladder is climbed only as far as measurement forces; a fixed diagram of a handful of nodes has to break one of these, so the standard should state a population floor or say which rule wins."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "canvas-graph",
+   "context": "audio-scene-designer",
+   "reason": "evidence leans on lib/audio-scene-viewport.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T05:16:04.172819+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "direct-manipulation",
+    "edge-management",
+    "graph-layout",
+    "render-budget",
+    "viewport-transform"
+   ],
+   "deviations": 0,
+   "context": "inventory-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T05:16:04.172819+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "canvas-graph"
+   ],
+   "techniques": [
+    "canvas-accessibility",
+    "direct-manipulation",
+    "edge-management",
+    "graph-layout",
+    "render-budget",
+    "viewport-transform"
+   ],
+   "deviations": 1,
+   "context": "animation-state-graph",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

@@ -25,13 +25,15 @@ interface Props {
   /** True when any search/type/slot/rarity filter is narrowing the catalog. */
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+  /** Told how a card was opened, before the toggle, so the drawer knows whether to scroll into view. */
+  onOpenVia: (via: 'keyboard' | 'pointer') => void;
 }
 
 export function CatalogItemGrid({
   gridRef, cardRefs, pageEntries, filteredCount,
   focusedIndex, setFocusedIndex, setSelectedItem,
   primaryEntry, isGenRunning, onRegenerate,
-  onGridKeyDown, hasActiveFilters, onClearFilters,
+  onGridKeyDown, hasActiveFilters, onClearFilters, onOpenVia,
 }: Props) {
   return (
     <div className="relative min-h-[300px]">
@@ -45,10 +47,10 @@ export function CatalogItemGrid({
               // `role="row"` keeps the grid/gridcell nesting valid — a `gridcell` may not sit
               // directly under `role="grid"`. `onActivate` gives the detail drawer a keyboard
               // route: the card swallows Enter/Space for its tooltip, so it was mouse-only.
-              <div key={item.id} role="row" onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} className="cursor-pointer">
+              <div key={item.id} role="row" onClick={() => { onOpenVia('pointer'); setSelectedItem(prev => prev?.id === item.id ? null : item); }} className="cursor-pointer">
                 <TradingCard ref={(el: HTMLDivElement | null) => { cardRefs.current[index] = el; }}
                   item={item} tabIndex={index === focusedIndex ? 0 : -1} onFocus={() => setFocusedIndex(index)}
-                  onActivate={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} />
+                  onActivate={() => { onOpenVia('keyboard'); setSelectedItem(prev => prev?.id === item.id ? null : item); }} />
                 {/* folder-09 R3: lifecycle cell + (Re)generate for the primary item. */}
                 <div role="gridcell" className="mt-1 px-1" onClick={(e) => e.stopPropagation()}>
                   <CatalogLifecycleCell

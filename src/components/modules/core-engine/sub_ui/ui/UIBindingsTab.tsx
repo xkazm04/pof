@@ -60,7 +60,8 @@ export function UIBindingsTab() {
         <BlueprintPanel color={ACCENT} className="p-3">
           <SectionHeader label="Input Mode SM" color={ACCENT} icon={GitBranch} />
           <div className="flex justify-center mb-2.5 min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-            <svg width={280} height={160} viewBox="0 0 280 160" className="overflow-visible">
+            {/* 210 tall: the GameAndUI node sits at y=170 and draws up to r=37 (active ring + focus ring). */}
+            <svg width={280} height={210} viewBox="0 0 280 210" className="overflow-visible">
               <style>{`g.sm-node:focus { outline: none; } g.sm-node:focus-visible .focus-ring { opacity: 0.6; }`}</style>
               {(() => {
                 const positions: Record<InputMode, { x: number; y: number }> = { Game: { x: 80, y: 50 }, UI: { x: 240, y: 50 }, GameAndUI: { x: 160, y: 170 } };
@@ -102,7 +103,7 @@ export function UIBindingsTab() {
                         <g key={node.id}
                           onClick={() => setCurrentInputMode(node.id)}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCurrentInputMode(node.id); } }}
-                          tabIndex={0} role="button" aria-label={`Switch to ${node.label} input mode`}
+                          tabIndex={0} role="button" aria-pressed={isActive} aria-label={`Switch to ${node.label} input mode`}
                           className="sm-node cursor-pointer">
                           <circle className="focus-ring" cx={pos.x} cy={pos.y} r={(isActive ? 32 : 28) + 5}
                             fill="none" stroke={color} strokeWidth="2" strokeDasharray="4 3" opacity={0}

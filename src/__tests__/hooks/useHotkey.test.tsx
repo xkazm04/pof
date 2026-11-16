@@ -43,7 +43,7 @@ import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 
 const ctrlK = () => act(() => { fireEvent.keyDown(window, { key: 'k', ctrlKey: true }); });
 const escape = () => act(() => { fireEvent.keyDown(document, { key: 'Escape' }); });
-const globalSearchBox = () => screen.queryByRole('textbox', { name: /search checklist items/i });
+const globalSearchBox = () => screen.queryByRole('combobox', { name: /search checklist items/i });
 const spellbookBox = () => screen.queryByRole('combobox', { name: /search abilities/i });
 
 beforeEach(() => {
@@ -103,7 +103,7 @@ describe('useHotkey — a hidden pane never receives keys', () => {
 
     rerender(tree(true));
     ctrlK();
-    expect(await screen.findByRole('textbox', { name: /search checklist items/i })).toBeTruthy();
+    expect(await screen.findByRole('combobox', { name: /search checklist items/i })).toBeTruthy();
     expect(spellbookBox()).toBeNull();
   });
 });
@@ -118,7 +118,7 @@ describe('useEscapeLayer — Escape closes only the top layer', () => {
     useModuleStore.setState({ quickActionsPanelCollapsed: false });
     render(<><ReviewHost /><GlobalSearchPanel /></>);
     ctrlK();
-    expect(await screen.findByRole('textbox', { name: /search checklist items/i })).toBeTruthy();
+    expect(await screen.findByRole('combobox', { name: /search checklist items/i })).toBeTruthy();
 
     escape();
     await waitFor(() => expect(globalSearchBox()).toBeNull());

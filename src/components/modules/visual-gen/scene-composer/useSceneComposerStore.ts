@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { tryApiFetch } from '@/lib/api-utils';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import {
   deleteObjectScript,
   duplicateObjectScript,
@@ -29,15 +29,16 @@ interface SceneComposerState {
   actionResult: string | null;
   /** True once at least one refresh has completed (success or failure). */
   hasRefreshed: boolean;
-  transformMode: 'translate' | 'rotate' | 'scale';
 
   refreshScene: () => Promise<void>;
   selectObject: (name: string | null) => void;
-  setTransformMode: (mode: 'translate' | 'rotate' | 'scale') => void;
   deleteObject: (name: string) => Promise<void>;
   duplicateObject: (name: string) => Promise<void>;
   clearActionFeedback: () => void;
 }
+
+/** Id of the newest refresh; replies to anything older are dropped. */
+let latestRefresh = 0;
 
 export const useSceneComposerStore = create<SceneComposerState>()(
   (set, get) => ({
@@ -49,11 +50,12 @@ export const useSceneComposerStore = create<SceneComposerState>()(
     failedAction: null,
     actionResult: null,
     hasRefreshed: false,
-    transformMode: 'translate',
 
     refreshScene: async () => {
+      const refresh = ++latestRefresh;
       set({ isRefreshing: true });
       const result = await tryApiFetch<SceneInfo>('/api/blender-mcp/scene');
+      if (refresh !== latestRefresh) return;
       if (result.ok) {
         set({ sceneInfo: result.data, isRefreshing: false, lastError: null, hasRefreshed: true });
       } else {
@@ -64,8 +66,6 @@ export const useSceneComposerStore = create<SceneComposerState>()(
     },
 
     selectObject: (name) => set({ selectedObject: name }),
-
-    setTransformMode: (mode) => set({ transformMode: mode }),
 
     /**
      * Run one object operation and REPORT it.
@@ -92,7 +92,10 @@ export const useSceneComposerStore = create<SceneComposerState>()(
         });
         return;
       }
-      set({ actionResult: result.data.output.trim() || `Deleted "${name}".` });
+      set((s) => ({
+        actionResult: result.data.output.trim() || `Deleted "${name}".`,
+        selectedObject: s.selectedObject === name ? null : s.selectedObject,
+      }));
       await get().refreshScene();
     },
 

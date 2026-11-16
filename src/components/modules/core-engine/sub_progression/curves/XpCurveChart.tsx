@@ -44,6 +44,11 @@ export function XpCurveChart({
     );
   }
 
+  const first = data[0];
+  const last = data[data.length - 1];
+  // The svg is one image to assistive tech: the per-dot <title>s stay as sighted
+  // hover tooltips, and this label carries the summary (range and cap cost).
+  const chartLabel = `XP required per level, Lv ${first.level} (${first.xp.toLocaleString()} XP) to Lv ${last.level} (${last.xp.toLocaleString()} XP)`;
   const gradientId = `areaGradient-${chartId}`;
   const filterId = `glow-curve-${chartId}`;
 
@@ -83,7 +88,12 @@ export function XpCurveChart({
       </div>
 
       <div className="absolute left-14 right-2 top-2 bottom-6 z-10">
-        <svg className="w-full h-full overflow-visible" preserveAspectRatio="none">
+        <svg
+            className="w-full h-full overflow-visible"
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={chartLabel}
+          >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={color} stopOpacity="0.4" />
@@ -95,6 +105,9 @@ export function XpCurveChart({
             </filter>
           </defs>
 
+          {/* The paths are authored in 0..100 chart space, so they need this viewBox to span
+              the plot; the dots stay outside it, placed in %, so they remain round. */}
+          <svg className="overflow-visible" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
           {/* Filled area: fades in once, then morphs its `d` with the params. */}
           <motion.path
             initial={{ opacity: 0 }}
@@ -118,6 +131,8 @@ export function XpCurveChart({
             vectorEffect="non-scaling-stroke"
             style={{ filter: `url(#${filterId})` }}
           />
+
+          </svg>
 
           {data.map((d, i) => {
             const x = pointX(i, data.length);

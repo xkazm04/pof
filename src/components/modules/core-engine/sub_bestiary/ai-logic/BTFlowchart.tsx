@@ -15,9 +15,16 @@ interface BTFlowchartProps {
   accent?: string;
 }
 
+/** child id -> parent id, derived once from the tree. */
+const PARENT_OF = new Map<string, string>(
+  BT_TREE.flatMap(n => n.children.map((c): [string, string] => [c, n.id])),
+);
+
 export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCESS }: BTFlowchartProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [search, setSearch] = useState('');
+  /* Roving tabindex: the tree is one tab stop; this node id holds it (null = first row). */
+  const [focusId, setFocusId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   /* Stable node.id -> focusable row element map, rebuilt after each render from
      the logical row order. Keyboard navigation resolves focus targets by node
@@ -81,6 +88,11 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
     return flatRows.filter(r => matchIds.has(r.node.id));
   }, [flatRows, matchIds]);
 
+  /* The tab-stop row, keyed by node identity; a filtered-out or collapsed-away
+     node falls back to the first visible row so the tree never loses its stop. */
+  const tabStopId = focusId != null && visibleRows.some(r => r.node.id === focusId)
+    ? focusId : visibleRows[0]?.node.id ?? null;
+
   /* Map each visible row's node.id to its rendered focusable element. Rebuilt
      after every render by aligning the actual treeitem elements (queried by
      role, so non-row children are ignored) to visibleRows in order. This is the
@@ -114,19 +126,40 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
           rowElsRef.current.get(prevId)?.focus();
         }
         break;
+      case 'Home':
+        e.preventDefault();
+        rowElsRef.current.get(visibleRows[0].node.id)?.focus();
+        break;
+      case 'End':
+        e.preventDefault();
+        rowElsRef.current.get(visibleRows[visibleRows.length - 1].node.id)?.focus();
+        break;
       case 'ArrowRight': {
+        /* WAI tree: collapsed -> expand; expanded -> first child. */
         const row = visibleRows[idx];
-        if (row.hasChildren && effectiveCollapsed.has(row.node.id)) {
-          e.preventDefault();
+        if (!row.hasChildren) break;
+        e.preventDefault();
+        if (effectiveCollapsed.has(row.node.id)) {
           toggleCollapse(row.node.id);
+        } else {
+          const first = visibleRows[idx + 1];
+          if (first && PARENT_OF.get(first.node.id) === row.node.id) rowElsRef.current.get(first.node.id)?.focus();
         }
         break;
       }
       case 'ArrowLeft': {
+        /* WAI tree: expanded -> collapse; collapsed or leaf -> parent. */
         const row = visibleRows[idx];
         if (row.hasChildren && !effectiveCollapsed.has(row.node.id)) {
           e.preventDefault();
           toggleCollapse(row.node.id);
+        } else {
+          const parentId = PARENT_OF.get(row.node.id);
+          const parentEl = parentId ? rowElsRef.current.get(parentId) : undefined;
+          if (parentEl) {
+            e.preventDefault();
+            parentEl.focus();
+          }
         }
         break;
       }
@@ -145,8 +178,9 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted pointer-events-none" />
         <input
           type="text" value={search} onChange={e => setSearch(e.target.value)}
+          aria-label="Search behavior tree nodes"
           placeholder="Search BT nodes..."
-          className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle outline-none focus:border-[var(--accent)]"
+          className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle focus-ring-inset"
         />
         {search && (
           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted font-mono">
@@ -180,6 +214,8 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
             isSelected={expandedNodeId === row.node.id}
             isMatch={matchIds?.has(row.node.id)}
             isCollapsed={effectiveCollapsed.has(row.node.id)}
+            isTabStop={row.node.id === tabStopId}
+            onFocusRow={setFocusId}
             accent={accent}
             onNodeClick={onNodeClick}
             onToggleCollapse={toggleCollapse}

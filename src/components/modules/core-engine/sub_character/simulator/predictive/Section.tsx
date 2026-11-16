@@ -16,6 +16,8 @@ export function Section({ title, icon: Icon, color, defaultOpen, children }: {
   return (
     <BlueprintPanel color={color}>
       <button
+        type="button"
+        aria-expanded={open}
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2 px-3 py-2 text-left"
       >

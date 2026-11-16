@@ -14,6 +14,7 @@
 
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   createHarnessOrchestrator,
   createDefaultConfig,
@@ -83,6 +84,8 @@ function wireOrchestratorEvents(orchestrator: HarnessOrchestrator): void {
 }
 
 // ── GET ─────────────────────────────────────────────────────────────────────
+
+const READ_ACTIONS = new Set(['plan', 'guide', 'progress', 'events']);
 
 /** The plan block of the status summary — one shape for the in-memory and the on-disk read. */
 function summarizePlan(plan: GamePlan) {
@@ -209,6 +212,10 @@ function respondFromDisk(action: string | null, statePath: string) {
 
 export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get('action');
+  // Refused rather than answered: an unrecognised action used to get the status summary.
+  if (action !== null && !READ_ACTIONS.has(action)) {
+    return apiError(`Unknown action: ${action}`, 400);
+  }
   const config = globalForHarness.harnessConfig;
   const orchestrator = globalForHarness.harnessOrchestrator;
 
@@ -265,8 +272,49 @@ export async function GET(request: NextRequest) {
 
 // ── POST ────────────────────────────────────────────────────────────────────
 
+const START_STRING_FIELDS = ['projectPath', 'projectName', 'ueVersion', 'statePath', 'ueTestFilter'];
+const START_BOOLEAN_FIELDS = ['unlimited', 'checkpoint', 'ueTests', 'ueVisual', 'fork', 'replacePaused'];
+const START_NUMBER_FIELDS: { field: string; integer: boolean; max?: number }[] = [
+  { field: 'maxIterations', integer: true },
+  { field: 'targetPassRate', integer: false, max: 100 },
+  { field: 'sessionTimeoutMs', integer: false },
+  { field: 'budgetUsd', integer: false },
+  { field: 'maxConcurrent', integer: true },
+];
+
+/**
+ * The first start field the run could not honour, by name. These reach `createDefaultConfig`
+ * and the executor as given, so a wrong type or an out-of-range number was never refused
+ * (a non-positive budget, for one, is quietly replaced by the default cap).
+ */
+function startFieldError(body: Record<string, unknown>): string | null {
+  for (const field of START_STRING_FIELDS) {
+    if (body[field] != null && typeof body[field] !== 'string') return `${field} must be a string`;
+  }
+  for (const field of START_BOOLEAN_FIELDS) {
+    if (body[field] != null && typeof body[field] !== 'boolean') return `${field} must be a boolean`;
+  }
+  for (const { field, integer, max } of START_NUMBER_FIELDS) {
+    const v = body[field];
+    if (v == null) continue;
+    if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0 || (integer && !Number.isInteger(v)) || (max != null && v > max)) {
+      return `${field} must be a positive ${integer ? 'integer' : 'number'}${max != null ? ` of at most ${max}` : ''}`;
+    }
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
-  const body = await request.json() as {
+  // start and resume spawn an autonomous CLI loop that runs with permissions skipped.
+  const denied = requireOperator(request);
+  if (denied) return denied;
+
+  const raw: unknown = await request.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
+  const body = raw as {
     action: 'start' | 'pause' | 'resume';
     projectPath?: string;
     projectName?: string;
@@ -288,6 +336,8 @@ export async function POST(request: NextRequest) {
     passRateBasis?: 'verified' | 'self-reported';
     /** Force a fresh forked run (new runId → parent) even over a resumable statePath. */
     fork?: boolean;
+    /** Deliberately displace a paused run that lives at a different statePath. */
+    replacePaused?: boolean;
   };
 
   // Shared validation cap for the free-text creative direction so an unbounded
@@ -302,6 +352,8 @@ export async function POST(request: NextRequest) {
     if (!body.projectPath || !body.projectName || !body.ueVersion) {
       return apiError('Missing required fields: projectPath, projectName, ueVersion', 400);
     }
+    const fieldError = startFieldError(body as unknown as Record<string, unknown>);
+    if (fieldError) return apiError(fieldError, 400);
 
     // Validate the new steering levers loudly rather than silently coercing.
     if (body.themeDirective != null) {
@@ -325,7 +377,11 @@ export async function POST(request: NextRequest) {
     // exposes are now reachable from the API. Reject an unknown name loudly.
     let scenarioAreas;
     if (body.scenario) {
-      const def = SCENARIOS[body.scenario];
+      // Own keys only: `constructor` found an inherited member, so the run started on the
+      // default plan with no scenario applied.
+      const def = typeof body.scenario === 'string' && Object.hasOwn(SCENARIOS, body.scenario)
+        ? SCENARIOS[body.scenario]
+        : undefined;
       if (!def) {
         return apiError(`Unknown scenario "${body.scenario}". Available: ${scenarioNames().join(', ')}`, 400);
       }
@@ -366,9 +422,6 @@ export async function POST(request: NextRequest) {
       executor: executorOverride,
     });
 
-    globalForHarness.harnessConfig = config;
-    globalForHarness.harnessEvents = [];
-
     // Durable identity: a start pointed at an existing statePath RESUMES the same
     // run (same runId) rather than silently minting a new one and fragmenting
     // history. A prior TERMINAL run at the statePath forks with recorded
@@ -390,6 +443,32 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       return apiError(err instanceof Error ? err.message : String(err), 400);
     }
+
+    // A paused run is still a live run: a start at a different statePath would replace the
+    // orchestrator global and leave that run's row open with nothing in memory able to resume it
+    // (it could only return through a disk rehydrate that needs its statePath). Refuse unless the
+    // caller says the replace is deliberate; a start at the paused run's own statePath continues
+    // that same run and is admitted.
+    const pausedConfig = globalForHarness.harnessConfig;
+    if (
+      globalForHarness.harnessStatus === 'paused'
+      && globalForHarness.harnessOrchestrator
+      && pausedConfig
+      && pausedConfig.statePath !== config.statePath
+      && body.replacePaused !== true
+    ) {
+      const pausedId = globalForHarness.harnessOrchestrator.getRunId?.() ?? 'unknown';
+      return apiError(
+        `A paused run (${pausedId}) at ${pausedConfig.statePath} would be orphaned by this start. Resume it, start at its statePath, or pass replacePaused: true to displace it.`,
+        409,
+      );
+    }
+
+    // Only an accepted start may replace these: GET reads the last config's statePath and a
+    // paused run's event buffer, and a refused start must not repoint either at the other run.
+    globalForHarness.harnessConfig = config;
+    globalForHarness.harnessEvents = [];
+
     const orchestrator = createHarnessOrchestrator(config, {
       ...(identity.resumeRunId ? { resumeRunId: identity.resumeRunId } : {}),
       ...(identity.parentRunId ? { parentRunId: identity.parentRunId } : {}),
@@ -441,6 +520,9 @@ export async function POST(request: NextRequest) {
     // continues — this also picks up a reaped 'interrupted' row and makes it live
     // again. The stranded in-progress→pending healing runs inside runLoop.
     if (!orchestrator) {
+      if (body.statePath != null && typeof body.statePath !== 'string') {
+        return apiError('statePath must be a string', 400);
+      }
       const statePath = body.statePath ?? globalForHarness.harnessConfig?.statePath;
       if (!statePath) {
         return apiError('Harness is not running and no statePath was provided to rehydrate a resumable run', 409);

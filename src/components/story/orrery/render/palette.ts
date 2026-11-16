@@ -75,6 +75,8 @@ export interface OrreryPalette {
   hover: string;
   select: string;
   measuredZero: string;
+  /** The theme's warn ink (`--or-chip-warn-ink`): the stale / unverified sector outline. */
+  statusInk: string;
   /** Flat-dial lane tracks, by lane parity. */
   track: string[];
   trackLine: string;
@@ -155,6 +157,7 @@ export function readOrreryPalette(host: HTMLElement): OrreryPalette {
   const rose = r.tok('var(--or-rose)');
   const infl = r.tok('var(--or-infl)');
   const ok = r.tok('var(--or-ok)');
+  const warnInk = r.tok('var(--or-chip-warn-ink)');
   const labelPx = r.px(LABEL_TOKEN, LABEL_FALLBACK_PX);
   r.close();
 
@@ -220,6 +223,7 @@ export function readOrreryPalette(host: HTMLElement): OrreryPalette {
     hover: inkHi.css,
     select: blend(amber, inkHi, 0.35),
     measuredZero: blend(hot, bg, 0.12),
+    statusInk: warnInk.css,
     track: [blend(core, bg, 0.7), blend(core, bg, 0.62)],
     trackLine: blend(line, bg, 0.1),
     spoke: blend(line2, bg, 0.35),

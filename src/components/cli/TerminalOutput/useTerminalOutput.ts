@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { LogEntry } from '../types';
 import { groupLogs } from './helpers';
+import { logger } from '@/lib/logger';
 import type { SelectionToolbarState } from './types';
 
 export function useTerminalOutput({
@@ -71,7 +72,11 @@ export function useTerminalOutput({
 
   const handleSelectionCopy = useCallback(() => {
     if (!selectionToolbar) return;
-    navigator.clipboard.writeText(selectionToolbar.text);
+    // writeText REJECTS without clipboard permission / focus / a secure context —
+    // catch it so a refused copy leaves a trace instead of an unhandled rejection.
+    void navigator.clipboard.writeText(selectionToolbar.text).catch((e: unknown) => {
+      logger.warn('[terminal] copy to clipboard refused:', e instanceof Error ? e.message : e);
+    });
     setSelectionToolbar(null);
     document.getSelection()?.removeAllRanges();
   }, [selectionToolbar]);

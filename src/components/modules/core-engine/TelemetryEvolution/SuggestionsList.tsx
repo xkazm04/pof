@@ -3,25 +3,28 @@
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ChevronDown, ChevronRight, CheckCircle2, XCircle,
-  TrendingUp, Sparkles, Layers,
+  TrendingUp, Sparkles,
 } from 'lucide-react';
 import { STATUS_WARNING } from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import type { GenreEvolutionSuggestion } from '@/types/telemetry';
 import { GenreTemplateGallery } from '@/components/modules/core-engine/GenreTemplateGallery';
-import { SUB_GENRE_STYLES } from './constants';
+import { SUB_GENRE_STYLES, FALLBACK_SUB_GENRE_STYLE } from './constants';
 
 export function SuggestionsList({
   suggestions,
   expandedId,
   onToggle,
   onResolve,
+  pendingId = null,
 }: {
   suggestions: GenreEvolutionSuggestion[];
   expandedId: string | null;
   onToggle: (id: string) => void;
   onResolve: (id: string, action: 'accept' | 'dismiss') => void;
+  /** Id of the suggestion whose resolve POST is in flight; its buttons are disabled. */
+  pendingId?: string | null;
 }) {
   const prefersReduced = useReducedMotion();
   return (
@@ -36,9 +39,15 @@ export function SuggestionsList({
           Evolution Suggestions
         </span>
       </div>
+      {/* genre_suggestions has no project column: pending suggestions are read
+          install-wide, so a suggestion here may come from another project's scan.
+          Stated, the same way AcceptedGenres states its scope. */}
+      <p className="text-2xs text-text-muted mb-2.5" data-testid="suggestions-scope">
+        From scans of every project in this install — suggestions are not project-scoped.
+      </p>
       <div className="space-y-3">
         {suggestions.map((sug, i) => {
-          const style = SUB_GENRE_STYLES[sug.subGenre] ?? { color: 'var(--text-muted)', icon: Layers };
+          const style = SUB_GENRE_STYLES[sug.subGenre] ?? FALLBACK_SUB_GENRE_STYLE;
           const Icon = style.icon;
           const isExpanded = expandedId === sug.id;
 
@@ -53,7 +62,9 @@ export function SuggestionsList({
             >
               {/* Header */}
               <button
+                type="button"
                 onClick={() => onToggle(sug.id)}
+                aria-expanded={isExpanded}
                 className="w-full flex items-center gap-3 px-3.5 py-3 text-left group"
               >
                 <div
@@ -130,7 +141,8 @@ export function SuggestionsList({
                       <div className="flex gap-2 pt-1">
                         <button
                           onClick={(e) => { e.stopPropagation(); onResolve(sug.id, 'accept'); }}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+                          disabled={pendingId !== null}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
                           style={{
                             backgroundColor: `${style.color}15`,
                             color: style.color,
@@ -142,7 +154,8 @@ export function SuggestionsList({
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onResolve(sug.id, 'dismiss'); }}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted bg-surface border border-border hover:border-border-bright transition-all"
+                          disabled={pendingId !== null}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted bg-surface border border-border hover:border-border-bright transition-all disabled:opacity-50"
                         >
                           <XCircle className="w-3 h-3" />
                           Dismiss

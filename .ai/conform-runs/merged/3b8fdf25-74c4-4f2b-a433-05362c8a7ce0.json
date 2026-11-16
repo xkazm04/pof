@@ -1,0 +1,136 @@
+{
+  "schema": "conform-run/1",
+  "worker": "3b8fdf25-74c4-4f2b-a433-05362c8a7ce0",
+  "subject": "agent-cli-transport",
+  "evaluatedAt": "2026-11-07T03:52:19.250509+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "core-engine-planning-shell",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/core-engine/ImplementationPlan/index.tsx:40 The planning shell only sends tasks through the shared useModuleCLI door and owns no spawn, probe, auth environment, stance flags or envelope parsing; searches of src/components/modules/core-engine for child_process, stream-json, ANTHROPIC_API_KEY and permission-mode found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "child_process",
+        "stream-json",
+        "ANTHROPIC_API_KEY",
+        "permission-mode"
+      ]
+    },
+    {
+      "context": "project-ops-api",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/app/api/session-analytics/route.ts:17 These are DB-backed reporting route handlers that never start an agent child process (the telemetry route only resolves skill patterns for injection); searches of the 13 route directories for child_process, stream-json, ANTHROPIC_API_KEY, permission-mode and --resume found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "child_process",
+        "stream-json",
+        "ANTHROPIC_API_KEY",
+        "permission-mode",
+        "--resume"
+      ]
+    },
+    {
+      "context": "ai-behavior-testing",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:79 The AI testing views call the shared useModuleCLI hook and leave every transport concern (probe, auth strip, stance, output envelope, resume) to the shared CLI service; searches of src/components/modules/game-systems for child_process, stream-json, ANTHROPIC_API_KEY and permission-mode found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "child_process",
+        "stream-json",
+        "ANTHROPIC_API_KEY",
+        "permission-mode"
+      ]
+    },
+    {
+      "context": "feature-design-state-hooks",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/hooks/useEntityTrackHelp.ts:4 The only CLI touchpoint in these hooks sends an evaluate-track task through the shared useModuleCLI hook; no hook spawns, probes or parses an agent child, and searches of src/hooks for child_process, stream-json, ANTHROPIC_API_KEY and permission-mode found nothing.",
+      "techniques": [],
+      "absenceTerms": [
+        "child_process",
+        "stream-json",
+        "ANTHROPIC_API_KEY",
+        "permission-mode"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "agent-cli-transport",
+      "context": "session-analytics-reporting",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor SpendDashboard.tsx:26 is a data-hook call in a file that is not among the context's files, and it does not show that this context lacks a CLI spawn. The context's own dashboard (SessionAnalyticsDashboard/index.tsx) only calls useSessionDashboard, and my grep of the context files found no "
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T03:52:19.250509+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "session-analytics-reporting",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:52:19.250509+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "core-engine-planning-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:52:19.250509+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "project-ops-api",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:52:19.250509+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "ai-behavior-testing",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T03:52:19.250509+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "agent-cli-transport"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "feature-design-state-hooks",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

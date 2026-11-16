@@ -13,7 +13,7 @@ import type {
   QuestObjective,
   DialogueNode,
 } from '@/types/quest-generation';
-import { MODULE_COLORS, ACCENT_VIOLET, ACCENT_GREEN, withOpacity, OPACITY_10 } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_VIOLET, ACCENT_GREEN, withOpacity, OPACITY_8, OPACITY_10 } from '@/lib/chart-colors';
 import { CATEGORY_LABELS, OBJ_ICONS, DIFFICULTY_COLORS, MAX_PIPS, ACCENT } from './constants';
 
 // ── Difficulty pips ──
@@ -70,7 +70,7 @@ export function QuestCard({ quest }: { quest: GeneratedQuest }) {
         </button>
         <span
           className="text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
-          style={{ color: catCfg.color, backgroundColor: `${catCfg.color}15` }}
+          style={{ color: catCfg.color, backgroundColor: withOpacity(catCfg.color, OPACITY_8) }}
         >
           {catCfg.label}
         </span>

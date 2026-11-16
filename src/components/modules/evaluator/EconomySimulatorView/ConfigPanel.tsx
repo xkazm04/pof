@@ -56,6 +56,7 @@ export function ConfigPanel({ config, onChange, onValidity }: {
             <button
               key={p}
               onClick={() => onChange({ ...config, philosophy: p })}
+              aria-pressed={config.philosophy === p}
               className={`px-3 py-1.5 rounded-lg text-2xs font-medium transition-colors border ${
                 config.philosophy === p
                   ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'

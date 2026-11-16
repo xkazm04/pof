@@ -71,8 +71,8 @@ export function ModuleDetailPanel({ selected, historyMap, onReviewModule, review
                 </span>
                 <div className="space-y-1">
                   <StatusRow
-                    label="Implemented"
-                    count={selected.implemented}
+                    label="Done"
+                    count={selected.implemented + selected.improved}
                     total={selected.total}
                     color={STATUS_SUCCESS}
                   />

@@ -1,6 +1,6 @@
 'use client';
 
-import { STATUS_SUCCESS, ACCENT_CYAN, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, ACCENT_CYAN, ACCENT_VIOLET, OPACITY_10, OPACITY_20 } from '@/lib/chart-colors';
 import type { HudTheme } from './types';
 
 // ── Fade Timeline sub-component ────────────────────────────────────────────
@@ -15,7 +15,7 @@ export function FadeTimeline({ theme }: { theme: HudTheme }) {
       {/* Fade-in ramp */}
       <polygon
         points={`0,40 ${fadeInEnd},0 ${fadeInEnd},40`}
-        fill={`${STATUS_SUCCESS}30`}
+        fill={`${STATUS_SUCCESS}${OPACITY_20}`}
         stroke={STATUS_SUCCESS}
         strokeWidth="0.5"
         vectorEffect="non-scaling-stroke"
@@ -26,7 +26,7 @@ export function FadeTimeline({ theme }: { theme: HudTheme }) {
         y={0}
         width={visibleEnd - fadeInEnd}
         height={40}
-        fill={`${ACCENT_CYAN}20`}
+        fill={`${ACCENT_CYAN}${OPACITY_10}`}
         stroke={ACCENT_CYAN}
         strokeWidth="0.5"
         vectorEffect="non-scaling-stroke"
@@ -34,7 +34,7 @@ export function FadeTimeline({ theme }: { theme: HudTheme }) {
       {/* Fade-out ramp */}
       <polygon
         points={`${visibleEnd},0 ${visibleEnd},40 100,40`}
-        fill={`${ACCENT_VIOLET}30`}
+        fill={`${ACCENT_VIOLET}${OPACITY_20}`}
         stroke={ACCENT_VIOLET}
         strokeWidth="0.5"
         vectorEffect="non-scaling-stroke"

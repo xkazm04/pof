@@ -1,7 +1,44 @@
+import { useState } from 'react';
 import {
-  ACCENT_CYAN, ACCENT_EMERALD,
+  ACCENT_CYAN, ACCENT_EMERALD, ACCENT_VIOLET,
   OPACITY_8,
 } from '@/lib/chart-colors';
+
+const PORT_MIN = 1024;
+const PORT_MAX = 65535;
+
+interface PortInputProps {
+  id: string;
+  testId: string;
+  value: number;
+  onCommit: (v: number) => void;
+}
+
+/** A port field that edits a draft and commits once, on blur, when the draft is a whole in-range port. */
+function PortInput({ id, testId, value, onCommit }: PortInputProps) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft !== null && /^\d+$/.test(draft.trim())) {
+      const v = parseInt(draft, 10);
+      if (v >= PORT_MIN && v <= PORT_MAX && v !== value) onCommit(v);
+    }
+    setDraft(null);
+  };
+  return (
+    <input
+      id={id}
+      type="number"
+      min={PORT_MIN}
+      max={PORT_MAX}
+      value={draft ?? String(value)}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') commit(); }}
+      className="w-full px-2 py-1 rounded text-xs font-mono bg-background border border-border/40 text-text focus:outline-none focus:border-[color:var(--focus-border)]"
+      data-testid={testId}
+    />
+  );
+}
 
 interface ConnectionSettingsProps {
   host: string;
@@ -10,10 +47,12 @@ interface ConnectionSettingsProps {
   setPofPort: (v: number) => void;
   rcPort: number;
   setRcPort: (v: number) => void;
+  wsPort: number;
+  setWsPort: (v: number) => void;
 }
 
 export function ConnectionSettings({
-  host, setHost, pofPort, setPofPort, rcPort, setRcPort,
+  host, setHost, pofPort, setPofPort, rcPort, setRcPort, wsPort, setWsPort,
 }: ConnectionSettingsProps) {
   return (
     <div className="px-4 py-3 border-b border-border/40 space-y-3" style={{ backgroundColor: `${ACCENT_CYAN}${OPACITY_8}` }} data-testid="bridge-connection-settings">
@@ -31,8 +70,8 @@ export function ConnectionSettings({
         />
       </div>
 
-      {/* Two-port row */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Port row: PoF HTTP, Remote Control, PoF live WebSocket */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* PoF Bridge Port */}
         <div className="space-y-1" data-testid="bridge-pof-port-field">
           <div className="flex items-center gap-1.5">
@@ -41,19 +80,7 @@ export function ConnectionSettings({
               PoF Bridge Port
             </label>
           </div>
-          <input
-            id="beh-pof-port"
-            type="number"
-            min={1024}
-            max={65535}
-            value={pofPort}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (!isNaN(v) && v >= 1 && v <= 65535) setPofPort(v);
-            }}
-            className="w-full px-2 py-1 rounded text-xs font-mono bg-background border border-border/40 text-text focus:outline-none focus:border-[color:var(--focus-border)]"
-            data-testid="bridge-pof-port-input"
-          />
+          <PortInput id="beh-pof-port" testId="bridge-pof-port-input" value={pofPort} onCommit={setPofPort} />
           <p className="text-2xs text-text-muted">
             PofHttpServer &mdash; serves <span className="font-mono text-text">/pof/*</span> routes (default: 30040)
           </p>
@@ -67,21 +94,23 @@ export function ConnectionSettings({
               Remote Control Port
             </label>
           </div>
-          <input
-            id="beh-rc-port"
-            type="number"
-            min={1024}
-            max={65535}
-            value={rcPort}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (!isNaN(v) && v >= 1 && v <= 65535) setRcPort(v);
-            }}
-            className="w-full px-2 py-1 rounded text-xs font-mono bg-background border border-border/40 text-text focus:outline-none focus:border-[color:var(--focus-border)]"
-            data-testid="bridge-rc-port-input"
-          />
+          <PortInput id="beh-rc-port" testId="bridge-rc-port-input" value={rcPort} onCommit={setRcPort} />
           <p className="text-2xs text-text-muted">
             UE5 Web Remote Control &mdash; serves <span className="font-mono text-text">/remote/*</span> routes (default: 30010)
+          </p>
+        </div>
+
+        {/* WebSocket Port */}
+        <div className="space-y-1" data-testid="bridge-ws-port-field">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ACCENT_VIOLET }} />
+            <label htmlFor="beh-ws-port" className="text-xs font-bold uppercase tracking-wider" style={{ color: ACCENT_VIOLET }}>
+              WebSocket Port
+            </label>
+          </div>
+          <PortInput id="beh-ws-port" testId="bridge-ws-port-input" value={wsPort} onCommit={setWsPort} />
+          <p className="text-2xs text-text-muted">
+            PoF live WebSocket &mdash; serves <span className="font-mono text-text">/pof/live</span> (default: 30041)
           </p>
         </div>
       </div>

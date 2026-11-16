@@ -60,13 +60,21 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   );
   const [plainMode, setPlainMode] = useState(false);
   // Reset (local + server) state — a failed server delete must be reported, never swallowed.
-  const [resetting, setResetting] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
+  // Keyed by entity like `resetFailure`: switching entities mid-delete must not paint the NEW
+  // entity's Reset as busy. A set, because a second entity's reset may start while the first runs.
+  const [resettingIds, setResettingIds] = useState<ReadonlySet<string>>(() => new Set());
+  // Keyed by the entity the reset ran against: the banner's Retry re-runs a DESTRUCTIVE delete
+  // against whichever entity is open, so a failure must never render on (or retry against)
+  // another one. An unkeyed string followed the operator across entity switches.
+  const [resetFailure, setResetFailure] = useState<{ entityId: string; error: string } | null>(null);
   // Explicit refresh-from-server state. A refresh RECONCILES (it can adopt content and drop
   // steps the server no longer has), so what it did is reported, never applied silently.
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [refreshOutcome, setRefreshOutcome] = useState<RefreshOutcome | null>(null);
+  // Report + error are KEYED by the entity the refresh ran against (like `resetFailure`): a
+  // refresh answered after an entity switch must never print on the entity now open.
+  // In-flight flag keyed by entity like the report (a set, as `resettingIds`): item-1's slow refresh must not paint item-2's button busy.
+  const [refreshingIds, setRefreshingIds] = useState<ReadonlySet<string>>(() => new Set());
+  const [refreshFailure, setRefreshFailure] = useState<{ entityId: string; error: string } | null>(null);
+  const [refreshReport, setRefreshReport] = useState<{ entityId: string; outcome: RefreshOutcome } | null>(null);
 
   // Responsive shell: below COLLAPSE_BREAKPOINT the 580px of catalog+pipeline chrome
   // is hidden and surfaced as left slide-over drawers, leaving the canvas full-width.
@@ -144,12 +152,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     if (!entityKey) return;
     const srv = serverArts[step];
     if (!srv) return;
-    adoptServer(entityKey, step, {
-      done: true, data: srv.data, ueAssets: srv.ueAssets, at: srv.updatedAt ?? new Date().toISOString(),
-      status: srv.status,
-      ...(srv.tier ? { tier: srv.tier } : {}),
-      ...(srv.reason ? { reason: srv.reason } : {}),
-    }, opts);
+    adoptServer(entityKey, step, toLabArtifacts([srv])[0].artifact, opts);
   };
 
   // Write-through: register sync bound to the active catalogId so produce() fires
@@ -242,15 +245,7 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     // The server's VERDICT (status/tier/reason) rides along: a gate drain resolves L3/L4
     // server-side, and `serverVerdictOverlay` lets that outcome reach the step banner
     // (content stays add-only — see `hydrateEntity`).
-    hydrateEntity(entityKey, entityArts.map((a) => ({
-      step: a.step,
-      artifact: {
-        done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString(),
-        status: a.status,
-        ...(a.tier ? { tier: a.tier } : {}),
-        ...(a.reason ? { reason: a.reason } : {}),
-      },
-    })));
+    hydrateEntity(entityKey, toLabArtifacts(entityArts));
   }, [entityKey, entityArts, hydrateEntity]);
 
   // Close an open drawer on Escape (narrow shell only).
@@ -275,19 +270,22 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // surviving server artifacts were re-adopted on the next load and the reset silently
   // un-did itself. Reset now deletes the server rows FIRST and only clears local state
   // when that succeeded — a reset that reports "done" is a reset that stuck.
+  const resetError = resetFailure && resetFailure.entityId === entityKey ? resetFailure.error : null;
   const resetEntityEverywhere = useCallback(async () => {
     if (!catalogId || !entityKey) return;
-    setResetError(null);
-    setResetting(true);
+    setResetFailure(null);
+    const resetId = entityKey;
+    setResettingIds((s) => new Set(s).add(resetId));
     try {
       const res = await deleteEntityArtifacts(catalogId, entityKey);
-      if (!res.ok) { setResetError(res.error); return; }
+      if (!res.ok) { setResetFailure({ entityId: entityKey, error: res.error }); return; }
       useLabPipelineStore.getState().resetEntity(entityKey);
       invalidateArtifacts(catalogId, entityKey);
     } finally {
-      setResetting(false);
+      setResettingIds((s) => { const n = new Set(s); n.delete(resetId); return n; });
     }
   }, [catalogId, entityKey]);
+  const resetting = !!entityKey && resettingIds.has(entityKey);
 
   // ── Refresh from server ────────────────────────────────────────────────────
   // The lab could only ever ADD server truth: hydration merges verdicts but never content,
@@ -303,22 +301,26 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
   // holding local work the server has not got is KEPT and reported.
   const refreshFromServer = useCallback(async () => {
     if (!catalogId || !entityKey) return;
-    setRefreshError(null);
-    setRefreshOutcome(null);
-    setRefreshing(true);
+    setRefreshFailure(null);
+    setRefreshReport(null);
+    const refreshId = entityKey;
+    setRefreshingIds((cur) => new Set(cur).add(refreshId));
     try {
       const res = await refreshArtifacts(catalogId, entityKey);
-      if (!res.ok) { setRefreshError(res.error); return; }
+      if (!res.ok) { setRefreshFailure({ entityId: entityKey, error: res.error }); return; }
       // ONE server-row → local-artifact projection, shared with the catalog-wide refresh
       // (`labCatalogRefresh.ts`) so the two scopes cannot reconcile against different shapes.
-      setRefreshOutcome(useLabPipelineStore.getState().refreshEntity(entityKey, toLabArtifacts(res.data)));
+      const outcome = useLabPipelineStore.getState().refreshEntity(entityKey, toLabArtifacts(res.data));
+      setRefreshReport({ entityId: entityKey, outcome });
     } finally {
-      setRefreshing(false);
+      setRefreshingIds((cur) => { const n = new Set(cur); n.delete(refreshId); return n; });
     }
   }, [catalogId, entityKey]);
 
+  const refreshing = !!entityKey && refreshingIds.has(entityKey);
   // A different entity's result must never be read as this one's.
-  useEffect(() => { setRefreshOutcome(null); setRefreshError(null); }, [entityKey]);
+  const refreshOutcome = refreshReport && refreshReport.entityId === entityKey ? refreshReport.outcome : null;
+  const refreshError = refreshFailure && refreshFailure.entityId === entityKey ? refreshFailure.error : null;
 
   const handleSelectCatalog = (id: string) => {
     onSelectCatalog(id);
@@ -350,14 +352,14 @@ export function useBaseline({ detail, onSelectCatalog, entityId, onSelectEntity,
     fields,
     isItems,
     produce,
-    resetEntityEverywhere, resetting, resetError, dismissResetError: () => setResetError(null),
+    resetEntityEverywhere, resetting, resetError, dismissResetError: () => setResetFailure(null),
     ueAssetCount,
     clearStepError,
     retryStepSync, dismissStepSyncError,
     artifacts, artifactByStep, displayStatus, stepDone, done,
     artsLoading, artsError, retryArts,
     refreshFromServer, refreshing, refreshError, refreshOutcome,
-    dismissRefresh: () => { setRefreshOutcome(null); setRefreshError(null); },
+    dismissRefresh: () => { setRefreshReport(null); setRefreshFailure(null); },
     driftByStep, adoptServerStep, entitySteps,
     runDrain, drainOutcome, dismissDrainOutcome,
     handleSelectCatalog, handleSelectEntity, selectStep,

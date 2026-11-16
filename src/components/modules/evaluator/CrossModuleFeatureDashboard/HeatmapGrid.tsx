@@ -6,12 +6,12 @@ import {
   ChevronRight,
   ArrowUpDown,
 } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
 import { STATUS_COLORS, STATUS_LABELS, STATUS_KEYS, type StatusKey, type SortKey } from './constants';
 import type { CellData, SelectedCell } from './types';
-import { cellIntensity, cellAlphaHex } from './helpers';
+import { cellIntensity, cellAlphaHex, completionColor } from './helpers';
 
 type Totals = Record<StatusKey, number> & { total: number };
 
@@ -48,7 +48,7 @@ export function HeatmapGrid({
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Grid3x3 className="w-3.5 h-3.5 text-[#ef4444]" />
+          <Grid3x3 className="w-3.5 h-3.5" style={{ color: MODULE_COLORS.evaluator }} />
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Feature Status Heatmap
           </span>
@@ -70,7 +70,7 @@ export function HeatmapGrid({
         </div>
       </div>
 
-      <div className="bg-[#0a0a1e] border border-border rounded-xl overflow-hidden">
+      <div className="bg-background border border-border rounded-xl overflow-hidden">
         {/* Table header */}
         <div className="grid items-center border-b border-border bg-surface-deep"
           style={{ gridTemplateColumns: HEATMAP_GRID_TEMPLATE }}
@@ -154,7 +154,6 @@ export function HeatmapGrid({
                             type="button"
                             aria-pressed={isSelected}
                             aria-label={`${cell.label}: ${cellTitle}. Show features.`}
-                            title={`${cellTitle}: show features`}
                             onClick={() => onSelectCell(cell.moduleId, key)}
                             className="w-full h-7 rounded-md flex items-center justify-center transition-all duration-base cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-border-bright"
                             style={{
@@ -170,7 +169,7 @@ export function HeatmapGrid({
                             </span>
                           </button>
                         ) : (
-                          <div className="w-full h-7 rounded-md" title={cellTitle} aria-label={cellTitle} />
+                          <div className="w-full h-7 rounded-md" aria-hidden="true" />
                         )}
 
                         {/* Tooltip */}
@@ -200,14 +199,14 @@ export function HeatmapGrid({
                           className="h-full rounded-full transition-all duration-slow"
                           style={{
                             width: `${pctDone}%`,
-                            backgroundColor: pctDone >= 80 ? STATUS_SUCCESS : pctDone >= 40 ? STATUS_WARNING : pctDone > 0 ? STATUS_ERROR : 'var(--text-muted)',
+                            backgroundColor: completionColor(pctDone),
                           }}
                         />
                       </div>
                       <span
                         className="text-xs font-medium w-7 text-right"
                         style={{
-                          color: pctDone >= 80 ? STATUS_SUCCESS : pctDone >= 40 ? STATUS_WARNING : pctDone > 0 ? STATUS_ERROR : 'var(--text-muted)',
+                          color: completionColor(pctDone),
                         }}
                       >
                         {pctDone}%
@@ -240,7 +239,7 @@ export function HeatmapGrid({
           <div className="px-2 py-2.5 flex items-center justify-center">
             <span
               className="text-xs font-bold"
-              style={{ color: overallPct >= 80 ? STATUS_SUCCESS : overallPct >= 40 ? STATUS_WARNING : STATUS_ERROR }}
+              style={{ color: completionColor(overallPct) }}
             >
               {overallPct}%
             </span>

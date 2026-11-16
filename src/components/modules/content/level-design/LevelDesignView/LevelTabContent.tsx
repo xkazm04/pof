@@ -167,10 +167,11 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
         <div className="overflow-y-auto p-5 space-y-5">
           {/* Description */}
           <div>
-            <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
+            <label htmlFor="ld-doc-description" className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
               Level Description
             </label>
             <textarea
+              id="ld-doc-description"
               value={activeDoc.description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
               onBlur={flushDoc}
@@ -182,13 +183,14 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
 
           {/* Design Narrative */}
           <div>
-            <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
+            <label htmlFor="ld-doc-narrative" className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
               Design Narrative
             </label>
             <p className="text-xs text-text-muted mb-2">
               Write your level design in natural language. Describe rooms, encounters, pacing curves, difficulty arcs, and player flow. This narrative drives code generation.
             </p>
             <textarea
+              id="ld-doc-narrative"
               value={activeDoc.designNarrative}
               onChange={(e) => handleNarrativeChange(e.target.value)}
               onBlur={flushDoc}
@@ -200,10 +202,11 @@ export function LevelTabContent({ vm }: { vm: LevelDesignVM }) {
 
           {/* Pacing Notes */}
           <div>
-            <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
+            <label htmlFor="ld-doc-pacing-notes" className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
               Pacing Notes
             </label>
             <textarea
+              id="ld-doc-pacing-notes"
               value={activeDoc.pacingNotes}
               onChange={(e) => handlePacingNotesChange(e.target.value)}
               onBlur={flushDoc}

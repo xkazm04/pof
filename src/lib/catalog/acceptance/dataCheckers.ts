@@ -1,7 +1,7 @@
 import { gradeGallerySelection } from './galleryArtifact';
 import type { Checker } from './types';
 import { tagRequiredFields } from './requiredFields';
-import { REFERENCE_GAP, isDeclaredGap } from './markers';
+import { REFERENCE_GAP, isDeclaredGap, readNumber } from './markers';
 import { ELEMENTS_BY_PROFILE, elementsOf, resistanceKey } from '@/lib/catalog/canon/elements';
 
 /**
@@ -122,10 +122,22 @@ export function resistancesPopulated(field: string, label: string): Checker {
 export function withinPercent(field: string, label: string, target: number, pct: number): Checker {
   return (data) => {
     const v = pickField(data, field);
-    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${pct}% of ${target})` };
-    const n = Number(v);
+    const n = readNumber(v);
+    if (n == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" ${v == null ? 'is not set' : `is not a number (${JSON.stringify(v)?.slice(0, 40)})`} (expected a value within ±${pct}% of ${target})` };
     const ok = n >= target * (1 - pct / 100) && n <= target * (1 + pct / 100);
     return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} vs ${target} ±${pct}%`, ...(ok ? {} : { reason: `${n} is outside ±${pct}% of ${target}` }) };
+  };
+}
+
+/** Numeric CEILING: passes for any value at or under `ceiling` (a budget — cheaper is never a
+ *  failure, unlike the two-sided {@link withinPercent} band). `field` may be a dot-path. */
+export function atMost(field: string, label: string, ceiling: number): Checker {
+  return (data) => {
+    const v = pickField(data, field);
+    const n = readNumber(v);
+    if (n == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" ${v == null ? 'is not set' : `is not a number (${JSON.stringify(v)?.slice(0, 40)})`} (expected a value of at most ${ceiling})` };
+    const ok = n <= ceiling;
+    return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} ≤ ${ceiling}`, ...(ok ? {} : { reason: `${n} is over the ${ceiling} ceiling` }) };
   };
 }
 
@@ -137,9 +149,10 @@ export function withinPercent(field: string, label: string, target: number, pct:
  */
 export function withinAbsolute(field: string, label: string, target: number, tol: number): Checker {
   return (data) => {
-    const v = data[field];
-    if (v == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" is not set (expected a value within ±${tol} of ${target})` };
-    const n = Number(v);
+    // Dot-path aware, like withinPercent (`pickField`): a step may grade the nested datum it charts.
+    const v = pickField(data, field);
+    const n = readNumber(v);
+    if (n == null) return { label, tier: 'L0', status: 'pending', detail: 'not set', reason: `field "${field}" ${v == null ? 'is not set' : `is not a number (${JSON.stringify(v)?.slice(0, 40)})`} (expected a value within ±${tol} of ${target})` };
     const ok = Math.abs(n - target) <= tol;
     return { label, tier: 'L0', status: ok ? 'pass' : 'fail', detail: `${n} vs ${target} ±${tol}`, ...(ok ? {} : { reason: `${n} is outside ±${tol} of ${target}` }) };
   };
@@ -164,11 +177,12 @@ export function dpsConsistent(
 ): Checker {
   return (data) => {
     const dmg = (data[damageField] ?? {}) as Record<string, unknown>;
-    const num = (k: string): number => Number(dmg[k] ?? (data as Record<string, unknown>)[k]);
+    // Strict (`readNumber`): a blank or a boolean is unset (NaN here), never 0 — blanks used to reconcile 0 = 0.
+    const num = (k: string): number => readNumber(dmg[k] ?? (data as Record<string, unknown>)[k]) ?? NaN;
     const min = num('damageMin');
     const max = num('damageMax');
     const aps = num('attackSpeed');
-    const dps = Number(data[dpsField]);
+    const dps = readNumber(data[dpsField]) ?? NaN;
     if (![min, max, aps, dps].every((n) => Number.isFinite(n))) {
       const missing: string[] = ['damageMin', 'damageMax', 'attackSpeed'].filter((k) => !Number.isFinite(num(k)));
       if (!Number.isFinite(dps)) missing.push('baseDPS');
@@ -218,16 +232,17 @@ export function materialShape(field: string, label: string): Checker {
       const req = ['surface', 'parentMaterial', 'textures'];
       for (let i = 0; i < masters.length; i++) {
         const m = (masters[i] ?? {}) as Record<string, unknown>;
-        const missing = req.filter((k) => m[k] == null);
+        const missing = req.filter((k) => m[k] == null || isDeclaredGap(m[k]));
         if (missing.length) {
           return { label, tier: 'L0', status: 'fail', detail: `master[${i}] incomplete`, reason: `field "${field}.parentMaterials[${i}]" missing: ${missing.join(', ')}` };
         }
       }
       return { label, tier: 'L0', status: 'pass', detail: `${masters.length} master(s), each surface / parentMaterial / textures populated` };
     }
-    // Legacy single-master shape (parentMaterial + textures), same strictness as fieldsPopulated.
+    // Legacy single-master shape (parentMaterial + textures), same strictness as fieldsPopulated —
+    // a DECLARED gap ("not in the reference") is not a value on either path.
     const req = ['parentMaterial', 'textures'];
-    const missing = req.filter((k) => obj[k] == null);
+    const missing = req.filter((k) => obj[k] == null || isDeclaredGap(obj[k]));
     const ok = missing.length === 0;
     return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${req.length - missing.length} / ${req.length} populated`, ...(ok ? {} : { reason: `field "${field}" missing: ${missing.join(', ')}` }) };
   }, { field, keys: ['parentMaterial', 'textures'] });
@@ -292,7 +307,15 @@ export function maxWordsPerEntry(field: string, label: string, max: number): Che
 
     let worst = 0;
     for (let i = 0; i < arr.length; i++) {
-      const raw = typeof arr[i] === 'string' ? (arr[i] as string) : String(arr[i] ?? '');
+      // A non-string entry is not a line: `String({...})` is "[object Object]" (2 words), which
+      // passed any cap. And a declared gap is not a spoken line, so it is unpopulated, not short.
+      if (typeof arr[i] !== 'string') {
+        return { label, tier: 'L0', status: 'fail', detail: `entry ${i} is not text`, reason: `field "${field}"[${i}] must be a line of text (KEY: "spoken text"), got ${Array.isArray(arr[i]) ? 'a list' : arr[i] === null ? 'null' : `a ${typeof arr[i]}`}` };
+      }
+      const raw = arr[i] as string;
+      if (isDeclaredGap(raw)) {
+        return { label, tier: 'L0', status: 'pending', detail: `entry ${i} declares a gap`, reason: `field "${field}"[${i}] is a declared gap ("${REFERENCE_GAP}"), not a spoken line` };
+      }
       // Prefer the quoted spoken half; fall back to the whole entry.
       const quoted = raw.match(/"([^"]*)"/);
       const spoken = quoted ? quoted[1] : raw;
@@ -315,8 +338,14 @@ export function maxWordsPerEntry(field: string, label: string, max: number): Che
 export function minCount(field: string, label: string, n: number): Checker {
   // Tagged so the produce prompt NAMES the list it counts (`requiredFields.ts`).
   return tagRequiredFields((data) => {
-    const arr = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
-    const ok = arr.length >= n;
-    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${arr.length} / ${n}`, ...(ok ? {} : { reason: `field "${field}" has ${arr.length} item(s), needs ≥ ${n}` }) };
+    const all = Array.isArray(data[field]) ? (data[field] as unknown[]) : [];
+    // A declared-gap ITEM is no item (as fieldsPopulated / entriesHaveFields read it). Only the bare marker or a
+    // `{ value: marker }` wrapper: a row with real fields beside a gap note is still a row, so isDeclaredGap's
+    // any-own-property rule does not apply to list items.
+    const real = all.filter((v) => !((typeof v === 'string' || (v != null && typeof v === 'object' && 'value' in v)) && isDeclaredGap(v)));
+    const ok = real.length >= n;
+    const gaps = all.length - real.length;
+    const note = gaps ? ` (${gaps} declared gap${gaps === 1 ? '' : 's'} not counted — "${REFERENCE_GAP}")` : '';
+    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: `${real.length} / ${n}`, ...(ok ? {} : { reason: `field "${field}" has ${real.length} item(s), needs ≥ ${n}${note}` }) };
   }, { field, minItems: n });
 }

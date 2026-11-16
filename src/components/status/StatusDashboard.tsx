@@ -1,13 +1,15 @@
 'use client';
 
 /**
- * /status shell — the Blueprint-themed page chrome hosting two tabs:
+ * /status shell — the Blueprint-themed page chrome hosting five tabs: Capability (the default
+ * landing), Category and Models, plus these two:
  *   • Pipelines  — the pipeline-centric health map (swimlanes across every catalog).
  *   • Item Focus — the entity-centric view (one entity's realization + its 1-hop
  *                  cross-pipeline dependency map).
  *
  * View state lives in the URL so it is deep-linkable and back/forward works:
- *   /status                                  → Pipelines
+ *   /status                                  → Capability
+ *   /status?tab=pipelines                    → Pipelines
  *   /status?entity=<catalogId>:<entityId>    → Item Focus on that entity
  *   /status?tab=item                         → Item Focus (empty, prompts search)
  * The URL is read via useSyncExternalStore (SSR snapshot '' → no hydration mismatch)
@@ -23,6 +25,10 @@ import type { ReadinessRoute } from '@/lib/status/readinessRoute';
 import { CategoryView } from './CategoryView';
 import { ItemFocusView } from './ItemFocusView';
 import { ModelsView } from './ModelsView';
+import { GameSelector } from '@/components/layout-lab/GameSelector';
+import { usePersistedEntityHydration } from '@/components/layout-lab/hooks/usePersistedEntityHydration';
+import { GAME_PARAM, useActiveGame, useActiveGameUrlSync } from '@/stores/activeGameStore';
+import { useStatusCatalogIds } from './statusArtifactSource';
 
 const NAV_EVENT = 'status-nav';
 
@@ -36,7 +42,11 @@ function subscribe(cb: () => void): () => void {
 }
 
 function navigate(search: string) {
-  const url = search ? `${window.location.pathname}?${search}` : window.location.pathname;
+  // The active game's `g` travels with every /status move (a tab switch must not drop it).
+  // Appended only when present, so a PoF address with no `g` is byte-identical to before.
+  const g = new URLSearchParams(window.location.search).get(GAME_PARAM);
+  const qs = g ? [search, `${GAME_PARAM}=${encodeURIComponent(g)}`].filter(Boolean).join('&') : search;
+  const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
   window.history.pushState(null, '', url);
   window.dispatchEvent(new Event(NAV_EVENT));
 }
@@ -54,11 +64,19 @@ function TabIntro({ children }: { children: React.ReactNode }) {
 
 export function StatusDashboard() {
   const search = useSyncExternalStore(subscribe, () => window.location.search, () => '');
+  // ACTIVE game: `?g=` wins on arrival, the store remembers; every tab shows only that game.
+  // Persisted entities carry the provenance that names a non-PoF entity's game, so they are
+  // loaded here as in the lab (PoF's views still grade the seed map only — statusEntitiesForGame).
+  useActiveGameUrlSync();
+  usePersistedEntityHydration();
+  const { game } = useActiveGame();
+  const gamePipelines = useStatusCatalogIds();
   const { tab, focus, catalog, filterClass, route } = parseStatusSearch(search);
 
   const setTab = (t: StatusTab) => {
-    if (t === 'item') navigate(focus ? `entity=${focus.catalogId}:${focus.entityId}` : 'tab=item');
-    else if (t === 'category') navigate(focus ? `catalog=${focus.catalogId}` : catalog ? `catalog=${catalog}` : 'tab=category');
+    const none = { focus: null, catalog: null, filterClass: null, route: null };
+    if (t === 'item') navigate(serializeStatusSearch({ ...none, tab: 'item', focus }));
+    else if (t === 'category') navigate(serializeStatusSearch({ ...none, tab: 'category', catalog: focus?.catalogId ?? catalog }));
     else if (t === 'models') navigate('tab=models');
     else if (t === 'pipelines') navigate('tab=pipelines');
     else navigate('');
@@ -103,6 +121,7 @@ export function StatusDashboard() {
           Pipeline Status
         </h1>
         <StatusTabs tab={tab} onChange={setTab} />
+        <GameSelector />
         {/* Pushed right by auto margin rather than space-between, so when the header wraps the
             title and the tablist stay adjacent instead of being flung to opposite edges. */}
         <a
@@ -114,6 +133,13 @@ export function StatusDashboard() {
           ← Blueprint lab
         </a>
       </div>
+
+      {/* A game with no registered pipeline in its manifest yet: say so, never a blank board. */}
+      {gamePipelines.length === 0 && (
+        <p data-testid="status-game-empty" role="status" style={{ fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-ink-deep)', marginBottom: 'var(--lab-s3)' }}>
+          No pipelines in {game.title}&apos;s manifest yet.
+        </p>
+      )}
 
       {/* One panel per tab view, named by its tab (WAI-ARIA tabs pattern). */}
       <div role="tabpanel" id={statusPanelId(tab)} aria-labelledby={statusTabId(tab)}>

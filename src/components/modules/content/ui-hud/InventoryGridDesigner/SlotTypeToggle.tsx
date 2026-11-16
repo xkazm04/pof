@@ -3,6 +3,8 @@ import type { SlotTypeConfig } from '@/lib/prompts/inventory';
 export function SlotTypeToggle({ slot, onToggle }: { slot: SlotTypeConfig; onToggle: () => void }) {
   return (
     <button
+      type="button"
+      aria-pressed={slot.enabled}
       onClick={onToggle}
       className="flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left shadow-inner hover:brightness-110"
       style={{
@@ -19,7 +21,7 @@ export function SlotTypeToggle({ slot, onToggle }: { slot: SlotTypeConfig; onTog
         }}
       />
       <span
-        className="text-[11px] font-bold uppercase transition-colors drop-shadow-md"
+        className="text-xs font-bold uppercase transition-colors drop-shadow-md"
         style={{ color: slot.enabled ? 'white' : 'rgba(156,163,175,0.6)', textShadow: slot.enabled ? `0 0 8px ${slot.color}80` : 'none' }}
       >
         {slot.label}

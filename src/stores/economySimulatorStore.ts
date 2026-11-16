@@ -74,6 +74,8 @@ interface EconomySimulatorState {
   baselineRun: EconomyRun | null;
   drift: EconomyRunDrift | null;
   isRunsLoading: boolean;
+  /** Failure of the last saved-runs action; rendered inline in the runs strip, not the page banner. */
+  runsError: string | null;
 
   // Actions
   fetchDefaults: () => Promise<void>;
@@ -111,6 +113,7 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
   baselineRun: null,
   drift: null,
   isRunsLoading: false,
+  runsError: null,
 
   fetchDefaults: async () => {
     set({ isLoading: true, error: null });
@@ -137,7 +140,10 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
 
   runSimulation: async (config: SimulationConfig) => {
     const runToken = ++simRunCounter;
-    set({ isSimulating: true, error: null, config });
+    // Generated code belongs to the run it came from: drop it, and invalidate any generate still
+    // in flight, so the codegen panel never shows a previous run's files under this one.
+    ++codeGenCounter;
+    set({ isSimulating: true, error: null, config, codeGenResult: null, isGenerating: false });
     try {
       const data = await apiFetch<{ result: SimulationResult }>(
         '/api/economy-simulator',
@@ -199,7 +205,7 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
   setSelectedCategory: (category) => set({ selectedCategory: category }),
 
   listRuns: async () => {
-    set({ isRunsLoading: true });
+    set({ isRunsLoading: true, runsError: null });
     try {
       const data = await apiFetch<{ runs: EconomyRun[]; baseline: EconomyRun | null }>(
         '/api/economy-simulator?action=list-runs',
@@ -212,13 +218,14 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
         isRunsLoading: false,
       });
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : String(err), isRunsLoading: false });
+      set({ runsError: err instanceof Error ? err.message : String(err), isRunsLoading: false });
     }
   },
 
   saveCurrentRun: async (name) => {
     const { result } = get();
     if (!result) return null;
+    set({ runsError: null });
     try {
       const data = await apiFetch<{ run: EconomyRun }>('/api/economy-simulator', {
         method: 'POST',
@@ -229,12 +236,13 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
       await get().listRuns();
       return data.run;
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : String(err) });
+      set({ runsError: err instanceof Error ? err.message : String(err) });
       return null;
     }
   },
 
   loadRun: async (id) => {
+    set({ runsError: null });
     try {
       const loadData = await apiFetch<{ run: EconomyRun }>('/api/economy-simulator', {
         method: 'POST',
@@ -244,12 +252,13 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
       // Re-simulate the loaded run's config so the full result (charts/snapshots) is restored.
       return await get().runSimulation(loadData.run.config);
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : String(err) });
+      set({ runsError: err instanceof Error ? err.message : String(err) });
       return null;
     }
   },
 
   deleteRun: async (id) => {
+    set({ runsError: null });
     try {
       await apiFetch<{ deleted: boolean }>('/api/economy-simulator', {
         method: 'POST',
@@ -259,12 +268,13 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
       await get().listRuns();
       return true;
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : String(err) });
+      set({ runsError: err instanceof Error ? err.message : String(err) });
       return false;
     }
   },
 
   setBaselineRun: async (id) => {
+    set({ runsError: null });
     try {
       const data = await apiFetch<{ baseline: EconomyRun | null }>('/api/economy-simulator', {
         method: 'POST',
@@ -279,7 +289,7 @@ export const useEconomySimulatorStore = create<EconomySimulatorState>((set, get)
       // Refresh the list so the new is_baseline flags are reflected in the UI strip.
       await get().listRuns();
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : String(err) });
+      set({ runsError: err instanceof Error ? err.message : String(err) });
     }
   },
 }));

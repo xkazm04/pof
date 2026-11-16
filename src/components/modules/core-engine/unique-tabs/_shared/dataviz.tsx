@@ -2,15 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_SUBDUED,
-  OPACITY_5,
   GLOW_SM,
-  withOpacity,
 } from '@/lib/chart-colors';
 import type {
-  TimelineEvent, HeatmapCell, DiffEntry, TagCloudItem,
+  TimelineEvent, HeatmapCell, DiffEntry,
 } from '@/types/unique-tab-improvements';
 import { EmptyPanel } from './primitives';
 
@@ -35,6 +32,7 @@ export function TimelineStrip({ events, accent, maxVisible = 50, height = 100 }:
   }
 
   const visible = events.slice(0, maxVisible);
+  const hidden = events.length - visible.length;
   const minT = Math.min(...visible.map((e) => e.timestamp));
   const maxT = Math.max(...visible.map((e) => e.timestamp + (e.duration ?? 0)));
   const range = maxT - minT || 1;
@@ -65,6 +63,11 @@ export function TimelineStrip({ events, accent, maxVisible = 50, height = 100 }:
           </div>
         );
       })}
+      {hidden > 0 && (
+        <div className="absolute top-0 right-0 text-xs font-mono text-text-muted" data-testid="timeline-more">
+          +{hidden} more
+        </div>
+      )}
     </div>
   );
 }
@@ -122,7 +125,8 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
                   <td
                     key={ci}
                     className="p-px outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:rounded-sm"
-                    tabIndex={0}
+                    // A read-only grid is not a row of dead tab stops: focus only when a cell acts.
+                    tabIndex={onCellClick ? 0 : undefined}
                     role="gridcell"
                     aria-label={cell?.tooltip ?? `${rowLabel} × ${cols[ci]}: ${(v * 100).toFixed(0)}%`}
                     title={cell?.tooltip ?? `${rowLabel} × ${cols[ci]}: ${(v * 100).toFixed(0)}%`}
@@ -135,7 +139,7 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
                     }}
                   >
                     <div
-                      className="w-8 h-8 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 focus-visible:ring-2 focus-visible:ring-white/60 transition-all flex items-center justify-center"
+                      className={`w-8 h-8 rounded-sm ${onCellClick ? 'cursor-pointer' : ''} hover:ring-1 hover:ring-white/30 focus-visible:ring-2 focus-visible:ring-white/60 transition-all flex items-center justify-center`}
                       style={{ backgroundColor: interpolateColor(lowColor, high, v) }}
                     >
                       {cell?.label && <span className="text-xs font-mono text-white/80">{cell.label}</span>}
@@ -213,45 +217,6 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
           <span>Hide {unchangedCount} unchanged</span>
         </button>
       )}
-    </div>
-  );
-}
-
-/* ── TagCloud ────────────────────────────────────────────────────────────── */
-
-interface TagCloudProps {
-  tags: TagCloudItem[];
-  accent: string;
-  maxFontSize?: number;
-  minFontSize?: number;
-}
-
-export function TagCloud({ tags, accent, maxFontSize = 16, minFontSize = 9 }: TagCloudProps) {
-  const maxCount = Math.max(...tags.map((t) => t.count), 1);
-  const minCount = Math.min(...tags.map((t) => t.count), 0);
-  const range = maxCount - minCount || 1;
-
-  return (
-    <div className="flex flex-wrap gap-1 items-center justify-center p-1.5">
-      {tags.map((t) => {
-        const norm = (t.count - minCount) / range;
-        const fontSize = minFontSize + norm * (maxFontSize - minFontSize);
-        const opacity = 0.4 + norm * 0.6;
-        const color = t.color ?? accent;
-        return (
-          <motion.span
-            key={t.tag}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-            className="font-mono font-bold cursor-default px-1.5 py-0.5 rounded transition-colors"
-            style={{ fontSize, color, opacity, backgroundColor: withOpacity(color, OPACITY_5) }}
-            title={`${t.tag}: ${t.count} references${t.category ? ` (${t.category})` : ''}`}
-          >
-            {t.tag}
-          </motion.span>
-        );
-      })}
     </div>
   );
 }

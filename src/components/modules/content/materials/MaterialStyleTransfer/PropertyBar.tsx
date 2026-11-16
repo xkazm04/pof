@@ -14,6 +14,9 @@ export function PropertyBar({
   icon: typeof Gem;
 }) {
   const pct = Math.min((value / max) * 100, 100);
+  // Precision follows the bar's scale, not the value: a unit-scale property reads two
+  // decimals, a wider one (Emissive 0-20) one — the same figure the mini preview prints.
+  const decimals = max > 1 ? 1 : 2;
   return (
     <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-deep border border-border">
       <Icon className="w-3 h-3 flex-shrink-0" style={{ color }} />
@@ -21,7 +24,7 @@ export function PropertyBar({
         <div className="flex items-center justify-between mb-0.5">
           <span className="text-2xs text-text-muted">{label}</span>
           <span className="text-2xs font-mono" style={{ color }}>
-            {value > 1 ? value.toFixed(1) : value.toFixed(2)}
+            {value.toFixed(decimals)}
           </span>
         </div>
         <div className="h-1 bg-surface rounded-full overflow-hidden">

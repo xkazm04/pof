@@ -1,0 +1,12 @@
+{
+  "id": "arena-2",
+  "lane": "arena",
+  "question": "Long-range combat versus the screen. At 32 px/m on a 1422x800 window, the view reaches about 22 m left and right of Rivet and about 12.5 m up and down. The 35 m range lane is off screen, and above or below Rivet even 15 m is off screen. How should twin-stick long range work?",
+  "options": [
+    { "key": "A", "label": "Camera leads toward the mouse (aim look-ahead, up to about 10 m)", "tradeoff": "35 m targets reach the edge of the screen when aimed at; the camera moves while Rivet stands still", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/arena/frames/arena-range-32.png"] },
+    { "key": "B", "label": "Cap readable long range at about 20 m; the 35 m lane only tests off-screen fire", "tradeoff": "a calm, fixed camera; 'long range' becomes about 20 m", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/arena/frames/arena-range-32.png"] },
+    { "key": "C", "label": "Zoom out to about 24 px/m while aiming or holding a weapon", "tradeoff": "sees everything, but Rivet and bullets get smaller", "frames": ["C:/Users/kazda/kiro/gtai-masters/eve/arena/frames/arena-range-48.png"] }
+  ],
+  "default": "A",
+  "asked": "21:00"
+}

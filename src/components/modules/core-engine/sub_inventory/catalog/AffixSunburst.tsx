@@ -41,7 +41,7 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
   const ring2Inner = 85;
   const ring2Outer = 120;
 
-  const arcs: { d: string; fill: string; label: string; midAngle: number; midR: number }[] = [];
+  const arcs: { d: string; fill: string; label: string; midAngle: number; midR: number; ring: 1 | 2 }[] = [];
 
   if (tree.children) {
     // Normalize each sibling group to sum to 1 before mapping to angles, so an
@@ -56,8 +56,9 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
       arcs.push({
         d: describeArc(cx, cy, ring1Inner, ring1Outer, cumAngle, cumAngle + angle),
         fill: child.color ?? STATUS_SUBDUED,
-        label: `${child.label} (${(child.probability * 100).toFixed(0)}%)`,
-        midAngle, midR,
+        // Print the share the arc actually draws (normalised), not the raw authored probability.
+        label: `${child.label} (${((child.probability / childSum) * 100).toFixed(0)}%)`,
+        midAngle, midR, ring: 1,
       });
       if (child.children && child.children.length > 0) {
         const gcSum = child.children.reduce((s, g) => s + (g.probability || 0), 0) || 1;
@@ -69,8 +70,9 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
           arcs.push({
             d: describeArc(cx, cy, ring2Inner, ring2Outer, childCum, childCum + childAngle),
             fill: grandchild.color ?? child.color ?? STATUS_SUBDUED,
-            label: `${grandchild.label} (${(grandchild.probability * 100).toFixed(0)}%)`,
-            midAngle: gcMidAngle, midR: gcMidR,
+            // Ring-2 arcs partition their parent's sweep, so this is P(grandchild | parent), said as such.
+            label: `${grandchild.label} (${((grandchild.probability / gcSum) * 100).toFixed(0)}% of ${child.label})`,
+            midAngle: gcMidAngle, midR: gcMidR, ring: 2,
           });
           childCum += childAngle;
         }
@@ -131,7 +133,8 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
           </g>
         );
       })()}
-      {arcs.filter((_, i) => i < (tree.children?.length ?? 0)).map((arc, i) => {
+      {/* arcs interleave child, grandchildren, next child - label by ring, not by index */}
+      {arcs.filter(arc => arc.ring === 1).map((arc, i) => {
         const lx = cx + (arc.midR + 5) * Math.cos(arc.midAngle);
         const ly = cy + (arc.midR + 5) * Math.sin(arc.midAngle);
         return (

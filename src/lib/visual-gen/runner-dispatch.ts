@@ -13,7 +13,7 @@
  * The providers are deliberately NOT unified behind one spec — each entry keeps its own
  * pins (Hunyuan model, Tripo model + texture quality, TripoSR fidelity) and budget rules.
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ok, err, type Result } from '@/types/result';
@@ -96,6 +96,17 @@ const writeTemp = (name: string, dataUrl: string): string | null => {
   return path;
 };
 
+/**
+ * Drop the temp inputs `writeTemp` made. Handed to each job store as its `onSettled` hook, so
+ * the OS temp dir stops growing by one image per submit. Best-effort and never throws: a file
+ * already gone (or held open on Windows) must not turn a settled job into a failed one.
+ */
+const removeTemps = (paths: readonly string[]) => () => {
+  for (const p of paths) {
+    try { rmSync(p, { force: true }); } catch { /* best-effort cleanup */ }
+  }
+};
+
 /** The single-image front half every image-to-3d entry shares. */
 function singleImage(id: string, input: RunnerStartInput): Result<{ imagePath: string; outputPath: string }, string> {
   if (!input.imageDataUrl) return err('Missing imageDataUrl for image-to-3d');
@@ -139,7 +150,8 @@ function startTripo(input: RunnerStartInput): Result<RunnerStarted, string> {
     if (!imageDataUrl) return err('Missing imageDataUrl for image-to-3d');
     const imagePath = writeTemp(`pof_tripo3d_in_${stamp}`, imageDataUrl);
     if (!imagePath) return err('imageDataUrl must be a base64 PNG/JPG/WebP data URL');
-    return ok({ jobId: startTripoJob({ mode, imagePath, outputPath, ...base }), extras });
+    const jobId = startTripoJob({ mode, imagePath, outputPath, ...base }, undefined, undefined, removeTemps([imagePath]));
+    return ok({ jobId, extras });
   }
   if (!viewDataUrls?.front) return err('multiview-to-3d needs at least a front view (viewDataUrls.front)');
   const views: Partial<Record<TripoView, { path: string }>> = {};
@@ -148,10 +160,16 @@ function startTripo(input: RunnerStartInput): Result<RunnerStarted, string> {
     if (!dataUrl) continue;
     // One temp file PER SLOT — a single-stamp name would mesh the last view four times.
     const path = writeTemp(`pof_tripo_mv_${slot}_${stamp}`, dataUrl);
-    if (!path) return err(`${slot} view must be a base64 PNG/JPG/WebP data URL`);
+    if (!path) {
+      removeTemps(Object.values(views).map((v) => v.path))();
+      return err(`${slot} view must be a base64 PNG/JPG/WebP data URL`);
+    }
     views[slot] = { path };
   }
-  const jobId = startTripoJob({ mode: 'multiview-to-3d', views, outputPath, ...base });
+  const jobId = startTripoJob(
+    { mode: 'multiview-to-3d', views, outputPath, ...base }, undefined, undefined,
+    removeTemps(Object.values(views).map((v) => v.path)),
+  );
   return ok({ jobId, extras: { ...extras, views: Object.keys(views) } });
 }
 
@@ -173,7 +191,10 @@ export const RUNNER_DISPATCH = {
     start: (input) => {
       const io = singleImage('hunyuan3d', input);
       if (!io.ok) return io;
-      const jobId = startHunyuanJob({ ...io.data, assetClass: input.assetClass, model: hunyuanModelFor(input.assetClass).model });
+      const jobId = startHunyuanJob(
+        { ...io.data, assetClass: input.assetClass, model: hunyuanModelFor(input.assetClass).model },
+        undefined, undefined, removeTemps([io.data.imagePath]),
+      );
       return ok({ jobId, extras: { gradedAs: gradedAs(input.assetClass) } });
     },
     getJob: (id) => getHunyuanJob(id),
@@ -183,7 +204,10 @@ export const RUNNER_DISPATCH = {
     start: (input) => {
       const io = singleImage('triposr', input);
       if (!io.ok) return io;
-      const jobId = startTriposrJob({ ...io.data, mcResolution: input.mcResolution, fidelity: true, assetClass: input.assetClass });
+      const jobId = startTriposrJob(
+        { ...io.data, mcResolution: input.mcResolution, fidelity: true, assetClass: input.assetClass },
+        undefined, undefined, removeTemps([io.data.imagePath]),
+      );
       return ok({ jobId, extras: { gradedAs: gradedAs(input.assetClass) } });
     },
     getJob: (id) => getTriposrJob(id),
@@ -201,7 +225,10 @@ export const RUNNER_DISPATCH = {
     start: (input) => {
       const io = singleImage('trellis2', input);
       if (!io.ok) return io;
-      const jobId = startTrellisJob({ ...io.data, assetClass: input.assetClass });
+      const jobId = startTrellisJob(
+        { ...io.data, assetClass: input.assetClass },
+        undefined, undefined, removeTemps([io.data.imagePath]),
+      );
       return ok({ jobId, extras: { gradedAs: gradedAs(input.assetClass) } });
     },
     getJob: (id) => getTrellisJob(id),

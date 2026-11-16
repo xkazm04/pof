@@ -34,3 +34,8 @@ export const SAVE_TYPE = {
 } as const;
 
 export type SaveTypeRole = keyof typeof SAVE_TYPE;
+
+/** Says which panels are hand-typed examples, so they are not read as measurements of the project. */
+export function SampleDataNotice({ children }: { children: string }) {
+  return <p data-sample-notice className={`${SAVE_TYPE.body} text-text-muted border-t border-border pt-3`}>{children}</p>;
+}

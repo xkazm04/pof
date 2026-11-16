@@ -1,0 +1,125 @@
+{
+ "schema": "conform-run/1",
+ "worker": "fbb05570-5bdf-4231-ad70-1e83524dc93a",
+ "subject": "concept-scene-parity",
+ "evaluatedAt": "2026-11-06T23:31:08.042278+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "project-setup-core",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/ProjectSetupModule.tsx:53 This context bootstraps the UE5 project (locate or create it, verify the build, install tooling, export the manifest) and holds no concept image or look scene; a grep of src/components/modules/project-setup for concept, scorecard, lighting, reflection, tone curve and play trace found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "concept",
+    "scorecard",
+    "lighting",
+    "reflection",
+    "tone curve"
+   ]
+  },
+  {
+   "context": "character-simulator",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_character/simulator/SimulatorTab.tsx:21 The simulator scores numeric archetype balance (DPS, survival, sensitivity) and holds no rendered scene or concept image; a grep of the simulator directory for concept, scorecard, lighting, reflection and tone curve found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "concept",
+    "scorecard",
+    "lighting",
+    "reflection",
+    "tone curve"
+   ]
+  },
+  {
+   "context": "ue5-asset-generation-hooks",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/hooks/useSnapshots.ts:4 The only capture surface here is visual regression against an accepted baseline, which an instrument scores (the neighbouring parity-gating ground), not an eye-judged comparison with a concept image; a grep of src/hooks for concept, scorecard, tone curve, play trace and colour grade found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "concept",
+    "scorecard",
+    "tone curve",
+    "colour grade"
+   ]
+  },
+  {
+   "context": "asset-forge",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:39 The forge generates single assets and gates each one in isolation with a geometry critique and CLIP fidelity against its input. That ground belongs to mesh finishing and reference parity, which the golden path hands off. No concept scene or lit placement exists here; a grep of the asset-forge directory for concept, lighting, reflection and tone curve found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "concept",
+    "lighting",
+    "reflection",
+    "tone curve"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "concept-scene-parity",
+   "context": "visual-gen-contact-sheet-ue5-export",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T23:31:08.042278+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "project-setup-core",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:31:08.042278+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "character-simulator",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:31:08.042278+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ue5-asset-generation-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-06T23:31:08.042278+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "asset-forge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

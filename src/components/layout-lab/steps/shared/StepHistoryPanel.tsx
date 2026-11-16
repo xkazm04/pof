@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { tryApiFetch, apiFetch } from '@/lib/api-utils';
 import { StatusTag } from '@/components/ui/StatusTag';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { readProduceDirection } from '@/lib/catalog/produceDirection';
 import type { ArtifactRevision } from '@/lib/pipeline-artifacts-db';
@@ -52,6 +53,7 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [restoreFailure, setRestoreFailure] = useState<{ rev: ArtifactRevision; message: string } | null>(null);
   const [comparing, setComparing] = useState<number | null>(null);
   const [dryRuns, setDryRuns] = useState<Record<number, RevisionDryRun>>({});
   const [compareError, setCompareError] = useState<string | null>(null);
@@ -74,6 +76,12 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   async function compare(rev: ArtifactRevision) {
     if (comparing === rev.id) { setComparing(null); return; }
     setComparing(rev.id);
+    await runDryRun(rev);
+  }
+
+  // Split from `compare` because that one TOGGLES: a Retry calling it from the open row
+  // reads `comparing === rev.id` in its own closure and only closes the row.
+  async function runDryRun(rev: ArtifactRevision) {
     setCompareError(null);
     if (dryRuns[rev.id]) return;
     const res = await tryApiFetch<RevisionDryRun>(REVISIONS_URL, postJson({ revisionId: rev.id, dryRun: true }));
@@ -84,7 +92,7 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
   async function restore(rev: ArtifactRevision) {
     setBusy(true);
     setNotice(null);
-    setError(null);
+    setRestoreFailure(null);
     try {
       const res = await apiFetch<{ artifact: { status: string }; regraded: boolean; archivedStatus: string }>(
         REVISIONS_URL, postJson({ revisionId: rev.id }),
@@ -101,7 +109,7 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
       await load();
       onRestored?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Restore failed');
+      setRestoreFailure({ rev, message: e instanceof Error ? e.message : 'Restore failed' });
     } finally {
       setBusy(false);
     }
@@ -123,11 +131,22 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
       {open && (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {error && <InlineErrorRetry dense message={`Couldn’t load previous versions: ${error}`} onRetry={() => void load()} />}
-          {notice && (
-            <span data-testid="step-history-notice" className={t.fontMono} style={{ fontSize: 13, color: t.warn }}>
-              {notice}
-            </span>
+          {restoreFailure && (
+            <InlineErrorRetry
+              dense
+              message={`Couldn’t restore the version from ${stamp(restoreFailure.rev.updatedAt)}: ${restoreFailure.message}`}
+              onRetry={() => void restore(restoreFailure.rev)}
+            />
           )}
+          {revisions === null && !error && <LoadingRow variant="inline" label="Loading previous versions…" color={t.muted} />}
+          {/* Persistent region: a restore's outcome mounting inside it is announced. */}
+          <div role="status" aria-live="polite" data-testid="step-history-live">
+            {notice && (
+              <span data-testid="step-history-notice" className={t.fontMono} style={{ fontSize: 13, color: t.warn }}>
+                {notice}
+              </span>
+            )}
+          </div>
           {revisions?.length === 0 && (
             <span data-testid="step-history-empty" className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>
               No previous versions — this step has only ever been produced once.
@@ -170,7 +189,10 @@ export function StepHistoryPanel({ t, catalogId, entityId, step, onRestored }: {
                   ↺ Restore
                 </button>
                 {comparing === r.id && compareError && (
-                  <InlineErrorRetry dense message={`Couldn’t compare this version: ${compareError}`} onRetry={() => { setComparing(null); void compare(r); }} />
+                  <InlineErrorRetry dense message={`Couldn’t compare this version: ${compareError}`} onRetry={() => void runDryRun(r)} />
+                )}
+                {comparing === r.id && !dry && !compareError && (
+                  <LoadingRow variant="inline" label="Comparing with the current output…" color={t.muted} />
                 )}
                 {comparing === r.id && dry && (
                   <RevisionCompare

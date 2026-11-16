@@ -25,7 +25,8 @@ export function AskTab() {
 
   const submit = useCallback(() => {
     const text = draft.trim();
-    if (!text) return;
+    // Same gate as every other Materials dispatch: never into a busy session.
+    if (!text || cli.isRunning) return;
     void cli.execute(TaskFactory.askClaude('materials', text, 'Materials'));
     setDraft('');
   }, [draft, cli]);
@@ -43,12 +44,14 @@ export function AskTab() {
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
           placeholder="Ask about materials, shaders, post-process..."
-          className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
+          aria-label="Ask Claude about materials"
+          className="focus-ring flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
         />
         <button
+          type="button"
           onClick={submit}
-          disabled={!draft.trim()}
-          className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+          disabled={!draft.trim() || cli.isRunning}
+          className="focus-ring px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
           style={{
             backgroundColor: `${MODULE_COLORS.content}15`,
             color: MODULE_COLORS.content,

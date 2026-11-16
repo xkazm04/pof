@@ -9,7 +9,7 @@ import {
 } from '@/lib/chart-colors';
 import { SectionHeader, CornerBrackets, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { SimulationStats } from '@/lib/item-dna/rolling-engine';
-import { ACCENT, AXIS_CONFIGS } from './data';
+import { ACCENT, AXIS_CONFIGS, affixDisplayName } from './data';
 
 interface Props {
   stats: SimulationStats;
@@ -133,7 +133,7 @@ export function SimulatorResults({ stats }: Props) {
               >
                 <CornerBrackets color={color} size={5} />
                 <span className="font-bold truncate" style={{ color }}>
-                  {entry.affix.isPrefix ? entry.affix.name : `Item ${entry.affix.name}`}
+                  {affixDisplayName(entry.affix)}
                 </span>
                 <NeonBar pct={barPct} color={color} height={4} />
                 <span className="text-text-muted text-right tabular-nums">

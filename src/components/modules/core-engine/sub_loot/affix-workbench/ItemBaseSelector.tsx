@@ -29,6 +29,7 @@ export function ItemBaseSelector({
             return (
               <motion.button key={base.name}
                 onClick={() => onSelectBase(base)}
+                aria-pressed={isSelected}
                 whileHover={{ scale: 1.03 }}
                 className="px-2 py-1.5 rounded-lg text-left transition-all"
                 style={{

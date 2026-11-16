@@ -44,6 +44,7 @@ import {
 } from '@/components/story/orrery/render/scene';
 import { drawHubLabel, drawLabelSweep } from '@/components/story/orrery/render/drawLabels';
 import { drawHierChords, drawHierRim, drawAxisTicks } from '@/components/story/orrery/render/drawRim';
+import { lensStatus, markDot, markSector, newStatusMarks, strokeStatusMarks } from '@/components/story/orrery/render/statusMark';
 
 const HUB = ORRERY_GEOMETRY.hubRadius;
 
@@ -73,6 +74,8 @@ export function drawHierarchy(ctx: CanvasRenderingContext2D, input: SceneInput):
   const labels: LabelSlot[] = [];
   const units: RimUnit[] = [];
   const span = unitSpan(vs);
+  // Stale / unverified outlines, queued per drawn sector and stroked once after the ring pass.
+  const marks = newStatusMarks();
 
   const drawSegment = (n: OrreryNode, a0: number, a1: number, r0: number, r1: number, px: number) => {
     const fill = fillFor(model, n, lens, palette);
@@ -94,6 +97,7 @@ export function drawHierarchy(ctx: CanvasRenderingContext2D, input: SceneInput):
       ctx.strokeStyle = palette.bg;
       ctx.stroke();
     }
+    markSector(marks, lensStatus(model, n, lens), a0, a1, r0, r1, cam.scale);
     if (px >= 7 || (r1 - r0) * cam.scale >= 14) {
       labels.push({ i: n.i, a0, a1, r0, r1, fill: css });
     }
@@ -105,6 +109,7 @@ export function drawHierarchy(ctx: CanvasRenderingContext2D, input: SceneInput):
     applyFill(ctx, blockFillFor(model, n, lens, palette), hatch, palette.hatch.ground);
     ctx.fill();
     stats.blocks++;
+    markSector(marks, lensStatus(model, n, lens), a0, a1, rIn, rOut, cam.scale);
   };
 
   const visit = (i: NodeIx): void => {
@@ -144,6 +149,7 @@ export function drawHierarchy(ctx: CanvasRenderingContext2D, input: SceneInput):
   visit(view.focus);
   stats.units = units.length;
   void span;
+  strokeStatusMarks(ctx, marks, palette, cam.scale);
 
   if (show.paths) stats.chords = drawHierChords(ctx, input);
   drawHub(ctx, input);
@@ -178,6 +184,7 @@ function drawHub(ctx: CanvasRenderingContext2D, input: SceneInput): void {
 
   if (view.focus !== view.root) return;
 
+  const marks = newStatusMarks();
   ctx.lineWidth = 1 / cam.scale;
   for (const i of model.dockTmpl) {
     const pos = model.dockPos.get(i);
@@ -201,7 +208,9 @@ function drawHub(ctx: CanvasRenderingContext2D, input: SceneInput): void {
     if (bad) ctx.setLineDash([3 / cam.scale, 2.4 / cam.scale]);
     ctx.stroke();
     ctx.setLineDash([]);
+    markDot(marks, lensStatus(model, n, lens), d.x, d.y, d.r, cam.scale);
   }
+  strokeStatusMarks(ctx, marks, palette, cam.scale);
   for (const i of model.dockEntry) {
     const pos = model.dockPos.get(i);
     if (!pos) continue;

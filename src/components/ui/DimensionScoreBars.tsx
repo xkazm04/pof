@@ -1,12 +1,14 @@
 'use client';
 
 import { MeterBar } from '@/components/ui/MeterBar';
-import { qualityColor } from '@/lib/chart-colors';
+import { scoreBandToken } from '@/lib/chart-colors';
+
+const bandColor = (score: number) => scoreBandToken(score).color;
 
 /**
  * DimensionScoreBars — the shared renderer for a judge verdict's per-dimension 0-100 craft
  * scores (Quality Program WS2). One labeled {@link MeterBar} per rubric dimension, fill and
- * value tinted by {@link qualityColor}. Consumed by BOTH the /status EvidenceModal (lab theme)
+ * value tinted by the 0-100 score band. Consumed by BOTH the /status EvidenceModal (lab theme)
  * and the Evaluator Verdicts detail modal (app theme) so the two never drift.
  *
  * `variant` switches only the label/heading typography for the two surfaces; the bars themselves
@@ -42,8 +44,8 @@ export function DimensionScoreBars({
         {entries.map(([key, score]) => (
           <div key={key} className="grid grid-cols-[8.5rem_1fr_2.25rem] items-center gap-2">
             <span className={lab ? 'text-xs truncate' : 'text-xs text-text truncate'} style={labelStyle}>{key}</span>
-            <MeterBar value={score} color={qualityColor} height={6} ariaLabel={`${key} score`} valueText={`${score} of 100`} />
-            <span className="text-xs tabular-nums text-right" style={{ color: qualityColor(score) }}>{score}</span>
+            <MeterBar value={score} color={bandColor} height={6} ariaLabel={`${key} score`} valueText={`${score} of 100`} />
+            <span className="text-xs tabular-nums text-right" style={{ color: bandColor(score) }}>{score}</span>
           </div>
         ))}
       </div>

@@ -1,0 +1,38 @@
+[
+  {
+    "file": "shot-1.jpg",
+    "prompt": "In-game screenshot of a shipped top-down crime video game, 16:9. Fixed overhead camera at 70 degrees pitch, long lens, almost orthographic. Gameplay scale: characters are small, each about one tenth of screen height. The whole frame is printed as a two-ink risograph on warm cream paper: halftone dot shading, slightly misregistered ink plates, paper grain, bold near-black outlines, flat shapes. Scene: night, a factory loading yard with painted lines, pallets and a chain-link fence. Centre: RIVET, a tall narrow scorched-steel welding robot with a welder-mask head, seen from above, drives a crackling electric fist into a riot cop; four small riot cops with round shields close in; one lies flat on a vermilion rubber-stamp splat; a dropped pistol on the asphalt. Four faint translucent teal robot silhouettes hover around Rivet. Palette only: cream F2E8D5, vermilion E8502A, teal 1FB5A8, violet-black ink 17131B. HUD printed like office forms: top-left a punch-clock card 'CASH $1,240'; top-right a row of five rubber stamps 'WANTED' with two inked; bottom-left a printed form 'STATIC' with four checkboxes LUCID CROWDED CHOIR CHORUS, CROWDED ticked in pen; bottom-right a ticket 'FISTS'; bottom-centre a small teal caption 'HAULER: again. harder.' No photorealism, no real logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image-3.0-pro",
+    "width": 1664,
+    "height": 928,
+    "generationNote": "Attempt 1 kept. The camera sits a little closer than final gameplay zoom, so characters are about 1/5 of frame height. The ghosts read as humanoid silhouettes rather than the four specific dead robots."
+  },
+  {
+    "file": "shot-2.jpg",
+    "prompt": "In-game screenshot of a shipped top-down crime video game, 16:9, overhead camera at 70 degrees, near-orthographic, gameplay scale. Rendered as a two-ink risograph print on cream paper: halftone dots, misregistered plates, paper grain, bold dark outlines, flat low-poly shapes. Scene: dusk, a city intersection with crosswalks, low boxy buildings seen from above with flat roofs and water tanks. Centre: RIVET, a small narrow welding robot, one arm raised; thin teal ink lines run from its hand to three boxy sedans. The first hijacked sedan swerves and T-bones a police cruiser; the second drives itself away with a translucent teal ghost driver trailing long-exposure streaks; the third spins toward a cop barricade. Small pedestrians scatter. Palette only: cream F2E8D5, vermilion E8502A, teal 1FB5A8, violet-black ink 17131B; teal is used only for the soul power and ghosts. HUD printed like forms: bottom-centre four stamped portrait squares labelled GEARBOX SENTRY HAULER MOP with GEARBOX circled in teal and a cooldown ring; bottom-left form 'STATIC' with CHOIR ticked and pen scribbles over it; top-left punch card 'CASH $8,915'; top-right three of five 'WANTED' stamps inked. No photorealism, no real logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image",
+    "width": 1664,
+    "height": 928,
+    "generationNote": "Attempt 1 kept. The soul-selector portraits came out as human faces; the souls are dead robots, so treat these as placeholders. WANTED shows 4 stamps instead of 3 of 5, and the buildings drift toward brick-maroon, outside the four-ink rule."
+  },
+  {
+    "file": "shot-3.jpg",
+    "prompt": "In-game screenshot of a shipped top-down open-city crime video game, 16:9, overhead camera at 65 degrees pitch pulled back for a chase, near-orthographic, gameplay scale with cars small. The frame is a two-ink risograph print on cream paper: halftone dot shading, misregistered plates, visible paper grain, bold dark outlines. Scene: night, a long four-lane avenue between blocks of flat-roofed buildings, rooftop billboards, a rail bridge. A small boxy stolen sedan races up the avenue; six police cruisers chase it in a wedge, sirens drawn as vermilion starbursts; an olive military armoured truck pushes out of a side street; the circle of a helicopter searchlight sweeps the road; wrecked cars burn behind. Palette only: cream F2E8D5, vermilion E8502A, teal 1FB5A8, violet-black ink 17131B. HUD printed like forms and stamps: top-right a row of six 'WANTED' rubber stamps, five inked, the sixth stamped 'ARMY'; top-left punch card 'CASH $22,300'; right edge a small printed street-map minimap with a vermilion route line; top-centre a torn job ticket 'JOB: DELIVER THE FAX 01:42'; bottom-left form 'STATIC' with LUCID ticked. No photorealism, no real logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image",
+    "width": 1664,
+    "height": 928,
+    "generationNote": "Attempt 1 kept. This frame drifts furthest from the palette: violet ink dominates and teal appears on billboards, which breaks the rule that teal belongs only to the dead. The stamp text is doubled (\"WANTED WANTED\") and the camera pitch is lower than specified. Kept because it reads as a real chase frame; in production the plate rule is enforced by the shader, which concept art cannot do."
+  },
+  {
+    "file": "rivet.jpg",
+    "prompt": "Character concept art of RIVET, an original video game robot protagonist, full body, front three-quarter view, printed as a two-colour risograph poster on warm cream paper. A tall narrow exhausted factory spot-welding robot: a welder-mask visor for a face with two thin teal slit eyes, one forearm ends in a welding torch, the other in a heavy three-finger clamp, scorched steel plates with stencilled number L9-04, a hazard-striped collar, an employee badge on a lanyard, a slight tired slouch. Rising from its chest like steam are four translucent teal ghosts of dead factory robots, mid-argument: a nervous driver bot with a steering-wheel head, a paranoid security-turret bot, an enormous gentle hydraulic press bot, and a tiny floor-cleaning disc bot. Bold black ink outlines, halftone dot shading, slight misregistration of the ink plates, visible paper grain, flat shapes. Palette only: cream F2E8D5, vermilion E8502A, teal 1FB5A8, near-black violet ink 17131B. Strong readable silhouette, centred, portrait. No text, no logos, no watermark.",
+    "provider": "qwen-image",
+    "model": "qwen-image-3.0",
+    "width": 1104,
+    "height": 1472,
+    "generationNote": "Planned on Leonardo (portrait 1024x1536); Leonardo refused before generating (\"not enough api tokens\"), so it was rendered on qwen-image at 1104x1472 (3:4 portrait). Attempt 1 kept. It shows six ghosts instead of four. The silhouette is strong."
+  }
+]

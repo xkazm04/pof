@@ -128,10 +128,11 @@ export function ZonePropertyPanel({
           {OCCLUSION_MODES.map((mode) => (
             <button
               key={mode}
+              type="button"
               onClick={() => buf.pick('occlusionMode', mode)}
               aria-label={`Occlusion ${mode}`}
               aria-pressed={v.occlusionMode === mode}
-              className={`flex-1 py-1 rounded text-2xs text-center transition-colors ${
+              className={`flex-1 py-1 rounded text-2xs text-center transition-colors focus-ring-inset ${
                 v.occlusionMode === mode
                   ? 'bg-border-bright text-text'
                   : 'bg-surface text-text-muted hover:bg-surface-hover'

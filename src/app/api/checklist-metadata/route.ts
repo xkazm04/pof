@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getDb } from '@/lib/db';
-import type { SubModuleId } from '@/types/modules';
+import { SUB_MODULE_IDS, type SubModuleId } from '@/types/modules';
 
-export type Priority = 'none' | 'critical' | 'important' | 'nice-to-have';
+const PRIORITIES = ['none', 'critical', 'important', 'nice-to-have'] as const;
+export type Priority = (typeof PRIORITIES)[number];
 
 export interface ChecklistMetadataRow {
   moduleId: SubModuleId;
@@ -50,7 +51,11 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { moduleId, itemId, priority, notes } = body as {
       moduleId: SubModuleId;
       itemId: string;
@@ -59,6 +64,15 @@ export async function PUT(req: NextRequest) {
     };
 
     if (!moduleId || !itemId) return apiError('moduleId and itemId are required', 400);
+    // Closed vocabularies: a row the GET hands back typed as Priority / SubModuleId must be one.
+    if (!(SUB_MODULE_IDS as readonly unknown[]).includes(moduleId)) {
+      return apiError(`Unknown moduleId: ${String(moduleId)}`, 400);
+    }
+    if (typeof itemId !== 'string') return apiError('itemId must be a string', 400);
+    if (priority !== undefined && !(PRIORITIES as readonly unknown[]).includes(priority)) {
+      return apiError(`priority must be one of: ${PRIORITIES.join(', ')}`, 400);
+    }
+    if (notes !== undefined && typeof notes !== 'string') return apiError('notes must be a string', 400);
 
     const db = getDb();
 

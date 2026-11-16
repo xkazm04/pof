@@ -130,3 +130,28 @@ describe('revision archiving', () => {
     expect(rev.archivedAt).toBeTruthy();
   });
 });
+
+describe('upsertArtifact — archive and write are ONE unit', () => {
+  // The archive used to run BEFORE the write's own serialisation and outside its transaction,
+  // so a write that then failed (an unserialisable blob, a NOT NULL violation, SQLITE_BUSY from
+  // a second writer on the shared DB) left a revision of content that was never superseded —
+  // and the next successful write archived the same version AGAIN.
+  it('a write that fails leaves no revision behind', () => {
+    upsertArtifact(art({ data: { brief: 'v1' } }));
+    expect(() => upsertArtifact(art({ data: { brief: 'v2', n: BigInt(1) } }))).toThrow();
+    expect(listRevisions(CAT, ENT, STEP)).toEqual([]);
+  });
+
+  it('a write rejected by the table leaves no revision behind', () => {
+    upsertArtifact(art({ data: { brief: 'v1' } }));
+    expect(() => upsertArtifact(art({ data: { brief: 'v2' }, status: null as unknown as 'pass' }))).toThrow();
+    expect(listRevisions(CAT, ENT, STEP)).toEqual([]);
+  });
+
+  it('a failed write followed by a good one archives the superseded version exactly once', () => {
+    upsertArtifact(art({ data: { brief: 'v1' } }));
+    expect(() => upsertArtifact(art({ data: { brief: 'v2' }, status: null as unknown as 'pass' }))).toThrow();
+    upsertArtifact(art({ data: { brief: 'v2' } }));
+    expect(listRevisions(CAT, ENT, STEP).map((r) => r.data.brief)).toEqual(['v1']);
+  });
+});

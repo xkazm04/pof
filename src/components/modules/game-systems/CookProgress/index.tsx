@@ -28,6 +28,7 @@ export function CookProgress({ request, projectPath, onComplete }: CookProgressP
     autoScroll,
     setAutoScroll,
     copied,
+    copyFailed,
     listRef,
     displayedLines,
     handleListScroll,
@@ -196,13 +197,16 @@ export function CookProgress({ request, projectPath, onComplete }: CookProgressP
             </button>
             <button
               type="button"
-              onClick={handleCopyAll}
+              onClick={() => { void handleCopyAll(); }}
               data-testid="pof-cook-log-copy"
               title="Copy all log lines with timestamps"
               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              style={copyFailed ? { color: STATUS_ERROR } : undefined}
             >
-              {copied ? <Check className="w-3 h-3" aria-hidden="true" /> : <Copy className="w-3 h-3" aria-hidden="true" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? <Check className="w-3 h-3" aria-hidden="true" />
+                : copyFailed ? <XCircle className="w-3 h-3" aria-hidden="true" />
+                  : <Copy className="w-3 h-3" aria-hidden="true" />}
+              {copied ? 'Copied' : copyFailed ? 'Copy failed' : 'Copy'}
             </button>
           </div>
         </div>

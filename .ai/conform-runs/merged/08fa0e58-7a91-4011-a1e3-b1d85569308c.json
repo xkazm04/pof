@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "08fa0e58-7a91-4011-a1e3-b1d85569308c",
+ "subject": "self-healing",
+ "evaluatedAt": "2026-10-31T22:32:52.062186+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "self-healing",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/AiDiagnosisCard.tsx:82 The context's only path from a diagnosis to a fix is copying a prompt to the clipboard for a person to run, so no machine applies a change on its own diagnosis and the self-healing precondition does not hold; searching the evaluator directory for rollback, remediat, healer, selfHeal and revert found nothing, and the crash libs (src/lib/crash-analyzer, src/lib/crash-health) contain no automated healer either.",
+   "techniques": [
+    {
+     "technique": "blast-radius-bounds",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/AiDiagnosisCard.tsx:82 The fix goes to the clipboard, and from there a person decides what to run. Nothing here mutates anything automatically, so there is no surface to bound."
+    },
+    {
+     "technique": "auto-rollback",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/AiDiagnosisCard.tsx:162 The UI asks the person to check the prompt before running it. No change is applied by machine, so there is nothing to watch or roll back."
+    },
+    {
+     "technique": "strategy-selection",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/AiDiagnosisCard.tsx:146 One fix prompt per diagnosis is shown, and nothing runs it. No strategy tree picks among remediations."
+    },
+    {
+     "technique": "failure-diagnosis",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/NoDiagnosisNotice.tsx:52 The context does a diagnosis-like job well: it matches signatures, marks strong vs weak matches, and has an honest 'no diagnosis' lane. But all of it feeds a person, never a healer, so the technique's healer-facing precondition does not hold."
+    },
+    {
+     "technique": "incident-promotion",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:309 Crashes are grouped into signature patterns so a person can triage them. No healer gives up and promotes an incident, so the futility and dedup rules for healer incidents do not apply."
+    }
+   ],
+   "absenceTerms": [
+    "rollback",
+    "remediat",
+    "healer",
+    "selfHeal",
+    "revert"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-31T22:32:52.062186+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "self-healing"
+   ],
+   "techniques": [
+    "auto-rollback",
+    "blast-radius-bounds",
+    "failure-diagnosis",
+    "incident-promotion",
+    "strategy-selection"
+   ],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

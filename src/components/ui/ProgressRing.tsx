@@ -17,7 +17,10 @@ export function ProgressRing({ value, size = 48, strokeWidth = 4, color = MODULE
   const prefersReduced = useReducedMotion();
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const offset = isLoading ? circumference * 0.75 : circumference - (value / 100) * circumference;
+  // A NaN or out-of-range value must not reach the arc, the readout or aria-valuenow.
+  const shown = Number.isFinite(value) ? value : 0;
+  const clamped = Math.max(0, Math.min(100, shown));
+  const offset = isLoading ? circumference * 0.75 : circumference - (clamped / 100) * circumference;
 
   const shouldSpin = isLoading && !prefersReduced;
 
@@ -25,10 +28,10 @@ export function ProgressRing({ value, size = 48, strokeWidth = 4, color = MODULE
     <div
       className={`relative inline-flex items-center justify-center ${className}`}
       role="progressbar"
-      aria-valuenow={isLoading ? undefined : value}
+      aria-valuenow={isLoading ? undefined : clamped}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label={label ?? `${value}% complete`}
+      aria-label={label ?? `${shown}% complete`}
     >
       <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={radius} stroke="var(--border)" strokeWidth={strokeWidth} fill="none" />
@@ -43,7 +46,7 @@ export function ProgressRing({ value, size = 48, strokeWidth = 4, color = MODULE
       {isLoading ? (
         <span className={`absolute text-xs font-semibold ${prefersReduced ? '' : 'animate-pulse'}`} style={{ color }}>…</span>
       ) : (
-        <span className="absolute text-xs font-semibold" style={{ color }}>{value}</span>
+        <span className="absolute text-xs font-semibold" style={{ color }}>{shown}</span>
       )}
     </div>
   );

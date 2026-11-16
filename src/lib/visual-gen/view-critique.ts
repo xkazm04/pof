@@ -111,8 +111,12 @@ export function parseViewCritiqueReply(raw: string): ViewCritiqueReply {
   if (!Number.isFinite(severityRaw)) {
     return { ok: false, error: `SEVERITY was not a number ("${severityMatch[1]}")` };
   }
+  // Below the scale is a malformed answer, and clamping it to 0 would read as a clean view.
+  if (severityRaw < 0) {
+    return { ok: false, error: `SEVERITY ${severityRaw} is below the 0-${SEVERITY_MAX} scale` };
+  }
   const body = defectsMatch[1].trim();
-  const defects = /^none$/i.test(body)
+  const defects = /^none[.!]?$/i.test(body)
     ? []
     : body.split(',').map((d) => d.trim()).filter(Boolean);
   return { ok: true, defects, severity: Math.max(0, Math.min(SEVERITY_MAX, Math.round(severityRaw))) };

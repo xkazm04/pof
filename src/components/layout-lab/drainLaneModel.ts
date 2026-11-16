@@ -39,6 +39,9 @@ export function drainProblem(summary: BatchDrainSummary | null): string | null {
   if (summary.entitiesLocked > 0) return `refused — another drain held the lease (${plural(summary.entitiesLocked, 'set')} locked)`;
   if (ranNothing(summary)) return `0 gates ran (${summary.skipped} skipped — no UE editor answered on the bridge)`;
   if (summary.failed > 0) return `${summary.failed} of ${plural(summary.ran, 'gate')} failed`;
+  if (summary.deferred > 0 && summary.passed + summary.failed < summary.ran) {
+    return `${summary.deferred} of ${plural(summary.ran, 'gate')} still deferred`;
+  }
   return null;
 }
 

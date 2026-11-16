@@ -13,6 +13,8 @@ export interface UseGenreEvolutionResult {
   stats: TelemetryStats | null;
   history: TelemetrySnapshot[];
   loading: boolean;
+  /** Why the last read of stats/history failed; null when it succeeded. A failed read is NOT an empty history. */
+  loadError: string | null;
   scanning: boolean;
   /** Human-readable reason the last scan failed; null when the last scan succeeded or none ran. */
   scanError: string | null;
@@ -36,8 +38,8 @@ const EMPTY: GenreEvolutionData = { stats: null, history: [] };
 const fetchGenreData = async (projectPath: string | null): Promise<GenreEvolutionData> => {
   const q = projectPath ? `&projectPath=${encodeURIComponent(projectPath)}` : '';
   const [stats, history] = await Promise.all([
-    apiFetch<TelemetryStats>(`/api/telemetry?action=stats${q}`).catch(() => null),
-    apiFetch<TelemetrySnapshot[]>(`/api/telemetry?action=history&limit=10${q}`).catch(() => [] as TelemetrySnapshot[]),
+    apiFetch<TelemetryStats>(`/api/telemetry?action=stats${q}`),
+    apiFetch<TelemetrySnapshot[]>(`/api/telemetry?action=history&limit=10${q}`),
   ]);
   return { stats, history };
 };
@@ -45,7 +47,7 @@ const fetchGenreData = async (projectPath: string | null): Promise<GenreEvolutio
 export function useGenreEvolution(): UseGenreEvolutionResult {
   const projectPath = useProjectStore((s) => s.projectPath);
   const fetcher = useCallback(() => fetchGenreData(projectPath), [projectPath]);
-  const { data, isLoading: loading, refetch: refresh } = useCRUD<GenreEvolutionData>(
+  const { data, isLoading: loading, error: loadError, refetch: refresh } = useCRUD<GenreEvolutionData>(
     '/api/telemetry',
     EMPTY,
     { fetcher },
@@ -99,6 +101,7 @@ export function useGenreEvolution(): UseGenreEvolutionResult {
     stats: data.stats,
     history: data.history,
     loading,
+    loadError,
     scanning,
     scanError,
     refresh,

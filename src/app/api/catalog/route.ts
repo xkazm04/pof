@@ -5,17 +5,25 @@ import { listLifecycle, getLifecycle, upsertLifecycle } from '@/lib/catalog-db';
 import { generationCallbackSchema, lifecycleStateSchema } from '@/lib/catalog/validation';
 import { syncEntityLifecycle } from '@/lib/catalog/headless';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { seededEntities } from '@/lib/catalog/seed';
 import { transitionOutcome } from '@/lib/catalog/generationPlan';
 import { recordTrialForVariantId } from '@/lib/prompt-evolution/engine';
 import { STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
 import { logger } from '@/lib/logger';
 
-/** GET /api/catalog?catalogId=spellbook → LifecycleRecord[] */
+/** GET /api/catalog?catalogId=spellbook → LifecycleRecord[] (404 for a catalog nothing knows) */
 export async function GET(req: NextRequest) {
   try {
     const catalogId = req.nextUrl.searchParams.get('catalogId');
     if (!catalogId) return apiError('catalogId is required', 400);
-    return apiSuccess(listLifecycle(catalogId));
+    const rows = listLifecycle(catalogId);
+    // Same answer as /entities and /lifecycle for a catalog nothing knows (a typo reads as
+    // "no such catalog", not "no entities yet"). A catalog that holds rows, declares a pipeline
+    // or seeds entities is known — including unregistered synthetic ones (loot-filter) with rows.
+    if (!rows.length && !getCatalogPipeline(catalogId) && !seededEntities(catalogId).length) {
+      return apiError(`Unknown catalog: ${catalogId}`, 404);
+    }
+    return apiSuccess(rows);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Catalog GET failed', 500);
   }
@@ -37,7 +45,12 @@ export async function POST(req: NextRequest) {
   try {
     const denied = requireOperator(req);
     if (denied) return denied;
-    const body = await req.json();
+    // A callback body that is not a JSON object is the CALLER's error (400), not a server
+    // fault: `null` used to throw on `body.action` and malformed JSON surfaced as a 500.
+    const body = (await req.json().catch(() => undefined)) as Record<string, unknown> | undefined;
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     if (body.action !== 'transition') return apiError(`Unknown action: ${body.action}`, 400);
 
     const next = lifecycleStateSchema.safeParse(body.nextLifecycle);

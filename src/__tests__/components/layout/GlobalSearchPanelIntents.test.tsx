@@ -33,7 +33,7 @@ const qa = SUB_MODULE_MAP['arpg-combat']!.quickActions[0];
 async function openWithActionRow() {
   render(<GlobalSearchPanel />);
   act(() => { fireEvent.keyDown(window, { key: 'k', ctrlKey: true }); });
-  const input = await screen.findByRole('textbox', { name: /search checklist items/i });
+  const input = await screen.findByRole('combobox', { name: /search checklist items/i });
   fireEvent.change(input, { target: { value: qa.label } });
   await screen.findByText(qa.label);
   return input;

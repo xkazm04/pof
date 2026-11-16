@@ -5,7 +5,7 @@ import { Brain } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { OPACITY_8, STATUS_WARNING, ACCENT_VIOLET, STATUS_SUBDUED, withOpacity } from '@/lib/chart-colors';
 import { SMART_LOOT_DATA } from '../_shared/data';
-import { smartLootLift } from '../simulation/lootSimEngine';
+import { smartLootLift, isHighGearGap } from '../simulation/lootSimEngine';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 
 export function SmartLoot() {
@@ -20,7 +20,10 @@ export function SmartLoot() {
           <span className="text-2xs text-text-muted">{smartMode ? 'Smart' : 'Raw'}</span>
           <button
             onClick={() => setSmartMode((v) => !v)}
-            className="w-8 h-4 rounded-full relative transition-colors"
+            role="switch"
+            aria-checked={smartMode}
+            aria-label="Smart loot mode"
+            className="w-8 h-4 rounded-full relative transition-colors focus-ring cursor-pointer"
             style={{ backgroundColor: smartMode ? ACCENT_VIOLET : STATUS_SUBDUED }}
           >
             <motion.div
@@ -56,7 +59,7 @@ export function SmartLoot() {
                 <span className="text-2xs font-mono w-8 text-right" style={{ color: smartMode ? ACCENT_VIOLET : STATUS_SUBDUED }}>
                   {activePct}%
                 </span>
-                {slot.gearScoreGap > 10 && (
+                {isHighGearGap(slot.gearScoreGap) && (
                   <span className="text-2xs font-mono px-1 rounded" style={{ backgroundColor: withOpacity(STATUS_WARNING, OPACITY_8), color: STATUS_WARNING }}>
                     Gap:{slot.gearScoreGap}
                   </span>

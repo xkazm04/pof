@@ -17,16 +17,16 @@ import { isLootSectionId, lootMetricsView, type LootSectionId, type MetricReadin
 
 /** One glyph per arpg-loot section; each receives its reading from the one view. */
 const GLYPHS = {
-  pipeline: () => <PipelineMetric />,
+  pipeline: (r) => <PipelineMetric reading={r} />,
   weights: () => <WeightsMetric />,
-  'world-items': () => <WorldItemsMetric />,
+  'world-items': (r) => <WorldItemsMetric reading={r} />,
   treemap: () => <TreemapMetric />,
-  histogram: () => <HistogramMetric />,
-  simulator: () => <SimulatorMetric />,
+  histogram: (r) => <HistogramMetric reading={r} />,
+  simulator: (r) => <SimulatorMetric reading={r} />,
   'co-occurrence': (r) => <CoOccurrenceMetric reading={r} />,
   timer: (r) => <TimerMetric reading={r} />,
   drought: (r) => <DroughtMetric reading={r} />,
-  beacon: () => <BeaconMetric />,
+  beacon: (r) => <BeaconMetric reading={r} />,
   impact: (r) => <ImpactMetric reading={r} />,
 } satisfies Record<LootSectionId, (reading: MetricReading) => ReactNode>;
 
@@ -47,10 +47,12 @@ function LootMetric({ id }: { id: LootSectionId }) {
   const reading = useLootMetricsView()[id];
   const glyph = GLYPHS[id](reading);
   if (reading.basis !== 'fixture') return <>{glyph}</>;
-  // Hand-authored numbers say so instead of posing as measured ones.
+  // Hand-authored numbers say so instead of posing as measured ones - on hover (title)
+  // and in the text assistive tech reads, since the glyph marks are aria-hidden.
   return (
     <span className="inline-flex" title={`${reading.detail ?? reading.unit} - sample data, not measured`}>
       {glyph}
+      <span className="sr-only"> (sample data, not measured)</span>
     </span>
   );
 }

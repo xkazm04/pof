@@ -160,6 +160,12 @@ describe('drainLane — a finished drain is reported by its OUTCOME, not as idle
     expect(lane.label).toMatch(/· failed$/);
   });
 
+  it('a batch whose gates all ran but stayed deferred is attention, never a clean Done', () => {
+    const lane = drainLane({ runs: [batchRun({ summary: { ...emptyBatchSummary(), entitiesRun: 2, ran: 20, deferred: 20 } })], lease: FREE, leaseProbe: 'ok' });
+    expect(lane.state).toBe('attention');
+    expect(lane.label).toMatch(/20 of 20 gates still deferred/);
+  });
+
   it('a locked or errored batch is attention too', () => {
     expect(drainLane({ runs: [batchRun({ summary: { ...emptyBatchSummary(), entitiesLocked: 2 } })], lease: FREE, leaseProbe: 'ok' }).state).toBe('attention');
     expect(drainLane({ runs: [batchRun({ summary: { ...emptyBatchSummary(), entitiesErrored: 2 } })], lease: FREE, leaseProbe: 'ok' }).state).toBe('attention');

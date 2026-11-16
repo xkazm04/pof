@@ -15,8 +15,6 @@ export interface SubsystemDef {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   endpoints: readonly EndpointDef[];
-  /** If true, the subsystem is declared but not yet implemented in the C++ plugin. */
-  notIntegrated?: boolean;
 }
 
 // ── Health state ────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import {
   UserPlus, Users, Volume2, Workflow, Wrench, Zap,
 } from 'lucide-react';
 import type { CategoryDefinition, SubModuleDefinition, SubModuleId, ChecklistItem, QuickAction } from '@/types/modules';
+import { MODULE_COLORS, ACCENT_ORANGE } from '@/lib/chart-colors';
 import {
   SAVE_GAME_CLASS, SAVE_SCHEMA_VERSION, SAVE_VERSION_FIELD, SAVE_PERSISTED_FIELDS, SAVE_EPHEMERAL_FIELDS,
   saveGamePropertyDeclarations,
@@ -384,65 +385,6 @@ const ARPG_QUICK_ACTIONS: Record<string, QuickAction[]> = {
   ],
 };
 
-export const CATEGORIES: CategoryDefinition[] = [
-  {
-    id: 'project-setup',
-    label: 'Project Setup',
-    icon: Rocket,
-    accentColor: '#00ff88',
-    accentColorVar: 'var(--setup)',
-    subModules: [],
-  },
-  {
-    id: 'core-engine',
-    label: 'Core Engine',
-    icon: Code,
-    accentColor: '#3b82f6',
-    accentColorVar: 'var(--core)',
-    subModules: [], // Driven by CORE_ENGINE_IDS
-  },
-  {
-    id: 'content',
-    label: 'Content',
-    icon: Palette,
-    accentColor: '#f59e0b',
-    accentColorVar: 'var(--content)',
-    subModules: ['models', 'animations', 'materials', 'level-design', 'ui-hud', 'audio'],
-  },
-  {
-    id: 'game-systems',
-    label: 'Game Systems',
-    icon: Gamepad2,
-    accentColor: '#8b5cf6',
-    accentColorVar: 'var(--systems)',
-    subModules: ['ai-behavior', 'physics', 'multiplayer', 'save-load', 'input-handling', 'dialogue-quests', 'packaging', 'blueprint-transpiler'],
-  },
-  {
-    id: 'evaluator',
-    label: 'Evaluator',
-    icon: Radar,
-    accentColor: '#ef4444',
-    accentColorVar: 'var(--evaluator)',
-    subModules: ['game-design-doc'],
-  },
-  {
-    id: 'game-director',
-    label: 'Game Director',
-    icon: Clapperboard,
-    accentColor: '#f97316',
-    accentColorVar: 'var(--director)',
-    subModules: [],
-  },
-  {
-    id: 'visual-gen',
-    label: 'Asset Studio',
-    icon: Shapes,
-    accentColor: '#06b6d4',
-    accentColorVar: 'var(--visual-gen)',
-    subModules: ['asset-viewer', 'asset-forge', 'material-lab', 'blender-pipeline', 'asset-browser', 'import-automation', 'auto-rig', 'procedural-engine', 'scene-composer'],
-  },
-];
-
 // ─── Core Engine module IDs ────────────────────────────────────────────────────────
 
 const CORE_ENGINE_IDS = [
@@ -451,6 +393,67 @@ const CORE_ENGINE_IDS = [
   'arpg-progression', 'arpg-world', 'arpg-save', 'arpg-polish',
   'core-engine-plan', // Plan pseudo-module at end
 ] as const;
+
+export const CATEGORIES: CategoryDefinition[] = [
+  {
+    id: 'project-setup',
+    label: 'Project Setup',
+    icon: Rocket,
+    accentColor: MODULE_COLORS.setup,
+    accentColorVar: 'var(--setup)',
+    subModules: [],
+  },
+  {
+    id: 'core-engine',
+    label: 'Core Engine',
+    icon: Code,
+    accentColor: MODULE_COLORS.core,
+    accentColorVar: 'var(--core)',
+    // Declared like every other category, so every reader of subModules (search
+    // index, search intents, getSubModulesForCategory) sees the arpg-* modules.
+    subModules: [...CORE_ENGINE_IDS],
+  },
+  {
+    id: 'content',
+    label: 'Content',
+    icon: Palette,
+    accentColor: MODULE_COLORS.content,
+    accentColorVar: 'var(--content)',
+    subModules: ['models', 'animations', 'materials', 'level-design', 'ui-hud', 'audio'],
+  },
+  {
+    id: 'game-systems',
+    label: 'Game Systems',
+    icon: Gamepad2,
+    accentColor: MODULE_COLORS.systems,
+    accentColorVar: 'var(--systems)',
+    subModules: ['ai-behavior', 'physics', 'multiplayer', 'save-load', 'input-handling', 'dialogue-quests', 'packaging', 'blueprint-transpiler'],
+  },
+  {
+    id: 'evaluator',
+    label: 'Evaluator',
+    icon: Radar,
+    accentColor: MODULE_COLORS.evaluator,
+    accentColorVar: 'var(--evaluator)',
+    subModules: ['game-design-doc'],
+  },
+  {
+    id: 'game-director',
+    label: 'Game Director',
+    icon: Clapperboard,
+    accentColor: ACCENT_ORANGE,
+    accentColorVar: 'var(--director)',
+    subModules: [],
+  },
+  {
+    id: 'visual-gen',
+    label: 'Asset Studio',
+    icon: Shapes,
+    accentColor: MODULE_COLORS['visual-gen'],
+    accentColorVar: 'var(--visual-gen)',
+    subModules: ['asset-viewer', 'asset-forge', 'material-lab', 'blender-pipeline', 'asset-browser', 'import-automation', 'auto-rig', 'procedural-engine', 'scene-composer'],
+  },
+];
 
 export const SUB_MODULES: SubModuleDefinition[] = [
   // ── Core Engine (aRPG) ───────────────────────────────────────────────────────────
@@ -1234,9 +1237,6 @@ for (const mod of SUB_MODULES) {
 }
 
 export function getSubModulesForCategory(categoryId: string): SubModuleDefinition[] {
-  if (categoryId === 'core-engine') {
-    return SUB_MODULES.filter(m => CORE_ENGINE_IDS.includes(m.id as typeof CORE_ENGINE_IDS[number]));
-  }
   const category = CATEGORY_MAP[categoryId];
   if (!category) return [];
   return category.subModules.map(id => SUB_MODULE_MAP[id]).filter((m): m is SubModuleDefinition => !!m);

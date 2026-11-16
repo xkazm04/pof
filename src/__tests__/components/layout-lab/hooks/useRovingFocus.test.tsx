@@ -41,4 +41,28 @@ describe('useRovingFocus', () => {
     fireEvent.keyDown(lb, { key: 'Enter' });
     expect(onSelect).toHaveBeenCalledWith(1);
   });
+
+  // The list can SHRINK under the cursor (a tree group collapses, the rail switches to an
+  // entity with a shorter pipeline). The active index must stay inside the list, or no item
+  // is the tab-stop and the whole list drops out of the Tab order.
+  it('keeps exactly one tab-stop when the list shrinks below the active index', () => {
+    const onSelect = vi.fn();
+    function Sized({ n }: { n: number }) {
+      const roving = useRovingFocus(n, 0, onSelect);
+      return (
+        <div role="listbox" {...roving.containerProps} data-testid="lb">
+          {Array.from({ length: n }, (_, i) => (
+            <div key={i} role="option" {...roving.itemProps(i)} data-testid={`opt-${i}`}>{i}</div>
+          ))}
+        </div>
+      );
+    }
+    const { rerender } = render(<Sized n={5} />);
+    fireEvent.keyDown(screen.getByTestId('lb'), { key: 'End' }); // active = 4
+    rerender(<Sized n={2} />);
+    const stops = screen.getAllByRole('option').filter((o) => o.getAttribute('tabindex') === '0');
+    expect(stops.map((o) => o.getAttribute('data-testid'))).toEqual(['opt-1']);
+    fireEvent.keyDown(screen.getByTestId('lb'), { key: 'Enter' });
+    expect(onSelect).toHaveBeenLastCalledWith(1);
+  });
 });

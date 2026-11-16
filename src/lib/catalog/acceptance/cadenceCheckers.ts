@@ -1,6 +1,6 @@
 import type { AcceptanceResult, Checker } from './types';
 import { tagRequiredFields } from './requiredFields';
-import { isDeclaredGap } from './markers';
+import { isDeclaredGap, readNumber } from './markers';
 import { markContentInvariant } from './contentInvariant';
 
 /**
@@ -9,11 +9,8 @@ import { markContentInvariant } from './contentInvariant';
  * Neither checker lowers the bar for a cooldown ability: a cooldown ability grades exactly as before.
  */
 
-function num(v: unknown): number | null {
-  if (v == null || v === '' || isDeclaredGap(v)) return null;
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n : null;
-}
+/** Strict: a blank, a list or a boolean is unpopulated, never 0/1 (`readNumber`). */
+const num = readNumber;
 
 /**
  * Effect rules: a cast gate is stated. Either `cooldown` > 0 (s), or — for an ability that a RESOURCE gates instead —

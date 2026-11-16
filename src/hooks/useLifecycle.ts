@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { Lifecycle } from '@/lib/lifecycle';
 
 /**
@@ -20,17 +20,11 @@ export function useLifecycle<T = void>(
   factory: () => Lifecycle<T>,
   deps: React.DependencyList,
 ): void {
-  const lifecycleRef = useRef<Lifecycle<T> | null>(null);
-
   useEffect(() => {
     const lifecycle = factory();
-    lifecycleRef.current = lifecycle;
     lifecycle.init();
 
-    return () => {
-      lifecycle.dispose();
-      lifecycleRef.current = null;
-    };
+    return () => lifecycle.dispose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
@@ -42,17 +36,11 @@ export function useLifecycle<T = void>(
 export function useGuardedLifecycle(
   factory: () => Lifecycle<void>,
 ): void {
-  const lifecycleRef = useRef<Lifecycle<void> | null>(null);
-
   useEffect(() => {
     const lifecycle = factory();
-    lifecycleRef.current = lifecycle;
     lifecycle.init();
 
-    return () => {
-      lifecycle.dispose();
-      lifecycleRef.current = null;
-    };
+    return () => lifecycle.dispose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

@@ -38,7 +38,7 @@
  * seen the real host. A silently-widened list would be the one failure mode worse than a
  * refused download.
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { logger } from '@/lib/logger';
 import { DEFAULT_THRESHOLDS } from './mesh-critique';
@@ -178,6 +178,8 @@ export type MeshFetchOutcome =
 export interface MeshFetchDeps {
   fetchFn?: typeof fetch;
   writeFile?: (path: string, data: Uint8Array) => void;
+  /** Moves the finished temp file onto its final name (default `renameSync`). */
+  rename?: (from: string, to: string) => void;
   mkdir?: (dir: string) => void;
   fileExists?: (path: string) => boolean;
   /** Where the file lands (default `<cwd>/generated/mcp`). */
@@ -198,6 +200,7 @@ export async function fetchMeshForGrading(
 ): Promise<MeshFetchOutcome> {
   const doFetch = deps.fetchFn ?? fetch;
   const write = deps.writeFile ?? ((p: string, d: Uint8Array) => writeFileSync(p, d));
+  const rename = deps.rename ?? ((a: string, b: string) => renameSync(a, b));
   const mkdir = deps.mkdir ?? ((d: string) => { mkdirSync(d, { recursive: true }); });
   const exists = deps.fileExists ?? existsSync;
   const outDir = deps.outDir ?? join(process.cwd(), 'generated', MCP_ASSET_DIR);
@@ -250,7 +253,12 @@ export async function fetchMeshForGrading(
     return { ok: false, reason: `refused: the provider declared ${declared} bytes, over the ${MESH_FETCH_MAX_BYTES}-byte cap` };
   }
 
-  const buf = new Uint8Array(await res.arrayBuffer());
+  let buf: Uint8Array;
+  try {
+    buf = new Uint8Array(await res.arrayBuffer());
+  } catch (e) {
+    return { ok: false, reason: `refused: the download failed mid-body — ${e instanceof Error ? e.message : String(e)}` };
+  }
   if (buf.byteLength === 0) return { ok: false, reason: 'refused: the provider returned an empty body' };
   if (buf.byteLength > MESH_FETCH_MAX_BYTES) {
     return { ok: false, reason: `refused: the body is ${buf.byteLength} bytes, over the ${MESH_FETCH_MAX_BYTES}-byte cap` };
@@ -272,7 +280,11 @@ export async function fetchMeshForGrading(
 
   try {
     mkdir(outDir);
-    write(path, buf);
+    // Write beside the final name and rename into place: the cached branch above trusts
+    // any file at `path`, so a crash or full disk mid-write must never leave a partial there.
+    const tmp = `${path}.part`;
+    write(tmp, buf);
+    rename(tmp, path);
   } catch (e) {
     return { ok: false, reason: `refused: could not write ${path} — ${e instanceof Error ? e.message : String(e)}` };
   }

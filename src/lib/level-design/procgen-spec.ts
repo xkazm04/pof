@@ -246,6 +246,7 @@ export function previewConfigFromSpec(spec: ProcgenSpec, maxPreviewSize?: number
     roomCountMax: spec.roomCountMax,
     corridorWidth: spec.corridorWidth,
     seed: spec.seedLabel,
+    seedValue: spec.seedValue,
     ensureConnected: spec.constraints.ensureConnected,
     ...(maxPreviewSize === undefined ? {} : { maxPreviewSize }),
   };

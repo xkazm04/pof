@@ -89,6 +89,7 @@ export function PropertyInspector() {
           <input
             type="text"
             placeholder="Search..."
+            aria-label="Search properties"
             value={propSearch}
             onChange={(e) => setPropSearch(e.target.value)}
             className="text-xs font-mono pl-7 pr-3 py-1.5 rounded-md bg-surface border border-border/30 text-text placeholder:text-text-subtle focus:outline-none w-40 transition-colors"

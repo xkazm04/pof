@@ -10,7 +10,7 @@ import {
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { PipelineFlow, FeatureGrid } from '../../unique-tabs/_shared';
-import { ZONES, ASSET_FEATURES } from '../_shared/data';
+import { ZONES, ASSET_FEATURES, ZONE_TYPE_FEATURES } from '../_shared/data';
 import type { ZoneRecord } from '../_shared/data';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { ZoneMapCanvas } from './MapCanvas';
@@ -172,15 +172,7 @@ function RegionDetails({ selectedZone, featureMap }: { selectedZone: ZoneRecord;
           <div className="pt-2 border-t border-border/40">
             <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-3">Feature State</div>
             <div className="space-y-3">
-              {selectedZone.type === 'hub' && (
-                <FeatureList itemNames={['Game instance', 'Base PlayerController']} featureMap={featureMap} />
-              )}
-              {selectedZone.type === 'combat' && (
-                <FeatureList itemNames={['Spawn point system', 'Enemy AI controller']} featureMap={featureMap} />
-              )}
-              {selectedZone.type === 'boss' && (
-                <FeatureList itemNames={['Death flow', 'Combat feedback']} featureMap={featureMap} />
-              )}
+              <FeatureList itemNames={ZONE_TYPE_FEATURES[selectedZone.type]} featureMap={featureMap} />
             </div>
           </div>
         </motion.div>

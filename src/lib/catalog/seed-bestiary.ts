@@ -3,24 +3,13 @@ import {
   type ArchetypeConfig,
 } from '@/components/modules/core-engine/sub_bestiary/_shared/data';
 import { lootTableIdForArchetype } from '@/lib/loot/enemy-loot-join';
-import { seedSpellbookEntries } from './seed-spellbook';
+import { spellbookIdForName } from './seed-spellbook';
 import type { BestiaryEntry, CatalogLink } from './types';
-
-/** Build a case-insensitive name → spellbook entry id map (computed once). */
-function buildSpellbookNameIndex(): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const e of seedSpellbookEntries()) {
-    map.set(e.data.name.toLowerCase(), e.id);
-  }
-  return map;
-}
-
-const SPELLBOOK_BY_NAME = buildSpellbookNameIndex();
 
 function resolveLinks(archetype: ArchetypeConfig): CatalogLink[] {
   const links: CatalogLink[] = [];
   for (const abilityName of archetype.abilities) {
-    const id = SPELLBOOK_BY_NAME.get(abilityName.toLowerCase());
+    const id = spellbookIdForName(abilityName);
     if (id) links.push({ catalogId: 'spellbook', entityId: id, role: 'ability' });
   }
   // One normalised join ('melee-grunt' → 'lt-MeleeGrunt'); null when no loot table is bound.

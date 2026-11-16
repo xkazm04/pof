@@ -326,6 +326,7 @@ function generateAttenuationHeader(zones: AudioZone[], apiMacro: string): Genera
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/DataAsset.h"
 #include "Sound/SoundAttenuation.h"
 #include "AudioZoneAttenuation.generated.h"
 
@@ -340,6 +341,10 @@ public:
 
 \tUFUNCTION(BlueprintCallable, Category = "Attenuation")
 \tUSoundAttenuation* GetAttenuationForZone(FName ZoneName) const;
+
+\t/** Build one attenuation asset per authored zone (radius from the Audio Scene Editor). */
+\tUFUNCTION(BlueprintCallable, Category = "Attenuation")
+\tvoid InitializeZones();
 
 \tstatic USoundAttenuation* CreateAttenuationAsset(UObject* Outer, FName ZoneName, float InnerRadius, float FalloffDistance);
 };
@@ -368,6 +373,13 @@ USoundAttenuation* UAudioZoneAttenuation::GetAttenuationForZone(FName ZoneName) 
 \t\treturn *Found;
 \t}
 \treturn nullptr;
+}
+
+void UAudioZoneAttenuation::InitializeZones()
+{
+\tZoneAttenuations.Empty();
+
+${zoneInits}
 }
 
 USoundAttenuation* UAudioZoneAttenuation::CreateAttenuationAsset(UObject* Outer, FName ZoneName, float InnerRadius, float FalloffDistance)
@@ -683,7 +695,11 @@ void ASceneEmitterSpawner::SpawnEmitter(const FEmitterDefinition& Def)
 \tif (!CheckCooldown(Def)) return;
 
 \tUSoundCue* Cue = Def.SoundCue.LoadSynchronous();
-\tif (!Cue) return;
+\tif (!Cue)
+\t{
+\t\tUE_LOG(LogTemp, Warning, TEXT("SceneEmitterSpawner: emitter %s has no loadable Sound Cue at %s - not spawned"), *Def.EmitterName.ToString(), *Def.SoundCue.ToString());
+\t\treturn;
+\t}
 
 \tUAudioComponent* AudioComp = NewObject<UAudioComponent>(this);
 \tAudioComp->SetupAttachment(RootComponent);
@@ -787,6 +803,7 @@ function generateMetaSoundCpp(zones: AudioZone[], moduleName: string): Generated
 \t\tFAmbientLayerConfig Config;
 \t\tConfig.ZoneName = FName(TEXT("${name}"));
 \t\tConfig.SoundscapeDescription = TEXT("${cppString(zone.soundscapeDescription)}");
+\t\t// MetaSoundSource is not authored in PoF - assign it on this component in the editor, or the layer stays silent.
 ${fade}
 \t\tLayerConfigs.Add(Config);
 \t}`;
@@ -813,7 +830,11 @@ void UProceduralAmbientManager::ActivateLayer(FName ZoneName)
 \tif (!Config) return;
 
 \tUMetaSoundSource* Source = Config->MetaSoundSource.LoadSynchronous();
-\tif (!Source) return;
+\tif (!Source)
+\t{
+\t\tUE_LOG(LogTemp, Warning, TEXT("ProceduralAmbientManager: zone %s has no MetaSoundSource assigned - ambient layer not played"), *ZoneName.ToString());
+\t\treturn;
+\t}
 
 \tAActor* Owner = GetOwner();
 \tif (!Owner) return;
@@ -865,6 +886,7 @@ function generateSceneManagerHeader(doc: AudioSceneDocument, apiMacro: string): 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "AudioReverbPresets.h"
+#include "AudioZoneAttenuation.h"
 #include "AudioSceneManager.generated.h"
 
 UCLASS()
@@ -877,6 +899,9 @@ public:
 
 \tUPROPERTY()
 \tTObjectPtr<UAudioReverbPresets> ReverbPresets;
+
+\tUPROPERTY()
+\tTObjectPtr<UAudioZoneAttenuation> ZoneAttenuation;
 
 \tUFUNCTION(BlueprintCallable, Category = "Audio Scene")
 \tvoid EnterZone(FName ZoneName);
@@ -910,6 +935,10 @@ void UAudioSceneManager::Initialize(FSubsystemCollectionBase& Collection)
 \t// Load reverb presets data asset
 \tReverbPresets = NewObject<UAudioReverbPresets>(this);
 \tUAudioReverbPresets::InitializeDefaults(ReverbPresets);
+
+\t// Per-zone attenuation (one asset per authored zone)
+\tZoneAttenuation = NewObject<UAudioZoneAttenuation>(this);
+\tZoneAttenuation->InitializeZones();
 
 \tUE_LOG(LogTemp, Log, TEXT("AudioSceneManager initialized: pool=%d, maxConcurrent=%d"),
 \t\tSoundPoolSize, MaxConcurrentSounds);

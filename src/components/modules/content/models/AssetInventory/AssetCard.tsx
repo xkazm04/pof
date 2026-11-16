@@ -1,11 +1,15 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRef } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { ScanLine, FolderOpen } from 'lucide-react';
 import type { ScannedAsset } from '@/app/api/filesystem/scan-assets/route';
 import type { InventoryEdge } from '@/lib/asset-inventory/declared-edges';
 import { TYPE_CONFIG } from './constants';
-import { formatBytes, formatDate } from './helpers';
+import { formatBytes } from '@/lib/format';
+import { OVERLAY_BLACK, OPACITY_60 } from '@/lib/chart-colors';
+import { formatDate } from './helpers';
 import { DependencyGraph } from './DependencyGraph';
 
 interface AssetCardProps {
@@ -22,27 +26,38 @@ interface AssetCardProps {
 export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencies, ueListed, setExpandedAsset }: AssetCardProps) {
   const conf = TYPE_CONFIG[asset.type];
   const Icon = conf.icon;
+  // Same contract as the sibling AssetPipelineDiagram: no scale-in, spring or
+  // hover lift under prefers-reduced-motion (opacity fades only).
+  const prefersReduced = useReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
+  // Collapsing unmounts the CLOSE button; hand focus back to the card (which is
+  // the expand control again) so keyboard focus never falls to <body>.
+  const collapse = () => {
+    setExpandedAsset(null);
+    cardRef.current?.focus();
+  };
 
   return (
     <motion.div
       key={asset.relativePath}
       layout
-      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      initial={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: -10 }}
-      transition={{ type: "spring", stiffness: 350, damping: 25 }}
-      whileHover={{ y: isExpanded ? 0 : -5, scale: isExpanded ? 1 : 1.02 }}
+      exit={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: -10 }}
+      transition={motionSafe({ type: 'spring', stiffness: 350, damping: 25 } as const, prefersReduced)}
+      whileHover={prefersReduced ? undefined : { y: isExpanded ? 0 : -5, scale: isExpanded ? 1 : 1.02 }}
       className={`relative group ${isExpanded ? 'col-span-full row-span-2' : ''}`}
       style={{ perspective: 1000 }}
     >
       <div
+        ref={cardRef}
         className={`h-full flex flex-col relative transition-all duration-300 focus-ring-outline ${isExpanded ? 'border-2 shadow-2xl' : 'border shadow-lg cursor-pointer'}`}
         style={{
           backgroundColor: 'var(--surface-card)',
           borderRadius: '16px',
           overflow: 'hidden',
           borderColor: isExpanded ? `${conf.color}80` : `${conf.color}30`,
-          boxShadow: isExpanded ? `0 0 30px -5px ${conf.color}40, inset 0 0 20px -10px ${conf.color}20` : `0 10px 20px -10px rgba(0,0,0,0.5), inset 0 0 10px -5px ${conf.color}20`,
+          boxShadow: isExpanded ? `0 0 30px -5px ${conf.color}40, inset 0 0 20px -10px ${conf.color}20` : `0 10px 20px -10px ${OVERLAY_BLACK}${OPACITY_60}, inset 0 0 10px -5px ${conf.color}20`,
         }}
         // Collapsed the card IS the expand control, so it carries button
         // semantics (aria-expanded is only valid alongside that role); expanded
@@ -66,13 +81,13 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
             setExpandedAsset(asset.relativePath);
           } else if (isExpanded && e.key === 'Escape') {
             e.stopPropagation();
-            setExpandedAsset(null);
+            collapse();
           }
         }}
       >
         {/* Glow Effects */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.05)] to-transparent pointer-events-none" />
-        <div className="absolute -inset-[100%] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.08)] to-transparent -rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none z-20" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+        <div className="absolute -inset-[100%] bg-gradient-to-r from-transparent via-white/10 to-transparent -rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none z-20" />
         <div className="absolute top-0 right-0 w-32 h-32 blur-3xl rounded-full pointer-events-none transition-opacity duration-300"
           style={{ backgroundColor: `${conf.color}20`, opacity: isExpanded ? 1 : 0.4 }} />
 
@@ -84,7 +99,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
         <div className="p-4 flex flex-col relative z-10 flex-1 border-b" style={{ borderColor: `${conf.color}20`, backgroundColor: `${conf.color}05` }}>
           <div className="flex justify-between items-start mb-3">
             <div className="p-2.5 rounded-xl border shadow-inner overflow-hidden relative" style={{ backgroundColor: `${conf.color}15`, borderColor: `${conf.color}40` }}>
-              <div className="absolute inset-0 bg-gradient-to-b from-[rgba(255,255,255,0.2)] to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
               <Icon className="w-5 h-5 relative z-10" style={{ color: conf.color, filter: `drop-shadow(0 0 4px ${conf.color}80)` }} />
             </div>
             <div className="flex flex-col items-end">
@@ -141,6 +156,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
+              transition={motionSafe({}, prefersReduced)}
               className="relative z-10 flex-1 bg-background/60 backdrop-blur-md"
             >
               <div className="p-4 border-t" style={{ borderColor: `${conf.color}20` }}>
@@ -149,7 +165,7 @@ export function AssetCard({ asset, isExpanded, edgeCount, allAssets, dependencie
                     <ScanLine className="w-4 h-4" /> Dependency Graph
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setExpandedAsset(null); }}
+                    onClick={(e) => { e.stopPropagation(); collapse(); }}
                     aria-label={`Close dependency graph for ${asset.name}`}
                     className="text-xs text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm cursor-pointer hover:bg-surface-hover transition-colors font-mono focus-ring"
                   >

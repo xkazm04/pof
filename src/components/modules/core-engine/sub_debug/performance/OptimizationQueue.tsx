@@ -27,6 +27,31 @@ const STATE_COLOR: Record<QueueRowState, string> = {
 
 const PROFILER_HINT = 'Take or import one in Evaluator > Performance Profiling; its triage findings are ranked here.';
 
+const DISPATCH_KEY = 'pof.debug.optimizationDispatched';
+/** Fallback when storage is unavailable: still survives a remount within the page. */
+let memoryDispatched: Record<string, number> = {};
+
+/**
+ * Dispatch times by finding id. Keyed by finding (not session) on purpose: the verify-by-recapture
+ * check compares a LATER capture's persisting findings against the dispatch time, so a
+ * dispatch must outlive the capture it was made on, a remount and a reload.
+ */
+function readDispatched(): Record<string, number> {
+  try {
+    const raw = window.localStorage.getItem(DISPATCH_KEY);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return { ...memoryDispatched, ...(parsed as Record<string, number>) };
+    }
+  } catch { /* storage blocked or corrupt: use memory */ }
+  return memoryDispatched;
+}
+
+function writeDispatched(id: string, at: number): void {
+  memoryDispatched = { ...readDispatched(), [id]: at };
+  try { window.localStorage.setItem(DISPATCH_KEY, JSON.stringify(memoryDispatched)); } catch { /* memory only */ }
+}
+
 function Note({ children }: { children: React.ReactNode }) {
   return <p className="text-xs font-mono text-text-muted leading-relaxed">{children}</p>;
 }
@@ -83,6 +108,7 @@ function RowView({ row, index, onDispatched }: { row: QueueRow; index: number; o
 
 function verificationNote(latest: Extract<LatestTriage, { kind: 'ready' }>, realized: number | null): string {
   const c = latest.comparison;
+  if (!c && latest.compareError) return `Not verified: comparing with the previous capture failed (${latest.compareError}).`;
   if (!c) return 'No earlier real capture to compare with: a Fix is verified only by the next capture.';
   if (!c.comparable) return `Not verified against ${c.base.name}: ${c.reason ?? 'the two captures are not comparable'}.`;
   return `Verified against ${c.base.name}: ${c.findings.resolved.length} resolved, ~${(realized ?? 0).toFixed(2)} ms/frame realized.`;
@@ -90,8 +116,10 @@ function verificationNote(latest: Extract<LatestTriage, { kind: 'ready' }>, real
 
 /** The Debug tab's optimization queue: the newest capture's triage, ranked, one-click Fix, verified by re-capture. */
 export function OptimizationQueue({ latest }: { latest: LatestTriage }) {
-  const [dispatched, setDispatched] = useState<Record<string, number>>({});
-  const onDispatched = useCallback((id: string) => setDispatched((d) => ({ ...d, [id]: Date.now() })), []);
+  const [version, setVersion] = useState(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `version` re-reads the persisted dispatches after a click
+  const dispatched = useMemo(() => readDispatched(), [version]);
+  const onDispatched = useCallback((id: string) => { writeDispatched(id, Date.now()); setVersion((v) => v + 1); }, []);
   const ready = latest.kind === 'ready' ? latest : null;
   const queue = useMemo(() => buildOptimizationQueue({
     triage: ready?.triage ?? null, comparison: ready?.comparison ?? null, dispatched, source: ready?.session.source,
@@ -101,7 +129,7 @@ export function OptimizationQueue({ latest }: { latest: LatestTriage }) {
   if (latest.kind === 'loading') body = <Note>Reading the newest profiler session&apos;s triage…</Note>;
   else if (latest.kind === 'no-capture') body = <Note>No profiler capture yet. {PROFILER_HINT}</Note>;
   else if (latest.kind === 'unavailable') body = <Note>Could not read the newest profiler session: {latest.reason}</Note>;
-  else if (!latest.triage) body = <Note>Triage could not be run for {latest.session.name}.</Note>;
+  else if (!latest.triage) body = <Note>Triage could not be run for {latest.session.name}{latest.triageError ? `: ${latest.triageError}` : '.'}</Note>;
   else {
     body = (
       <>

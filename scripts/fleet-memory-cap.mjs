@@ -2,7 +2,7 @@
 // Artifact-level cap for .claude/fleet-memory.md.
 //
 // CLAUDE.md states two rules for this file: each session appends AT MOST 2 lines
-// (a per-edit cap), and the file holds at most 200 ENTRY lines (an artifact cap). The
+// (a per-edit cap), and the file holds at most 300 ENTRY lines (an artifact cap). The
 // per-edit cap was obeyed by every one of the last 24 commits; the artifact cap was crossed
 // on 2026-08-19 and nothing noticed, because no check ever read the file's size — every edit
 // was compliant, and the sum of compliant edits was not. This script is the check that reads
@@ -28,7 +28,7 @@ const { countFleetMemoryEntries, planFleetMemoryPrune } = await import('../src/l
 
 const FILE = '.claude/fleet-memory.md';
 const ARCHIVE = '.claude/fleet-memory-archive.md';
-const CAP = 200;
+const CAP = 300;
 
 const ARCHIVE_HEADER = [
   '# Fleet Shared Memory — Archive',

@@ -9,12 +9,13 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
   withOpacity, OPACITY_37, OPACITY_8, OPACITY_25,
 } from '@/lib/chart-colors';
+import { downloadBlob } from '@/lib/download';
 import type { WaveDef, ChoreographySimResult } from '@/lib/combat/choreography-sim';
 import type { TuningOverrides } from '@/types/combat-simulator';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import { FEEDBACK_CHANNEL_COLORS } from './types';
 import { UnifiedTimeline } from './UnifiedTimeline';
-import { TuningSlider, StatBox } from './TuningSlider';
+import { TuningSlider } from './TuningSlider';
 export { ArchetypePalette, GhostLegend } from './GridPanels';
 
 type SimResult = ChoreographySimResult;
@@ -31,8 +32,8 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
     <BlueprintPanel className="p-3 space-y-3 w-full xl:w-56">
       <div className="flex items-center justify-between">
         <SectionHeader label="Waves" />
-        <button onClick={onAdd} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
-          <Plus className="w-3 h-3 text-text-muted" />
+        <button type="button" onClick={onAdd} aria-label="Add wave" className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+          <Plus className="w-3 h-3 text-text-muted" aria-hidden />
         </button>
       </div>
       <div className="space-y-1">
@@ -42,12 +43,14 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
             style={{ borderColor: selectedWave === i ? `${withOpacity(ACCENT_CYAN, OPACITY_37)}` : 'var(--border)', backgroundColor: selectedWave === i ? `${withOpacity(ACCENT_CYAN, OPACITY_8)}` : 'transparent' }}
             onClick={() => onSelect(i)}>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-mono font-bold truncate" style={{ color: selectedWave === i ? ACCENT_CYAN : 'var(--text)' }}>
+              <button type="button" aria-pressed={selectedWave === i} onClick={(e) => { e.stopPropagation(); onSelect(i); }}
+                className="focus-ring block max-w-full text-left text-xs font-mono font-bold truncate" style={{ color: selectedWave === i ? ACCENT_CYAN : 'var(--text)' }}>
                 {wave.label}
-              </div>
+              </button>
               <div className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 <Clock className="w-2.5 h-2.5" />
                 <input type="number" min={0} max={120} step={1} value={wave.spawnTimeSec}
+                  aria-label={`${wave.label} spawn time (seconds)`}
                   onChange={(e) => onUpdateTime(i, Number(e.target.value))}
                   onClick={(e) => e.stopPropagation()}
                   className="w-10 bg-transparent border-b border-border/40 text-xs font-mono text-text-muted focus:outline-none focus:border-cyan-400/50" />
@@ -55,9 +58,9 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
               </div>
             </div>
             {waves.length > 1 && (
-              <button onClick={(e) => { e.stopPropagation(); onRemove(i); }}
+              <button type="button" aria-label={`Remove ${wave.label}`} onClick={(e) => { e.stopPropagation(); onRemove(i); }}
                 className="p-0.5 rounded hover:bg-surface-deep transition-colors shrink-0">
-                <Trash2 className="w-2.5 h-2.5 text-text-muted hover:text-red-400" />
+                <Trash2 className="w-2.5 h-2.5 text-text-muted hover:text-red-400" aria-hidden />
               </button>
             )}
           </div>
@@ -84,11 +87,11 @@ export function TimelineSection({ simResult, waves, scrubTime, isPlaying, onScru
       <div className="flex items-center justify-between">
         <SectionHeader label={`Combat Timeline \u2014 ${simResult.damageEvents.length} events, ${simResult.totalDurationSec.toFixed(1)}s`} />
         <div className="flex items-center gap-1">
-          <button onClick={onTogglePlay} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
-            {isPlaying ? <Pause className="w-3 h-3 text-text-muted" /> : <Play className="w-3 h-3 text-text-muted" />}
+          <button type="button" onClick={onTogglePlay} aria-label={isPlaying ? 'Pause playback' : 'Play encounter'} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+            {isPlaying ? <Pause className="w-3 h-3 text-text-muted" aria-hidden /> : <Play className="w-3 h-3 text-text-muted" aria-hidden />}
           </button>
-          <button onClick={onReset} className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
-            <RotateCcw className="w-3 h-3 text-text-muted" />
+          <button type="button" onClick={onReset} aria-label="Reset playback to 0s" className="p-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+            <RotateCcw className="w-3 h-3 text-text-muted" aria-hidden />
           </button>
           <span className="text-xs font-mono text-text-muted ml-1">{scrubTime.toFixed(1)}s</span>
         </div>
@@ -158,26 +161,23 @@ export function StatsPanel({ simResult }: { simResult: SimResult }) {
 
 /* ── Export Panel ───────────────────────────────────────────────────────── */
 
-export function ExportPanel({ exportConfig, onCopy, copied }: {
-  exportConfig: string; onCopy: () => void; copied: boolean;
+export type CopyState = 'idle' | 'copied' | 'failed';
+
+export function ExportPanel({ exportConfig, onCopy, copyState }: {
+  exportConfig: string; onCopy: () => void; copyState: CopyState;
 }) {
+  const copied = copyState === 'copied';
   return (
     <BlueprintPanel className="p-3 space-y-3">
       <div className="flex items-center justify-between">
         <SectionHeader label="UE5 Export" />
         <div className="flex items-center gap-1">
-          <button onClick={onCopy}
+          <button onClick={onCopy} aria-live="polite"
             className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
             {copied ? <Check className="w-2.5 h-2.5" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-2.5 h-2.5 text-text-muted" />}
-            <span className="text-text-muted">{copied ? 'Copied' : 'Copy'}</span>
+            <span className="text-text-muted">{copied ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy'}</span>
           </button>
-          <button onClick={() => {
-            const blob = new Blob([exportConfig], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'EncounterConfig.h'; a.click();
-            URL.revokeObjectURL(url);
-          }}
+          <button onClick={() => downloadBlob(new Blob([exportConfig], { type: 'text/plain' }), 'EncounterConfig.h')}
             className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
             <Download className="w-2.5 h-2.5 text-text-muted" />
             <span className="text-text-muted">.h</span>

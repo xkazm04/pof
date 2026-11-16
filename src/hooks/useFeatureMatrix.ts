@@ -169,6 +169,10 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       await fetchData();
     } else {
       console.error('useFeatureMatrix seed error:', result.error);
+      // Release the guard and say so: an empty matrix with no error reads as an
+      // unreviewed module, and a held guard meant Retry could never seed again.
+      seededModules.delete(`${projectPath}::${moduleId}`);
+      setError(`Could not initialize this module's features: ${result.error}`);
     }
   }, [moduleId, projectPath, fetchData]);
 
@@ -177,11 +181,18 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     setVerifyPlan(plan);
   }, []);
 
+  // Latest-wins token for the preview slot. Bumped by every preview dispatch AND by
+  // every module/project switch, so a preview still in flight when the scope moves
+  // resolves inert instead of seating the old scope's plan as the new one's.
+  const previewSeqRef = useRef(0);
+
   // A preview belongs to the module + project it was read under: switching either
   // drops it, so an apply can never write one project's picks into another.
   useEffect(() => {
+    previewSeqRef.current++;
     holdPlan(null);
     setVerifyError(null);
+    setIsVerifying(false);
   }, [moduleId, projectPath, holdPlan]);
 
   const previewAutoVerify = useCallback(async (): Promise<VerificationPlan | null> => {
@@ -195,12 +206,15 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       return null;
     }
     const manifest = bridge.manifest;
+    const mine = ++previewSeqRef.current;
     setIsVerifying(true);
     setVerifyError(null);
     try {
       // Read through the SAME scope the apply writes under. A failed read builds no
       // plan: without the stored rows a review verdict would read as "no row".
       const current = await readVerificationRows(moduleId, projectPath);
+      // Superseded (a newer preview, or the module/project switched): inert.
+      if (mine !== previewSeqRef.current) return null;
       if (!current.ok) {
         setVerifyError(current.error);
         holdPlan(null);
@@ -210,7 +224,7 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
       holdPlan(plan);
       return plan;
     } finally {
-      setIsVerifying(false);
+      if (mine === previewSeqRef.current) setIsVerifying(false);
     }
   }, [moduleId, projectPath, holdPlan]);
 
@@ -239,20 +253,9 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
 
   const discardAutoVerify = useCallback(() => holdPlan(null), [holdPlan]);
 
-  // Auto-seed on first load if no data exists
-  useEffect(() => {
-    let cancelled = false;
-
-    async function init() {
-      await fetchData();
-    }
-
-    init().then(() => {
-      if (cancelled) return;
-    });
-
-    return () => { cancelled = true; };
-  }, [fetchData]);
+  // Load on mount and whenever the module or project changes. Stale responses are
+  // dropped inside fetchData by its request id; the seed decision is the effect below.
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   // After loading, if features is empty and we haven't seeded this module yet, auto-seed.
   // Only after a SUCCESSFUL empty fetch — a failed GET also leaves features at []

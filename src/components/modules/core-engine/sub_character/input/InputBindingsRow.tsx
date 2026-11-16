@@ -31,7 +31,8 @@ export function InputBindingsRow({
   // keeps animating — so they opt out of the endless loop explicitly.
   const prefersReduced = useReducedMotion();
   const sc = STATUS_COLORS[status];
-  const freq = KEY_FREQUENCY_MAP.get(binding.defaultKey) ?? 0;
+  const measured = KEY_FREQUENCY_MAP.get(binding.defaultKey);
+  const freq = measured ?? 0;
   const freqColor = heatColor(freq);
   const rowConflict = expandKey(binding.key).some((k) => conflicts.has(k));
 
@@ -79,7 +80,10 @@ export function InputBindingsRow({
       <td className="py-2.5 pr-4">
         <div className="flex items-center gap-2">
           <div className="w-16"><NeonBar pct={freq} color={freqColor} height={4} /></div>
-          <span className="text-xs text-text-muted tabular-nums w-6 text-right">{freq}%</span>
+          <span
+            className="text-xs text-text-muted tabular-nums w-6 text-right"
+            title={measured === undefined ? 'No frequency data for this binding' : undefined}
+          >{measured === undefined ? '—' : `${measured}%`}</span>
         </div>
       </td>
       <td className="py-2.5">

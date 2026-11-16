@@ -17,6 +17,7 @@ import { VERIFICATION_RULES } from './verification-rules';
 import { tryApiFetch } from '@/lib/api-utils';
 import { eventBus } from '@/lib/event-bus';
 import type { UpsertFeature } from '@/lib/feature-matrix-db';
+import { isFeatureDone } from '@/lib/feature-done';
 
 /** Normalize a rule's return: built-in rules give a verdict, ad-hoc rules may give a bare status. */
 function evaluate(rule: VerificationRule, manifest: AssetManifest): VerificationVerdict {
@@ -218,7 +219,7 @@ export async function applyVerification(
       {
         moduleId: plan.moduleId,
         itemId: c.featureName,
-        checked: c.to === 'implemented' || c.to === 'improved',
+        checked: isFeatureDone(c.to),
         source: 'auto-verify',
       },
       'verification-engine',

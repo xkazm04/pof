@@ -94,12 +94,6 @@ export interface HoverState {
   tooltipLeft: number;
 }
 
-// ── ID Generator ───────────────────────────────────────────────────────────
-let _nextId = 1;
-export function nextId(): string {
-  return `e${_nextId++}`;
-}
-
 // ── Finding lookup ─────────────────────────────────────────────────────────
 /** Range label for a ranged finding ("12.5–17s"), point label ("8s") otherwise. */
 export function findingTimeLabel(a: BalanceAlert): string {

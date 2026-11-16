@@ -9,7 +9,8 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** The entity's head noun — "Reinforced Crate" → "Crate". Player-facing prompt/cue wording. */
 const noun = (n: string) => n.trim().split(/\s+/).pop() || n;
 

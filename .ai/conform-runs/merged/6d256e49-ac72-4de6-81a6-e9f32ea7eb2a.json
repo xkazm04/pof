@@ -1,0 +1,27 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6d256e49-ac72-4de6-81a6-e9f32ea7eb2a",
+ "subject": "mesh-finishing-for-engine-readiness",
+ "evaluatedAt": "2026-11-10T00:31:27.924258+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [],
+ "declined": [
+  {
+   "subject": "mesh-finishing-for-engine-readiness",
+   "context": "visual-gen-contact-sheet-ue5-export",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "mesh-finishing-for-engine-readiness",
+   "context": "visual-gen-library",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "mesh-finishing-for-engine-readiness",
+   "context": "animation-combos-metrics",
+   "reason": "evidence leans on retargeting/RetargetingTab.tsx, which is not a tracked file"
+  }
+ ],
+ "consults": []
+}

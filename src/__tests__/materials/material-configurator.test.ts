@@ -84,7 +84,7 @@ describe('buildMaterialConfiguratorPrompt — a live parent master', () => {
   });
 
   it('[guard] no parent: the instance prompt and its key are the ones recorded at d13603cf', () => {
-    expect(fnv(buildMaterialConfiguratorPrompt(config, GOLDEN_CTX))).toBe('cfb4dce4');
+    expect(fnv(buildMaterialConfiguratorPrompt(config, GOLDEN_CTX))).toBe('f60cb6fc');
     expect(materialConfiguratorVariantKey(config)).toBe('material-configurator::instance::stone::fb8c90ae');
   });
 });

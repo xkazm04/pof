@@ -81,9 +81,13 @@ export function paddedDomain(
   ceil: number,
 ): { min: number; max: number } {
   if (values.length === 0) return { min: floor, max: ceil };
+  // Clamp each bound into [floor, ceil] on both sides, so a value outside the
+  // window collapses to a flat domain at the edge instead of min > max (which
+  // would hand sparklinePoints a negative range and flip the line).
+  const clampBound = (v: number) => Math.min(ceil, Math.max(floor, v));
   return {
-    min: Math.max(floor, Math.min(...values) - padding),
-    max: Math.min(ceil, Math.max(...values) + padding),
+    min: clampBound(Math.min(...values) - padding),
+    max: clampBound(Math.max(...values) + padding),
   };
 }
 

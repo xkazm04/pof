@@ -9,6 +9,7 @@ import {
   withOpacity, GLOW_MD,
 } from '@/lib/chart-colors';
 import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { BlueprintPanel, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT } from '../_shared/data';
 
@@ -66,15 +67,23 @@ export function CircularGauge({ label, current, target, unit }: {
 
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(text).then(() => {
+    // A denied permission rejects; an insecure context has no clipboard API at all.
+    const fail = () => {
+      setFailed(true);
+      setTimeout(() => setFailed(false), UI_TIMEOUTS.copyFeedback);
+    };
+    const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+    if (!clipboard) { fail(); return; }
+    clipboard.writeText(text).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
+      setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+    }, fail);
   }, [text]);
 
   return (
-    <button onClick={handleCopy}
+    <button onClick={handleCopy} aria-label={`Copy "${text}" to clipboard`}
       className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider px-2 py-1 rounded transition-all border shrink-0"
       style={{
         backgroundColor: copied ? `${STATUS_SUCCESS}${OPACITY_20}` : `${ACCENT}${OPACITY_10}`,
@@ -83,7 +92,7 @@ export function CopyButton({ text }: { text: string }) {
         boxShadow: copied ? `0 0 10px ${withOpacity(STATUS_SUCCESS, OPACITY_22)}` : 'none',
       }}>
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      {copied ? 'COPIED' : 'EXEC'}
+      {copied ? 'COPIED' : failed ? 'COPY FAILED' : 'COPY'}
     </button>
   );
 }

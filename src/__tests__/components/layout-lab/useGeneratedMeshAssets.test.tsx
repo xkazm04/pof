@@ -36,3 +36,20 @@ describe('useGeneratedMeshAssets', () => {
     expect(tryApiFetch).not.toHaveBeenCalled();
   });
 });
+
+describe('useGeneratedMeshAssets — malformed manifest', () => {
+  beforeEach(() => tryApiFetch.mockReset());
+
+  it('treats a manifest that is not a list as no meshes, not an unhandled rejection', async () => {
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => { rejections.push(reason); };
+    process.on('unhandledRejection', onRejection);
+    tryApiFetch.mockResolvedValue({ ok: true, data: [] });
+    const { result } = renderHook(() => useGeneratedMeshAssets(true));
+    await waitFor(() => expect(tryApiFetch).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    process.off('unhandledRejection', onRejection);
+    expect(rejections).toEqual([]);
+    expect(result.current).toEqual([]);
+  });
+});

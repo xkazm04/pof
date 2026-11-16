@@ -11,6 +11,7 @@ import { MatrixBatchDrain } from '@/components/layout-lab/MatrixBatchDrain';
 import { emptyBatchSummary, summarizeBatchDrain, type BatchDrainSummary } from '@/components/layout-lab/batchDrainModel';
 import type { BatchDrainState } from '@/components/layout-lab/hooks/useBatchDrain';
 import { LIGHT } from '@/components/layout-lab/theme';
+const EV = { kind: 'scenario' as const, at: '2026-01-01T00:00:00.000Z' };
 
 afterEach(cleanup);
 
@@ -85,8 +86,8 @@ describe('MatrixBatchDrain — a mixed drain result reaches the human', () => {
         ran: 3, passed: 1, failed: 1, deferred: 1, skipped: 2,
         screenshots: ['/tmp/pof_l4_scn_7/shot_02.png'],
         results: [
-          { job: { catalogId: 'c', entityId: 'e1', step: 'A', tier: 'L3' }, verdict: { status: 'pass', detail: 'ok' } },
-          { job: { catalogId: 'c', entityId: 'e1', step: 'B', tier: 'L3' }, verdict: { status: 'fail', detail: 'price/power 1.43x' } },
+          { job: { catalogId: 'c', entityId: 'e1', step: 'A', tier: 'L3' }, verdict: { status: 'pass', detail: 'ok', evidence: EV } },
+          { job: { catalogId: 'c', entityId: 'e1', step: 'B', tier: 'L3' }, verdict: { status: 'fail', detail: 'price/power 1.43x', evidence: EV } },
           { job: { catalogId: 'c', entityId: 'e2', step: 'C', tier: 'L4' }, verdict: { status: 'deferred', detail: 'judge unavailable' } },
           { job: { catalogId: 'c', entityId: 'e2', step: 'D', tier: 'L3' }, skipped: 'limit reached' },
           { job: { catalogId: 'c', entityId: 'e2', step: 'E', tier: 'L3' }, skipped: 'no L3 executor' },

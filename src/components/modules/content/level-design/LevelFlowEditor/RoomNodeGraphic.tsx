@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { RoomNode } from '@/types/level-design';
 import type { PacingFinding } from '@/lib/level-design/pacing-linter';
 import { STATUS_ERROR, STATUS_WARNING, ACCENT_VIOLET, OVERLAY_WHITE } from '@/lib/chart-colors';
-import { ROOM_W, ROOM_H, ROOM_TYPE_CONFIG, DIFFICULTY_COLORS, SEVERITY_COLORS } from './constants';
+import { ROOM_W, ROOM_H, roomTypeConfig, DIFFICULTY_COLORS, SEVERITY_COLORS } from './constants';
 import { highestSeverity } from './helpers';
 
 /** Distance (px) a node moves per Shift+Arrow press — the keyboard equivalent of a drag. */
@@ -57,7 +57,7 @@ export function RoomNodeGraphic({
   cancelConnecting,
 }: RoomNodeGraphicProps) {
   const [focusVisible, setFocusVisible] = useState(false);
-  const cfg = ROOM_TYPE_CONFIG[room.type];
+  const cfg = roomTypeConfig(room.type);
   const isSelected = selectedRoomId === room.id;
   const isConnectTarget = connectingFrom && connectingFrom !== room.id;
   const diffColor = DIFFICULTY_COLORS[room.difficulty];
@@ -212,7 +212,7 @@ export function RoomNodeGraphic({
 
       {/* Room name */}
       <text x={30} y={18} style={{ fontSize: 11 }} fill={isSelected ? OVERLAY_WHITE : 'var(--text)'} fontFamily="monospace" fontWeight={700} letterSpacing={0.5}>
-        {room.name.length > 14 ? room.name.slice(0, 14) + '...' : room.name.toUpperCase()}
+        {(room.name.length > 14 ? room.name.slice(0, 14) + '...' : room.name).toUpperCase()}
       </text>
 
       {/* Room type label */}

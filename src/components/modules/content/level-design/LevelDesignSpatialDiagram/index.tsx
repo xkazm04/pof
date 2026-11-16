@@ -44,7 +44,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
         <div>
           <h3 className="text-xs font-semibold text-text">Level Systems</h3>
           <p className="text-2xs text-text-muted">
-            {completedCount}/3 systems — build top-down
+            {completedCount}/{nodeStates.length} systems — build top-down
           </p>
         </div>
       </div>

@@ -1,0 +1,192 @@
+{
+ "schema": "conform-run/1",
+ "worker": "4948c3e7-8f04-4507-b258-4d0953e13222",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-03T09:46:55.471975+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ue5-bridge-monitoring",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:196 A suite run where every scenario's runTest returns null (bridge readback timed out or was aborted) and no snapshot presets are set has an empty runResults; `every` on an empty array is true, so the suite is recorded as 'passed' with zero results \u2014 the empty-success lie the standard forbids.",
+   "techniques": [
+    {
+     "technique": "live-app-harness",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:168 A scenario whose readback deadline expired (useTestRunner returns null on timeout) is dropped silently, not reported as a harness failure distinct from a test failure."
+    },
+    {
+     "technique": "derived-selection-must-be-measured",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:184 No floor on executed count; zero results evaluates to allPassed=true and the run is green."
+    },
+    {
+     "technique": "approval-snapshots-with-guarded-update",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/SnapshotsTab.tsx:19 Re-baseline is a per-preset, confirmed, deliberate act, followed by recapture and re-compare rather than assumed; there is no ambient record mode."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:187 A failed or empty snapshot capture counts as not passed, so capture failures cannot pass silently. This is a partial guard only and does not cover the scenario path."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/project-setup/TestHarnessPanel/useTestHarnessPanel.ts:164 Scenarios run serially against the single live editor bridge."
+    },
+    {
+     "technique": "far-side-oracle",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/project-setup/BridgeEndpointHealth/useBridgeEndpointHealth.ts:51 The health panel probes read-only GET/WS routes for liveness. It makes no effect claims that would need a far-side observer."
+    }
+   ]
+  },
+  {
+   "context": "observation-testing",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:56 The drain lease is keyed by catalog|entity scope, and drain-lease.ts:50 explicitly lets scoped drains of different entities run concurrently, yet route.ts:10 says the singleton resource is one non-reentrant UE editor. Two entity drains can therefore drive the same editor at once, which breaks the serial law.",
+   "techniques": [
+    {
+     "technique": "isolation-lanes",
+     "verdict": "deviation",
+     "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:56 The singleton (editor) is not what the lease guards. The lease guards artifact scope, so the singleton catalog is keyed wrong."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "deviation",
+     "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:10 The serial-by-law constraint is stated, but it is enforced only per scope, not per editor."
+    },
+    {
+     "technique": "far-side-oracle",
+     "verdict": "conformant",
+     "evidence": "src/types/observation.ts:23 The observer runs inside the launched game and reports raw substrate samples (location, speed, droop), not the tool's own vocabulary."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/types/observation.ts:42 ability_found makes the answer name whether the decision was reached ('tag missing' vs 'ran with no effect')."
+    },
+    {
+     "technique": "assert-the-schedule-not-the-stopwatch",
+     "verdict": "conformant",
+     "evidence": "src/types/observation.ts:141 Observation runs use a fixed simulated step, so metrics are read in frames rather than wall time."
+    },
+    {
+     "technique": "platform-quirk-absorption",
+     "verdict": "conformant",
+     "evidence": "src/types/observation.ts:192 A missing UE-side event becomes a named diagnosis instead of a silent empty capture."
+    }
+   ]
+  },
+  {
+   "context": "catalog-pipeline-api",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:56 The drain route and settle-test both key the lease on catalog|entity scope, while the resource that cannot be shared is the one UE editor. Two drains scoped to different entities can overlap against that editor, so the singleton is not serialized.",
+   "techniques": [
+    {
+     "technique": "isolation-lanes",
+     "verdict": "deviation",
+     "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:56 The lease guards artifact scope, not the singleton editor."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "deviation",
+     "evidence": "src/app/api/pipeline-artifacts/drain/route.ts:59 The refusal cites editor non-reentrancy but fires only on a scope conflict."
+    },
+    {
+     "technique": "fixture-economics",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/purge-fixtures/route.ts:12 The suite stopped writing synthetic fixtures into the operator's real DB, and residue is inventoried and purged."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/drain/settle-test/route.ts:12 An unfound test settles to deferred, never to a pass."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/verify-packaging/route.ts:12 The packaging grade is re-derived from what is actually on disk, which closes the known hollow-pass class."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "quality-evaluation-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "test-harness",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-03T09:46:55.471975+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "approval-snapshots-with-guarded-update",
+    "derived-selection-must-be-measured",
+    "far-side-oracle",
+    "isolation-lanes",
+    "live-app-harness",
+    "negative-control-tests"
+   ],
+   "deviations": 1,
+   "context": "ue5-bridge-monitoring",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T09:46:55.471975+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "assert-the-schedule-not-the-stopwatch",
+    "far-side-oracle",
+    "isolation-lanes",
+    "live-app-harness",
+    "platform-quirk-absorption",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "observation-testing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T09:46:55.471975+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "fixture-economics",
+    "isolation-lanes",
+    "live-app-harness",
+    "negative-control-tests",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "catalog-pipeline-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

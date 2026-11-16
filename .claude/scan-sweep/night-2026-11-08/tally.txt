@@ -1,0 +1,114 @@
+W1 bestiary-encounters-metrics built=6 B=6 C=1
+W1 audio-view-and-catalog built=7 B=6 C=1
+W1 bestiary-archetypes-ai built=9 B=6 C=2
+W1 audio-scene-designer built=9 B=7 C=0
+W2 blender-3d-integration built=3 B=3 C=0
+W2 blender-pipeline built=7 B=8 C=0
+W2 blender-mcp-bridge built=5 B=6 C=2
+W2 blueprint-tools built=7 B=7 C=0 carried=1
+W3 blueprint-transpiler-game-systems built=8(incl carry) B=10 C=0
+W3 build-history-config built=8 B=8 C=1
+W3 build-quality-monitoring built=12 B=10 C=0
+W3 build-packaging-trio built=11 B=10 C=0
+W4 catalog-database built=4 B=4 C=1
+W4 catalog-core-infrastructure built=5 B=3 C=1
+W4 catalog-browser-ui built=7 B=8 C=0
+W4 catalog-acceptance built=7 B=8 C=1 leads=1
+W5 catalog-gap-analysis built=7 B=5 C=1
+W5 catalog-pipelines built=5 B=5 C=0
+W5 catalog-pipeline-state built=7 B=7 C=0
+W5 catalog-pipeline-api built=8 B=7 C=0 leads=1
+W6 catalog-seed-data built=4 B=3 C=4
+W6 character-simulator built=8 B=6 C=1
+W6 character-movement-playground built=8 B=8 C=0
+W6 character-overview-input built=12 B=7 C=1
+W7 coach-and-guidance built=7 B=6 C=0
+W7 code-quality-evaluation built=11 B=7 C=1
+W7 cli-terminal-trio built=11 B=4 C=2
+W7 cli-terminal-shell built=11 B=5 C=1
+W8 combat-dodge-timeline built=6 B=9 C=1
+W8 combat-damage-pipeline built=9 B=6 C=1
+W8 combat-choreography built=11 B=7 C=1
+W8 combat-metrics built=9 B=5 C=2
+W9 combat-simulator built=6 B=6 C=0 (3 backlog)
+W9 cook-packaging-pipeline built=9 B=5 C=0
+W9 core-engine-planning-shell built=8 B=9 C=1
+W9 core-engine-genre-tabs built=10 B=7 C=0
+W10 debug-performance built=8 B=7 C=1
+W10 database-layer built=5 B=5 C=2 (1 backlog)
+W10 cross-module-features built=11 B=8 C=0
+W10 core-engine-scan-telemetry built=13 B=5 C=2
+W11 economy-simulator built=10 B=6 C=1
+W11 eqs-squad-combat-spatial built=8 B=7 C=1
+W11 game-design-studio-api built=7 B=11 C=1
+W11 feature-design-state-hooks built=7 B=7 C=1
+W12 game-world-content-api built=10 B=4 C=1 (2 carries from audio-module)
+W12 game-ui-hud built=10 B=5 C=2
+W12 game-director-system built=9 B=6 C=1
+W12 feature-matrix-trio built=10 B=8 C=1
+W13 image-generation built=6 B=5 C=1
+W13 holistic-quality-overview built=10 B=9 C=0
+W13 hud-damage-and-navigation built=10 B=6 C=1
+W13 hud-theme-and-inventory built=10 B=7 C=0
+W14 inventory-economy-simulator built=8 B=9 C=1
+W14 item-catalog-pipeline built=8 B=8 C=1
+W14 inventory-genome-economy built=11 B=10 C=1
+W14 inventory-catalog built=11(incl leonardo carry) B=9 C=1
+W15 judge-craft-quality built=4 B=7 C=1
+W15 lab-ui-primitives built=5 B=6 C=1
+W15 lab-hooks built=6 B=3 C=0
+W15 lab-shell-and-navigation built=10 B=4 C=0
+W16 localization-pipeline built=8 B=5 C=1
+W16 level-flow-editor+level-design-module built=9 B=7 C=1
+W16 loot-affix-core built=12 B=8 C=3
+W17 loot-metrics-designer built=5 B=8 C=1
+W17 material-configurator built=8 B=3 C=1
+W17 loot-simulation built=12 B=6 C=3
+W17 loot-affix-workbench built=8 B=7 C=2
+W18 module-cli-orchestration-hooks built=4 B=6 C=0 (1 carry)
+W18 material-lab built=11 B=5 C=0
+W18 models-asset-inventory built=8 B=8 C=1
+W18 material-style-tools built=13 B=3 C=1
+W19 module-evaluator built=7 B=6 C=1
+W19 observation-testing+simulation-tools built=9 B=7 C=0 (3 cross-round cards)
+W19 module-system built=10 B=6 C=0
+W19 module-topology-graph built=11 B=10 C=0
+W20 pipeline-acceptance-engine built=7 B=4 C=0
+W20 pipeline-step-components built=6 B=8 C=0
+W20 platform-services-api built=9 B=4 C=2
+W20 procedural-level-generation built=6 B=10 C=0
+W21 project-health-dashboards built=11 B=4 C=1
+W21 progression-curves-builds built=8 B=4 C=2
+W21 procedural-scene-tools built=13 B=3 C=0
+W21 progression-rewards-internals built=8 B=8 C=0
+W22 project-ops-api built=8 B=7 C=1
+W22 project-setup-core built=11 B=7 C=1
+W22 prompt-evolution built=12 B=8 C=0
+W22 quality-evaluation-api built=9 B=7 C=0
+W23 save-system built=12 B=3 C=1
+W23 roadmap-workflow-management built=12 B=2 C=2
+W23 session-analytics-reporting built=11 B=4 C=1
+W23 shared-utility-hooks built=9 B=9 C=1
+W24 state-management built=8 B=7 C=1
+W24 status-health-dashboard built=8 B=4 C=1
+W24 streaming-zone-planner built=13 B=5 C=0
+W24 step-shared-primitives built=13 B=3 C=0
+W25 ue5-asset-generation-hooks built=8 B=6 C=0
+W25 ue5-build-bridge built=8 B=7 C=3
+W25 topbar-and-activity built=16 B=4 C=0
+W25 ue5-bridge-monitoring built=10 B=10 C=1
+W26 ue5-filesystem built=8 B=6 C=1
+W26 ue5-state-sync built=14 B=1 C=1
+W26 ue5-bridge-client+experiment-runner built=10 B=4 C=2
+W27 visual-gen-contact-sheet-ue5-export built=11 B=10 C=0
+W27 visual-gen-3d-model-runners built=13 B=4 C=2
+W27 ui-primitives built=10 B=9 C=0
+W27 visual-gen-asset-pipeline built=11 B=4 C=1
+W28 visual-gen-library built=12 B=3 C=1
+W28 visual-gen-mesh built=9 B=4 C=3
+W28 visual-gen-core built=10 B=6 C=2
+W28 visual-gen-mesh-quality-gates built=13 B=2 C=1
+W29 visual-gen-quality-and-animation built=7 B=7 C=0
+W29 visual-gen-style-asset-library built=7 B=5 C=2
+W29 visual-gen-rigging-conformance built=12 B=8 C=3
+W29 world-module built=14 B=1 C=1

@@ -30,8 +30,19 @@
  *    `assembled-character-is-multi-shell`) — and the count and face total of what was
  *    discarded are reported, so "3 props out of 5 components" is never mistaken for
  *    "the mesh had 3 components".
+ *
+ * ── The group's frame travels with every part (decollate before invert) ─────────────
+ *
+ * The generator normalised the WHOLE group to a ~1 m box, so a separated part is in
+ * group units: a barrel from a four-prop group measures ~0.22 m and reads as neither
+ * "generator-normalised" nor real-world. Every part shares that one scale, so the
+ * script reports the group's extents and each part's extents and centre in the group
+ * frame, read before the re-centre. {@link rescaleSplitGroup} turns ONE known prop size
+ * into every part's size; the centres say where each part sat in the reference image.
+ * A part's `_NN` is its face-count rank, not its identity - two barrels swap ranks on
+ * a re-generation, and after the re-centre both sit at the origin.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { BLENDER_CANDIDATES } from './mesh-finish';
 import { blenderNotFound, locateBlender, type BlenderSeams } from './blender-locate';
@@ -88,12 +99,18 @@ export interface MeshSplitSpec {
   timeoutMs?: number;
 }
 
+export type Xyz = [number, number, number];
+
 export interface SplitPart {
   name: string;
   path: string;
   faces: number;
   /** This part's share of the input's faces, 0..1. */
   share: number;
+  /** Bounding-box extents in the GROUP's units (glTF metres of the normalised delivery). */
+  extents?: Xyz;
+  /** Bounding-box centre in the group frame, read before the re-centre. */
+  origin?: Xyz;
 }
 
 export interface ParsedMeshSplit {
@@ -108,6 +125,8 @@ export interface ParsedMeshSplit {
   capped?: number;
   /** Share of the input's faces the written parts account for, 0..1. */
   coverage?: number;
+  /** The whole group's extents before the split - ~1 m on its longest axis for raw generator output. */
+  groupExtents?: Xyz;
   /** Any marker the declaration does not know, verbatim (`script-markers.ts`). */
   diagnostics?: Record<string, string>;
   error?: string;
@@ -145,10 +164,16 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
 
   const parts: SplitPart[] = [];
   for (const value of block.all('PART')) {
-    const [name, faces, share, path] = value.split('|');
+    const [name, faces, share, path, extents, origin] = value.split('|');
     if (!name || !path) continue;
-    parts.push({ name: name.trim(), path: path.trim(), faces: Number(faces), share: Number(share) });
+    const box = parseXyz(extents);
+    const at = parseXyz(origin);
+    parts.push({
+      name: name.trim(), path: path.trim(), faces: Number(faces), share: Number(share),
+      ...(box ? { extents: box } : {}), ...(at ? { origin: at } : {}),
+    });
   }
+  const groupExtents = parseXyz(get('GROUP_EXTENTS'));
 
   // DONE with no part is not a success: the caller asked for assets and got none, and
   // "the script finished" is not the thing being reported.
@@ -163,6 +188,7 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
     discardedFaces: num('DISCARDED_FACES'),
     capped: num('CAPPED'),
     coverage: num('COVERAGE'),
+    ...(groupExtents ? { groupExtents } : {}),
     diagnostics: block.diagnostics,
     // The speck reason is true only of a run that FINISHED; a run that never printed
     // DONE (killed, crashed, never started) gets its process reason from runMeshSplit.
@@ -172,11 +198,52 @@ export function parseMeshSplitOutput(stdout: string): ParsedMeshSplit {
   };
 }
 
+/** `x,y,z` -> a finite triple, or undefined (an older script, or a malformed field). Pure. */
+function parseXyz(v: string | undefined): Xyz | undefined {
+  if (!v) return undefined;
+  const n = v.split(',').map((c) => Number(c.trim()));
+  return n.length === 3 && n.every(Number.isFinite) ? (n as Xyz) : undefined;
+}
+
+export interface RescaledPart {
+  name: string;
+  /** The part's longest extent in group units, as delivered. */
+  measuredExtentM: number;
+  /** Its longest extent once the group's one shared scale is applied. */
+  worldExtentM: number;
+  /** `worldExtentM / measuredExtentM` - the same for every part of one group. */
+  importUniformScale: number;
+}
+
+/**
+ * Every part's real size from ONE known one. Pure.
+ *
+ * A group was normalised as a whole, so its parts share one scale factor: if the
+ * operator knows the well is 1.2 m, the barrels and the lamp post beside it follow.
+ * Graded alone, each part would need its own target, and the operator would have to
+ * know which `_NN` is which. Undefined when the known part is absent or either side
+ * of the ratio is unmeasured - never a guessed scale.
+ */
+export function rescaleSplitGroup(
+  parts: readonly SplitPart[],
+  known: { name: string; targetExtentM: number },
+): RescaledPart[] | undefined {
+  const longest = (p: SplitPart) => (p.extents ? Math.max(...p.extents) : 0);
+  const anchor = parts.find((p) => p.name === known.name);
+  const measured = anchor ? longest(anchor) : 0;
+  if (!(measured > 0) || !(known.targetExtentM > 0) || !Number.isFinite(known.targetExtentM)) return undefined;
+  if (parts.some((p) => !(longest(p) > 0))) return undefined;
+  const k = known.targetExtentM / measured;
+  return parts.map((p) => ({ name: p.name, measuredExtentM: longest(p), worldExtentM: longest(p) * k, importUniformScale: k }));
+}
+
 type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<ProcessOutcome>;
 
 export interface MeshSplitDeps extends BlenderSeams {
   run?: RunFn;
   fileExists?: (p: string) => boolean;
+  /** Last-modified time of a file, or undefined when unknown (default `statSync`). */
+  mtimeMs?: (p: string) => number | undefined;
   now?: () => number;
   env?: Record<string, string | undefined>;
 }
@@ -189,6 +256,7 @@ function err(message: string): MeshSplitResult {
 export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}): Promise<MeshSplitResult> {
   const env = deps.env ?? process.env;
   const fileExists = deps.fileExists ?? existsSync;
+  const mtimeMs = deps.mtimeMs ?? defaultMtimeMs;
   const now = deps.now ?? (() => Date.now());
   const run = deps.run ?? defaultRun;
 
@@ -200,6 +268,15 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
   const script = spec.scriptPath ?? join(process.cwd(), 'scripts', 'visual-gen', 'pof_mesh_split.py');
   if (!fileExists(script)) return err(`pof_mesh_split.py not found at ${script}`);
 
+  // Part names are prefix + rank in a caller-owned directory, so a rerun finds the earlier
+  // run's files. Snapshot their mtimes first: a part whose file did not change is a leftover.
+  const before = new Map<string, number>();
+  for (let i = 1; i <= (spec.maxParts ?? DEFAULT_MAX_PARTS); i++) {
+    const name = `${spec.prefix}_${String(i).padStart(2, '0')}.glb`;
+    const p = join(spec.outputDir, name);
+    const m = fileExists(p) ? mtimeMs(p) : undefined;
+    if (m !== undefined) before.set(name, m);
+  }
   const start = now();
   const timeoutMs = spec.timeoutMs ?? 600_000;
   const outcome = await run(blender, buildMeshSplitArgs(script, spec), timeoutMs);
@@ -213,8 +290,15 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
 
   // A part is only a part if the file is there. The script announcing one it did not
   // write would otherwise become an asset URL that 404s at the viewer.
-  const written = parsed.parts.filter((p) => fileExists(p.path));
-  const missing = parsed.parts.filter((p) => !fileExists(p.path)).map((p) => p.name);
+  // A file left by an earlier run (unchanged mtime) does not count as this run's output.
+  const isFresh = (p: SplitPart) => {
+    if (!fileExists(p.path)) return false;
+    const was = before.get(basename(p.path));
+    const now_ = mtimeMs(p.path);
+    return was === undefined || now_ === undefined || now_ > was;
+  };
+  const written = parsed.parts.filter(isFresh);
+  const missing = parsed.parts.filter((p) => !isFresh(p)).map((p) => p.name);
 
   return {
     ...parsed,
@@ -224,6 +308,10 @@ export async function runMeshSplit(spec: MeshSplitSpec, deps: MeshSplitDeps = {}
       ?? (missing.length ? `the split announced ${missing.length} part(s) that were not written: ${missing.join(', ')}` : undefined),
     durationMs: now() - start,
   };
+}
+
+function defaultMtimeMs(p: string): number | undefined {
+  try { return statSync(p).mtimeMs; } catch { return undefined; }
 }
 
 // ── default spawn seam: the shared local-process seam (tested in local-process.test.ts) ──

@@ -107,12 +107,12 @@ describe('runMeshViews', () => {
   });
 
   it('returns the rendered views', async () => {
-    const r = await runMeshViews(SPEC, deps(
-      'POF_VIEWS_0=0.0|C:/gen/views/crate/view_00.png\nPOF_VIEWS_DONE=1',
-      ['C:/gen/views/crate/view_00.png'],
+    const r = await runMeshViews({ ...SPEC, views: 2 }, deps(
+      'POF_VIEWS_0=0.0|C:/gen/views/crate/view_00.png\nPOF_VIEWS_1=180.0|C:/gen/views/crate/view_01.png\nPOF_VIEWS_DONE=2',
+      ['C:/gen/views/crate/view_00.png', 'C:/gen/views/crate/view_01.png'],
     ));
     expect(r.ok).toBe(true);
-    expect(r.views).toHaveLength(1);
+    expect(r.views).toHaveLength(2);
     expect(r.durationMs).toBeGreaterThan(0);
   });
 

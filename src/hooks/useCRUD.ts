@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { useIsMounted } from '@/hooks/useIsMounted';
@@ -14,6 +14,11 @@ export interface UseCRUDOptions<T> {
   errorMessage?: string;
   /** Skip auto-fetch on mount (useful when you need to call refetch manually). */
   skipInitialFetch?: boolean;
+  /**
+   * When the endpoint changes, report `initial` until the new endpoint answers instead of
+   * the previous endpoint's data. Off by default: existing callers keep the old data.
+   */
+  resetOnEndpointChange?: boolean;
 }
 
 export interface UseCRUDResult<T> {
@@ -49,14 +54,19 @@ export function useCRUD<T>(
   initial: T,
   options: UseCRUDOptions<T> = {},
 ): UseCRUDResult<T> {
-  const { transform, fetcher, errorMessage, skipInitialFetch } = options;
-  const [data, setData] = useState<T>(initial);
+  const { transform, fetcher, errorMessage, skipInitialFetch, resetOnEndpointChange } = options;
+  const [loaded, setLoaded] = useState<{ endpoint: string; value: T }>({ endpoint, value: initial });
+  const data = resetOnEndpointChange && loaded.endpoint !== endpoint ? initial : loaded.value;
   const [isLoading, setIsLoading] = useState(!skipInitialFetch);
   const [error, setError] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const isMounted = useIsMounted();
+  // Last request wins: a slow response for a previous endpoint never lands over the current one.
+  const latestRequestRef = useRef(0);
 
   const refetch = useCallback(async () => {
+    const requestId = ++latestRequestRef.current;
+    const isCurrent = () => isMounted() && requestId === latestRequestRef.current;
     setIsLoading(true);
     setError(null);
     try {
@@ -67,14 +77,14 @@ export function useCRUD<T>(
         const raw = await apiFetch<unknown>(endpoint);
         result = transform ? transform(raw) : raw as T;
       }
-      if (!isMounted()) return;
-      setData(result);
+      if (!isCurrent()) return;
+      setLoaded({ endpoint, value: result });
     } catch (err) {
-      if (isMounted()) {
+      if (isCurrent()) {
         setError(err instanceof Error ? err.message : (errorMessage ?? 'Failed to fetch data'));
       }
     } finally {
-      if (isMounted()) setIsLoading(false);
+      if (isCurrent()) setIsLoading(false);
     }
   }, [endpoint, transform, fetcher, errorMessage, isMounted]);
 

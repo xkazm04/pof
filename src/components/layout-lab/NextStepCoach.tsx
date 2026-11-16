@@ -126,10 +126,10 @@ export function NextStepCoach({
   // Fetch failed → say so and offer a retry. Recommending a step here would be a guess
   // built on statuses we could not read (every unfetched step looks `unproduced`).
   if (serverError) {
+    // No live region here: InlineErrorRetry is already role="alert", and nesting it inside a
+    // polite status region made the failure announce twice.
     return (
       <Panel
-        role="status"
-        aria-live="polite"
         data-testid="next-step-coach"
         data-coach-state="error"
         glass={t.glass}
@@ -154,8 +154,6 @@ export function NextStepCoach({
 
   return (
     <Panel
-      role="status"
-      aria-live="polite"
       data-testid="next-step-coach"
       glass={t.glass}
       style={{
@@ -177,6 +175,9 @@ export function NextStepCoach({
           What to do next
         </span>
 
+        {/* The ONE live region: only the advice sentence. The CTA and the disclosure sit
+            outside it, so a status change announces what changed, not every button label. */}
+        <span role="status" aria-live="polite" data-testid="next-step-coach-live" style={{ flex: 1, minWidth: 0, display: 'flex' }}>
         {next ? (
           <span
             title={`${next.actionWord}: ${next.step} — ${shownHint}`}
@@ -203,6 +204,7 @@ export function NextStepCoach({
             </span>
           </span>
         )}
+        </span>
 
         {/* Terminal state with unproven passes: the weakest link is the only honest next
             move, so it gets the same jump affordance an actionable step would. */}

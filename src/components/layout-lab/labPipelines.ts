@@ -2,33 +2,18 @@ import { pipelineForCatalog, trackLabel } from '@/lib/pipeline/tracks';
 import { ITEM_STEP_NAMES } from './steps/itemsSteps';
 
 /**
- * Fine idea→UE pipeline steps per catalog (from game_catalog_pipelines.xlsx).
- * Spellbook is the lab showcase (16 steps); other catalogs fall back to their
- * 8-track labels so every detail view still renders a pipeline.
+ * The curated fine-step list of a BESPOKE catalog (`catalogManifest` BESPOKE_CATALOGS). The
+ * manifest reads this for the bespoke catalog and for a catalog with NO registered pipeline (the
+ * generic track-label fallback) — never for a registered one, whose `StepSpec` labels are the
+ * persisted `pipeline_artifacts.step` keys. A list here for a registered catalog is dead while the
+ * registry is loaded and renders orphan labels when it is not (Rule 4b); spellbook, bestiary and
+ * currencies carried such lists until 2026-11-08 (`labPipelinesShadow.test.ts` holds the line).
  */
 const FINE_STEPS: Record<string, string[]> = {
-  spellbook: [
-    'Concept Brief & Fantasy', 'Mechanical Effect Logic', 'Cost & Cooldown Rules',
-    'Targeting Rules', 'Damage / Healing / Status Formulas', 'Combo & Interaction Rules',
-    'Balancing & Tuning Pass', 'Animation Set', 'VFX (cast, projectile, impact)',
-    'SFX (cast, impact, voice)', 'UI (icon, tooltip, cooldown)', 'Camera Shake / Feedback',
-    'Localization', 'AI Usage Hints', 'Combat Test Gate', 'UE Ability Asset Packaging',
-  ],
   // Single source of truth: the Items step labels are declared once in
   // itemsSteps.ts (ITEM_STEP_SPECS keys → ITEM_STEP_NAMES) so the rendered
   // timeline, the bespoke-UI registry, and these specs can never drift apart.
   items: ITEM_STEP_NAMES,
-  bestiary: [
-    'Concept Brief & Role', 'Lore & Codex Text', 'Stat Block & Resistances', 'Ability Set',
-    'AI Behavior Tree', 'Aggro / Perception', 'Encounter Balancing', 'Loot Binding',
-    'Concept Art 2D', '3D Model & Rig', 'Material & Texture', 'Animation Set',
-    'VFX Set', 'SFX Set', 'Combat Test Gate', 'UE Packaging',
-  ],
-  currencies: [
-    'Concept Brief & Role', 'Source/Sink Mapping', 'Cap & Decay Rules', 'Conversion Rules',
-    'Inflation Sim', 'Icon 2D Art', 'Gain VFX', 'Gain SFX', 'Wallet UI',
-    'Localization', 'Anti-Exploit', 'Telemetry', 'Economy Test Gate', 'UE Packaging',
-  ],
 };
 
 export function labPipelineSteps(catalogId: string): string[] {

@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { gateInputImage, parseVisionImage } from '@/lib/visual-gen/input-gate';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/visual-gen/input-gate
@@ -19,13 +22,26 @@ import { gateInputImage, parseVisionImage } from '@/lib/visual-gen/input-gate';
  * Data: { verdict: 'pass'|'warn'|'fail', score: 0-100, reasons: string[], raw: string }
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = (await request.json()) as { imageDataUrl?: string; subject?: string };
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const body = parsed as { imageDataUrl?: string; subject?: string };
     if (!body.imageDataUrl) return apiError('Missing required field: imageDataUrl', 400);
+    if (typeof body.imageDataUrl !== 'string') return apiError('imageDataUrl must be a string', 400);
+    if (body.subject != null && typeof body.subject !== 'string') return apiError('subject must be a string', 400);
     const image = parseVisionImage(body.imageDataUrl);
     if (!image) return apiError('imageDataUrl must be a base64 image data URL', 400);
 
+    const startedAt = Date.now();
     const card = await gateInputImage(image, { subject: body.subject });
+    // One structured line per outcome: provider, status, duration. Never the image, subject or error text.
+    (card.ok ? logger.info : logger.warn)('[visual-gen/input-gate] outcome', {
+      provider: 'vision',
+      status: card.ok ? 200 : 502,
+      ms: Date.now() - startedAt,
+    });
     if (!card.ok) return apiError(`input gate could not run: ${card.error}`, 502);
     return apiSuccess(card);
   } catch (e) {

@@ -1,0 +1,763 @@
+[
+ [
+  {
+   "names": [
+    "audio-scene-designer"
+   ],
+   "files": 26
+  },
+  {
+   "names": [
+    "audio-view-and-catalog"
+   ],
+   "files": 22
+  },
+  {
+   "names": [
+    "bestiary-archetypes-ai"
+   ],
+   "files": 23
+  },
+  {
+   "names": [
+    "bestiary-encounters-metrics"
+   ],
+   "files": 18
+  }
+ ],
+ [
+  {
+   "names": [
+    "blender-3d-integration"
+   ],
+   "files": 5
+  },
+  {
+   "names": [
+    "blender-mcp-bridge"
+   ],
+   "files": 35
+  },
+  {
+   "names": [
+    "blender-pipeline"
+   ],
+   "files": 14
+  },
+  {
+   "names": [
+    "blueprint-tools"
+   ],
+   "files": 251
+  }
+ ],
+ [
+  {
+   "names": [
+    "blueprint-transpiler-game-systems"
+   ],
+   "files": 19
+  },
+  {
+   "names": [
+    "build-history-config"
+   ],
+   "files": 20
+  },
+  {
+   "names": [
+    "build-packaging",
+    "crash-analysis",
+    "project-exploration-tools"
+   ],
+   "files": 17
+  },
+  {
+   "names": [
+    "build-quality-monitoring"
+   ],
+   "files": 23
+  }
+ ],
+ [
+  {
+   "names": [
+    "catalog-acceptance"
+   ],
+   "files": 45
+  },
+  {
+   "names": [
+    "catalog-browser-ui"
+   ],
+   "files": 24
+  },
+  {
+   "names": [
+    "catalog-core-infrastructure"
+   ],
+   "files": 155
+  },
+  {
+   "names": [
+    "catalog-database"
+   ],
+   "files": 22
+  }
+ ],
+ [
+  {
+   "names": [
+    "catalog-gap-analysis"
+   ],
+   "files": 41
+  },
+  {
+   "names": [
+    "catalog-pipeline-api"
+   ],
+   "files": 23
+  },
+  {
+   "names": [
+    "catalog-pipeline-state"
+   ],
+   "files": 91
+  },
+  {
+   "names": [
+    "catalog-pipelines"
+   ],
+   "files": 42
+  }
+ ],
+ [
+  {
+   "names": [
+    "catalog-seed-data"
+   ],
+   "files": 26
+  },
+  {
+   "names": [
+    "character-movement-playground"
+   ],
+   "files": 22
+  },
+  {
+   "names": [
+    "character-overview-input"
+   ],
+   "files": 29
+  },
+  {
+   "names": [
+    "character-simulator"
+   ],
+   "files": 27
+  }
+ ],
+ [
+  {
+   "names": [
+    "cli-terminal-output",
+    "cli-terminal-system",
+    "knowledge-system"
+   ],
+   "files": 20
+  },
+  {
+   "names": [
+    "cli-terminal-shell"
+   ],
+   "files": 29
+  },
+  {
+   "names": [
+    "coach-and-guidance"
+   ],
+   "files": 11
+  },
+  {
+   "names": [
+    "code-quality-evaluation"
+   ],
+   "files": 25
+  }
+ ],
+ [
+  {
+   "names": [
+    "combat-choreography"
+   ],
+   "files": 25
+  },
+  {
+   "names": [
+    "combat-damage-pipeline"
+   ],
+   "files": 21
+  },
+  {
+   "names": [
+    "combat-dodge-timeline"
+   ],
+   "files": 17
+  },
+  {
+   "names": [
+    "combat-metrics"
+   ],
+   "files": 20
+  }
+ ],
+ [
+  {
+   "names": [
+    "combat-simulator"
+   ],
+   "files": 13
+  },
+  {
+   "names": [
+    "cook-packaging-pipeline"
+   ],
+   "files": 13
+  },
+  {
+   "names": [
+    "core-engine-genre-tabs"
+   ],
+   "files": 27
+  },
+  {
+   "names": [
+    "core-engine-planning-shell"
+   ],
+   "files": 28
+  }
+ ],
+ [
+  {
+   "names": [
+    "core-engine-scan-telemetry"
+   ],
+   "files": 15
+  },
+  {
+   "names": [
+    "cross-module-features"
+   ],
+   "files": 17
+  },
+  {
+   "names": [
+    "database-layer"
+   ],
+   "files": 8
+  },
+  {
+   "names": [
+    "debug-performance"
+   ],
+   "files": 20
+  }
+ ],
+ [
+  {
+   "names": [
+    "economy-simulator"
+   ],
+   "files": 13
+  },
+  {
+   "names": [
+    "eqs-squad-combat-spatial"
+   ],
+   "files": 28
+  },
+  {
+   "names": [
+    "feature-design-state-hooks"
+   ],
+   "files": 10
+  },
+  {
+   "names": [
+    "game-design-studio-api"
+   ],
+   "files": 22
+  }
+ ],
+ [
+  {
+   "names": [
+    "feature-matrix-tracking",
+    "gdd-compliance",
+    "prompt-engineering"
+   ],
+   "files": 22
+  },
+  {
+   "names": [
+    "game-director-system"
+   ],
+   "files": 12
+  },
+  {
+   "names": [
+    "game-ui-hud"
+   ],
+   "files": 18
+  },
+  {
+   "names": [
+    "game-world-content-api"
+   ],
+   "files": 15
+  }
+ ],
+ [
+  {
+   "names": [
+    "holistic-quality-overview"
+   ],
+   "files": 26
+  },
+  {
+   "names": [
+    "hud-damage-and-navigation"
+   ],
+   "files": 28
+  },
+  {
+   "names": [
+    "hud-theme-and-inventory"
+   ],
+   "files": 25
+  },
+  {
+   "names": [
+    "image-generation"
+   ],
+   "files": 48
+  }
+ ],
+ [
+  {
+   "names": [
+    "inventory-catalog"
+   ],
+   "files": 19
+  },
+  {
+   "names": [
+    "inventory-economy-simulator"
+   ],
+   "files": 37
+  },
+  {
+   "names": [
+    "inventory-genome-economy"
+   ],
+   "files": 24
+  },
+  {
+   "names": [
+    "item-catalog-pipeline"
+   ],
+   "files": 167
+  }
+ ],
+ [
+  {
+   "names": [
+    "judge-craft-quality"
+   ],
+   "files": 26
+  },
+  {
+   "names": [
+    "lab-hooks"
+   ],
+   "files": 13
+  },
+  {
+   "names": [
+    "lab-shell-and-navigation"
+   ],
+   "files": 18
+  },
+  {
+   "names": [
+    "lab-ui-primitives"
+   ],
+   "files": 13
+  }
+ ],
+ [
+  {
+   "names": [
+    "level-design-module"
+   ],
+   "files": 2
+  },
+  {
+   "names": [
+    "level-flow-editor"
+   ],
+   "files": 25
+  },
+  {
+   "names": [
+    "localization-pipeline"
+   ],
+   "files": 22
+  },
+  {
+   "names": [
+    "loot-affix-core"
+   ],
+   "files": 28
+  }
+ ],
+ [
+  {
+   "names": [
+    "loot-affix-workbench"
+   ],
+   "files": 23
+  },
+  {
+   "names": [
+    "loot-metrics-designer"
+   ],
+   "files": 21
+  },
+  {
+   "names": [
+    "loot-simulation"
+   ],
+   "files": 23
+  },
+  {
+   "names": [
+    "material-configurator"
+   ],
+   "files": 21
+  }
+ ],
+ [
+  {
+   "names": [
+    "material-lab"
+   ],
+   "files": 15
+  },
+  {
+   "names": [
+    "material-style-tools"
+   ],
+   "files": 12
+  },
+  {
+   "names": [
+    "models-asset-inventory"
+   ],
+   "files": 12
+  },
+  {
+   "names": [
+    "module-cli-orchestration-hooks"
+   ],
+   "files": 13
+  }
+ ],
+ [
+  {
+   "names": [
+    "module-evaluator"
+   ],
+   "files": 18
+  },
+  {
+   "names": [
+    "module-system"
+   ],
+   "files": 14
+  },
+  {
+   "names": [
+    "module-topology-graph"
+   ],
+   "files": 27
+  },
+  {
+   "names": [
+    "observation-testing",
+    "simulation-tools"
+   ],
+   "files": 8
+  }
+ ],
+ [
+  {
+   "names": [
+    "pipeline-acceptance-engine"
+   ],
+   "files": 10
+  },
+  {
+   "names": [
+    "pipeline-step-components"
+   ],
+   "files": 38
+  },
+  {
+   "names": [
+    "platform-services-api"
+   ],
+   "files": 17
+  },
+  {
+   "names": [
+    "procedural-level-generation"
+   ],
+   "files": 31
+  }
+ ],
+ [
+  {
+   "names": [
+    "procedural-scene-tools"
+   ],
+   "files": 20
+  },
+  {
+   "names": [
+    "progression-curves-builds"
+   ],
+   "files": 20
+  },
+  {
+   "names": [
+    "progression-rewards-internals"
+   ],
+   "files": 25
+  },
+  {
+   "names": [
+    "project-health-dashboards"
+   ],
+   "files": 26
+  }
+ ],
+ [
+  {
+   "names": [
+    "project-ops-api"
+   ],
+   "files": 13
+  },
+  {
+   "names": [
+    "project-setup-core"
+   ],
+   "files": 15
+  },
+  {
+   "names": [
+    "prompt-evolution"
+   ],
+   "files": 26
+  },
+  {
+   "names": [
+    "quality-evaluation-api"
+   ],
+   "files": 22
+  }
+ ],
+ [
+  {
+   "names": [
+    "roadmap-workflow-management"
+   ],
+   "files": 15
+  },
+  {
+   "names": [
+    "save-system"
+   ],
+   "files": 19
+  },
+  {
+   "names": [
+    "session-analytics-reporting"
+   ],
+   "files": 24
+  },
+  {
+   "names": [
+    "shared-utility-hooks"
+   ],
+   "files": 24
+  }
+ ],
+ [
+  {
+   "names": [
+    "state-management"
+   ],
+   "files": 12
+  },
+  {
+   "names": [
+    "status-health-dashboard"
+   ],
+   "files": 28
+  },
+  {
+   "names": [
+    "step-shared-primitives"
+   ],
+   "files": 30
+  },
+  {
+   "names": [
+    "streaming-zone-planner"
+   ],
+   "files": 11
+  }
+ ],
+ [
+  {
+   "names": [
+    "topbar-and-activity"
+   ],
+   "files": 25
+  },
+  {
+   "names": [
+    "ue5-asset-generation-hooks"
+   ],
+   "files": 14
+  },
+  {
+   "names": [
+    "ue5-bridge-monitoring"
+   ],
+   "files": 21
+  },
+  {
+   "names": [
+    "ue5-build-bridge"
+   ],
+   "files": 15
+  }
+ ],
+ [
+  {
+   "names": [
+    "ue5-bridge-client"
+   ],
+   "files": 10
+  },
+  {
+   "names": [
+    "ue5-experiment-runner"
+   ],
+   "files": 2
+  },
+  {
+   "names": [
+    "ue5-filesystem"
+   ],
+   "files": 17
+  },
+  {
+   "names": [
+    "ue5-state-sync"
+   ],
+   "files": 28
+  }
+ ],
+ [
+  {
+   "names": [
+    "ui-primitives"
+   ],
+   "files": 10
+  },
+  {
+   "names": [
+    "visual-gen-3d-model-runners"
+   ],
+   "files": 18
+  },
+  {
+   "names": [
+    "visual-gen-asset-pipeline"
+   ],
+   "files": 14
+  },
+  {
+   "names": [
+    "visual-gen-contact-sheet-ue5-export"
+   ],
+   "files": 17
+  }
+ ],
+ [
+  {
+   "names": [
+    "visual-gen-core"
+   ],
+   "files": 14
+  },
+  {
+   "names": [
+    "visual-gen-library"
+   ],
+   "files": 15
+  },
+  {
+   "names": [
+    "visual-gen-mesh"
+   ],
+   "files": 10
+  },
+  {
+   "names": [
+    "visual-gen-mesh-quality-gates"
+   ],
+   "files": 19
+  }
+ ],
+ [
+  {
+   "names": [
+    "visual-gen-quality-and-animation"
+   ],
+   "files": 12
+  },
+  {
+   "names": [
+    "visual-gen-rigging-conformance"
+   ],
+   "files": 11
+  },
+  {
+   "names": [
+    "visual-gen-style-asset-library"
+   ],
+   "files": 14
+  },
+  {
+   "names": [
+    "world-module"
+   ],
+   "files": 26
+  }
+ ]
+]

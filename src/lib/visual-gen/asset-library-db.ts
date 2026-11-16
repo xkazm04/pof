@@ -10,6 +10,7 @@
 
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import { filterLibraryAssets } from '@/lib/visual-gen/library-filter';
 import type {
   AssetSource,
   AssetCategory,
@@ -123,17 +124,14 @@ export function listLibraryAssets(db: Database.Database, filter: LibraryFilter =
     where.push('id IN (SELECT assetId FROM asset_collection_items WHERE collectionId = ?)');
     params.push(filter.collectionId);
   }
-  if (filter.query?.trim()) {
-    // Match name or any tag (tags are stored as a JSON array string).
-    where.push('(LOWER(name) LIKE ? OR LOWER(tags) LIKE ?)');
-    const like = `%${filter.query.trim().toLowerCase()}%`;
-    params.push(like, like);
-  }
 
   const sql = `SELECT * FROM asset_library${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY createdAt DESC, rowid DESC`;
   const rows = db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
   const memberships = loadMemberships(db);
-  return rows.map((r) => rowToAsset(r, memberships));
+  const assets = rows.map((r) => rowToAsset(r, memberships));
+  // Text search is the in-memory filter itself, not a SQL twin of it: SQLite's LOWER and LIKE fold
+  // ASCII only, so "école" missed "École" here while the panel's filter found it.
+  return filter.query?.trim() ? filterLibraryAssets(assets, { query: filter.query }) : assets;
 }
 
 export function getLibraryAsset(db: Database.Database, id: string): LibraryAsset | null {

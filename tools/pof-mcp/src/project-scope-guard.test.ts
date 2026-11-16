@@ -107,6 +107,21 @@ const ROUTE_SCOPE: Record<string, { scoped: boolean; why: string }> = {
   'visual-gen/icon-from-mesh': { scoped: false, why: 'renders a mesh at a stated path into generated/icons/, keyed (catalogId, entityId, step)' },
   'visual-gen/assets': { scoped: false, why: 'lists generated meshes on disk across provider dirs; no project column' },
 
+  // ── story graphs: keyed (project, graphId) by EXACT match, not own-plus-legacy ──
+  // `project` here is the storygraph document's own project slug. These routes never use the
+  // legacy-scope rule: an unscoped read spans EVERY project (a list of all graphs; a graphId
+  // two projects hold is a 409 naming them), so the silent "legacy rows only = zero rows"
+  // failure this guard exists for cannot occur. The tools still declare and forward
+  // `project` (pinned by story-tools.test.ts). If the store ever adopts projectScopeSql,
+  // the primitive cross-check below flips these to a failure until they are reclassified.
+  // Two more story routes are reached only on paths this probe does not drive (and so cannot be
+  // listed without tripping the stale-entry check): `story/graphs/[graphId]` (pof_story_graph
+  // WITH a graphId — same exact-match findStoryGraphs, 404/409) and `story/walk/[jobId]`
+  // (polling an in-memory job by its own id). Both are pinned in story-tools.test.ts.
+  'story/graphs': { scoped: false, why: 'listStoryGraphs narrows by exact project when given and lists every project otherwise; POST imports into the project the DOCUMENT declares' },
+  'story/findings': { scoped: false, why: 'resolves the stored graph exactly like story/graphs/[graphId] (404 / 409), then validates it in memory' },
+  'story/walk': { scoped: false, why: 'resolves the stored graph exactly like story/graphs/[graphId], then starts an in-memory walk job' },
+
   // ── genuinely project-free routes ──────────────────────────────────────────
   'ability-spec': { scoped: false, why: 'catalog data keyed by catalogId/entityId; no project column' },
   'ai-testing': { scoped: false, why: 'AI test suites carry no project column' },

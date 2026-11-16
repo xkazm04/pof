@@ -28,6 +28,9 @@ export type ConnectionFailureMode =
   | 'wrong-port'
   | 'timeout'
   | 'unreachable-host'
+  | 'connection-lost'
+  | 'not-connected'
+  | 'oversized-response'
   | 'unknown';
 
 export interface ConnectionDiagnosis {
@@ -156,6 +159,58 @@ export function classifyConnectionError(
         'In the 3D Viewport sidebar (press N) ▸ BlenderMCP tab, click "Connect to MCP server".',
         portHint,
         'Then retry the connection here.',
+      ],
+      addonInstallUrl: BLENDER_ADDON_REPO_URL,
+    };
+  }
+
+  // The addon sent more than the bridge will buffer; the service reset the socket.
+  if (lower.includes('response exceeded')) {
+    return {
+      mode: 'oversized-response',
+      title: 'Blender sent too large a reply',
+      summary:
+        'Blender answered with more data than PoF will hold in memory, so the connection was reset to keep it from stalling.',
+      steps: [
+        'Reconnect to Blender, then retry with a smaller scene or a narrower request.',
+        'If a script prints a lot of output, trim what it prints.',
+      ],
+    };
+  }
+
+  // The service was asked to send while no socket was open.
+  if (lower.includes('not connected to blender')) {
+    return {
+      mode: 'not-connected',
+      title: 'Not connected to Blender',
+      summary: 'PoF has no open connection to Blender, so the command was not sent.',
+      steps: [
+        'Connect to Blender from the connection bar first.',
+        'If Blender is closed, launch it and start the addon server from the BlenderMCP sidebar panel (press N).',
+        'Then repeat the action.',
+      ],
+      addonInstallUrl: BLENDER_ADDON_REPO_URL,
+    };
+  }
+
+  // The socket was open but Blender or the network dropped it mid-exchange.
+  if (
+    lower.includes('closed while command was in flight') ||
+    lower.includes('connection was reset') ||
+    lower.includes('econnreset') ||
+    lower.includes('socket error') ||
+    lower.includes('write failed') ||
+    lower.includes('epipe')
+  ) {
+    return {
+      mode: 'connection-lost',
+      title: 'Blender closed the connection',
+      summary:
+        'The connection to Blender dropped while a command was running or queued. Blender may have quit, crashed or stopped its addon server; the command may not have finished.',
+      steps: [
+        'Check that Blender is still open and has not crashed.',
+        'In the BlenderMCP sidebar panel, make sure "Connect to MCP server" is still active.',
+        'Reconnect here, then retry the action. Check the scene before repeating it: the first attempt may have partly run.',
       ],
       addonInstallUrl: BLENDER_ADDON_REPO_URL,
     };

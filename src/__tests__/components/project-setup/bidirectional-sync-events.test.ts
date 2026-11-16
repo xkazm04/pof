@@ -27,7 +27,7 @@ function entry(direction: 'outbound' | 'inbound', dropped = false): SyncLogEntry
 }
 
 describe('diffSyncState', () => {
-  it('a changed snapshot timestamp is exactly one inbound SNAP event; the first frame is none', () => {
+  it('a changed editor state is exactly one inbound SNAP event; the first frame is none', () => {
     const events = diffSyncState(view({ snapshot: snap(1) }), view({ snapshot: snap(2, 'PIE') }));
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ direction: 'inbound', category: 'SNAP', message: 'Editor: PIE' });

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Copy, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { downloadBlob } from '@/lib/download';
 import { getCachedHighlight, highlight } from '@/lib/shiki-highlighter';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -27,19 +28,6 @@ interface CodeViewerProps {
 
 /** Highlighted HTML together with the input it was computed from. */
 interface Highlighted { code: string; lang: string; html: string }
-
-/** Build + click a transient anchor to save `text` as a file (client-only). */
-function triggerDownload(fileName: string, text: string): void {
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
 
 function defaultLabel(fileName: string): string {
   if (fileName.endsWith('.cpp')) return 'C++';
@@ -79,9 +67,13 @@ export function CodeViewer({
     if (html !== null) return;
 
     let cancelled = false;
-    highlight(trimmed, lang).then((result) => {
-      if (!cancelled) setHighlighted({ code: trimmed, lang, html: result });
-    });
+    highlight(trimmed, lang).then(
+      (result) => {
+        if (!cancelled) setHighlighted({ code: trimmed, lang, html: result });
+      },
+      // The plain <pre> stays up; a failed grammar load is not an unhandled rejection.
+      () => {},
+    );
 
     return () => { cancelled = true; };
   }, [trimmed, lang, html]);
@@ -110,7 +102,7 @@ export function CodeViewer({
   }, [trimmed, fileName]);
 
   const handleDownload = useCallback(() => {
-    triggerDownload(fileName, `${trimmed}\n`);
+    downloadBlob(new Blob([`${trimmed}\n`], { type: 'text/plain;charset=utf-8' }), fileName);
     toast.success(`Downloaded ${fileName}`);
   }, [trimmed, fileName]);
 

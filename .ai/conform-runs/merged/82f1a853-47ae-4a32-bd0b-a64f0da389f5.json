@@ -1,0 +1,149 @@
+{
+ "schema": "conform-run/1",
+ "worker": "82f1a853-47ae-4a32-bd0b-a64f0da389f5",
+ "subject": "concept-scene-parity",
+ "evaluatedAt": "2026-11-03T23:49:12.598721+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "pipeline-step-components",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/layout-lab/steps/ItemArt.tsx:15 These step panels run a per-asset generate/compare/select gallery for catalog entities and never capture a lit real-time scene from a concept camera or score it element by element against a concept image; a case-insensitive search of steps/ and one-shot/ for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+   "techniques": [
+    {
+     "technique": "refine-or-pivot-with-every-round-kept",
+     "verdict": "not-applicable",
+     "evidence": "src/components/layout-lab/steps/ItemArt.tsx:16 Kept batches exist, but they are for single-asset generation. No scene look round is judged against a concept, so the subject's precondition does not hold."
+    }
+   ],
+   "absenceTerms": [
+    "colour grade",
+    "reflection probe"
+   ]
+  },
+  {
+   "context": "image-generation",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/lib/visual-gen/input-gate.ts:2 This context produces and gates the 2D concept/input images upstream of asset generation, which the golden path assigns to media-generation prompt craft and image-to-3d input gating, not to judging a placed real-time scene against a concept; a search of src/lib/visual-gen, the stores and the generate/leonardo routes found none of concept camera, scene parity, colour grade, reflection probe or play trace.",
+   "techniques": [
+    {
+     "technique": "judge-in-the-destination-light",
+     "verdict": "not-applicable",
+     "evidence": "src/lib/visual-gen/lighting-presets.ts:2 These are Lumen config presets that get injected into prompts. Nothing here reviews an asset under a destination-scene light rig."
+    }
+   ],
+   "absenceTerms": [
+    "colour grade",
+    "reflection probe"
+   ]
+  },
+  {
+   "context": "audio-scene-designer",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioScenePainter/types.ts:6 The 'scene' here is a 2D audio zone and emitter layout, not a rendered visual scene judged against a concept image; a search of the audio module for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "colour grade",
+    "reflection probe"
+   ]
+  },
+  {
+   "context": "procedural-scene-tools",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/visual-gen/scene-composer/SceneExporter.tsx:19 The scene composer builds a scene tree and exports it through a Blender script, but nothing captures that scene from a concept camera or scores it against a concept; a search of the procedural-engine, scene-composer, auto-rig and import-automation folders for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "colour grade",
+    "reflection probe"
+   ]
+  },
+  {
+   "context": "code-quality-evaluation",
+   "subject": "concept-scene-parity",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/DeepEvalResults/FindingRow.tsx:28 This context judges generated C++ source files (findings tied to files and commits), not a visual scene against a concept image, so the look-parity loop has nothing to govern here; a search of the evaluator module for concept camera, scene parity, colour grade, reflection probe and play trace found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "colour grade",
+    "reflection probe"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-03T23:49:12.598721+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [
+    "refine-or-pivot-with-every-round-kept"
+   ],
+   "deviations": 0,
+   "context": "pipeline-step-components",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T23:49:12.598721+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [
+    "judge-in-the-destination-light"
+   ],
+   "deviations": 0,
+   "context": "image-generation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T23:49:12.598721+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-scene-designer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T23:49:12.598721+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "procedural-scene-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-03T23:49:12.598721+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "concept-scene-parity"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "code-quality-evaluation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

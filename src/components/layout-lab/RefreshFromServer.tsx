@@ -34,7 +34,7 @@ interface RefreshFromServerProps {
  */
 export function RefreshFromServer({ t, onRefresh, refreshing, error, outcome, onDismiss }: RefreshFromServerProps) {
   return (
-    <div style={{ padding: '0 18px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ padding: '0 var(--lab-s5) var(--lab-s3)', display: 'flex', flexDirection: 'column', gap: 'var(--lab-s2)' }}>
       <Button
         mono
         onClick={onRefresh}
@@ -58,7 +58,7 @@ export function RefreshFromServer({ t, onRefresh, refreshing, error, outcome, on
           className={t.fontMono}
           role="status"
           data-testid="refresh-outcome"
-          style={{ fontSize: 12, lineHeight: 1.5, color: t.muted }}
+          style={{ fontSize: 'var(--lab-fs-xs)', lineHeight: 1.5, color: t.muted }}
         >
           {describeOutcome(outcome)}
           {outcome.kept.length > 0 && (
@@ -82,7 +82,7 @@ function describeOutcome(o: RefreshOutcome): string {
   const total = o.adopted.length + o.removed.length + o.kept.length + o.unchanged;
   if (total === 0) return 'The server holds no artifacts for this entity.';
   if (o.adopted.length === 0 && o.removed.length === 0 && o.kept.length === 0) {
-    return `Up to date — ${o.unchanged} step${o.unchanged === 1 ? '' : 's'} match the server.`;
+    return `Up to date — ${o.unchanged === 1 ? '1 step matches' : `${o.unchanged} steps match`} the server.`;
   }
   return [
     o.adopted.length ? `${o.adopted.length} adopted` : null,

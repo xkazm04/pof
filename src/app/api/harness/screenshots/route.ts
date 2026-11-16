@@ -11,8 +11,11 @@
  *   {
  *     statePath: string,
  *     baselineSlugs: string[],
- *     iterations: Array<{ iteration: number, capturedAt: string, modules: VisualModuleResult[] }>
+ *     iterations: Array<{ iteration: number, capturedAt: string, modules: VisualModuleResult[], corrupt?: true }>
  *   }
+ *
+ * `corrupt: true` marks an iteration whose result.json exists but does not parse - a damaged
+ * gate record, not a legitimate empty one (same contract as progressResponse in ../route.ts).
  */
 import { NextRequest } from 'next/server';
 import * as fs from 'fs';
@@ -38,7 +41,7 @@ export async function GET(req: NextRequest) {
   if (!fs.existsSync(screenshotsRoot)) return apiSuccess({ statePath, baselineSlugs: [], iterations: [] });
 
   const entries = fs.readdirSync(screenshotsRoot, { withFileTypes: true });
-  const iterations: Array<{ iteration: number; capturedAt: string; modules: VisualModuleResult[] }> = [];
+  const iterations: Array<{ iteration: number; capturedAt: string; modules: VisualModuleResult[]; corrupt?: true }> = [];
   let baselineSlugs: string[] = [];
 
   for (const entry of entries) {
@@ -56,14 +59,15 @@ export async function GET(req: NextRequest) {
     const resultPath = path.join(dir, 'result.json');
     let modules: VisualModuleResult[] = [];
     let capturedAt = '';
+    let corrupt = false;
     if (fs.existsSync(resultPath)) {
       try {
         const parsed = JSON.parse(fs.readFileSync(resultPath, 'utf-8')) as VisualGateResult;
         modules = parsed.modules ?? [];
-      } catch { /* fall through with empty modules */ }
+      } catch { corrupt = true; }
       try { capturedAt = fs.statSync(resultPath).mtime.toISOString(); } catch { /* */ }
     }
-    iterations.push({ iteration: iter, capturedAt, modules });
+    iterations.push(corrupt ? { iteration: iter, capturedAt, modules, corrupt: true } : { iteration: iter, capturedAt, modules });
   }
   iterations.sort((a, b) => b.iteration - a.iteration);
 

@@ -193,8 +193,11 @@ export function useMenuFlowDiagram() {
       const ux = dx / len;
       const uy = dy / len;
 
-      // Offset from center by half the node diagonal for cleaner endpoints
-      const offset = 40;
+      // Stop at the node box edge along this direction (+4px gap): nodes draw over
+      // arrows, so a fixed 40px offset hid heads inside wide boxes (half-width 85).
+      const edgeX = Math.abs(ux) > 1e-9 ? (NODE_W / 2) / Math.abs(ux) : Infinity;
+      const edgeY = Math.abs(uy) > 1e-9 ? (NODE_H / 2) / Math.abs(uy) : Infinity;
+      const offset = Math.min(edgeX, edgeY) + 4;
       const fx = from.x + ux * offset;
       const fy = from.y + uy * offset;
       const tx = to.x - ux * offset;

@@ -50,3 +50,27 @@ test('originFromEnv prefers POF_APP_ORIGIN, then PORT, then the dev default', ()
   assert.equal(originFromEnv({ PORT: '3001' }), 'http://127.0.0.1:3001');
   assert.equal(originFromEnv({}), 'http://127.0.0.1:3000');
 });
+
+test('sends x-operator-token on get and post when POF_OPERATOR_TOKEN is set', async () => {
+  const seen: Array<Record<string, string>> = [];
+  mockFetch(async (_url: unknown, init: unknown) => {
+    seen.push((init as { headers: Record<string, string> }).headers);
+    return { ok: true, status: 200, json: async () => ({ success: true, data: 1 }) };
+  });
+  const pof = createPofClient('http://x', { POF_OPERATOR_TOKEN: 's3cret' });
+  await pof.get('/api/a');
+  await pof.post('/api/b', {});
+  assert.equal(seen.length, 2);
+  for (const h of seen) assert.equal(h['x-operator-token'], 's3cret');
+});
+
+test('sends no operator header when no token is configured', async () => {
+  let seen: Record<string, string> = {};
+  mockFetch(async (_url: unknown, init: unknown) => {
+    seen = (init as { headers: Record<string, string> }).headers;
+    return { ok: true, status: 200, json: async () => ({ success: true, data: 1 }) };
+  });
+  await createPofClient('http://x', {}).get('/api/a');
+  assert.equal('x-operator-token' in seen, false);
+  assert.equal(seen['Content-Type'], 'application/json');
+});

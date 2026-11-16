@@ -13,10 +13,9 @@ import {
   DMG_TYPES, ARMOR_TYPES, EFFECTIVENESS_DATA,
   PROJECTILE_PATHS,
 } from '../_shared/data';
-import { WEAPONS } from '../_shared/data-metrics';
-import type { Weapon, WeaponCategory } from '../_shared/data-metrics';
+import { WEAPONS, WEAPON_CATEGORIES } from '../_shared/data-metrics';
+import type { Weapon } from '../_shared/data-metrics';
 
-const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const WEAPONS_BY_CAT = WEAPON_CATEGORIES.map(cat => ({
   category: cat,
   weapons: WEAPONS.filter(w => w.category === cat),
@@ -55,6 +54,7 @@ export function HitsTab() {
         <SectionHeader label="Per-Weapon Hit Analysis" color={ACCENT} icon={Crosshair} />
         <div className="mt-2 mb-3">
           <select
+            aria-label="Weapon for hit analysis"
             value={selectedWeaponId ?? ''}
             onChange={(e) => setSelectedWeaponId(e.target.value || null)}
             className="w-full max-w-xs bg-surface-deep border border-border/30 rounded px-2 py-1.5 text-xs font-mono text-text focus:outline-none focus:border-border/60"

@@ -24,7 +24,7 @@ const depth = computeDepth();
 
 export function BehaviorTreeMetric() {
   return (
-    <div className="text-[10px] font-mono leading-tight">
+    <div className="text-2xs font-mono leading-tight">
       <span className="font-bold" style={{ color: ACCENT_EMERALD }}>{nodeCount}</span>
       <span style={{ color: withOpacity(ACCENT_EMERALD, OPACITY_50) }}> nodes / </span>
       <span className="font-bold" style={{ color: ACCENT_EMERALD }}>{depth}</span>

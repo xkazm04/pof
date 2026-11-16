@@ -1,0 +1,4 @@
+Generated one image with built-in imagegen using the prompt in `PROMPT.don-fax.md`. Saved as [don-fax.png](./don-fax.png).
+
+Original path:
+`C:\Users\kazda\.codex\generated_images\01a19d70-2429-7583-b435-5a13c0a5a027\exec-d5ba6f21-38fd-4221-93f6-fb07b51d6bd6.png`

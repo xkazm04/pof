@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { Search, LayoutDashboard, FlaskConical, Boxes } from 'lucide-react';
 import { requestShellSwitch } from '@/hooks/useLeaveGuard';
+import { OPEN_GLOBAL_SEARCH_EVENT } from '@/components/layout/GlobalSearchPanel/constants';
 
 // --- New (Blueprint) shell switch ---
 // Mirror of the lab's "Legacy shell" button: names this entry legacy=1 (keeping its
@@ -59,7 +60,7 @@ export function Studio3DLink() {
 
 export function SearchTrigger() {
   const handleClick = useCallback(() => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+    window.dispatchEvent(new CustomEvent(OPEN_GLOBAL_SEARCH_EVENT));
   }, []);
 
   return (
@@ -71,7 +72,7 @@ export function SearchTrigger() {
       <Search className="w-3 h-3" />
       <span className="hidden sm:inline">Search</span>
       <kbd className="hidden sm:inline-flex items-center px-1 py-px text-2xs bg-surface border border-border rounded font-mono">
-        ⌘K
+        Ctrl K
       </kbd>
     </button>
   );

@@ -12,13 +12,14 @@
  *
  * inbound == written is convergence (`confirmed`), never a conflict;
  * inbound == base means UE has not applied it yet (`pending`); anything else is
- * `diverged`, the only outcome `deriveConflicts` reports. The plugin sends no
- * ack for `set.property`, so the ledger claims no more than socket delivery
- * plus read-back. Ordering is the client's own arrival sequence - UE
- * timestamps are a second clock and are not compared.
+ * `diverged`, the only outcome `deriveConflicts` reports. The plugin's
+ * `set.ack` (`applyAck`) is the stronger evidence and settles the write it
+ * names; a read-back is the editor's ExportText string, so it can only confirm
+ * a value already written in that form. Ordering is the client's own arrival
+ * sequence - UE timestamps are a second clock and are not compared.
  */
 
-import type { SyncConflict, SyncWrite, SyncWriteOutcome } from '@/types/ue5-bridge';
+import type { SyncConflict, SyncWrite, SyncWriteOutcome, WriteAck } from '@/types/ue5-bridge';
 
 /** Distinct keys the ledger keeps; the oldest write is evicted past this. */
 export const MAX_LEDGER_ENTRIES = 100;
@@ -101,6 +102,23 @@ export function observeUpdate(
   if (outcome === write.outcome && outcome === 'unobserved') return ledger;
   const next = new Map(ledger);
   next.set(key, { ...write, outcome, inbound: update.value });
+  return next;
+}
+
+/**
+ * Apply the plugin's verdict to the write it names. An ack for a superseded
+ * write (seq mismatch) is ignored and returns the SAME map.
+ */
+export function applyAck(ledger: Ledger, ack: WriteAck): Ledger {
+  const key = writeKey(ack.objectPath, ack.propertyName);
+  const write = ledger.get(key);
+  if (!write || write.seq !== ack.requestId || write.outcome === 'dropped') return ledger;
+  const next = new Map(ledger);
+  if (!ack.ok) {
+    next.set(key, { ...write, outcome: 'rejected', error: ack.error ?? 'Refused by the editor' });
+  } else {
+    next.set(key, { ...write, outcome: ack.adjusted ? 'diverged' : 'confirmed', inbound: ack.value ?? write.inbound });
+  }
   return next;
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import {
   getPatternDashboard,
   searchPatterns,
@@ -108,8 +108,12 @@ export async function GET(req: NextRequest) {
  *   { action: 'update', id, patch: PatternMetaPatch }      → Patch editable fields
  */
 export async function POST(req: NextRequest) {
+  // A malformed or non-object body is a 400, not the catch-all 500 below.
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
+
   try {
-    const body = await req.json();
     const { action } = body;
 
     if (action === 'extract') {
@@ -130,7 +134,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'delete') {
       const { id } = body;
-      if (!id) return apiError('id is required', 400);
+      if (typeof id !== 'string' || !id) return apiError('id is required', 400);
       const deleted = deletePattern(id);
       return apiSuccess({ deleted });
     }
@@ -165,7 +169,7 @@ export async function POST(req: NextRequest) {
     if (action === 'update') {
       const { id, patch } = body as { id?: string; patch?: PatternMetaPatch };
       if (!id) return apiError('id is required', 400);
-      if (!patch || typeof patch !== 'object') return apiError('patch is required', 400);
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return apiError('patch must be an object', 400);
       const pattern = updatePatternMeta(id, patch);
       if (!pattern) return apiError('Pattern not found', 404);
       return apiSuccess({ pattern });

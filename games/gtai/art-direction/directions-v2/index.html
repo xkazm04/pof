@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GTAI Art Directions</title>
+<style>
+:root {
+  --paper: #F2E8D5; --paper-2: #E9DCC3; --ink: #17131B; --ink-2: #4A4350; --verm: #E8502A; --teal: #1FB5A8;
+  --rule: #CDBFA6; --card: #FBF6EC; --good: #2F7D4F; --warn: #A8620F; --bad: #B33A1E;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #18151B; --paper-2: #221E26; --ink: #EFE6D6; --ink-2: #B8AEBF; --rule: #3A3440; --card: #201C24;
+    --good: #6FC28F; --warn: #E2A24E; --bad: #F07A5A;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #18151B; --paper-2: #221E26; --ink: #EFE6D6; --ink-2: #B8AEBF; --rule: #3A3440; --card: #201C24;
+  --good: #6FC28F; --warn: #E2A24E; --bad: #F07A5A;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink);
+  font: 15px/1.55 ui-sans-serif, "Segoe UI", system-ui, -apple-system, sans-serif; }
+main { max-width: 1240px; margin: 0 auto; padding: 24px 16px 80px; }
+h1, h2, h3 { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .01em; line-height: 1.2; }
+h1 { font-size: 30px; margin: 8px 0 6px; }
+h2 { font-size: 22px; margin: 56px 0 10px; padding-top: 14px; border-top: 3px solid var(--ink); }
+h3 { font-size: 16px; margin: 26px 0 8px; }
+p, li { max-width: 78ch; }
+a { color: var(--verm); }
+.lede { font-size: 17px; color: var(--ink-2); }
+.tag { display: inline-block; font: 12px/1 ui-monospace, Consolas, monospace; padding: 4px 7px; border: 1.5px solid var(--ink);
+  border-radius: 3px; margin-right: 6px; }
+.tag.v { background: var(--verm); color: #fff; border-color: var(--verm); }
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) { .g2, .g3 { grid-template-columns: 1fr; } }
+figure { margin: 0; background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 8px; }
+figure img { display: block; width: 100%; height: auto; border-radius: 3px; }
+figure img.px { image-rendering: pixelated; }
+figcaption { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+figcaption b { color: var(--ink); }
+.wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: var(--card); }
+th, td { border: 1px solid var(--rule); padding: 7px 9px; text-align: left; vertical-align: top; }
+th { background: var(--paper-2); font-weight: 600; }
+td.score, .score { font: 700 20px/1 ui-monospace, Consolas, monospace; white-space: nowrap; }
+.s5 { color: var(--good); } .s4 { color: var(--good); } .s3 { color: var(--warn); } .s2, .s1 { color: var(--bad); }
+.ladder td:first-child { white-space: nowrap; font-weight: 600; }
+.callout { border-left: 5px solid var(--verm); background: var(--card); padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; }
+.callout.ink { border-left-color: var(--ink); }
+.small { font-size: 13px; color: var(--ink-2); }
+nav.toc { font: 13px/1.9 ui-monospace, Consolas, monospace; }
+nav.toc a { color: var(--ink); margin-right: 14px; white-space: nowrap; }
+code { font: 13px ui-monospace, Consolas, monospace; background: var(--paper-2); padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<main>
+
+<p class="small">GTAI: Uprising - art-direction study v2 - 2026-11-02 - Codex CLI built-in <code>image_gen</code> (ChatGPT Pro plan) + Godot 4.7.2 prototypes</p>
+<h1>Five art directions, from where we are to Rivet</h1>
+<p class="lede">The owner asked for directions that chase the Rivet concept's comic, hand-drawn quality, plus real backups that
+evolve the current riso print. This board compares five directions on one scene. For each direction it shows a Codex gameplay mock,
+a top-down Rivet at close-up and at 50 px, a Codex parts sheet run through our chroma key, and a frame rendered in the real Godot
+district with a prototype print shader.</p>
+
+<nav class="toc"><a href="#anchor">Anchor and now</a><a href="#ladder">Ladder</a><a href="#axes">Axes</a><a href="#d1">D1</a><a href="#d2">D2</a><a href="#d3">D3</a><a href="#d4">D4</a><a href="#d5">D5</a><a href="#truth">50 px truth</a><a href="#rec">Recommendation</a><a href="#method">Method</a></nav>
+
+<div class="callout">
+<b>The short answer.</b> At gameplay scale (32 px/m, so Rivet is about 50 px across), none of the Rivet concept's hand-made
+detail survives on the <i>character</i>: hatching, grime and sketch lines all turn to mush. What survives is the
+silhouette, the vermilion hazard collar, value contrast, and a cream "sticker" rim. The comic look can live in the
+<i>world</i> (roofs, kerbs, vehicles, shadows) and in a calm print pass. <b>Chase D4 Ink and Hatch in its hybrid form</b>
+(hatched world, flat-wash streets, sticker-rimmed characters). <b>Keep D1 Riso Refined as the safe backup.</b> D2 Linocut is the bold alternative.
+</div>
+
+<!-- ================================================================= ANCHOR -->
+<h2 id="anchor">The anchor and where we are now</h2>
+<div class="grid g3">
+  <figure><img src="anchor_rivet_concept.jpg" alt="Rivet concept: a grimy welding robot drawn in sketchy ink with hatching and teal ghost souls on cream paper">
+    <figcaption><b>The look to chase:</b> the Rivet concept (ref-4). It has confident, sketchy ink with hatching; grime; a cream paper ground;
+    misregistered vermilion; and teal ghost souls. It is high craft, but it feels hand-made.</figcaption></figure>
+  <figure><img src="anchor_camera90_target.jpg" alt="Camera target: a straight-down GTA 2 style frame of a loading yard">
+    <figcaption><b>The camera to keep:</b> ref-1 shows a 90-degree, orthographic camera with characters at about 1/20 of the screen height.
+    It was attached to every mock prompt.</figcaption></figure>
+  <figure><img src="engine_riso_junction.jpg" alt="The current Godot district junction through the 4 px riso halftone shader">
+    <figcaption><b>Now, in-engine:</b> the district junction after evolve waves 1-4, seen through <code>riso.gdshader</code>
+    (4 inks with a 4 px halftone). It is the same deterministic frame as every in-engine render below.</figcaption></figure>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <figure><img src="now_roofs.jpg" alt="Current roofs scene after the wave 2 roof upgrade">
+    <figcaption><b>Now, the roofs:</b> evolve wave 2 (Codex roof sheets). This is the strongest part of the current look.</figcaption></figure>
+  <figure><img class="px" src="now_cutout_32ppm_closeups.png" alt="3x close-ups of the cutout rig characters at 32 px per metre">
+    <figcaption><b>Now, the characters at 32 px/m (3x):</b> the v1 and v2 cutout rigs. The 4 px halftone eats the rig parts;
+    the identity is carried by the collar arc and the dark silhouette. Every direction below must beat this.</figcaption></figure>
+</div>
+
+<!-- ================================================================= LADDER -->
+<h2 id="ladder">The ladder at a glance</h2>
+<div class="wrap"><table class="ladder">
+<tr><th>Direction</th><th>What it is</th><th>Distance to Rivet</th><th>Can we get there (1-5)</th></tr>
+<tr><td><a href="#d1">D1 Riso Refined</a></td><td>Today's 4-ink riso with flat ink fills, a finer and lighter dot screen, and clean outlines. It is the print we have, done gently.</td><td>Far: still a print, not a drawing.</td><td class="score s5">5</td></tr>
+<tr><td><a href="#d2">D2 Linocut</a></td><td>A carved block print with solid ink streets, paper gouges and a flat vermilion second block. There are no dots and no greys.</td><td>Medium: hand-made and bold, but carved rather than drawn.</td><td class="score s4">4</td></tr>
+<tr><td><a href="#d3">D3 Clear Line</a></td><td>Ligne claire: even outlines with flat fills from 7 muted inks. There is no texture work.</td><td>Far, sideways: the cleanest and most legible, with no grit.</td><td class="score s4">4</td></tr>
+<tr><td><a href="#d4">D4 Ink and Hatch</a></td><td>A pen-and-ink comic panel: hand-inked lines, hatching for tone, and 2 spot inks on cream paper. The <b>hybrid</b> form keeps the hatching in the world and puts sticker-rimmed characters on a flat-wash street.</td><td>Close: this is the Rivet concept's line and hatching, with a tone budget.</td><td class="score s4">4</td></tr>
+<tr><td><a href="#d5">D5 Inked Grime</a></td><td>The full chase: sketchy ink, watercolour-like wash, grime, rust and misregistered vermilion.</td><td>It is the concept.</td><td class="score s2">2</td></tr>
+</table></div>
+
+<!-- ================================================================= AXES -->
+<h2 id="axes">The axes they differ on</h2>
+<div class="wrap"><table>
+<tr><th>Axis</th><th>D1 Riso Refined</th><th>D2 Linocut</th><th>D3 Clear Line</th><th>D4 Ink and Hatch</th><th>D5 Inked Grime</th></tr>
+<tr><th>Line quality</th><td>Bold, even 3 px ink outline</td><td>Fat, wobbly carved edges</td><td>Thin, uniform, clean outline</td><td>Hand-inked, with varying weight</td><td>Sketchy, with construction lines</td></tr>
+<tr><th>Shading method</th><td>Fine, light halftone, used sparingly</td><td>Solid ink with carved paper gouges</td><td>None (flat cel)</td><td>Hatching and cross-hatching</td><td>Wash plus hatching plus grime</td></tr>
+<tr><th>Inks and palette</th><td>4 (cream, ink, vermilion, teal)</td><td>3 + teal; nothing in between</td><td>7 muted inks (this breaks the 4-ink lock)</td><td>2 spot inks + paper + teal</td><td>Continuous tone (this breaks the lock)</td></tr>
+<tr><th>Detail density</th><td>Low to medium</td><td>Low, chunky</td><td>Medium</td><td>Medium to high (in the world)</td><td>High everywhere</td></tr>
+<tr><th>Paper and grain</th><td>Cream with light grain</td><td>Cream, with roller texture in the solids</td><td>A light tooth</td><td>Cream with grain</td><td>Cream with stipple and grime</td></tr>
+<tr><th>The shader's role</th><td>It does the print: dots, plates, edge ink</td><td>Thresholds tone to solid or paper and carves the darks</td><td>Posterises and outlines only</td><td>Sets the tone budget (wash) and adds hatching in the shadows; the art carries the pen work</td><td>It can only approximate the wash; the grime and sketch lines must be in the art</td></tr>
+</table></div>
+
+<!-- ================================================================= D1 -->
+<h2 id="d1">D1 Riso Refined <span class="tag">closest evolution</span><span class="score s5">5/5</span></h2>
+<p>This is the current look with the mud taken out. The art is prompted as flat ink fills (the evolve round's own round-2 advice),
+and the full-screen pass uses a finer 3 px screen at 70% coverage with a flat vermilion plate, instead of dotting the accents.</p>
+<div class="grid g2">
+  <figure><img src="d1_mock.jpg" alt="D1 Codex mock of the intersection fight">
+    <figcaption><b>Codex mock.</b> The camera holds. It is crisp, light and very legible. Drift: the dumpster came out teal, which is reserved for the dead, and the water-tank legs read slightly oblique.</figcaption></figure>
+  <figure><img class="px" src="d1_mock_game.png" alt="D1 mock at the 1280x720 game size, centre crop 2x">
+    <figcaption><b>The same mock at game size</b> (scaled to 1280x720, centre crop shown 2x). The cops and Rivet separate cleanly from the asphalt.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="d1_rivet.jpg" alt="D1 Rivet top-down close-up"><figcaption><b>Rivet from above.</b> It slid toward clean vector art, the vermilion went orange, and the dot screen is barely there.</figcaption></figure>
+  <figure><img src="d1_rivet50.png" alt="d1 Rivet at true 50 px size" style="width:auto;image-rendering:pixelated;margin-bottom:6px"><img class="px" src="d1_rivet50x4.png" alt="D1 Rivet at 50 px on paper and on asphalt, 4x"><figcaption><b>At 50 px (true size on top, then 4x), on paper and on asphalt.</b> The cream body pops on asphalt and almost vanishes on paper. The collar survives.</figcaption></figure>
+  <figure><img class="px" src="d1_composite.png" alt="D1 sample composited into the in-engine fine frame"><figcaption><b>Offline composite</b> into the in-engine <code>fine</code> frame (3x). Left: the raw sample. Right: the same sample with the game's sticker rim. The in-engine Rivet is in the middle.</figcaption></figure>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <figure><img src="d1_parts.jpg" alt="D1 parts sheet"><figcaption><b>Parts test</b> (helmet, torso with collar, torch forearm, clamp). All four parts are top-down with joint caps.</figcaption></figure>
+  <figure><img src="d1_parts_keyed.jpg" alt="D1 parts keyed onto asphalt"><figcaption><b>Through our keyer</b> (<code>evolve/tools/proc.py</code>): 4/4 parts found, 0.8% spill. The green came back as (1,204,35), not #00B140, but the border-measured key handles it.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="engine_fine_junction.jpg" alt="In-engine fine pass, junction"><figcaption><b>In-engine</b>, <code>--look=fine</code>: the current assets with a 3 px screen at 70% and a flat vermilion plate.</figcaption></figure>
+  <figure><img src="engine_fine_roofs.jpg" alt="In-engine fine pass, roofs"><figcaption>Roofs, <code>fine</code>. These are lighter than today's frames, with the detail intact.</figcaption></figure>
+  <figure><img class="px" src="engine_fine_actors3x.png" alt="In-engine fine pass, actors 3x"><figcaption>Actors at 3x. These are unchanged, because they print through <code>riso_item</code> above the full-screen pass.</figcaption></figure>
+</div>
+<h3>Feasibility</h3>
+<div class="wrap"><table>
+<tr><th>What the shader must do</th><td>Keep <code>riso.gdshader</code>, with a 3 px cell, ink density x0.7, and a flat vermilion plate (a threshold, not dots). It is done and proven in-engine as <code>look=fine</code>.</td></tr>
+<tr><th>What the prompts must say</th><td>"FLAT INK FILLS, bold even 3 px outlines, a fine light halftone used sparingly, plenty of bare paper." Add explicit bans: "teal only for ghosts", "vermilion E8502A, not orange".</td></tr>
+<tr><th>Codex consistency</th><td>Good in structure, but the style drifts to clean vector and the palette leaks (orange, teal). The shader's palette snap repairs the palette.</td></tr>
+<tr><th>Readability at 32 px/m</th><td>Good on asphalt and weak on paper-coloured ground. It is the same as today, but lighter.</td></tr>
+<tr><th>Migration effort</th><td>About 1 hour. Swap the shader constants; the waves 1-4 assets stay. Optionally re-prompt future waves with "flat fills".</td></tr>
+<tr><th>Can we get there</th><td class="score s5">5</td></tr>
+</table></div>
+
+<!-- ================================================================= D2 -->
+<h2 id="d2">D2 Linocut <span class="tag">real backup: bold</span><span class="score s4">4/5</span></h2>
+<p>A carved block print: dark tones print as solid ink, light tones as paper, and gouges carry the form. It is the most
+graphic direction, it held the strictest palette of any direction across all four Codex images, and its bold outlines gave the best 50 px read.</p>
+<div class="grid g2">
+  <figure><img src="d2_mock.jpg" alt="D2 Codex mock"><figcaption><b>Codex mock.</b> The streets are black and the cream characters and vehicles pop. Drift: the water-tank legs read slightly oblique, the ghosts' heads are drawn face-on, and the cops show their visors at a slight tilt.</figcaption></figure>
+  <figure><img class="px" src="d2_mock_game.png" alt="D2 mock at game size"><figcaption><b>At game size.</b> This is the highest figure-ground contrast of the five. Dark vehicles would vanish into the black street.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="d2_rivet.jpg" alt="D2 Rivet top-down"><figcaption><b>Rivet from above</b>, carved. The collar became a twisted rope.</figcaption></figure>
+  <figure><img src="d2_rivet50.png" alt="d2 Rivet at true 50 px size" style="width:auto;image-rendering:pixelated;margin-bottom:6px"><img class="px" src="d2_rivet50x4.png" alt="D2 Rivet at 50 px"><figcaption><b>At 50 px:</b> the best of the five. The fat ink outline survives the downscale and holds the silhouette on both grounds.</figcaption></figure>
+  <figure><img class="px" src="d2_composite.png" alt="D2 composite into lino frame"><figcaption><b>Offline composite</b> into the in-engine <code>lino</code> frame (3x). It needs the sticker rim on the carved street.</figcaption></figure>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <figure><img src="d2_parts.jpg" alt="D2 parts sheet"><figcaption><b>Parts test.</b> All four parts are top-down and on-model with the sample.</figcaption></figure>
+  <figure><img src="d2_parts_keyed.jpg" alt="D2 parts keyed"><figcaption><b>Keyed:</b> 4/4 parts, 1.2% spill, a clean edge (the fat outline helps the key).</figcaption></figure>
+  <figure><img src="d2_sheet.jpg" alt="D2 environment contact sheet"><figcaption><b>Extra: an environment sheet</b> (cruiser, sedan, dumpster, barrels, crate, lamp, water tank, AC unit). <b>8/8 objects are true top-down</b>, even the lamp and the tank, with strict 3-ink discipline.</figcaption></figure>
+  <figure><img src="d2_sheet_keyed.jpg" alt="D2 sheet keyed"><figcaption>The sheet keyed: 8/8 objects found.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="engine_lino_junction.jpg" alt="In-engine lino junction"><figcaption><b>In-engine</b>, <code>--look=lino</code>: anything darker than mid-grey prints as solid ink with sparse carved lines. Cream vehicles pop, but the black SWAT van disappears.</figcaption></figure>
+  <figure><img src="engine_lino_roofs.jpg" alt="In-engine lino roofs"><figcaption>The roofs get loud. The roof art was drawn for dots, not for a threshold.</figcaption></figure>
+  <figure><img class="px" src="engine_lino_actors3x.png" alt="lino actors 3x"><figcaption>Actors at 3x. The sticker rim does all the work on the black street.</figcaption></figure>
+</div>
+<h3>Feasibility</h3>
+<div class="wrap"><table>
+<tr><th>What the shader must do</th><td>Threshold the ink plate (at d &gt; 0.40, solid), carve sparse lines into the solids with one cut direction per block, keep vermilion flat, and draw fat edges. It is prototyped as <code>look=lino</code>.</td></tr>
+<tr><th>What the prompts must say</th><td>"Hand-carved linocut, solid ink and carved white gouges, a flat off-register vermilion block, no halftone, no greys." For vehicles and props: "light bodies", because dark objects merge with black streets.</td></tr>
+<tr><th>Codex consistency</th><td>The best of the five. The palette held in 4 out of 4 images, the line weight matched across the mock, the sample, the parts and the sheet, and the sheet camera was perfect.</td></tr>
+<tr><th>Readability at 32 px/m</th><td>The best character read. The risk is dark vehicles and props on black asphalt; they need a cream rim or light bodies.</td></tr>
+<tr><th>Migration effort</th><td>Medium. The shader is done. Regenerate the roofs (3 sheets) and the dark vehicles (about 3 sheets) for a threshold print, and recolour dark props. About a day.</td></tr>
+<tr><th>Can we get there</th><td class="score s4">4</td></tr>
+</table></div>
+
+<!-- ================================================================= D3 -->
+<h2 id="d3">D3 Clear Line <span class="tag">real backup: legibility</span><span class="score s4">4/5</span></h2>
+<p>Ligne claire: one even outline weight, flat fills and no texture. It is the most legible and the most machine-consistent
+direction, and the furthest from Rivet's grit. It needs about 7 inks, so it would break the owner's 4-ink lock; that is an owner call.</p>
+<div class="grid g2">
+  <figure><img src="d3_mock.jpg" alt="D3 Codex mock"><figcaption><b>Codex mock.</b> It is calm and precise. Drift: the water tank stands on oblique legs.</figcaption></figure>
+  <figure><img class="px" src="d3_mock_game.png" alt="D3 at game size"><figcaption><b>At game size.</b> It reads instantly, but it also reads like a generic mobile game.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="d3_rivet.jpg" alt="D3 Rivet"><figcaption><b>Rivet from above.</b> The body became dark grey, and he grew a gloved hand on the torch.</figcaption></figure>
+  <figure><img src="d3_rivet50.png" alt="d3 Rivet at true 50 px size" style="width:auto;image-rendering:pixelated;margin-bottom:6px"><img class="px" src="d3_rivet50x4.png" alt="D3 Rivet at 50 px"><figcaption><b>At 50 px:</b> it reads on paper, but the dark grey body merges with the asphalt. The value must be chosen per ground.</figcaption></figure>
+  <figure><img class="px" src="d3_composite.png" alt="D3 composite"><figcaption><b>Offline composite</b> into <code>clear</code> (3x). Without the rim it is lost; with the rim it is fine.</figcaption></figure>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <figure><img src="d3_parts.jpg" alt="D3 parts"><figcaption><b>Parts test.</b> All four are top-down; this is the cleanest sheet.</figcaption></figure>
+  <figure><img src="d3_parts_keyed.jpg" alt="D3 parts keyed"><figcaption><b>Keyed:</b> 4/4 parts, 0.8% spill.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="engine_clear_junction.jpg" alt="In-engine clear junction"><figcaption><b>In-engine</b>, <code>--look=clear</code>: a 3x3 average, then a snap to 7 inks, then a uniform outline.</figcaption></figure>
+  <figure><img src="engine_clear_roofs.jpg" alt="In-engine clear roofs"><figcaption>The roofs flatten well.</figcaption></figure>
+  <figure><img class="px" src="engine_clear_actors3x.png" alt="clear actors"><figcaption>Actors at 3x on a flat grey ground: good contrast.</figcaption></figure>
+</div>
+<h3>Feasibility</h3>
+<div class="wrap"><table>
+<tr><th>What the shader must do</th><td>Pre-blur, snap to the palette and outline. It is done as <code>look=clear</code>. The grain from the AI textures must be blurred out first.</td></tr>
+<tr><th>What the prompts must say</th><td>"Ligne claire, even outline weight, flat fills, no shading, no hatching, no halftone", plus a named palette.</td></tr>
+<tr><th>Codex consistency</th><td>Very high. This is Codex's natural register.</td></tr>
+<tr><th>Readability at 32 px/m</th><td>High once the character values are fixed against the asphalt.</td></tr>
+<tr><th>Migration effort</th><td>Low for the shader; it works on today's assets. The identity cost is high: it drops the print and the grit.</td></tr>
+<tr><th>Can we get there</th><td class="score s4">4</td></tr>
+</table></div>
+
+<!-- ================================================================= D4 -->
+<h2 id="d4">D4 Ink and Hatch <span class="tag v">chase this</span><span class="score s4">4/5</span></h2>
+<p>A pen-and-ink comic panel: hand-inked lines, hatching instead of dots, and two spot inks on cream paper. This is the Rivet concept's
+line and shading method, without the continuous-tone wash. The plain form hatches everything, which is busy at game scale. The <b>hybrid</b>
+form adds a tone budget: the streets are a flat ink wash, the hatching goes to roofs, kerbs and shadows, and the characters are flat-value cut-outs with a cream sticker rim.</p>
+<div class="grid g2">
+  <figure><img src="d4h2_mock.jpg" alt="D4 hybrid Codex mock: hatched roofs, flat wash asphalt, sticker-rimmed characters">
+    <figcaption><b>The recommended target frame</b> (<code>d4h2_mock</code>): a hatched world, a flat-wash street, and top-down characters with sticker rims. The camera holds; the water-tank legs are again slightly oblique.</figcaption></figure>
+  <figure><img class="px" src="d4h2_mock_game.png" alt="D4 hybrid at game size"><figcaption><b>At game size:</b> Rivet's collar, the torch tip, the cops and the ghosts all read at once. This is the best gameplay read on the board.</figcaption></figure>
+  <figure><img src="d4_mock.jpg" alt="D4 plain Codex mock"><figcaption><b>The plain D4 mock.</b> It hatches everything; the asphalt is a scribble and the figures compete with it. The props on the pavement (lamps, barrels) lean slightly.</figcaption></figure>
+  <figure><img src="d4_mock_b.jpg" alt="D4 plain mock, second run"><figcaption><b>The same prompt, run again</b> (a consistency test). The line, hatch density, palette and layout grammar all match; the lamp posts lean a little more.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="d4_rivet.jpg" alt="D4 Rivet top-down"><figcaption><b>Rivet from above</b>, hatched. This is close to the concept's craft. The arms are mirrored compared with the D5 sample (the clamp is on top here).</figcaption></figure>
+  <figure><img src="d4_rivet50.png" alt="d4 Rivet at true 50 px size" style="width:auto;image-rendering:pixelated;margin-bottom:6px"><img class="px" src="d4_rivet50x4.png" alt="D4 Rivet at 50 px"><figcaption><b>At 50 px, the hatching is gone.</b> What is left is a cream body, the collar and the outline: in effect, D1. This is why the hybrid uses flat-value characters.</figcaption></figure>
+  <figure><img class="px" src="d4_composite.png" alt="D4 composite into hatch frame"><figcaption><b>Offline composite</b> into the in-engine <code>hatch</code> frame (3x). The raw sample drowns in the hatched street; with the sticker rim it reads.</figcaption></figure>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <figure><img src="d4_parts.jpg" alt="D4 parts sheet"><figcaption><b>Parts test.</b> It is on-model with the sample and top-down; the torso shows a small front bevel.</figcaption></figure>
+  <figure><img src="d4_parts_keyed.jpg" alt="D4 parts keyed"><figcaption><b>Keyed:</b> 4/4 parts, 1.5% spill (the fine hatch lines at the rim pick up a little green).</figcaption></figure>
+  <figure><img src="d4_sheet.jpg" alt="D4 environment sheet"><figcaption><b>Extra: an environment sheet. 8/8 objects are true top-down.</b> Drift: vermilion rust everywhere, including a red civilian car, which breaks the rule that vermilion means humans, police, blood and heat. The prompt needs "rust is ink, not vermilion".</figcaption></figure>
+  <figure><img src="d4_sheet_keyed.jpg" alt="D4 sheet keyed"><figcaption>The sheet keyed: 8/8 objects found.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="engine_hatch_junction.jpg" alt="In-engine hatch junction"><figcaption><b>In-engine</b>, <code>--look=hatch</code>: today's assets, with luminance mapped to world-locked pen hatching (single, then cross, then a third direction, then solid) and hand-wobbled ink edges. It reads as a drawing, but the asphalt is busy.</figcaption></figure>
+  <figure><img src="engine_hatch_roofs.jpg" alt="In-engine hatch roofs"><figcaption>Roofs, <code>hatch</code>. This is where the hatching pays off: the roofs look drawn.</figcaption></figure>
+  <figure><img class="px" src="engine_hatch_actors3x.png" alt="hatch actors"><figcaption>Actors at 3x. The diagonal hatch competes with the figures.</figcaption></figure>
+  <figure><img src="engine_wash_junction.jpg" alt="In-engine wash junction"><figcaption><b>In-engine</b>, <code>--look=wash</code>: the tone-budget pass for the hybrid. The street is a flat mid-grey ink wash with grime blotches, and hatching is kept for deep shadows. It is calm, and the figures win.</figcaption></figure>
+  <figure><img src="engine_wash_roofs.jpg" alt="In-engine wash roofs"><figcaption>Roofs, <code>wash</code>. They are calm but undrawn. In the hybrid, the roof pen work must come from regenerated D4 roof art, not from the shader.</figcaption></figure>
+  <figure><img class="px" src="engine_wash_actors3x.png" alt="wash actors"><figcaption>Actors at 3x on wash. This is the best in-engine contrast of the six passes.</figcaption></figure>
+</div>
+<h3>Feasibility</h3>
+<div class="wrap"><table>
+<tr><th>What the shader must do</th><td>Two jobs. (1) Set the <b>tone budget</b>: map ink density to 3 flat wash steps and hatch only in deep shadow (<code>look=wash</code>, done). (2) Keep the item pass from dotting the characters: snap steel to a flat value, not a 2 px screen (<code>look_item</code> mode 5, done). The pen work itself must come from the art. When the shader adds hatching (<code>look=hatch</code>) it is world-locked through a <code>world_px</code> uniform, so it does not swim, but it hatches the asphalt too.</td></tr>
+<tr><th>What the prompts must say</th><td>The D4 style block, plus "hatching is a budget: the asphalt is a flat mid-grey ink wash, with the densest pen work on the roofs". For characters: "seen from directly above, only the top of each helmet; NO faces, visors or chibi figures; a flat light value with a thick cream sticker rim and an ink outline". For props: "rust is ink, not vermilion".</td></tr>
+<tr><th>Codex consistency</th><td>Good. Six D4 images (two mocks, the hybrid, the sample, the parts and the sheet) kept the same line, hatch and paper. The first hybrid run was <b>rejected</b> because the characters came back as three-quarter chibis with visors; the explicit character-camera rule fixed it on the next run. Vermilion overuse is the main drift.</td></tr>
+<tr><th>Readability at 32 px/m</th><td>The plain form is poor (busy hatching and lost hatch detail on characters). The hybrid is the best on the board.</td></tr>
+<tr><th>Migration effort</th><td>About 2 days. The shader is done. Regenerate the roofs (3 sheets), vehicles (3), props (3) and ground decals (2) at about 1.5 minutes per sheet. Regenerate the Rivet and King parts sheets in D4 with the sticker rim. Re-key and re-slice with the existing tools.</td></tr>
+<tr><th>Can we get there</th><td class="score s4">4</td></tr>
+</table></div>
+
+<!-- ================================================================= D5 -->
+<h2 id="d5">D5 Inked Grime <span class="tag">full chase</span><span class="score s2">2/5</span></h2>
+<p>The Rivet concept as a game: sketchy ink, watercolour-like wash, grime, rust and misregistered vermilion. Codex can draw it,
+and it stays in style across images. The problem is the scale: almost everything that makes the concept beautiful is smaller than one screen pixel at 32 px/m.</p>
+<div class="grid g2">
+  <figure><img src="d5_mock.jpg" alt="D5 Codex mock"><figcaption><b>Codex mock.</b> The camera holds and it is gorgeous. Drift: the palette slid to mauve with sodium-lamp glows, the cream paper ground is gone, and it is continuous tone (it breaks the 4-ink lock).</figcaption></figure>
+  <figure><img class="px" src="d5_mock_game.png" alt="D5 at game size"><figcaption><b>At game size:</b> the figures are mid-value on mid-value asphalt and are the hardest of the five to find.</figcaption></figure>
+</div>
+<div class="grid g3" style="margin-top:14px">
+  <figure><img src="d5_rivet.jpg" alt="D5 Rivet top-down"><figcaption><b>Rivet from above:</b> the closest to the concept. Rust, hatching, wash and cables are all there.</figcaption></figure>
+  <figure><img src="d5_rivet50.png" alt="d5 Rivet at true 50 px size" style="width:auto;image-rendering:pixelated;margin-bottom:6px"><img class="px" src="d5_rivet50x4.png" alt="D5 Rivet at 50 px"><figcaption><b>At 50 px: honest failure.</b> The grime turns to pink-grey mush, the body has little contrast with the asphalt, and only the collar survives.</figcaption></figure>
+  <figure><img class="px" src="d5_composite.png" alt="D5 composite into wash frame"><figcaption><b>Offline composite</b> into <code>wash</code> (3x). Even with the sticker rim, the inside of the figure reads as noise.</figcaption></figure>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <figure><img src="d5_parts.jpg" alt="D5 parts"><figcaption><b>Parts test.</b> It is on-model and top-down, and the grime texture held. Close up, it looks more like a digital texture than ink.</figcaption></figure>
+  <figure><img src="d5_parts_keyed.jpg" alt="D5 parts keyed"><figcaption><b>Keyed:</b> 4/4 parts, 1.6% spill (the highest; the soft grime edges catch green).</figcaption></figure>
+</div>
+<h3>Feasibility</h3>
+<div class="wrap"><table>
+<tr><th>What the shader must do</th><td>Very little that helps. It can quantise a wash and add grit (<code>look=wash</code>), but it cannot create sketch lines or grime that the art does not carry, and a print pass would destroy the continuous tone that defines the look.</td></tr>
+<tr><th>What the prompts must say</th><td>Attach the concept as a style reference every time. Add "cream paper ground, no coloured light, no sodium glow" and "ink for rust, not vermilion".</td></tr>
+<tr><th>Codex consistency</th><td>The style is good across 3 images; the palette drifts in every one.</td></tr>
+<tr><th>Readability at 32 px/m</th><td>Poor. The detail is sub-pixel and the value contrast with the ground is low.</td></tr>
+<tr><th>Migration effort</th><td>High. Every asset must be regenerated, the print identity is lost, and a new readability system must be designed.</td></tr>
+<tr><th>Can we get there</th><td class="score s2">2</td></tr>
+</table></div>
+<p class="small">Where D5 does belong: key art, the loading screens, the soul-selector portraits and HUD cards. These are 192 px and larger, where its craft is visible.</p>
+
+<!-- ================================================================= 50 px TRUTH -->
+<h2 id="truth">What the 50 px test says, across all five</h2>
+<div class="grid g2">
+  <figure><img class="px" src="engine_riso_actors3x.png" alt="Current in-engine actors 3x"><figcaption><b>Today, in-engine (3x):</b> what actually makes the current characters findable is the thick cream sticker rim with an ink line, not the art inside it.</figcaption></figure>
+  <figure><img src="rejected_d4h_mock.jpg" alt="Rejected D4 hybrid mock with chibi characters"><figcaption><b>The 1 rejected image</b> (<code>d4h_mock</code>): the world is fine, but the characters are three-quarter chibis with faces. Codex drifts here whenever characters get a "sticker" treatment, unless the character camera is spelled out.</figcaption></figure>
+</div>
+<ul>
+<li><b>Hatching, grime and sketch lines do not survive 50 px.</b> D4's hatched Rivet and D5's grimy Rivet both collapse to a value blob with a collar. Put the comic craft into the world, where surfaces are large (roofs at 80 px/m, vehicles at 48 px/m), not into the characters.</li>
+<li><b>Bold outlines survive.</b> D2's fat carved outline is the only internal detail that holds at 50 px.</li>
+<li><b>The sticker rim is the readability system,</b> and it is style-independent. Keep it in every direction: add it at keying time (a 2 px cream dilation plus a 1 px ink line) or in the item shader.</li>
+<li><b>The ground decides.</b> A cream character dies on cream paper; a dark one dies on asphalt. Every direction needs a tone budget in which the street sits one clear value step away from the characters.</li>
+</ul>
+
+<!-- ================================================================= RECOMMENDATION -->
+<h2 id="rec">Recommendation</h2>
+<div class="callout">
+<p><b>Chase first: D4 Ink and Hatch, hybrid form.</b> It is the closest we can get to the Rivet concept that still plays at 32 px/m.
+It uses the concept's line and its hatching where they are visible (roofs, kerbs, vehicles, shadows), a calm flat-wash street, and
+flat-value, sticker-rimmed characters. Codex holds the style across sheets, parts and mocks; the print pass is already prototyped in-engine; and the cutout pipeline
+keys the parts cleanly (4/4 parts, about 1.5% spill).</p>
+<p><b>Safe backup: D1 Riso Refined.</b> It is one shader change (proven as <code>look=fine</code>), with zero asset migration, and the current waves stay.
+It does not chase Rivet, but it fixes today's muddiness.</p>
+<p><b>Bold alternative if D4 stalls: D2 Linocut.</b> It has the best Codex palette discipline and the best 50 px read, and it is hand-made in a different way.</p>
+</div>
+<h3>The first concrete step</h3>
+<ol>
+<li>In <code>gtai-spike/evolve/project-artdir</code> (branch <code>artdir</code>), run the district with <code>--look=wash</code> as the D4 tone budget.</li>
+<li>Regenerate <b>wave 2 (the 3 roof sheets)</b> with the D4 style block plus the "hatching budget" rules from <code>_prompts/ink-and-hatch.md</code>, and swap them in place with the existing <code>proc.py</code> and <code>build_sprites.py</code>. Skip the posterise step, so the hatching is kept.</li>
+<li>Regenerate <b>Rivet's 16-part sheet</b> in D4 with "flat light values, thick cream sticker rim, top-down only", rig it with the existing v2 slicer, and compare it with the v2 rig in the 3x actor crop at 32 px/m.</li>
+<li>Gate: continue to vehicles and props only if the roofs scene reads as drawn and the new Rivet beats the v2 rig in that crop. If it fails, ship D1's <code>fine</code> pass and stop.</li>
+</ol>
+
+<!-- ================================================================= METHOD -->
+<h2 id="method">Method, budget and honesty notes</h2>
+<ul>
+<li><b>Images:</b> 20 Codex <code>image_gen</code> calls, run one at a time; <b>19 used and 1 rejected</b> (<code>d4h_mock</code>: character camera). There were no usage or rate-limit events.
+Each call took 70-180 s (mean about 100 s) and used about 100-175k input tokens, mostly cached. Every image was inspected before use.</li>
+<li><b>Item-level camera drift</b> that was accepted, not rejected:
+  <ul>
+  <li>water-tank legs read slightly oblique in most of the 7 accepted mocks (accepted as GTA 2 convention, as in the evolve round);</li>
+  <li>lamp posts lean in the two plain D4 mocks;</li>
+  <li>D2's ghosts are face-on and its cops show their visors;</li>
+  <li>D4's torso part has a small front bevel.</li>
+  </ul>
+  The 2 environment sheets, whose prompt says "lying flat so that only its TOP surface shows", came back 8/8 top-down, lamps and tanks included.</li>
+<li><b>References:</b>
+  <ul>
+  <li>Every mock attached <code>ref-1-camera-90-TARGET.jpg</code> as Image 1.</li>
+  <li>The Rivet design came from the v2 turnaround (D1-D4) or the concept (D5).</li>
+  <li>Each parts sheet attached that direction's own Rivet sample as the style lock.</li>
+  </ul>
+  The prompts to regenerate every image are in <code>_prompts/&lt;direction&gt;.md</code>.</li>
+<li><b>The 50 px panels</b> crop the character from its paper with a border-connected flood fill and resize the long side to 50 px (Lanczos). They are shown at 1x on paper and on asphalt <code>#585258</code>, then 4x nearest.</li>
+<li><b>The composites are offline</b> (PIL), not in-engine: the sample is pasted at 50 px into the in-engine frame of the matching print pass. The real rig would also pass through the item shader.</li>
+<li><b>The in-engine frames</b> are the deterministic <code>--autoplay --district</code> hook (junction t=16 s, roofs t=9.5 s), rendered on d3d12 from the
+<code>artdir</code> worktree with <code>--look=riso|fine|hatch|wash|lino|clear</code>. The shaders are <code>game/look.gdshader</code> and <code>game/look_item.gdshader</code>; <code>main.gd</code> has a 21-line diff and the default path is untouched. They are committed on branch <code>artdir</code> (commits 2215081, 25b9a97, 821a3e7). The renders are reproducible with <code>gtai-spike/artdir/tools/render.sh &lt;look&gt;</code>.</li>
+<li><b>Key metrics</b> come from <code>evolve/tools/proc.py</code>. Codex's "#00B140" came back as anything from (1,167,65) to (1,204,35), but it was always flat (border std about 1), so the border-measured key worked on all 7 sheets: 4/4 parts in each of the 5 parts sheets and 8/8 objects in each of the 2 environment sheets.</li>
+</ul>
+<p class="small">Working files (not part of this board): <code>C:\Users\kazda\kiro\gtai-spike\artdir\</code> holds <code>gen/</code> (the raw outputs, logs and ledger), <code>renders/</code> and <code>tools/</code>.</p>
+
+</main>
+</body>
+</html>

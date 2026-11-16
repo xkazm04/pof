@@ -24,10 +24,10 @@ vi.hoisted(() => {
 import {
   getReviewHistory,
   getAllReviewHistory,
-  clearModuleFeatures,
   upsertFeatures,
   MAX_SNAPSHOTS_PER_MODULE,
 } from '@/lib/feature-matrix-db';
+import { clearFeatureMatrixExact } from '@/__tests__/helpers/clearFeatureMatrix';
 import { getDb } from '@/lib/db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import type { SubModuleId } from '@/types/modules';
@@ -66,7 +66,7 @@ function review(reviewedAt: string, status: 'implemented' | 'partial' = 'impleme
 }
 
 beforeEach(() => {
-  clearModuleFeatures(MODULE);
+  clearFeatureMatrixExact(MODULE);
   getDb().prepare('DELETE FROM review_snapshots WHERE module_id = ?').run(MODULE);
 });
 
@@ -163,7 +163,7 @@ describe('a snapshot is written only for a real review event', () => {
   });
 
   it('writes no snapshot for a seed of unscored placeholders either', () => {
-    clearModuleFeatures(MODULE);
+    clearFeatureMatrixExact(MODULE);
     upsertFeatures(
       MODULE,
       declared.map((d) => ({

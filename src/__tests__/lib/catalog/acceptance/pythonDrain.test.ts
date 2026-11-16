@@ -113,6 +113,60 @@ describe('drainPythonAll', () => {
     expect(d.saved).toHaveLength(1);
   });
 
+  it('a bridge error on step 1 stops the chain: later steps are not dispatched against missing inputs', async () => {
+    const seen: string[] = [];
+    const d = deps({
+      listArtifacts: () => [
+        artifact('Import Mixamo Clips', 'player_movement.import_clips'),
+        artifact('IK Rigs', 'player_movement.build_ik_rigs'),
+        artifact('Retarget Clips', 'player_movement.retarget'),
+      ],
+      run: async (m) => { seen.push(m); return { ok: false, error: 'editor closed' }; },
+    });
+    const s = await drainPythonAll({}, d);
+    expect(seen).toEqual(['player_movement.import_clips']);
+    expect(s).toMatchObject({ errors: 1, dispatched: 0, changed: 0 });
+    expect(s.results.map((r) => r.outcome)).toEqual(['bridge-error', 'upstream-failed', 'upstream-failed']);
+    expect(s.results[1].detail).toContain('bridge error');
+    expect(d.saved).toHaveLength(0);
+  });
+
+  it('continueOnFail still dispatches past a bridge error', async () => {
+    const seen: string[] = [];
+    const d = deps({
+      listArtifacts: () => [
+        artifact('Import Mixamo Clips', 'player_movement.import_clips'),
+        artifact('IK Rigs', 'player_movement.build_ik_rigs'),
+      ],
+      run: async (m) => { seen.push(m); return { ok: false, error: 'editor closed' }; },
+    });
+    const s = await drainPythonAll({}, d, { continueOnFail: true });
+    expect(seen).toHaveLength(2);
+    expect(s.errors).toBe(2);
+  });
+
+  it('a step drained to fail on an EARLIER run still stops its chain on a re-drain', async () => {
+    // Run 1 condemned Import Mixamo Clips and stopped the chain; run 2 (no force) must not
+    // dispatch IK Rigs over that persisted fail just because the failed step is "already drained".
+    const seen: string[] = [];
+    const d = deps({
+      listArtifacts: () => [
+        { ...artifact('Import Mixamo Clips', 'player_movement.import_clips', { created: [], skipped: [], failed: ['boom'] }), status: 'fail' },
+        artifact('IK Rigs', 'player_movement.build_ik_rigs'),
+      ],
+      run: async (m) => { seen.push(m); return { ok: true, data: { created: ['a'], skipped: [], failed: [] } }; },
+    });
+    const s = await drainPythonAll({}, d);
+    expect(seen).toEqual([]);
+    expect(s.results.map((r) => r.outcome)).toEqual(['already-drained', 'upstream-failed']);
+    expect(d.saved).toHaveLength(0);
+    // continueOnFail still opts out of the stop, as it does for a fail drained this run.
+    const seen2: string[] = [];
+    const s2 = await drainPythonAll({}, { ...d, run: async (m) => { seen2.push(m); return { ok: true, data: { created: ['a'], skipped: [], failed: [] } }; } }, { continueOnFail: true });
+    expect(seen2).toEqual(['player_movement.build_ik_rigs']);
+    expect(s2.results.map((r) => r.outcome)).toEqual(['already-drained', 'drained']);
+  });
+
   it('continueOnFail keeps the chain going', async () => {
     const d = deps({
       listArtifacts: () => [

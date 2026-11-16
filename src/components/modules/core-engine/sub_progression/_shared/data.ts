@@ -40,7 +40,6 @@ export const generateChartData = (base: number, exp: number) => {
   return levels.map((level) => ({
     level,
     xp: calculateXpForLevel(level, safeBase, safeExp),
-    totalParams: Math.floor(level * 1.5),
   }));
 };
 

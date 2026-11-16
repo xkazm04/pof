@@ -45,6 +45,25 @@ describe('checkLocalPath', () => {
     expect(checkLocalPath(p).ok).toBe(false);
   });
 
+  it.runIf(process.platform === 'win32').each(['/foo', '\\foo', '/Users/me/proj'])(
+    'refuses the drive-less rooted path %s on win32 (the drive would come from the server cwd)',
+    (p) => {
+      expect(checkLocalPath(p).ok).toBe(false);
+    },
+  );
+
+  it('[guard] a rooted path is not refused for lacking a drive when the platform is not win32', () => {
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    try {
+      // path.isAbsolute is platform-bound, so only the win32-specific refusal is under test.
+      const checked = checkLocalPath('/foo');
+      expect(checked.ok ? '' : checked.error).not.toMatch(/name its drive/);
+    } finally {
+      Object.defineProperty(process, 'platform', platform);
+    }
+  });
+
   it.each([undefined, null, 42, '', '   '])('refuses a missing or non-string path (%s)', (p) => {
     expect(checkLocalPath(p).ok).toBe(false);
   });

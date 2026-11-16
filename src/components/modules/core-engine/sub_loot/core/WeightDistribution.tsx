@@ -94,6 +94,8 @@ export function WeightDistribution() {
             return (
               <button
                 key={tier.name}
+                type="button"
+                aria-pressed={selected === tier.name}
                 className="flex items-center gap-2 w-full text-left px-2 py-1 rounded transition-all cursor-pointer"
                 style={{ backgroundColor: isActive ? withOpacity(tier.color, OPACITY_8) : 'transparent' }}
                 onMouseEnter={() => setHovered(tier.name)}
@@ -130,7 +132,7 @@ export function WeightDistribution() {
                 <span className="text-text">{activeTier.weight} / {TOTAL_WEIGHT}</span>
                 <span className="text-text-muted">Drop Rate</span>
                 <span className="text-text">{((activeTier.weight / TOTAL_WEIGHT) * 100).toFixed(2)}%</span>
-                <span className="text-text-muted">Avg per 100 kills</span>
+                <span className="text-text-muted">Avg per 100 drops</span>
                 <span className="text-text">{((activeTier.weight / TOTAL_WEIGHT) * 100).toFixed(0)}</span>
                 <span className="text-text-muted">Affixes</span>
                 <span className="text-text">

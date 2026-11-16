@@ -6,6 +6,7 @@ import { AudioScenePainter } from '@/components/modules/content/audio/AudioScene
 import { useSceneAudition } from '@/components/modules/content/audio/AudioScenePainter/useSceneAudition';
 import { auditionMix, type AuditionLibrary } from '@/lib/audio-scene-audition';
 import { ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SoundEmitter } from '@/types/audio-scene';
 
 /**
@@ -207,5 +208,111 @@ describe('painter LISTEN mode — case 7', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Play' })); });
     expect(FakeAudioContext.instances).toHaveLength(1);
     onlyGets();
+  });
+});
+
+describe('painter LISTEN mode — readout copy', () => {
+  it('a heard emitter at zero gain reads as silent, never "-Infinity dB"', async () => {
+    const { container } = render(
+      <AudioScenePainter
+        zones={[]}
+        emitters={[emitter({ volumeMultiplier: 0 })]}
+        onUpdateZones={vi.fn()}
+        onUpdateEmitters={vi.fn()}
+        onSelectZone={vi.fn()}
+        onSelectEmitter={vi.fn()}
+        selectedZoneId={null}
+        selectedEmitterId={null}
+        accentColor={ACCENT_CYAN_LIGHT}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /LISTEN/ }));
+    const svg = container.querySelector('svg.touch-none-canvas') as SVGSVGElement;
+    fireEvent.mouseDown(svg, { clientX: 150, clientY: 110 });
+    fireEvent.mouseUp(svg);
+
+    const heard = await screen.findByTestId('audition-heard-e1');
+    expect(heard.textContent).not.toMatch(/Infinity/);
+    expect(heard.textContent).toMatch(/−∞ dB/);
+  });
+});
+
+describe('useSceneAudition — reverb impulse is rebuilt only when the decay changes', () => {
+  it('a wet/dry-only change glides the wet gain and keeps the impulse', async () => {
+    const base = auditionMix({ zones: [], emitters: [emitter()] }, { x: 100, y: 100 }, LIB);
+    const withReverb = (decayTime: number, wetDry: number) =>
+      ({ ...base, reverb: { ...base.reverb, decayTime, wetDry } });
+    const { result, rerender, unmount } = renderHook(
+      ({ decay, wet }: { decay: number; wet: number }) => useSceneAudition(withReverb(decay, wet)),
+      { initialProps: { decay: 1.5, wet: 0.3 } },
+    );
+    await act(async () => { await result.current.play(); });
+    const ctx = FakeAudioContext.instances[0];
+    const builds = vi.spyOn(ctx, 'createBuffer');
+    const wetGain = ctx.gains[1].gain; // [0] dry bus, [1] wet bus
+
+    // A Wet/Dry slider drag: many frames, decay untouched.
+    for (const wet of [0.35, 0.4, 0.45, 0.5]) rerender({ decay: 1.5, wet });
+    await act(async () => {});
+    expect(builds).toHaveBeenCalledTimes(0);
+    expect(wetGain.value).toBe(0.5);
+
+    vi.useFakeTimers();
+    try {
+      rerender({ decay: 2.5, wet: 0.5 });
+      act(() => { vi.advanceTimersByTime(UI_TIMEOUTS.textEditDebounce); });
+      expect(builds).toHaveBeenCalledTimes(1);
+    } finally { vi.useRealTimers(); }
+
+    act(() => result.current.stop());
+    unmount();
+  });
+
+  it('a Decay slider drag coalesces into at most 2 impulse builds and applies the final decay', async () => {
+    const base = auditionMix({ zones: [], emitters: [emitter()] }, { x: 100, y: 100 }, LIB);
+    const withDecay = (decayTime: number) => ({ ...base, reverb: { ...base.reverb, decayTime } });
+    const { result, rerender, unmount } = renderHook(
+      ({ decay }: { decay: number }) => useSceneAudition(withDecay(decay)),
+      { initialProps: { decay: 1 } },
+    );
+    await act(async () => { await result.current.play(); });
+    const ctx = FakeAudioContext.instances[0];
+    const builds = vi.spyOn(ctx, 'createBuffer');
+
+    vi.useFakeTimers();
+    try {
+      // 10 slider frames, 1.0 -> 3.0, each inside the debounce window.
+      for (let i = 1; i <= 10; i++) {
+        rerender({ decay: 1 + i * 0.2 });
+        act(() => { vi.advanceTimersByTime(UI_TIMEOUTS.textEditDebounce / 4); });
+      }
+      act(() => { vi.advanceTimersByTime(UI_TIMEOUTS.textEditDebounce); });
+      expect(builds.mock.calls.length).toBeLessThanOrEqual(2);
+      // The last decay won: 3.0 s at the fake 8 kHz context.
+      const last = builds.mock.calls[builds.mock.calls.length - 1];
+      expect(last[1]).toBe(Math.round(8000 * 3));
+    } finally { vi.useRealTimers(); }
+
+    act(() => result.current.stop());
+    unmount();
+  });
+
+  it('stopping cancels a pending impulse build', async () => {
+    const base = auditionMix({ zones: [], emitters: [emitter()] }, { x: 100, y: 100 }, LIB);
+    const withDecay = (decayTime: number) => ({ ...base, reverb: { ...base.reverb, decayTime } });
+    const { result, rerender, unmount } = renderHook(
+      ({ decay }: { decay: number }) => useSceneAudition(withDecay(decay)),
+      { initialProps: { decay: 1 } },
+    );
+    await act(async () => { await result.current.play(); });
+    const builds = vi.spyOn(FakeAudioContext.instances[0], 'createBuffer');
+    vi.useFakeTimers();
+    try {
+      rerender({ decay: 2 });
+      act(() => result.current.stop());
+      act(() => { vi.advanceTimersByTime(UI_TIMEOUTS.textEditDebounce * 2); });
+      expect(builds).toHaveBeenCalledTimes(0);
+    } finally { vi.useRealTimers(); }
+    unmount();
   });
 });

@@ -125,8 +125,29 @@ export function bindingsApplyGate(resolved: ResolvedBindings): ApplyGate {
   return { ok: true };
 }
 
-/** KeyboardEvent.key -> the binding label the table and keyboard map use. */
-export function normalizeKeyEvent(key: string): string {
+/** KeyboardEvent.code punctuation -> the unshifted label the table and EKeys map know. */
+const CODE_PUNCTUATION: Record<string, string> = {
+  Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Backslash: '\\',
+  Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backquote: '`',
+};
+
+/** The physical printable key behind `code` (Digit1 -> '1', KeyQ -> 'Q'), or null. */
+function labelFromCode(code: string | undefined): string | null {
+  if (!code) return null;
+  const digit = /^Digit(\d)$/.exec(code);
+  if (digit) return digit[1];
+  const letter = /^Key([A-Z])$/.exec(code);
+  if (letter) return letter[1];
+  return CODE_PUNCTUATION[code] ?? null;
+}
+
+/**
+ * KeyboardEvent.key (+ optional .code) -> the binding label the table and keyboard map use.
+ * `code` names the physical key, so Shift+1 captures '1' rather than '!'; `key` is the fallback.
+ */
+export function normalizeKeyEvent(key: string, code?: string): string {
+  const physical = labelFromCode(code);
+  if (physical !== null) return physical;
   const named: Record<string, string> = {
     ' ': 'Space', control: 'Ctrl', shift: 'Shift', alt: 'Alt', tab: 'Tab',
     arrowup: 'Up', arrowdown: 'Down', arrowleft: 'Left', arrowright: 'Right',

@@ -9,6 +9,7 @@ import {
   DEFAULT_CONFIG,
 } from '@/lib/combat/definitions';
 import type { CombatScenario, TuningOverrides, CombatSimConfig } from '@/types/combat-simulator';
+import { ok, err, type Result } from '@/types/result';
 
 /**
  * Coerce an untrusted numeric field to a finite integer within [min, max].
@@ -20,6 +21,38 @@ function clampInt(value: unknown, fallback: number, min: number, max: number): n
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(Math.max(Math.round(n), min), max);
+}
+
+/**
+ * The caller's tuning over DEFAULT_TUNING, one known multiplier at a time. It used to
+ * be spread unchecked, so `playerHealthMul: "abc"` ran the engine on NaN health and
+ * answered 200 with a fabricated 0%-survival verdict. Absent/null keeps the default,
+ * a non-finite value is refused naming the key, unknown keys never reach the engine.
+ */
+function resolveTuning(raw: unknown): Result<TuningOverrides, string> {
+  if (raw === undefined || raw === null) return ok({ ...DEFAULT_TUNING });
+  if (typeof raw !== 'object' || Array.isArray(raw)) return err('tuning must be a JSON object');
+  const tuning: TuningOverrides = { ...DEFAULT_TUNING };
+  for (const key of Object.keys(DEFAULT_TUNING) as (keyof TuningOverrides)[]) {
+    const value = (raw as Record<string, unknown>)[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return err(`tuning.${key} must be a finite number`);
+    tuning[key] = value;
+  }
+  return ok(tuning);
+}
+
+/** Why the scenario's player fields cannot reach the engine, or null when they can. */
+function playerScenarioError(scenario: CombatScenario): string | null {
+  const gear = scenario.playerGear as unknown;
+  if (typeof gear !== 'object' || gear === null || Array.isArray(gear)) return 'scenario.playerGear must be a gear object';
+  const bonuses = (gear as Record<string, unknown>).bonuses;
+  if (typeof bonuses !== 'object' || bonuses === null || Array.isArray(bonuses)) return 'scenario.playerGear.bonuses must be an object';
+  for (const [k, v] of Object.entries(bonuses)) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return `scenario.playerGear.bonuses.${k} must be a finite number`;
+  }
+  if (!Array.isArray(scenario.playerAbilities)) return 'scenario.playerAbilities must be an array';
+  return null;
 }
 
 export async function GET() {
@@ -38,12 +71,18 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const action = body.action as string;
 
     if (action === 'simulate') {
       const scenario = body.scenario as CombatScenario;
-      const tuning: TuningOverrides = { ...DEFAULT_TUNING, ...(body.tuning ?? {}) };
+      const tuningResult = resolveTuning(body.tuning);
+      if (!tuningResult.ok) return apiError(tuningResult.error, 400);
+      const tuning = tuningResult.data;
       const config: CombatSimConfig = {
         iterations: clampInt(body.config?.iterations, 1000, 1, 5000),
         seed: clampInt(body.config?.seed, Math.floor(Math.random() * 999999), 0, 0xffffffff),
@@ -73,6 +112,13 @@ export async function POST(req: NextRequest) {
         return apiError(`Unknown enemy archetype id(s): ${unknown.join(', ')}`, 400);
       }
       scenario.enemies = enemies;
+
+      // The player half of the scenario crosses the same boundary: a missing gear used to crash
+      // the engine on `playerGear.bonuses` (500), and abilities that are not an array or a
+      // non-numeric level ran the engine on garbage.
+      const playerError = playerScenarioError(scenario);
+      if (playerError) return apiError(playerError, 400);
+      scenario.playerLevel = clampInt(scenario.playerLevel, 1, 1, 50);
 
       // Strip individual fight results if too many (keep summary + alerts).
       //

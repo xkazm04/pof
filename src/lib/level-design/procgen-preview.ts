@@ -33,6 +33,13 @@ export interface PreviewConfig {
   corridorWidth: number;
   /** Raw seed text from the wizard (may be empty — falls back to a fixed seed). */
   seed: string;
+  /**
+   * The seed already resolved from `seed` (`hashSeed(seed)`), when the caller
+   * holds one — a ProcgenSpec resolves it once and hands it down, so the
+   * preview does not derive the same quantity a second time. Omitted: derived
+   * from `seed`, which is what a bare config always did.
+   */
+  seedValue?: number;
   /** Cap on the longest preview side; keeps generation in the millisecond range. */
   maxPreviewSize?: number;
   /**
@@ -106,7 +113,7 @@ const GENERATORS = { bsp: bspGrid, cellular: cellularGrid, wfc: wfcGrid, perlin:
 export function generatePreview(config: PreviewConfig): PreviewResult {
   const cap = config.maxPreviewSize ?? DEFAULT_MAX_PREVIEW_SIZE;
   const { w, h, scale } = fitToPreview(config.gridWidth, config.gridHeight, cap);
-  const seedValue = hashSeed(config.seed);
+  const seedValue = config.seedValue ?? hashSeed(config.seed);
   const rng = new FRandomStream(seedValue);
   // An inverted band is flagged in the wizard and read swapped here, so a
   // mis-dragged pair still previews something rather than collapsing to nothing.

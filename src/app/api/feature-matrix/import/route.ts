@@ -9,7 +9,7 @@ import { FEATURE_STATUSES } from '@/types/feature-matrix';
 import type { CLIFeatureReport } from '@/types/feature-matrix';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
-import type { SubModuleId } from '@/types/modules';
+import { SUB_MODULE_IDS, type SubModuleId } from '@/types/modules';
 
 /**
  * `reviewedAt` becomes `last_reviewed_at` — the evidence date the GDD compliance
@@ -147,11 +147,20 @@ export const POST = withRoute(async (request: NextRequest) => {
     }
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
   const { moduleId: rawModuleId } = body;
 
   if (!rawModuleId || typeof rawModuleId !== 'string') {
     return apiError('moduleId is required', 400);
+  }
+  // A closed enum. Disk mode joins it into a path (`../../x` escaped .pof/matrix), and a
+  // module with no definitions skips the hallucinated-name check below.
+  if (!(SUB_MODULE_IDS as readonly string[]).includes(rawModuleId)) {
+    return apiError(`Unknown moduleId: ${rawModuleId}`, 400);
   }
 
   const moduleId = rawModuleId as SubModuleId;

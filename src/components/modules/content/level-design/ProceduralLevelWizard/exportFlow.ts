@@ -25,10 +25,13 @@ export interface PendingBlenderExport {
   grid: CellType[][];
 }
 
+/** What a stale plan was before the spec moved, so Undo back to its spec can restore it exactly. */
+export type StaleOrigin = { status: 'prepared' } | { status: 'failed'; message: string };
+
 export type ExportFlow =
   | { status: 'idle' }
   | { status: 'prepared'; pending: PendingBlenderExport; exportKey: string }
-  | { status: 'stale'; pending: PendingBlenderExport; exportKey: string }
+  | { status: 'stale'; pending: PendingBlenderExport; exportKey: string; was: StaleOrigin }
   | { status: 'sending'; pending: PendingBlenderExport; exportKey: string }
   | { status: 'done'; message: string }
   /** The plan is KEPT so Retry needs no re-prepare. */
@@ -77,7 +80,15 @@ export function exportFlowReducer(flow: ExportFlow, action: ExportFlowAction): E
       return flow.status === 'sending' || flow.status === 'idle' ? flow : IDLE_EXPORT_FLOW;
     case 'specChanged':
       if ((flow.status === 'prepared' || flow.status === 'failed') && flow.exportKey !== action.exportKey) {
-        return { status: 'stale', pending: flow.pending, exportKey: flow.exportKey };
+        const was: StaleOrigin = flow.status === 'failed' ? { status: 'failed', message: flow.message } : { status: 'prepared' };
+        return { status: 'stale', pending: flow.pending, exportKey: flow.exportKey, was };
+      }
+      // Undo (or any edit) back to the exact spec the plan was built from: the
+      // plan is valid again, in the state it was in, with no re-prepare.
+      if (flow.status === 'stale' && flow.exportKey === action.exportKey) {
+        return flow.was.status === 'failed'
+          ? { status: 'failed', pending: flow.pending, exportKey: flow.exportKey, message: flow.was.message }
+          : { status: 'prepared', pending: flow.pending, exportKey: flow.exportKey };
       }
       return flow;
   }

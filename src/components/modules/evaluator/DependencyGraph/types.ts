@@ -1,3 +1,4 @@
+import type { EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
 import type { SubModuleId } from '@/types/modules';
 import type { ResolvedDependency } from '@/lib/feature-definitions';
 
@@ -27,7 +28,6 @@ export interface BuildTarget {
 export interface ModuleNode {
   moduleId: SubModuleId;
   label: string;
-  color: string;
   featureCount: number;
   blockedCount: number;
   implementedCount: number;
@@ -45,5 +45,5 @@ export interface Edge {
 // ─── Component ──────────────────────────────────────────────────────────────────
 
 export interface DependencyGraphProps {
-  onNavigateTab?: (tab: string) => void;
+  onNavigateTab?: (tab: EvaluatorTabId) => void;
 }

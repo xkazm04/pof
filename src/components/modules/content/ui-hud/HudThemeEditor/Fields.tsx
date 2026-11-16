@@ -16,8 +16,10 @@ export function ColorPickerField({ label, value, onChange }: {
     <div className="flex items-center gap-2">
       <input
         type="color"
+        aria-label={label}
         value={rgbaToHex(value)}
-        onChange={(e) => onChange(hexToRGBA(e.target.value))}
+        // <input type="color"> carries no alpha: keep the colour's own A (an imported 0.5 stays 0.5).
+        onChange={(e) => onChange({ ...hexToRGBA(e.target.value), a: value.a })}
         className="w-6 h-6 rounded border border-border cursor-pointer bg-transparent shrink-0"
       />
       <span className="text-2xs text-text-muted flex-1 truncate">{label}</span>
@@ -26,7 +28,7 @@ export function ColorPickerField({ label, value, onChange }: {
   );
 }
 
-export function SliderField({ label, value, min, max, step, unit, onChange, color }: {
+export function SliderField({ label, value, min, max, step, unit, onChange, color, decimals }: {
   label: string;
   value: number;
   min: number;
@@ -35,8 +37,13 @@ export function SliderField({ label, value, min, max, step, unit, onChange, colo
   unit: string;
   onChange: (v: number) => void;
   color?: string;
+  /** Decimal places of the readout; set it to the row's export precision so the label and the .h agree. */
+  decimals?: number;
 }) {
-  const displayValue = `${Number.isInteger(step) || step >= 1 ? value : value.toFixed(1)}${unit}`;
+  const shown = decimals !== undefined
+    ? value.toFixed(decimals)
+    : Number.isInteger(step) || step >= 1 ? value : value.toFixed(1);
+  const displayValue = `${shown}${unit}`;
   return (
     <StyledSlider
       min={min}

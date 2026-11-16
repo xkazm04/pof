@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24T21:44:46.356Z",
+  "generatedAt": "2026-11-02T14:50:12.950Z",
   "walked": [
     "achievements",
     "affixes",
@@ -9,6 +9,7 @@
     "characters",
     "codex",
     "combat-map",
+    "contracts",
     "crafting-recipes",
     "currencies",
     "cutscenes",
@@ -29,6 +30,7 @@
     "spellbook",
     "state-graph",
     "status-effects",
+    "story-arcs",
     "tutorial-beats",
     "vendors",
     "vfx",

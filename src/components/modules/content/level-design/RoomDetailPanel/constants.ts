@@ -1,7 +1,7 @@
 import {
   Swords, Puzzle, Compass, Crown, Shield, ArrowRightLeft, Film, Home,
 } from 'lucide-react';
-import type { RoomType, DifficultyLevel, PacingCurve } from '@/types/level-design';
+import { ROOM_TYPES, type RoomType, type DifficultyLevel, type PacingCurve } from '@/types/level-design';
 import type { LucideIcon } from 'lucide-react';
 import { STATUS_ERROR, ACCENT_VIOLET, ACCENT_EMERALD, STATUS_WARNING, STATUS_INFO, ACCENT_PINK, STATUS_SUCCESS, STATUS_LIME, STATUS_BLOCKER, STATUS_SUBDUED, ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
 
@@ -16,7 +16,7 @@ export const ROOM_TYPE_CONFIG: Record<RoomType, { icon: LucideIcon; color: strin
   hub: { icon: Home, color: ACCENT_CYAN_LIGHT, label: 'Hub' },
 };
 
-export const ALL_ROOM_TYPES: RoomType[] = ['combat', 'puzzle', 'exploration', 'boss', 'safe', 'transition', 'cutscene', 'hub'];
+export const ALL_ROOM_TYPES: RoomType[] = [...ROOM_TYPES];
 export const ALL_PACING: PacingCurve[] = ['rest', 'buildup', 'rising', 'peak', 'falling'];
 export const ALL_DIFFICULTIES: DifficultyLevel[] = [1, 2, 3, 4, 5];
 

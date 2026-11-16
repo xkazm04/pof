@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { motionSafe } from '@/lib/motion';
 import {
   ArrowLeftRight, Square, Zap, ArrowDown, ArrowUp,
-  AlertTriangle, Radio,
+  AlertTriangle, Radio, Loader2,
 } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_ERROR,
@@ -10,10 +10,12 @@ import {
   OPACITY_10, OPACITY_15,
 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
+import type { UE5ConnectionStatus } from '@/types/ue5-bridge';
 import type { SyncConflict } from './types';
 
 export function PanelHeader({
   isLive,
+  wsStatus,
   conflicts,
   outboundCount,
   inboundCount,
@@ -22,6 +24,7 @@ export function PanelHeader({
   disconnectWs,
 }: {
   isLive: boolean;
+  wsStatus: UE5ConnectionStatus;
   conflicts: SyncConflict[];
   outboundCount: number;
   inboundCount: number;
@@ -88,7 +91,18 @@ export function PanelHeader({
         )}
 
         {/* Connect/disconnect */}
-        {!isLive ? (
+        {wsStatus === 'connecting' ? (
+          // The handshake is in flight: a second connect() would call cleanup() and tear it down.
+          <button
+            type="button"
+            disabled
+            aria-busy="true"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border cursor-wait"
+            style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}${OPACITY_10}`, color: ACCENT_CYAN }}
+          >
+            <Loader2 className="w-3 h-3 animate-spin motion-reduce:animate-none" /> Connecting…
+          </button>
+        ) : !isLive ? (
           <button
             onClick={connectWs}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border transition-colors"

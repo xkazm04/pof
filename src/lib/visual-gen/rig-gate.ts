@@ -78,6 +78,11 @@ export interface RigFacts {
   negativeWeights: number;
   /** NaN/Infinity weights. */
   nonFiniteWeights: number;
+  /**
+   * Non-zero influences naming a joint index the skin does not declare; such a vertex binds
+   * to a bone that does not exist. `undefined` on a facts record captured before this field.
+   */
+  outOfRangeJointRefs?: number;
   /** Largest number of non-zero influences on any single vertex. */
   maxInfluences: number;
   weightSumMin: number;
@@ -97,6 +102,18 @@ export interface RigFacts {
   morphTargetCount?: number;
   /** Names from `meshes[].extras.targetNames`, deduped. Empty means declared-but-unnamed. */
   morphTargetNames?: string[];
+  /**
+   * Meshes a node binds to a skin other than `skins[0]`. They are NOT graded (the facts are
+   * single-skin: `jointCount` and `jointNames` come from `skins[0]`), so the count is carried
+   * for {@link scoreRig} to name them rather than let the verdict read as covering the file.
+   * `undefined` means NOT READ.
+   */
+  ungradedMeshes?: number;
+  /**
+   * Largest quantization step of the weight accessors read: 1/255 for 8-bit, 1/65535 for
+   * 16-bit, 0 for float. `undefined` means NOT READ and is treated as float (strict).
+   */
+  weightQuantStep?: number;
 }
 
 export interface RigVerdict {
@@ -140,7 +157,7 @@ interface Gltf {
     primitives: { attributes: Record<string, number>; targets?: Record<string, number>[] }[];
     extras?: { targetNames?: unknown };
   }[];
-  nodes?: { name?: string }[];
+  nodes?: { name?: string; mesh?: number; skin?: number }[];
   skins?: { joints: number[]; inverseBindMatrices?: number }[];
   accessors?: { bufferView: number; byteOffset?: number; componentType: number; count: number; type: string; normalized?: boolean }[];
   bufferViews?: { byteOffset?: number; byteLength: number; byteStride?: number }[];
@@ -163,7 +180,11 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     const len = view.getUint32(off, true);
     const type = view.getUint32(off + 4, true);
     const start = off + 8;
-    if (start + len > buffer.byteLength) break;
+    // A chunk that overruns the file is damage. Skipping it would drop the BIN chunk and
+    // report a rigged character as "never rigged", which is a verdict on the wrong thing.
+    if (start + len > buffer.byteLength) {
+      throw new Error(`truncated .glb: a chunk declares ${len} bytes at offset ${start} but the file is ${buffer.byteLength} bytes`);
+    }
     if (type === CHUNK_JSON) json = JSON.parse(buffer.subarray(start, start + len).toString('utf8')) as Gltf;
     else if (type === CHUNK_BIN) bin = buffer.subarray(start, start + len);
     off = start + len;
@@ -186,12 +207,28 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
   const empty: RigFacts = {
     hasSkin: false, jointCount: 0, jointNames: [], referencedJoints: 0, hasInverseBindMatrices: false,
     vertexCount: 0, zeroWeightVertices: 0, negativeWeights: 0, nonFiniteWeights: 0,
-    maxInfluences: 0, weightSumMin: 0, weightSumMax: 0, weightSumMean: 0,
+    outOfRangeJointRefs: 0, maxInfluences: 0, weightSumMin: 0, weightSumMax: 0, weightSumMean: 0,
     morphTargetCount, morphTargetNames,
   };
 
-  const prim = json.meshes?.[0]?.primitives?.[0];
-  if (!prim) return empty;
+  // Every primitive that can move with skins[0]. A character split into body, hair and
+  // cloth shells carries several, and each one's weights are this gate's question. A mesh
+  // a node binds to a DIFFERENT skin indexes that skin's joints, so reading it here would
+  // grade it against the wrong joint list.
+  const boundSkin = new Map<number, number | undefined>();
+  for (const node of json.nodes ?? []) {
+    if (node.mesh !== undefined) boundSkin.set(node.mesh, node.skin);
+  }
+  const primitives = (json.meshes ?? []).flatMap((mesh, index) => {
+    const bound = boundSkin.get(index);
+    return bound === undefined || bound === 0 ? (mesh.primitives ?? []) : [];
+  });
+  const ungradedMeshes = (json.meshes ?? []).filter((_, index) => {
+    const bound = boundSkin.get(index);
+    return bound !== undefined && bound !== 0;
+  }).length;
+  empty.ungradedMeshes = ungradedMeshes;
+  if (primitives.length === 0) return empty;
 
   const readAccessor = (index: number | undefined): number[][] | null => {
     if (index === undefined || !json.accessors || !json.bufferViews || !bin) return null;
@@ -212,48 +249,70 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     return rows;
   };
 
-  const position = readAccessor(prim.attributes.POSITION);
-  const vertexCount = position?.length ?? 0;
-
   const skin = json.skins?.[0];
-  const weights = readAccessor(prim.attributes.WEIGHTS_0);
-  const joints = readAccessor(prim.attributes.JOINTS_0);
-  if (!skin || !weights || !joints) return { ...empty, vertexCount };
 
   // Integer weight encodings are normalized fractions of their max; float ones are used
   // as-is. Without this an 8-bit-weight rig would read as sums of ~255 and fail.
-  const wAcc = json.accessors![prim.attributes.WEIGHTS_0];
-  const scale =
-    wAcc.componentType === 5121 ? 1 / 255 : wAcc.componentType === 5123 ? 1 / 65535 : 1;
+  const scaleOf = (index: number): number => {
+    const componentType = json!.accessors![index].componentType;
+    return componentType === 5121 ? 1 / 255 : componentType === 5123 ? 1 / 65535 : 1;
+  };
+  let weightQuantStep = 0;
+  const skinned = primitives.flatMap((p) => {
+    const weights = readAccessor(p.attributes.WEIGHTS_0);
+    const joints = readAccessor(p.attributes.JOINTS_0);
+    if (!weights || !joints) return [];
+    const weights1 = readAccessor(p.attributes.WEIGHTS_1);
+    const joints1 = readAccessor(p.attributes.JOINTS_1);
+    // A vertex over four influences continues in the second set, and its sum is over both.
+    weightQuantStep = Math.max(weightQuantStep, scaleOf(p.attributes.WEIGHTS_0), weights1 ? scaleOf(p.attributes.WEIGHTS_1) : 0);
+    const second = weights1 && joints1 ? { weights1, joints1, scale1: scaleOf(p.attributes.WEIGHTS_1) } : undefined;
+    return [{ weights, joints, scale: scaleOf(p.attributes.WEIGHTS_0), second }];
+  });
+  if (!skin || skinned.length === 0) {
+    const vertexCount = primitives.reduce((n, p) => n + (readAccessor(p.attributes.POSITION)?.length ?? 0), 0);
+    return { ...empty, vertexCount };
+  }
 
   let zeroWeightVertices = 0;
   let negativeWeights = 0;
   let nonFiniteWeights = 0;
   let maxInfluences = 0;
+  let outOfRangeJointRefs = 0;
   let sumMin = Number.POSITIVE_INFINITY;
   let sumMax = Number.NEGATIVE_INFINITY;
   let sumTotal = 0;
   const referenced = new Set<number>();
+  let weightedVertices = 0;
 
-  for (let i = 0; i < weights.length; i++) {
-    const w = weights[i];
-    const j = joints[i] ?? [];
-    let sum = 0;
-    let influences = 0;
-    for (let c = 0; c < w.length; c++) {
-      const value = w[c] * scale;
-      if (!Number.isFinite(value)) { nonFiniteWeights++; continue; }
-      if (value < 0) negativeWeights++;
-      sum += value;
-      if (value > 0) { influences++; if (j[c] !== undefined) referenced.add(j[c]); }
+  for (const { weights, joints, scale, second } of skinned) {
+    weightedVertices += weights.length;
+    for (let i = 0; i < weights.length; i++) {
+      const w = [...weights[i].map((v) => v * scale), ...(second?.weights1[i] ?? []).map((v) => v * second!.scale1)];
+      const j = [...(joints[i] ?? []), ...(second?.joints1[i] ?? [])];
+      let sum = 0;
+      let influences = 0;
+      for (let c = 0; c < w.length; c++) {
+        const value = w[c];
+        if (!Number.isFinite(value)) { nonFiniteWeights++; continue; }
+        if (value < 0) negativeWeights++;
+        sum += value;
+        if (value > 0) {
+          influences++;
+          if (j[c] !== undefined) {
+            if (j[c] < skin.joints.length) referenced.add(j[c]);
+            else outOfRangeJointRefs++;
+          }
+        }
+      }
+      if (sum < 1e-6) zeroWeightVertices++;
+      if (influences > maxInfluences) maxInfluences = influences;
+      if (sum < sumMin) sumMin = sum;
+      if (sum > sumMax) sumMax = sum;
+      sumTotal += sum;
     }
-    if (sum < 1e-6) zeroWeightVertices++;
-    if (influences > maxInfluences) maxInfluences = influences;
-    if (sum < sumMin) sumMin = sum;
-    if (sum > sumMax) sumMax = sum;
-    sumTotal += sum;
   }
-  const n = weights.length || 1;
+  const n = weightedVertices || 1;
 
   return {
     hasSkin: true,
@@ -263,25 +322,36 @@ export function parseGlbRig(buffer: Buffer): RigFacts {
     jointNames: skin.joints.map((j) => json!.nodes?.[j]?.name ?? ''),
     referencedJoints: referenced.size,
     hasInverseBindMatrices: skin.inverseBindMatrices !== undefined,
-    vertexCount: vertexCount || weights.length,
+    vertexCount: weightedVertices,
     zeroWeightVertices,
     negativeWeights,
     nonFiniteWeights,
+    outOfRangeJointRefs,
     maxInfluences,
     weightSumMin: Number.isFinite(sumMin) ? sumMin : 0,
     weightSumMax: Number.isFinite(sumMax) ? sumMax : 0,
     weightSumMean: sumTotal / n,
     morphTargetCount,
     morphTargetNames,
+    ungradedMeshes,
+    weightQuantStep: weightQuantStep === 1 ? 0 : weightQuantStep,
   };
 }
 
 /**
- * Tolerance on the weight sum. Both captured rigs sum to exactly 1.0, so this is loose
- * on purpose: it is here to survive 8/16-bit weight quantization, not to accommodate a
- * sloppy rig.
+ * Floor of the tolerance on the weight sum. Float weights are held to this. Integer
+ * encodings get a wider band from {@link weightSumTolerance}, because one 8-bit step is
+ * 3.9e-3 and a 1e-3 band cannot survive it.
  */
 const WEIGHT_SUM_TOLERANCE = 1e-3;
+
+/**
+ * Tolerance for one file: the float floor, widened to two quantization steps for integer
+ * weights (four influences each rounded by up to half a step is at most two steps off).
+ */
+function weightSumTolerance(facts: RigFacts): number {
+  return Math.max(WEIGHT_SUM_TOLERANCE, 2 * (facts.weightQuantStep ?? 0));
+}
 
 /** A skeleton this thin is more likely a degenerate prediction than a real rig. */
 const THIN_SKELETON_JOINTS = 2;
@@ -324,16 +394,24 @@ export function scoreRig(facts: RigFacts, expect?: RigExpectation): RigVerdict {
       `${facts.zeroWeightVertices} of ${facts.vertexCount} vertices carry no weight — they cannot follow the skeleton`,
     );
   }
-  if (
-    Math.abs(facts.weightSumMin - 1) > WEIGHT_SUM_TOLERANCE ||
-    Math.abs(facts.weightSumMax - 1) > WEIGHT_SUM_TOLERANCE
-  ) {
+  const tolerance = weightSumTolerance(facts);
+  if (Math.abs(facts.weightSumMin - 1) > tolerance || Math.abs(facts.weightSumMax - 1) > tolerance) {
     failures.push(
       `weights are not normalized (sums ${facts.weightSumMin.toFixed(4)}–${facts.weightSumMax.toFixed(4)}, expected 1) — vertices will scale as the skeleton moves`,
     );
   }
   if (facts.negativeWeights > 0) failures.push(`${facts.negativeWeights} negative weight(s)`);
   if (facts.nonFiniteWeights > 0) failures.push(`${facts.nonFiniteWeights} non-finite weight(s)`);
+  if ((facts.outOfRangeJointRefs ?? 0) > 0) {
+    failures.push(`${facts.outOfRangeJointRefs} influence(s) name a joint index outside the skin — those vertices bind to a bone that does not exist`);
+  }
+
+  if ((facts.ungradedMeshes ?? 0) > 0) {
+    warnings.push(
+      `${facts.ungradedMeshes} mesh(es) bound to a skin other than the first were not graded — ` +
+        'this verdict covers the first skin only',
+    );
+  }
 
   const orphans = facts.jointCount - facts.referencedJoints;
   if (orphans > 0) warnings.push(`${orphans} orphan joint(s): declared but deforming no vertex`);

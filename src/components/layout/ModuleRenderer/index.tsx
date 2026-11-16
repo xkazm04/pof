@@ -18,6 +18,8 @@ import { PaneIdContext, getPaneHolds, subscribePaneHolds } from '@/hooks/usePane
 // InlineTerminal is rendered with props *outside* the module Suspense boundary,
 // so it stays eagerly imported (lazifying it would suspend with no boundary).
 import { InlineTerminal } from '@/components/cli/InlineTerminal';
+import { useTaskDAGStore } from '@/stores/taskDAGStore';
+import { workflowPinnedSessionIds } from '@/lib/workflow-dispatch';
 
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useActiveModuleId } from '@/hooks/useActiveModuleId';
@@ -110,6 +112,17 @@ export function ModuleRenderer() {
     maximizedTabId && maximizedSession?.moduleId === activeModuleId
       ? maximizedTabId
       : null;
+
+  // A workflow node's terminal is what receives its prompt, so it stays mounted whatever
+  // module the user is on. Folded to a string: the selector must return a stable value.
+  const workflowExecution = useTaskDAGStore((s) => s.activeExecution);
+  const workflowPinnedKey = useCLIPanelStore((s) =>
+    workflowPinnedSessionIds(s.sessions, workflowExecution).join('|'),
+  );
+  const mountedSessions = useMemo(() => {
+    const pinned = workflowPinnedKey ? workflowPinnedKey.split('|') : [];
+    return [...sessionLru, ...pinned.filter((id) => !sessionLru.includes(id))];
+  }, [sessionLru, workflowPinnedKey]);
 
   // What this shell can observe about live work: which CLI sessions are running
   // (and the module each is attributed to), plus the pane holds modules declare
@@ -318,7 +331,7 @@ export function ModuleRenderer() {
       </div>
 
       {/* Inline terminals — LRU keep-alive: toggle visibility via display */}
-      {sessionLru.map((sessionId) => {
+      {mountedSessions.map((sessionId) => {
         const isVisible = sessionId === inlineSessionId;
         return (
           <div

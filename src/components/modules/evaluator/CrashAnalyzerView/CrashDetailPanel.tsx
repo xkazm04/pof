@@ -5,11 +5,12 @@ import {
   Bug, ChevronDown, ChevronRight, XCircle,
   Layers, Clock, Cpu, Terminal,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MicroLabel } from '@/components/ui/MicroLabel';
 import { DecoratedCrashText } from '@/components/ui/CrashTerm';
 import { SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 import type { CrashReport, CrashDiagnosis } from '@/types/crash-analyzer';
 import { SeverityBadge } from './SeverityBadge';
 import { PlainCrashSummary } from './PlainCrashSummary';
@@ -33,6 +34,7 @@ export function CrashDetailPanel({
   // raw log) collapse behind one disclosure so the humanized story leads. Default
   // closed there; in Technical mode they're always shown.
   const [showTech, setShowTech] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   return (
     <div className="space-y-3 pl-4">
@@ -111,6 +113,7 @@ export function CrashDetailPanel({
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
+                transition={motionSafe({ duration: DURATION.base, ease: EASE_OUT }, prefersReducedMotion)}
                 className="overflow-hidden"
               >
                 <div className="space-y-3">

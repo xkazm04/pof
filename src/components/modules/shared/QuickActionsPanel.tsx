@@ -31,7 +31,8 @@ export function QuickActionsPanel({ actions, onRunPrompt, accentColor, isRunning
   const { suggestions, fetchSuggestions } = usePromptSuggestions((moduleId ?? '') as SubModuleId);
 
   const handleCustomPrompt = () => {
-    if (!customPrompt.trim()) return;
+    // Enter reaches here too, so it must honour the same guard as the disabled Send button.
+    if (!customPrompt.trim() || isRunning) return;
     onRunPrompt(customPrompt.trim());
     setCustomPrompt('');
   };
@@ -130,7 +131,7 @@ export function QuickActionsPanel({ actions, onRunPrompt, accentColor, isRunning
             type="text"
             value={customPrompt}
             onChange={(e) => handlePromptChange(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleCustomPrompt(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleCustomPrompt(); }}
             placeholder={`Ask about ${moduleLabel.toLowerCase()}...`}
             aria-label={`Ask Claude about ${moduleLabel.toLowerCase()}`}
             className="flex-1 px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors min-w-0"

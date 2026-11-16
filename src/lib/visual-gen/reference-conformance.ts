@@ -117,8 +117,13 @@ export function parseConformanceReply(raw: string): ConformanceReply {
   if (!Number.isFinite(severityRaw)) {
     return { ok: false, error: `SEVERITY was not a number ("${severityMatch[1]}")` };
   }
+  // Below the scale is a malformed answer, and clamping it to 0 would read as a match —
+  // the same rule `parseViewCritiqueReply` already holds for the damage verdict.
+  if (severityRaw < 0) {
+    return { ok: false, error: `SEVERITY ${severityRaw} is below the 0-${SEVERITY_MAX} scale` };
+  }
   const body = listMatch[1].trim();
-  const divergences = /^none$/i.test(body)
+  const divergences = /^none[.!]?$/i.test(body)
     ? []
     : body.split(',').map((d) => d.trim()).filter(Boolean);
   return {
@@ -209,9 +214,17 @@ export interface ConformanceDeps {
   subject?: string;
 }
 
+/** A reference is operator-supplied art, so it is not always PNG; some vision APIs reject a mislabeled image. */
+function mimeOf(path: string): string {
+  const lower = path.toLowerCase();
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'image/png';
+}
+
 const defaultReadImage = async (path: string): Promise<VisionImage> => ({
   base64: (await readFile(path)).toString('base64'),
-  mime: path.toLowerCase().endsWith('.jpg') || path.toLowerCase().endsWith('.jpeg') ? 'image/jpeg' : 'image/png',
+  mime: mimeOf(path),
 });
 
 /**

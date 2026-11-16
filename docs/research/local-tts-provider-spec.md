@@ -113,3 +113,85 @@ generate one line, play/measure the bytes, and flip the two `step-facts.json` VO
 - `src/lib/model-policy.ts` is Claude-CLI-scoped by construction (`ClaudeModel` → `--model`);
   a local-LLM tier does **not** belong there. Ollama is live on :11434 if a local authoring
   path is ever wanted, but that is a separate seam.
+
+## 2026-11-06 update: a local path for voice casting, read from an open voice studio
+
+> Source: registry intake `intake-voicebox-mg-1106` of github.com/jamiepine/voicebox at `8af7efe`
+> (release 0.6.0 plus one month). Registry technique:
+> `media-generation/audio-generation/character-voice-design/freeze-the-design-into-a-reference`.
+> Status: **knowledge and a plan, nothing built.** The reconsider trigger above still holds:
+> no local speech weights are on the registry machine, and the installed `qwen_tts` package does
+> not import there (torchaudio native library).
+
+Since this spec was written, PoF grew a full casting and takes pipeline on ElevenLabs (rounds on
+`eleven_ttv_v3`, takes on `eleven_v3`, see `games/gtai/voice/casting/CASTING.md`). The question is
+no longer "is there a TTS engine" but "what replaces each ElevenLabs step without breaking the cast".
+
+### The three provider calls are already seams
+
+| PoF dependency | ElevenLabs call today | Local replacement |
+|---|---|---|
+| `RoundDeps.design` (`src/lib/voice/castingRound.ts:47-48`) | `designVoice` - description in, previews out | an open **design** model: description (+ optional instruct) in, audio out. No preview id. |
+| `TakeDeps.createVoice` (`src/lib/voice/takes.ts:22`) | `createDesignedVoice` - **the save step**: preview becomes a stored voice slot | **the freeze**: render one neutral reference clip from the cast design, store it, return a local voice handle that points at it |
+| `TakeDeps.synth` (`src/lib/voice/takes.ts:22`) | `synthesizeSpeech` on the stored voice, direction as inline v3 tags | a **clone** engine conditioned on the frozen reference |
+
+The voice module imports `elevenlabs-speech` directly rather than through `AUDIO_PROVIDERS`, so a
+local path is a second set of these three functions, not a registry entry.
+
+### Why the freeze is not optional on open models
+
+Open design models have **no save step**: the description is the voice and is re-read on every
+render. A fixed seed repeats one line; it does not keep the person across lines. The open studio
+read here ships exactly that (a "designed" profile is its description, re-designed per line, with
+per-line instruct appended into the identity prompt), so every directed line is drawn from a
+slightly different voice. The model family it wraps documents the fix itself ("Voice Design then
+Clone": design a short reference clip, build a clone prompt from it, generate every line from that
+prompt, "especially useful when you want a consistent character voice across many lines").
+
+### The engine matrix that decides it (as read in that tree, dated)
+
+| Role | Engine (weights licence, and where that statement comes from) | Direction it accepts |
+|---|---|---|
+| design | Qwen3-TTS 1.7B VoiceDesign (Apache-2.0 per the studio's changelog), 10 languages | free-text instruct (shares the prompt with identity) |
+| clone | Qwen3-TTS Base 0.6B / 1.7B (repository Apache-2.0; the README states no weights licence - check the model card) | **none** - drops instruct silently |
+| clone | Chatterbox multilingual (MIT per this spec's 2026-09-07 survey; the studio states none), 23 languages | fixed per-language exaggeration default only |
+| clone | Chatterbox Turbo (same family; licence not stated in the studio), English only | inline non-verbal tags: `[laugh]`, `[cough]`, `[chuckle]` |
+| clone + design + direction | OmniVoice | free-text instruct - **CC-BY-NC weights, unusable for a commercial game** |
+| preset | Kokoro 82M (Apache-2.0 per the studio's preset docs) | none; cannot clone |
+
+So a licence-clean local cast trades away ElevenLabs v3's inline direction. What carries delivery
+then: the line text and punctuation (already PoF's practice, see the line-craft rules), tags on the
+English-only clone engine, and, for a character whose range must span a whisper and a shout,
+**one frozen reference per register**, rendered from the same design and seed with different delivery
+instructions and checked against each other for speaker similarity before they ship together.
+
+### Porting the existing cast
+
+The seven cast voices (Rivet, Dent, Kerf, Ohm, Tonnage, King, General Krump) port unevenly:
+
+- **The winning descriptions port.** They are the most valuable output of the rounds; re-run them as
+  a casting round on the local designer.
+- **The seeds do not.** `eleven_ttv_v3` seeds mean nothing to another model.
+- **The previews port only under ElevenLabs' terms.** Cloning a cast preview locally gives the closest
+  match and binds the provider's terms to every line (the two-axis rule above). Re-designing locally
+  gives a cast whose terms are the open weights' alone, at the cost of one round per character.
+- **The robot treatment.** CASTING.md's lesson is that a robot must sound synthetic and that the
+  synthetic layer was written into the description. On a freeze path, render the reference clean and
+  apply the machine layer as a finishing chain after the clone read; a reference clip with the
+  treatment baked in is cloned with its artefacts into every line.
+
+### A local server that matches the integration shape above
+
+The studio read here exposes an OpenAI-compatible `POST /v1/audio/speech` (`voice` = a studio profile,
+`instructions` = the engine's instruct, `speed` = pitch-preserving time stretch), which is the exact
+shape this spec's adapter targets. It would serve `synth` for preset and cloned profiles. It does not
+implement the freeze: its designed profiles re-design per line, so the `createVoice` step stays PoF's
+job (render the reference, then create a cloned profile from it).
+
+### What would prove it
+
+Queued as a held render proof in the registry (`vbmg-001`): Rivet's winning description with the
+treatment removed, five quest lines; arm A re-designs per line, arm B freezes and clones; measure
+speaker similarity of each line to the reference within one embedding model, a second seed per arm as
+the floor, and an owner blind board on "same person?" and on range. PoF's existing Whisper read-back
+and pause screen apply unchanged to both arms.

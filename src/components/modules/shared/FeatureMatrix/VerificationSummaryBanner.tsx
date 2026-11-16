@@ -1,12 +1,13 @@
 import { ShieldCheck } from 'lucide-react';
 import type { VerificationResult } from '@/types/pof-bridge';
+import { isFeatureDone } from '@/lib/feature-done';
 import { STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, ACCENT_CYAN_LIGHT, statusBg, statusBorder } from '@/lib/chart-colors';
 
 export function VerificationSummaryBanner({ results }: { results: VerificationResult[] }) {
   // Name what the apply WROTE, not just how many: the user picked these rows.
   const written = results.filter((r) => r.written);
   const writeError = results.find((r) => r.writeError)?.writeError;
-  const implemented = results.filter((r) => r.newStatus === 'implemented' || r.newStatus === 'improved').length;
+  const implemented = results.filter((r) => isFeatureDone(r.newStatus)).length;
   const partial = results.filter((r) => r.newStatus === 'partial').length;
   const missing = results.filter((r) => r.newStatus === 'missing').length;
 

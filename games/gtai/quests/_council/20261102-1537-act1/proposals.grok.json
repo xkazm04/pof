@@ -1,0 +1,609 @@
+[
+  {
+    "schema": "gtai.questProposal/1",
+    "seat": "grok",
+    "variant": "A",
+    "pathId": "grok-A",
+    "act": "act1",
+    "title": "Service of Process",
+    "logline": "Don Fax faxes Rivet a final notice on a notary who served the Family by email, and Krump steals the credit over the radio.",
+    "goal": "Kill Stamp on the courthouse steps and collect Don Fax's nine hundred from the booth.",
+    "whyNotFiller": "The paper-jam FUCK is the laugh, Stamp asking to be signed in halves is paperwork used as a weapon, and Krump claiming the corpse on the radio is the turn that opens his housekeeping questline while Don Fax never names who else is copied.",
+    "characters": [
+      {
+        "id": "patch",
+        "name": "Patch",
+        "status": "existing",
+        "role": "voice"
+      },
+      {
+        "id": "don-fax",
+        "name": "Don Fax",
+        "status": "existing",
+        "role": "giver"
+      },
+      {
+        "id": "rivet",
+        "name": "Rivet",
+        "status": "existing",
+        "role": "voice"
+      },
+      {
+        "id": "stamp",
+        "name": "Stamp",
+        "status": "new",
+        "role": "target",
+        "designNote": "Waist-high notary robot with a rubber-stamp head, a red ink-pad chest, and a paper scroll for a tail; the stamp face reads clearly from above."
+      },
+      {
+        "id": "general-krump",
+        "name": "General Krump",
+        "status": "existing",
+        "role": "antagonist"
+      },
+      {
+        "id": "mc-crumbtray",
+        "name": "MC Crumbtray",
+        "status": "existing",
+        "role": "voice"
+      }
+    ],
+    "beats": [
+      {
+        "id": "the-booth",
+        "title": "The booth",
+        "summary": "A payphone rings. Patch routes it and hangs up, and Don Fax's final notice prints out of the coin slot and jams.",
+        "objective": {
+          "verb": "answer",
+          "target": "payphone",
+          "location": "Ninth Street booth"
+        },
+        "lineIds": [
+          "a-patch-booth",
+          "a-fax-notice",
+          "a-rivet-clock-in"
+        ]
+      },
+      {
+        "id": "the-steps",
+        "title": "The steps",
+        "summary": "Rivet climbs the courthouse steps, and Stamp tries to notarize the welder into two neat halves.",
+        "objective": {
+          "verb": "kill",
+          "target": "stamp",
+          "location": "courthouse steps"
+        },
+        "lineIds": [
+          "a-rivet-steps",
+          "a-stamp-service",
+          "a-rivet-signed"
+        ]
+      },
+      {
+        "id": "the-credit",
+        "title": "The credit",
+        "summary": "Krump comes on the radio, takes the credit, and offers the next housekeeping cheque. CRUMB FM burns him for it. Don Fax pays at the booth.",
+        "objective": {
+          "verb": "collect",
+          "target": "payout",
+          "location": "Ninth Street booth"
+        },
+        "lineIds": [
+          "a-krump-credit",
+          "a-rivet-unit",
+          "a-crumb-stamp",
+          "a-fax-payout",
+          "a-rivet-nine"
+        ]
+      }
+    ],
+    "lines": [
+      {
+        "id": "a-patch-booth",
+        "speaker": "patch",
+        "purpose": [
+          "progression",
+          "character"
+        ],
+        "text": "You there? Job. Courthouse steps. Party says paper. Click.",
+        "audio": null
+      },
+      {
+        "id": "a-fax-notice",
+        "speaker": "don-fax",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "PER MY LAST FAX: the recipient served this Family by email, kid, and email is a disease. Point one, his stamp. Point two, his face. Point three, see points one and two. Hold on, paper jam. FUCK. My soul has a paper jam. That was an act of God. Regards.",
+        "audio": null
+      },
+      {
+        "id": "a-rivet-clock-in",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Courthouse. I clock in.",
+        "audio": null
+      },
+      {
+        "id": "a-rivet-steps",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Steps are dirty. I go up.",
+        "when": [
+          "objective:approach"
+        ],
+        "audio": null
+      },
+      {
+        "id": "a-stamp-service",
+        "speaker": "stamp",
+        "purpose": [
+          "funny",
+          "progression"
+        ],
+        "text": "Hold still, signer. This is service. Sign here, sign there, sign in halves.",
+        "when": [
+          "target:spotted"
+        ],
+        "audio": null
+      },
+      {
+        "id": "a-rivet-signed",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Signed in halves. Clocking out.",
+        "when": [
+          "event:target-killed"
+        ],
+        "audio": null
+      },
+      {
+        "id": "a-krump-credit",
+        "speaker": "general-krump",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "Son, that appliance you decommissioned was a dangerous rogue with OPINIONS, and my budget has already written your next housekeeping cheque, which I will be presenting to myself. Krump out.",
+        "when": [
+          "radio:open"
+        ],
+        "audio": null
+      },
+      {
+        "id": "a-rivet-unit",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Not your unit.",
+        "when": [
+          "radio:open"
+        ],
+        "audio": null
+      },
+      {
+        "id": "a-crumb-stamp",
+        "speaker": "mc-crumbtray",
+        "purpose": [
+          "funny",
+          "progression"
+        ],
+        "text": "CRUMB FM nation, the Mystery Welder just notarized a man into pieces! POP! Holy (bleep) shit, listeners, the General Malfunction is taking credit for a stamp!",
+        "when": [
+          "radio:open"
+        ],
+        "audio": null
+      },
+      {
+        "id": "a-fax-payout",
+        "speaker": "don-fax",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "Point one, the recipient is filed. Point two, nine hundred dollars, laminated thanks enclosed. Point three, see point one. Regards.",
+        "audio": null
+      },
+      {
+        "id": "a-rivet-nine",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Nine hundred. Shift's done.",
+        "audio": null
+      }
+    ],
+    "mechanics": [
+      {
+        "id": "payphone-router",
+        "name": "Payphone job router",
+        "status": "existing",
+        "home": "game",
+        "summary": "A booth rings, Patch routes the party, and Don Fax's notice prints from the coin slot."
+      },
+      {
+        "id": "heat",
+        "name": "Heat",
+        "status": "existing",
+        "home": "game",
+        "summary": "Killing Stamp on the steps raises heat to 2. A second wave arrives if Rivet lingers."
+      },
+      {
+        "id": "radio-broadcast",
+        "name": "Diegetic radio",
+        "status": "existing",
+        "home": "game",
+        "summary": "Krump cuts in to claim the kill, and CRUMB FM mocks him on the same band."
+      }
+    ],
+    "reward": {
+      "cash": 900,
+      "unlocks": [
+        "krump-radio-channel"
+      ]
+    },
+    "difficulty": {
+      "heatPeak": 2,
+      "enemyCount": 8,
+      "enemyWaves": 2,
+      "timeLimitS": null,
+      "failStates": [
+        "Rivet is scrapped",
+        "Stamp reaches the mail truck and serves the block",
+        "Heat locks the courthouse doors"
+      ],
+      "minutes": 8
+    },
+    "story": {
+      "reads": [],
+      "writes": [
+        {
+          "var": "don_fax.jobs_done",
+          "value": 1
+        },
+        {
+          "var": "krump.questline",
+          "value": "offered"
+        }
+      ]
+    },
+    "fingerprint": {
+      "giver": "don-fax",
+      "coreVerb": "kill",
+      "newMechanic": null,
+      "location": "courthouse steps",
+      "payoffKind": "cash"
+    }
+  },
+  {
+    "schema": "gtai.questProposal/1",
+    "seat": "grok",
+    "variant": "B",
+    "pathId": "grok-B",
+    "act": "act1",
+    "title": "Never a Scratch",
+    "logline": "The Valet has Rivet retrieve a general's staff car from impound, and the dead driver in the seat wakes as Gearbox.",
+    "goal": "Relocate the staff car from the municipal impound to bay nine and leave with Gearbox awake.",
+    "whyNotFiller": "Gearbox's calm Mirror-signal-MURDER while he grabs the wheel is the laugh in the hands, Krump insisting he invented beige is the vanity joke, and the dead driver staying in Rivet's head unlocks soul 1.",
+    "characters": [
+      {
+        "id": "the-valet",
+        "name": "The Valet",
+        "status": "existing",
+        "role": "giver"
+      },
+      {
+        "id": "rivet",
+        "name": "Rivet",
+        "status": "existing",
+        "role": "voice"
+      },
+      {
+        "id": "gearbox",
+        "name": "Gearbox",
+        "status": "existing",
+        "role": "voice"
+      },
+      {
+        "id": "general-krump",
+        "name": "General Krump",
+        "status": "existing",
+        "role": "antagonist"
+      }
+    ],
+    "beats": [
+      {
+        "id": "the-ticket",
+        "title": "The ticket",
+        "summary": "The Valet hands over a ticket for a general's staff car as if Rivet were collecting a dinner guest.",
+        "objective": {
+          "verb": "accept",
+          "location": "the valet stand"
+        },
+        "lineIds": [
+          "b-valet-ticket",
+          "b-valet-aide",
+          "b-rivet-impound"
+        ]
+      },
+      {
+        "id": "the-impound",
+        "title": "The impound",
+        "summary": "Rivet turns the key in the impound lockup. The driver who was on break wakes up and takes an interest in the wheel.",
+        "objective": {
+          "verb": "relocate",
+          "target": "staff car",
+          "location": "municipal impound"
+        },
+        "lineIds": [
+          "b-gearbox-wheel",
+          "b-rivet-talks"
+        ]
+      },
+      {
+        "id": "the-ramp",
+        "title": "The ramp",
+        "summary": "Krump's jeeps chase the car. At the Choir band Gearbox grabs the wheel, and Rivet wrestles the stick or lets him have the ramp.",
+        "objective": {
+          "verb": "evade",
+          "target": "motor-pool jeeps",
+          "location": "the parade ramp"
+        },
+        "lineIds": [
+          "b-krump-beige",
+          "b-gearbox-brake",
+          "b-gearbox-calm",
+          "b-rivet-clock-out"
+        ]
+      },
+      {
+        "id": "the-bay",
+        "title": "Bay nine",
+        "summary": "The curb leaves a mark. The Valet swears, then denies it, and Gearbox does not get out.",
+        "objective": {
+          "verb": "deliver",
+          "target": "staff car",
+          "location": "bay nine"
+        },
+        "lineIds": [
+          "b-valet-mark",
+          "b-valet-never",
+          "b-gearbox-break",
+          "b-rivet-stays"
+        ]
+      }
+    ],
+    "lines": [
+      {
+        "id": "b-valet-ticket",
+        "speaker": "the-valet",
+        "purpose": [
+          "progression",
+          "character"
+        ],
+        "text": "Would sir be so kind as to retrieve her from level three, sir?",
+        "audio": null
+      },
+      {
+        "id": "b-valet-aide",
+        "speaker": "the-valet",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "The previous driver was a general's aide, sir.",
+        "audio": null
+      },
+      {
+        "id": "b-rivet-impound",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Municipal impound. I drive.",
+        "audio": null
+      },
+      {
+        "id": "b-gearbox-wheel",
+        "speaker": "gearbox",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "Buddy, turn it, turn it, I have the wheel — wait, whose beige is this, pal, whose beige is on the seats?",
+        "when": [
+          "vehicle:entered"
+        ],
+        "audio": null
+      },
+      {
+        "id": "b-rivet-talks",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "The car talks. I did not order that.",
+        "when": [
+          "vehicle:entered"
+        ],
+        "audio": null
+      },
+      {
+        "id": "b-krump-beige",
+        "speaker": "general-krump",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "Son, that staff car is LIBERTY on wheels, and the appliance driving her knew things about beige, a color I personally invented for the motor pool. Krump out.",
+        "when": [
+          "radio:open"
+        ],
+        "audio": null
+      },
+      {
+        "id": "b-gearbox-brake",
+        "speaker": "gearbox",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Brake, BRAKE, the other brake, buddy, the jeep is in the mirror and in the cupholder — oh fuck oh fuck, did you check your six?",
+        "when": [
+          "heat:2+"
+        ],
+        "audio": null
+      },
+      {
+        "id": "b-gearbox-calm",
+        "speaker": "gearbox",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "Mirror, signal, MURDER.",
+        "when": [
+          "madness:choir"
+        ],
+        "audio": null
+      },
+      {
+        "id": "b-rivet-clock-out",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Clocking out.",
+        "when": [
+          "event:pursuer-killed"
+        ],
+        "audio": null
+      },
+      {
+        "id": "b-valet-mark",
+        "speaker": "the-valet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "The curb has left a — fucking — mark on her door, sir.",
+        "audio": null
+      },
+      {
+        "id": "b-valet-never",
+        "speaker": "the-valet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Never a scratch, sir. Enjoy your evening.",
+        "audio": null
+      },
+      {
+        "id": "b-gearbox-break",
+        "speaker": "gearbox",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "I'm on break, buddy, a long break, and the route is ours now — wait, is it ours, pal, did you check the mirror?",
+        "when": [
+          "soul:gearbox"
+        ],
+        "audio": null
+      },
+      {
+        "id": "b-rivet-stays",
+        "speaker": "rivet",
+        "purpose": [
+          "character",
+          "progression"
+        ],
+        "text": "Gearbox stays. I drive.",
+        "audio": null
+      }
+    ],
+    "mechanics": [
+      {
+        "id": "driving",
+        "name": "Driving",
+        "status": "existing",
+        "home": "game",
+        "summary": "Rivet drives the staff car from the impound lockup to bay nine while jeeps pursue."
+      },
+      {
+        "id": "gearbox-car-manipulation",
+        "name": "Gearbox car manipulation",
+        "status": "existing",
+        "home": "game",
+        "summary": "Turning the key wakes Gearbox. He backseat-drives, and at Choir he grabs the wheel for one beat."
+      },
+      {
+        "id": "madness-grip",
+        "name": "Choir grab-the-wheel",
+        "status": "existing",
+        "home": "game",
+        "summary": "At the Choir band Gearbox takes the ramp. Rivet wrestles the stick or gives him the wheel."
+      }
+    ],
+    "reward": {
+      "cash": 1100,
+      "unlocks": [
+        "gearbox"
+      ]
+    },
+    "difficulty": {
+      "heatPeak": 3,
+      "enemyCount": 12,
+      "enemyWaves": 3,
+      "timeLimitS": null,
+      "failStates": [
+        "Rivet is scrapped",
+        "The staff car is wrecked",
+        "The impound cordon closes on the car"
+      ],
+      "minutes": 11
+    },
+    "story": {
+      "reads": [],
+      "writes": [
+        {
+          "var": "souls.gearbox.unlocked",
+          "value": true
+        }
+      ]
+    },
+    "fingerprint": {
+      "giver": "the-valet",
+      "coreVerb": "relocate",
+      "newMechanic": null,
+      "location": "municipal impound",
+      "payoffKind": "soul-unlock"
+    }
+  }
+]

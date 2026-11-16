@@ -33,6 +33,7 @@ beforeEach(() => {
     projectName: 'Did',
     projectPath: 'C:/UE/Did',
     dynamicContext: FRESH(),
+    scannedPath: 'C:/UE/Did',
     isScanning: false,
     scanError: null,
   });

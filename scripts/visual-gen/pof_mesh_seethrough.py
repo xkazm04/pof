@@ -31,6 +31,16 @@ RES = 192
 
 arm = next(o for o in bpy.data.objects if o.type == 'ARMATURE')
 
+GROUPS = {'arms': ['upperarm_l', 'upperarm_r'], 'forearms': ['lowerarm_l', 'lowerarm_r'],
+          'thighs': ['thigh_l', 'thigh_r'], 'calves': ['calf_l', 'calf_r'],
+          'spine': ['spine_01', 'spine_02', 'spine_03'], 'neck': ['neck_01', 'head']}
+# set_pose skips a bone the rig does not have, so a skeleton outside these names sweeps
+# nothing and reports the rest pose as a clean posed result.
+blind = [g for g, bones in GROUPS.items() if not any(b in arm.pose.bones for b in bones)]
+if blind and '--quick' not in argv:
+    print('POF_SEETHROUGH_ERROR=rig has none of the swept bones for: ' + ', '.join(blind))
+    sys.exit(0)
+
 def build_fixture(holed):
     # closed-by-construction copy of the file's own mesh: voxel remesh at rest, weights
     # transferred from the original, original removed. 'holed' cuts a chest patch out of it.
@@ -94,9 +104,6 @@ cam.constraints.new('TRACK_TO').target = tgt
 CAMS = {'front': (0, -1, 0), 'back': (0, 1, 0), 'left': (-1, 0, 0), 'right': (1, 0, 0),
         'q_front_l': (-0.7, -0.7, 0.35), 'q_back_r': (0.7, 0.7, -0.25)}
 
-GROUPS = {'arms': ['upperarm_l', 'upperarm_r'], 'forearms': ['lowerarm_l', 'lowerarm_r'],
-          'thighs': ['thigh_l', 'thigh_r'], 'calves': ['calf_l', 'calf_r'],
-          'spine': ['spine_01', 'spine_02', 'spine_03'], 'neck': ['neck_01', 'head']}
 POSES = [('rest', {})]
 QUICK = '--quick' in argv
 for g, bones in GROUPS.items():

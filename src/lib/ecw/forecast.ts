@@ -70,7 +70,11 @@ export function computeVelocityForecast(
 
   return {
     daysRemaining,
-    velocityPerDay: Math.round(velocityPerDay * 10) / 10,
+    // One decimal at >= 1/day; below that, two significant figures — a fixed one
+    // decimal printed a real 0.04/day as "0" beside a finite ETA built from it.
+    velocityPerDay: velocityPerDay >= 1
+      ? Math.round(velocityPerDay * 10) / 10
+      : Number(velocityPerDay.toPrecision(2)),
     confidence: Math.round(confidence * 100) / 100,
   };
 }

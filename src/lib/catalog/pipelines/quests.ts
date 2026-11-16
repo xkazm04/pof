@@ -8,7 +8,8 @@ import { allOf } from '../acceptance/combinators';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /**
  * The quest's identity token — the leading article is dropped so a quest titled
  * "The Ember Pact" owns `EmberPact` (matching the cross-catalog contract

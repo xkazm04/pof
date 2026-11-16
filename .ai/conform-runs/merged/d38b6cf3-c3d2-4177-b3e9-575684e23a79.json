@@ -1,0 +1,103 @@
+{
+  "schema": "conform-run/1",
+  "worker": "d38b6cf3-c3d2-4177-b3e9-575684e23a79",
+  "subject": "mesh-finishing-for-engine-readiness",
+  "evaluatedAt": "2026-11-07T04:14:33.233442+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "scripts/visual-gen/ardy/pof_bvh_blender.py:100 The headless Blender stage writes a skinned proxy and animation FBX for UE, then reports OK on the exporter's return alone; it never re-reads the file to confirm the armature, the mesh and the clip are present, which is the self-certified delivery the technique exists to remove.",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/ardy/pof_bvh_blender.py:91 The export is scoped with use_selection, but no read-back of objects or clips follows before the OK marker at line 100."
+        },
+        {
+          "technique": "unwrap-only-the-low-poly",
+          "verdict": "not-applicable",
+          "evidence": "scripts/visual-gen/pof_mesh_critique.py:1 The critique only measures structure (watertight, components, bbox); no reduce or unwrap stage exists in this context."
+        }
+      ]
+    },
+    {
+      "context": "blender-pipeline",
+      "subject": "mesh-finishing-for-engine-readiness",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/FBXConversionTab.tsx:38 The FBX to GLB receipt shows mesh and triangle counts the script measured from the scene BEFORE export (pof_fbx_convert.py), and the route only checks that the file exists and is fresh. The written GLB is never read back, so 'Converted N meshes' rests on file existence, the structural rung the technique says is not proof.",
+      "techniques": [
+        {
+          "technique": "export-proven-by-read-back",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView/FBXConversionTab.tsx:29 The counts come from the scene before export (scripts/visual-gen/pof_fbx_convert.py marker MESHES/TRIS after an isfile check), not from re-reading the GLB."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "mesh-finishing-for-engine-readiness",
+      "context": "character-overview-input",
+      "reason": "absence contradicted: src/components/modules/core-engine/sub_character/ai-feel/build-apply-prompt.ts:63 contains 'bake' (1 hit(s) in the context's directories)"
+    },
+    {
+      "subject": "mesh-finishing-for-engine-readiness",
+      "context": "visual-gen-contact-sheet-ue5-export",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "mesh-finishing-for-engine-readiness",
+      "context": "loot-affix-core",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor data.ts:24 is just the 'Core' subtab definition. It doesn't show that mesh finishing is absent, so it is an incidental anchor. The absence rests on a four-term grep (unwrap, bake, mesh, decimat) that I couldn't confirm was the right search for this subject."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T04:14:33.233442+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "mesh-finishing-for-engine-readiness"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "loot-affix-core",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T04:14:33.233442+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "mesh-finishing-for-engine-readiness"
+      ],
+      "techniques": [
+        "export-proven-by-read-back",
+        "unwrap-only-the-low-poly"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-quality-and-animation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T04:14:33.233442+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "mesh-finishing-for-engine-readiness"
+      ],
+      "techniques": [
+        "export-proven-by-read-back"
+      ],
+      "deviations": 1,
+      "context": "blender-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

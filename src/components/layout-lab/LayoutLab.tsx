@@ -26,6 +26,9 @@ import { useLabLocation } from './hooks/useLabLocation';
 import { useLabAddress } from './hooks/useLabRouteSync';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
+import { GameSelector } from './GameSelector';
+import { GameHome } from './game/gameHome';
+import { useActiveGame, useActiveGameUrlSync } from '@/stores/activeGameStore';
 
 /**
  * UI identity lab (/layout). Consolidated to a single Blueprint baseline with a
@@ -36,6 +39,9 @@ import { IconButton } from './ui/IconButton';
 export function LayoutLab() {
   const reduce = useReducedMotion();
   const groups = useLabCatalogData();
+  // The ACTIVE game (URL `g` wins on arrival, the store remembers): every view below shows only it.
+  useActiveGameUrlSync();
+  const { gameId, game } = useActiveGame();
   // Persisted entities (other sessions' one-shots, /diablo ingests) join the tree.
   usePersistedEntityHydration();
   const { prefs, setPrefs } = useLabPrefs();
@@ -51,7 +57,7 @@ export function LayoutLab() {
   const { catalogId, entityId, stepIdx, view } = loc;
   // The location's ADDRESS (`/?legacy=0&c=&e=&s=<step label>&v=`): arrival opens it, section moves push,
   // step moves replace, Back/Forward re-apply through the same `nav` door (useLabRouteSync).
-  useLabAddress(loc, detail, nav);
+  useLabAddress(loc, detail, nav, gameId);
   // Lab-wide search (⌘/Ctrl+K or "/"), driving the SAME navigate door (`nav`).
   const [searchOpen, setSearchOpen] = useLabSearchShortcut();
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
@@ -68,6 +74,10 @@ export function LayoutLab() {
   const workQueue = useLabWorkQueue(catalogId, entityId, nav.open); // Matrix queue: Next opens each stop like a cell
 
   // Names this entry as the lab (legacy=0) before pushing legacy=1, so Back returns here.
+  // The skip link's target: Baseline's <main id="lab-canvas"> exists only on the composed Catalogs
+  // view; every other view (Matrix, Canon, Game, the empty-game board) is reached at the view wrapper.
+  const skipTarget = view === 'catalogs' && groups.length > 0 ? 'lab-canvas' : 'lab-view';
+
   const switchToLegacy = useCallback(() => { requestShellSwitch('legacy'); }, []);
   // The header's drain lane opens a finished drain's catalog on the Matrix (drain runs live in labRunnerStore).
   const openDrain = useCallback((c: string) => { if (c !== catalogId) nav.catalog(c); nav.view('matrix'); }, [catalogId, nav]);
@@ -84,7 +94,7 @@ export function LayoutLab() {
       className={labFontVars}
       style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}
     >
-      <a href="#lab-canvas" className="focus-ring"
+      <a href={`#${skipTarget}`} className="focus-ring"
          style={{ position: 'fixed', left: 'var(--lab-s2)', top: 'var(--lab-s2)', zIndex: 50,
                   padding: 'var(--lab-s2) var(--lab-s3)', background: 'var(--lab-panel)',
                   border: '1px solid var(--lab-line)', color: 'var(--lab-ink)',
@@ -96,14 +106,17 @@ export function LayoutLab() {
       {/* ── Title-block (Blueprint) / glass command bar (Studio) chrome ── */}
       <header
         style={{
-          flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)',
+          flex: '0 0 auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--lab-s2)',
           padding: 'var(--lab-s2) var(--lab-s4)', background: 'var(--lab-panel)',
           borderBottom: '1px solid var(--lab-line)', boxShadow: 'var(--lab-elev-1)',
           ...(theme.glass ? { backdropFilter: 'blur(var(--lab-glass-blur))' } : {}),
         }}
       >
-        {/* Left zone: brand. flex:1 balances the right zone so the center group is truly centered. */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+        {/* Left zone: game selector + brand. flex:1 balances the right zone so the center group is truly
+            centered; the zones never shrink below their content — the header WRAPS to a second row
+            instead of painting one zone under another (the game selector made the left zone collide). */}
+        <div style={{ flex: '1 0 auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+          <GameSelector />
           <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             PoF·LAB <span style={{ color: 'var(--lab-ink)' }}>sheet · {detail?.catalog.catalogId ?? '—'}</span>
           </span>
@@ -118,9 +131,10 @@ export function LayoutLab() {
           >
             Search <span aria-hidden="true" style={{ color: 'var(--lab-muted)' }}>⌘K</span>
           </Button>
-          <Button active={view === 'catalogs'} onClick={() => nav.view('catalogs')}>Catalogs</Button>
-          <Button active={view === 'matrix'} onClick={() => nav.view('matrix')}>Matrix</Button>
-          <Button active={view === 'canon'} onClick={() => nav.view('canon')}>Canon</Button>
+          <Button current={view === 'catalogs'} onClick={() => nav.view('catalogs')}>Catalogs</Button>
+          <Button current={view === 'matrix'} onClick={() => nav.view('matrix')}>Matrix</Button>
+          <Button current={view === 'canon'} onClick={() => nav.view('canon')}>Canon</Button>
+          <Button current={view === 'game'} onClick={() => nav.view('game')} data-testid="lab-view-game">Game</Button>
           <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
           {/* Full-page jumps to the app's other surfaces — derived from NAVIGABLE_SURFACES
               and drawn distinctly from the in-place view toggles above. */}
@@ -128,7 +142,7 @@ export function LayoutLab() {
           <Button onClick={switchToLegacy}>Legacy shell</Button>
         </div>
         {/* Right zone: status + theme toggle in the corner */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--lab-s2)' }}>
+        <div style={{ flex: '1 0 auto', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--lab-s2)' }}>
           {/* ONE affordance for "what is running right now" — the UE drain lease, the
               one-shot orchestrator and the forge's background polls in one vocabulary.
               (Replaces the old RunnerChip + LabJobsChip pair, which shared nothing.) */}
@@ -140,15 +154,22 @@ export function LayoutLab() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Lab-level cross-catalog coach — only over the composition (Baseline) view;
             the Matrix and Canon carry their own catalog-wide summaries. */}
-        {view === 'catalogs' && <><GlobalCoach t={theme} /><WorkQueueStrip q={workQueue} /></>}
+        {view === 'catalogs' && groups.length > 0 && <><GlobalCoach t={theme} /><WorkQueueStrip q={workQueue} /></>}
+        {/* The view lives in shell state, not a route change, so no framework announcer fires:
+            name the active view in a polite live region (focus stays on the header row). */}
+        <div role="status" aria-live="polite" className="sr-only" data-testid="lab-view-announcer">{VIEW_NAME[view]} view</div>
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={view}
+          <motion.div key={view} id="lab-view" tabIndex={-1}
             initial={reduce ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
             transition={{ duration: reduce ? 0 : 0.18, ease: 'easeOut' }}
             style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             {view === 'canon' ? <CanonView t={theme} />
+              : view === 'game' ? <GameHome t={theme} />
+              // A game whose manifest names no registered pipeline yet: an honest, named empty
+              // board — never a blank panel and never PoF's catalogs.
+              : groups.length === 0 ? <EmptyGameBoard title={game.title} onOpenGame={() => nav.view('game')} />
               : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onSelectCatalog={nav.catalog} onOpenStep={nav.open} onOpenQueue={workQueue.open} />
               : <Baseline theme={theme} groups={groups} detail={detail}
                   onSelectCatalog={nav.catalog}
@@ -168,6 +189,22 @@ export function LayoutLab() {
         onNavigate={nav.open}
       />
       <OneShotPanel t={theme} />
+    </div>
+  );
+}
+
+const VIEW_NAME = { catalogs: 'Catalogs', matrix: 'Matrix', canon: 'Canon', game: 'Game' } as const;
+
+/** The Catalogs/Matrix surface for a game with no pipelines in its manifest yet. */
+function EmptyGameBoard({ title, onOpenGame }: { title: string; onOpenGame: () => void }) {
+  return (
+    <div data-testid="game-empty-board" role="status"
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--lab-s3)', padding: 'var(--lab-s6)', color: 'var(--lab-muted)' }}>
+      <p style={{ fontSize: 'var(--lab-fs-md)', color: 'var(--lab-ink-deep)' }}>No pipelines in {title}&apos;s manifest yet</p>
+      <p style={{ fontSize: 'var(--lab-fs-xs)', maxWidth: 520, textAlign: 'center' }}>
+        Its planned pipelines and engine binding are on the Game view. &ldquo;All pipelines&rdquo; in the header reveals the registered ones it does not use.
+      </p>
+      <Button onClick={onOpenGame}>Open the Game view</Button>
     </div>
   );
 }

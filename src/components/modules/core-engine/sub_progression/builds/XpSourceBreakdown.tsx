@@ -20,6 +20,8 @@ export function XpSourceBreakdown() {
     <BlueprintPanel color={ACCENT} className="p-5">
       <SectionHeader icon={BarChart3} label="XP Source Breakdown" color={ACCENT} />
 
+      <p className="text-xs font-mono text-text-muted mt-2">Sample figures: this split is not measured from play.</p>
+
       <div className="mt-2.5 space-y-3">
         {XP_SOURCES.map((src, i) => (
           <motion.div

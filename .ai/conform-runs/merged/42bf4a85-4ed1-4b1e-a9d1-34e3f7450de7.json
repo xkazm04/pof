@@ -1,0 +1,158 @@
+{
+  "schema": "conform-run/1",
+  "worker": "42bf4a85-4ed1-4b1e-a9d1-34e3f7450de7",
+  "subject": "image-to-3d-input-gating",
+  "evaluatedAt": "2026-11-08T02:17:50.852323+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "scripts/visual-gen/pof_tripo.mjs:11 The paid Tripo CLI uploads the given image straight to the provider. planTripoCli/executeTripoCli never call the Tier-0 input gate and stamp no 'submitted ungated' state for the input (their only ungated note is about the mesh gate on the output). The paid path skips the gate entirely, which is exactly the failure the protocol names.",
+      "techniques": [
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_tripo.mjs:43 The paid dispatch is planned and run without gateInputImage. A fail cannot return an error instead of a job, and the input is never stamped ungated (tripo-cli.ts:119 only says the mesh is ungated)."
+        },
+        {
+          "technique": "single-subject-plain-background",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_triposr.py:52 Before TripoSR runs, the background is matted out and the subject is composited onto a uniform 0.5 mid-grey field (line 55) after resize_foreground leaves a margin. Hunyuan also runs BackgroundRemover (pof_hunyuan.py:36). The rule 'reject if the matte fails' is not enforced."
+        },
+        {
+          "technique": "text-is-never-geometry",
+          "verdict": "conformant",
+          "evidence": "scripts/visual-gen/pof_txt2img.py:12 The source image is briefed without text or watermarks at generation time, the cheapest fix the technique names. The same negative prompt also briefs single-subject, uncropped, plain-background inputs."
+        }
+      ]
+    },
+    {
+      "context": "visual-gen-mesh",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:91 Scene-mode decomposition runs with only a free-text hint and no declared inventory. There is no coverage or residue check and no minimum-over-regions frame verdict, and the generator's 'excluded' discard list is dropped from the API response. A prop the VLM missed is silently absent while every crop verdict stays green.",
+      "techniques": [
+        {
+          "technique": "scene-partition-is-the-gated-unit",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:91 No expected inventory is declared before decomposing and no region/backdrop/residue states are reported. Gating each crop instead of the whole frame (line 67, cropPropRegion) is conformant with step 3."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "src/app/api/visual-gen/scene-decompose/route.ts:111 Ran and unavailable are kept as separate states (line 72). A caller opt-out returns an empty array, not a per-prop 'skipped, submitted ungated' stamp, so opting out reads as silence."
+        },
+        {
+          "technique": "part-cut-planning",
+          "verdict": "not-applicable",
+          "evidence": "src/app/api/visual-gen/mesh-split/route.ts:14 mesh-split separates independent props after generation to save credits. The parts ship independently, which the technique excludes."
+        }
+      ],
+      "registryProposal": "mesh-split's credit-amortisation path (one image-to-3D job for a group of props, split afterwards) is a scene-mode generation whose partition is never gated before spend. scene-partition-is-the-gated-unit could name this 'batch several subjects into one paid job' case explicitly."
+    },
+    {
+      "context": "asset-viewer-and-browser",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "not-applicable",
+      "evidence": "src/components/modules/visual-gen/asset-viewer/assetGrade.ts:2 The viewer and browser load and grade generated meshes (the output side) and never handle a reconstruction's source image. A grep of asset-viewer/ and asset-browser/ for gateInputImage, inputGate, ungated, image-to-3d and referenceRole found nothing; the only hits are 'tripo' mentions in mesh-stat comments.",
+      "techniques": [],
+      "absenceTerms": [
+        "gateInputImage",
+        "inputGate",
+        "ungated",
+        "referenceRole"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "character-overview-input",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (data.ts:27) is a Wizard subtab subtitle that mentions Mixamo and Quixel; it does not show that image-to-3D is absent. The cited SOURCES list is in wizard/wizard-data.ts, which is not one of this context's files."
+    },
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "visual-gen-quality-and-animation",
+      "reason": "withdrawn after review: reviewer (sonnet): The critic scripts (pof_vlm_critique.py, pof_vlm_batch.py) judge generated outputs, not reconstruction inputs. The verdict's own technique anchor says so. A deviation against input-gating for open defect text and a prose verdict is therefore about a different concern than the subject."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-08T02:17:50.852323+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "character-overview-input",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:17:50.852323+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "score-defect-verdict-protocol",
+        "single-subject-plain-background",
+        "text-is-never-geometry"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-asset-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:17:50.852323+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "part-cut-planning",
+        "scene-partition-is-the-gated-unit",
+        "score-defect-verdict-protocol"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-mesh",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:17:50.852323+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "asset-viewer-and-browser",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-08T02:17:50.852323+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "score-defect-verdict-protocol",
+        "single-subject-plain-background"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-quality-and-animation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

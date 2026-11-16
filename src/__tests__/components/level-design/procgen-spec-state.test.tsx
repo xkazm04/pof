@@ -87,7 +87,7 @@ function installApi() {
   }) as unknown as typeof fetch;
 }
 
-const tab = (name: RegExp) => screen.getAllByRole('button').find((b) => name.test(b.textContent ?? ''))!;
+const tab = (name: RegExp) => screen.getAllByRole('tab').find((b) => name.test(b.textContent ?? ''))!;
 const radio = (label: RegExp) => screen.getByRole('radio', { name: label });
 
 /** The wizard's defaults BEFORE this change — literal, so a drift in the reducer's initial state shows. */

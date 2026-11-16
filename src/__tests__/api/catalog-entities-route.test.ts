@@ -64,6 +64,18 @@ describe('POST /api/catalog-entities', () => {
     expect((await post({ catalogId: CATALOG, entityId: 'x' })).status).toBe(400);
   });
 
+  it('refuses wrongly-typed ids, name, tags and categoryPath instead of persisting them', async () => {
+    const base = { catalogId: CATALOG, entityId: 'user-typed', name: 'Typed' };
+    for (const bad of [
+      { entityId: 42 }, { catalogId: ['bestiary'] }, { name: 7 },
+      { tags: 'undead' }, { tags: ['ok', 3] }, { categoryPath: 'Monsters/Undead' },
+    ]) {
+      const res = await post({ ...base, ...bad });
+      expect(res.status, JSON.stringify(bad)).toBe(400);
+    }
+    expect(listEntities(CATALOG)).toHaveLength(0);
+  });
+
   it('rejects an unknown source rather than storing it', async () => {
     const res = await post({ catalogId: CATALOG, entityId: 'user-x', name: 'X', source: 'imagination' });
     expect(res.status).toBe(400);

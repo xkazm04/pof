@@ -1,5 +1,8 @@
 import { getDb } from './db';
+import { logger } from './logger';
+import { brokenDocName } from './level-design-db';
 import { buildUpdateQuery } from './db-utils';
+import { clampConfigInt } from './economy/normalize-config';
 import type {
   AudioSceneDocument,
   AudioSceneSummary,
@@ -48,13 +51,35 @@ interface AudioSceneRow {
 
 // ── Helpers ──
 
+/**
+ * Parse one JSON blob column, reporting failure instead of throwing. Twin of
+ * level-design-db's parseBlob: a truncated write or a non-array blob must not 500
+ * the whole list GET or crash the summary that iterates the value.
+ */
+function parseBlob<T>(raw: unknown, field: string, broken: string[]): T[] {
+  const text = typeof raw === 'string' ? raw : '';
+  if (!text) return [];
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!Array.isArray(parsed)) {
+      broken.push(field);
+      return [];
+    }
+    return parsed as T[];
+  } catch {
+    broken.push(field);
+    return [];
+  }
+}
+
 function rowToDoc(row: AudioSceneRow): AudioSceneDocument {
-  return {
+  const broken: string[] = [];
+  const doc: AudioSceneDocument = {
     id: row.id,
     name: row.name,
     description: row.description,
-    zones: JSON.parse(row.zones || '[]'),
-    emitters: JSON.parse(row.emitters || '[]'),
+    zones: parseBlob<AudioSceneDocument['zones'][number]>(row.zones, 'zones', broken),
+    emitters: parseBlob<AudioSceneDocument['emitters'][number]>(row.emitters, 'emitters', broken),
     globalReverbPreset: (row.global_reverb_preset as AudioSceneDocument['globalReverbPreset']) || 'none',
     soundPoolSize: row.sound_pool_size || 32,
     maxConcurrentSounds: row.max_concurrent_sounds || 16,
@@ -62,6 +87,11 @@ function rowToDoc(row: AudioSceneRow): AudioSceneDocument {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+  if (broken.length > 0) {
+    logger.error(`audio scene ${doc.id} has unreadable data in: ${broken.join(', ')}`);
+    doc.name = brokenDocName(doc.name, broken);
+  }
+  return doc;
 }
 
 // ── CRUD ──
@@ -95,7 +125,22 @@ export function createAudioScene(payload: CreateAudioScenePayload): AudioSceneDo
   return scene;
 }
 
-export function updateAudioScene(payload: UpdateAudioScenePayload): AudioSceneDocument | null {
+/** Same ranges as the Settings tab fields; both are emitted verbatim as int32 by the codegen. */
+export const SOUND_POOL_SIZE_RANGE = { min: 1, max: 256, fallback: 32 } as const;
+export const MAX_CONCURRENT_SOUNDS_RANGE = { min: 1, max: 128, fallback: 16 } as const;
+
+/** The server is the trust boundary: a replayed or older client can still send 2.5 or 99999. */
+function clampSceneSettings(payload: UpdateAudioScenePayload): UpdateAudioScenePayload {
+  const out = { ...payload };
+  const p = SOUND_POOL_SIZE_RANGE;
+  const c = MAX_CONCURRENT_SOUNDS_RANGE;
+  if (out.soundPoolSize !== undefined) out.soundPoolSize = clampConfigInt(out.soundPoolSize, p.min, p.max, p.fallback);
+  if (out.maxConcurrentSounds !== undefined) out.maxConcurrentSounds = clampConfigInt(out.maxConcurrentSounds, c.min, c.max, c.fallback);
+  return out;
+}
+
+export function updateAudioScene(rawPayload: UpdateAudioScenePayload): AudioSceneDocument | null {
+  const payload = clampSceneSettings(rawPayload);
   ensureAudioSceneTable();
   const db = getDb();
   const existing = getAudioScene(payload.id);
@@ -126,8 +171,8 @@ export function deleteAudioScene(id: number): boolean {
 
 // ── Summary ──
 
-export function getAudioSceneSummary(): AudioSceneSummary {
-  const docs = getAllAudioScenes();
+/** Pass `docs` when the caller already read them, so the table is read and parsed once. */
+export function getAudioSceneSummary(docs: AudioSceneDocument[] = getAllAudioScenes()): AudioSceneSummary {
 
   const allZones = docs.flatMap((d) => d.zones);
   const allEmitters = docs.flatMap((d) => d.emitters);

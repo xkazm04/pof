@@ -14,7 +14,10 @@ export function getDefaultRoughness(surface: SurfaceType): number {
 
 /** The slider values a freshly picked surface starts from (also the initial state). */
 export function surfaceParamDefaults(surface: SurfaceType): Record<string, number> {
-  return { Roughness: getDefaultRoughness(surface), Metallic: getDefaultMetallic(surface) };
+  const { Roughness, Metallic, ...rest } = SURFACE_SPEC[surface].defaults;
+  const extras: Record<string, number> = {};
+  for (const [k, v] of Object.entries(rest)) if (v !== undefined) extras[k] = v;
+  return { Roughness, Metallic, ...extras };
 }
 
 export function getApplicableParams(surface: SurfaceType): ParamDef[] {

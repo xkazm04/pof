@@ -18,6 +18,37 @@ function versionPayload(projectPath: string | null) {
   return { version: formatVersion(version), parsed: version, nextVersion: formatVersion(nextVersionFor(projectPath)) };
 }
 
+/**
+ * A numeric query param, validated before it is bound into `LIMIT ? OFFSET ?`. Absent →
+ * the default; anything else must be an integer >= `min`. `Number('abc')` used to reach
+ * SQLite as NaN ('datatype mismatch' → 500) and `-1` became an unbounded LIMIT.
+ */
+function intParam(params: URLSearchParams, name: string, fallback: number, min: number): number | string {
+  const raw = params.get(name);
+  if (raw === null) return fallback;
+  const n = Number(raw);
+  if (raw.trim() === '' || !Number.isInteger(n) || n < min) return `${name} must be an integer >= ${min}`;
+  return n;
+}
+
+const BUILD_STATUSES = ['success', 'failed', 'cancelled'];
+const RECORD_NUMERIC_FIELDS = ['sizeBytes', 'durationMs', 'cookTimeMs', 'warningCount', 'errorCount'] as const;
+
+/** The caller's error in a `record` body, or null. The row feeds the dashboard's stats. */
+function recordFieldError(body: Record<string, unknown>): string | null {
+  if (body.platform !== undefined && typeof body.platform !== 'string') return 'platform must be a string';
+  if (body.status !== undefined && !BUILD_STATUSES.includes(body.status as string)) {
+    return `status must be one of: ${BUILD_STATUSES.join(', ')}`;
+  }
+  for (const key of RECORD_NUMERIC_FIELDS) {
+    const v = body[key];
+    if (v !== undefined && v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0)) {
+      return `${key} must be a non-negative number`;
+    }
+  }
+  return null;
+}
+
 // `?projectPath=` scopes every read to one project (own rows + the unattributed ones
 // recorded before builds carried a project). Omitting it is an UNSCOPED read of the
 // unattributed rows only — it is never "every project's builds shown as yours".
@@ -27,8 +58,10 @@ export const GET = withRoute(async (request: NextRequest) => {
 
   switch (action) {
     case 'list': {
-      const limit = Number(request.nextUrl.searchParams.get('limit') ?? '100');
-      const offset = Number(request.nextUrl.searchParams.get('offset') ?? '0');
+      const limit = intParam(request.nextUrl.searchParams, 'limit', 100, 1);
+      if (typeof limit === 'string') return apiError(limit, 400);
+      const offset = intParam(request.nextUrl.searchParams, 'offset', 0, 0);
+      if (typeof offset === 'string') return apiError(offset, 400);
       const builds = getBuilds(limit, offset, projectPath);
       return apiSuccess({ builds });
     }
@@ -39,8 +72,10 @@ export const GET = withRoute(async (request: NextRequest) => {
       // used to fetch in a 4-way Promise.all, reusing the exact same store
       // functions/args so each field is byte-for-byte identical to the
       // individual actions below.
-      const listLimit = Number(request.nextUrl.searchParams.get('limit') ?? '100');
-      const trendLimit = Number(request.nextUrl.searchParams.get('trendLimit') ?? '30');
+      const listLimit = intParam(request.nextUrl.searchParams, 'limit', 100, 1);
+      if (typeof listLimit === 'string') return apiError(listLimit, 400);
+      const trendLimit = intParam(request.nextUrl.searchParams, 'trendLimit', 30, 1);
+      if (typeof trendLimit === 'string') return apiError(trendLimit, 400);
       return apiSuccess({
         builds: getBuilds(listLimit, 0, projectPath),
         stats: getBuildStats(projectPath),
@@ -68,7 +103,8 @@ export const GET = withRoute(async (request: NextRequest) => {
     }
     case 'trend': {
       const platform = request.nextUrl.searchParams.get('platform') ?? undefined;
-      const limit = Number(request.nextUrl.searchParams.get('limit') ?? '30');
+      const limit = intParam(request.nextUrl.searchParams, 'limit', 30, 1);
+      if (typeof limit === 'string') return apiError(limit, 400);
       const trend = getSizeTrend(platform, limit, projectPath);
       return apiSuccess({ trend });
     }
@@ -84,11 +120,17 @@ export const GET = withRoute(async (request: NextRequest) => {
 }, 'Failed to read build history');
 
 export const POST = withRoute(async (request: NextRequest) => {
-  const body = await request.json();
+  const body = await request.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
   const action = body.action ?? 'record';
 
   switch (action) {
     case 'record': {
+      const invalid = recordFieldError(body);
+      if (invalid) return apiError(invalid, 400);
       const input: BuildRecordInput = {
         // Explicit or nothing — a build recorded without a project stays honestly
         // unattributed rather than being assigned to whichever project is open.

@@ -7,7 +7,12 @@ import { attributeFilesSince } from '@/lib/evaluator/git-attribution';
  * since the previous scan. Body: `{ projectPath, files, since }`.
  */
 export const POST = withRoute(async (req: NextRequest) => {
-  const { projectPath, files, since } = (await req.json()) as {
+  const raw: unknown = await req.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
+  const { projectPath, files, since } = raw as {
     projectPath?: string;
     files?: unknown;
     since?: string | null;
@@ -15,6 +20,14 @@ export const POST = withRoute(async (req: NextRequest) => {
 
   if (!projectPath || typeof projectPath !== 'string') {
     return apiError('projectPath is required', 400);
+  }
+
+  if (files != null && !Array.isArray(files)) {
+    return apiError('files must be an array of paths', 400);
+  }
+  // Refused rather than ignored: a dropped since widens the attribution to the whole history.
+  if (since != null && typeof since !== 'string') {
+    return apiError('since must be a string or null', 400);
   }
 
   const fileList = Array.isArray(files) ? files.filter((f): f is string => typeof f === 'string') : [];

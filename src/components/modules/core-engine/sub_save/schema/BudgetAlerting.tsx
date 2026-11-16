@@ -15,6 +15,10 @@ import {
   formatBytes, getBudgetStatus, projectGrowth,
 } from '../_shared/data';
 
+// A trend needs two real generations; with one there is nothing to extrapolate.
+const HAS_TREND = GROWTH_HISTORY.length >= 2;
+const NEXT_VERSION = `V${GROWTH_HISTORY.length + 1}`;
+
 export function BudgetAlerting() {
   // Every input below is a frozen module-level constant and the component takes
   // no props, so this derivation is computed exactly once (empty deps). It
@@ -132,19 +136,19 @@ export function BudgetAlerting() {
                           </div>
                         );
                       })}
-                      <div className="flex-1 flex flex-col items-center gap-0.5">
-                        <motion.div className="w-full rounded-t-sm min-h-[2px] border border-dashed" style={{ backgroundColor: `${withOpacity(projectedColor, OPACITY_20)}`, borderColor: `${withOpacity(projectedColor, OPACITY_37)}` }} initial={{ height: 0 }} animate={{ height: `${maxVal > 0 ? (projected / maxVal) * 100 : 0}%` }} transition={{ duration: 0.5, delay: 0.5 }} title={`Projected V3.0: ${formatBytes(projected)}`} />
-                        <span className={`${SAVE_TYPE.axis} text-text-muted italic`}>V3?</span>
-                      </div>
+                      {HAS_TREND && <div className="flex-1 flex flex-col items-center gap-0.5">
+                        <motion.div className="w-full rounded-t-sm min-h-[2px] border border-dashed" style={{ backgroundColor: `${withOpacity(projectedColor, OPACITY_20)}`, borderColor: `${withOpacity(projectedColor, OPACITY_37)}` }} initial={{ height: 0 }} animate={{ height: `${maxVal > 0 ? (projected / maxVal) * 100 : 0}%` }} transition={{ duration: 0.5, delay: 0.5 }} title={`Projected ${NEXT_VERSION}.0: ${formatBytes(projected)}`} />
+                        <span className={`${SAVE_TYPE.axis} text-text-muted italic`}>{NEXT_VERSION}?</span>
+                      </div>}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  {HAS_TREND && <div className="text-right shrink-0">
                     <div className={`${SAVE_TYPE.body} text-text-muted mb-0.5`}>Projected</div>
                     <div className={SAVE_TYPE.hero} style={{ color: projectedColor }}>{formatBytes(projected)}</div>
                     <div className="text-xs" style={{ color: projectedColor }}>
                       {projected > currentBytes ? `+${formatBytes(projected - currentBytes)}` : projected < currentBytes ? `-${formatBytes(currentBytes - projected)}` : 'stable'}
                     </div>
-                  </div>
+                  </div>}
                 </div>
               </motion.div>
             );
@@ -158,8 +162,10 @@ export function BudgetAlerting() {
           <span className="text-text-muted">/</span>
           <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(totalBudget)}</span>
           <span className="text-text-muted ml-1">({((TOTAL_BYTES / totalBudget) * 100).toFixed(0)}% used)</span>
-          <span className="ml-auto text-text-muted">Next version est:</span>
-          <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(nextVersionEst)}</span>
+          {HAS_TREND && <>
+            <span className="ml-auto text-text-muted">Next version est:</span>
+            <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(nextVersionEst)}</span>
+          </>}
         </div>
       </div>
     </BlueprintPanel>

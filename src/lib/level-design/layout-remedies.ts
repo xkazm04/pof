@@ -6,7 +6,7 @@
  * seed and every corridor width, and only a larger room band connects it, while
  * a cellular cave is one toggle ('Ensure Connected') away from one region. The
  * preview is pure and seeded (`generatePreview` over FRandomStream, ~0.3-4 ms at
- * the preview cap), so every candidate the designer could try by hand can be
+ * the preview cap, 8-25 ms at the export size remedies are verified at), so every candidate the designer could try by hand can be
  * TRIED here, deterministically, on an explicit click.
  *
  * {@link findLayoutRemedies} returns only what it measured to connect:
@@ -29,6 +29,12 @@ import {
 export const REMEDY_SEED_SCAN = 64;
 /** Connected seeds returned (best-ranked first). */
 export const REMEDY_SEED_KEEP = 3;
+/**
+ * Longest side a remedy is verified at. Mirrors the wizard's MAX_EXPORT_SIZE (a
+ * test pins them equal): the export regenerates at that size, so "one region"
+ * proven only on the 96-cell preview can be fragmented again on the shipped grid.
+ */
+export const REMEDY_VERIFY_SIZE = 256;
 /** Hard cap on `generatePreview` calls per diagnosis, baseline included. */
 export const REMEDY_PREVIEW_BUDGET = 96;
 
@@ -132,7 +138,7 @@ export function findLayoutRemedies(spec: ProcgenSpec, current?: PreviewStats): L
   const run = (s: ProcgenSpec): PreviewStats | null => {
     if (calls >= REMEDY_PREVIEW_BUDGET) return null;
     calls++;
-    return generatePreview(previewConfigFromSpec(s)).stats;
+    return generatePreview(previewConfigFromSpec(s, REMEDY_VERIFY_SIZE)).stats;
   };
   const base = current ?? run(spec)!;
   if (base.regions <= 1) return { needed: false, current: base };

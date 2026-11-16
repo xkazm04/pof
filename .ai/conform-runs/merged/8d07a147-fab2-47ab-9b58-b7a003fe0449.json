@@ -1,0 +1,143 @@
+{
+ "schema": "conform-run/1",
+ "worker": "8d07a147-fab2-47ab-9b58-b7a003fe0449",
+ "subject": "fire-tv-device-realities",
+ "evaluatedAt": "2026-11-07T00:40:31.618598+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-scene-designer",
+   "subject": "fire-tv-device-realities",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:75 This context is a desktop-browser SVG authoring canvas (it shows a desktop-only notice) with no APK, ADB, device wake, socket bind or streaming-stick target; case-insensitive rg over src/components/modules/content/audio for adb, firetv/fire tv, apk, KEEP_SCREEN_ON, abiFilters/armeabi, ServerSocket and THREAD_PRIORITY found zero hits, so the subject's precondition (a game running on a streaming stick) does not hold.",
+   "techniques": [],
+   "absenceTerms": [
+    "adb",
+    "firetv",
+    "apk",
+    "abiFilters"
+   ]
+  },
+  {
+   "context": "audio-generation-tools",
+   "subject": "fire-tv-device-realities",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioCodeGenPanel.tsx:107 These panels generate UE5 C++ audio code for a desktop Unreal project from a web editor; nothing here packages, installs, launches or hosts a server on a TV device, and rg over the audio component directory for adb, firetv, apk, KEEP_SCREEN_ON and abiFilters found no hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "adb",
+    "firetv",
+    "apk",
+    "abiFilters"
+   ]
+  },
+  {
+   "context": "audio-view-and-catalog",
+   "subject": "fire-tv-device-realities",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioView/EmptyState.tsx:46 AudioView and the event catalog are browser authoring UI for designing audio scenes that become C++; there is no device deployment, display wake, ABI, lease-addressed device or on-device save/audio-stream path, and rg for adb, firetv, apk, KEEP_SCREEN_ON and abiFilters over the audio directory found nothing.",
+   "techniques": [],
+   "absenceTerms": [
+    "adb",
+    "firetv",
+    "apk",
+    "abiFilters"
+   ]
+  },
+  {
+   "context": "game-world-content-api",
+   "subject": "fire-tv-device-realities",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/app/api/audio-codegen/route.ts:7 These are Next.js server route handlers on the developer workstation (codegen, ElevenLabs generation, level-design sync with UE) and never build, install or run on a streaming stick; rg over the listed api directories for adb, firetv, apk, KEEP_SCREEN_ON, abiFilters, ServerSocket and THREAD_PRIORITY returned zero hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "adb",
+    "firetv",
+    "apk",
+    "abiFilters"
+   ]
+  },
+  {
+   "context": "hud-damage-and-navigation",
+   "subject": "fire-tv-device-realities",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/ui-hud/LowHealthPulse/constants.ts:1 The HUD tools are in-browser simulators that mirror UE5 C++ widget defaults (ARPGHUDWidget.h) for a desktop Unreal game, not a TV-device build; rg over src/components/modules/content/ui-hud for adb, firetv, apk, KEEP_SCREEN_ON and abiFilters found no hits.",
+   "techniques": [],
+   "absenceTerms": [
+    "adb",
+    "firetv",
+    "apk",
+    "abiFilters"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-07T00:40:31.618598+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "fire-tv-device-realities"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-scene-designer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:40:31.618598+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "fire-tv-device-realities"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-generation-tools",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:40:31.618598+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "fire-tv-device-realities"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-view-and-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:40:31.618598+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "fire-tv-device-realities"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "game-world-content-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:40:31.618598+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "fire-tv-device-realities"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "hud-damage-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

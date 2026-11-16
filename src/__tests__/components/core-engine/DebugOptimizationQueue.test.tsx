@@ -18,7 +18,7 @@ vi.mock('@/hooks/useModuleCLI', () => ({
 import { OptimizationQueue } from '@/components/modules/core-engine/sub_debug/performance/OptimizationQueue';
 
 afterEach(cleanup);
-beforeEach(() => { execute.mockClear(); useModuleCLISpy.mockClear(); });
+beforeEach(() => { execute.mockClear(); useModuleCLISpy.mockClear(); try { window.localStorage.clear(); } catch { /* none */ } });
 
 const FINDING: PerformanceFinding = {
   id: 'tick-freq-BP_Enemy', priority: 'critical', category: 'tick', title: 'BP_Enemy ticks at 60Hz unnecessarily',
@@ -47,6 +47,17 @@ describe('OptimizationQueue', () => {
     expect(task.moduleId).toBe('arpg-polish');
     expect(task.prompt).toContain(FINDING.fixPrompt);
     expect(await screen.findByText(/dispatched/i)).toBeTruthy();
+  });
+
+  it('a dispatched row survives unmount + remount (dispatch time is persisted, not component state)', async () => {
+    const first = render(<OptimizationQueue latest={latest('csv-stats')} />);
+    fireEvent.click(screen.getByRole('button', { name: /fix/i }));
+    expect(await screen.findByText(/dispatched/i)).toBeTruthy();
+    first.unmount();
+    cleanup();
+    render(<OptimizationQueue latest={latest('csv-stats')} />);
+    expect(screen.getByText('dispatched')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /fix/i }).textContent).toMatch(/fix again/i);
   });
 
   it('a generated sample session -> synthetic rows, no Fix button, a note to import a UE capture, execute never called', () => {

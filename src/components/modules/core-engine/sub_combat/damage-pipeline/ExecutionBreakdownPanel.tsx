@@ -123,8 +123,8 @@ export function ExecutionBreakdownPanel() {
           UE C++ as shipped (pre-canon armour curve):{' '}
           <code className="font-mono text-text">ARPGDamageExecution::Execute_Implementation</code>
         </p>
-        <button onClick={() => setCalcActive(a => !a)}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono uppercase tracking-[0.15em] font-bold transition-colors border shrink-0"
+        <button type="button" onClick={() => setCalcActive(a => !a)}
+          className="focus-ring flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono uppercase tracking-[0.15em] font-bold transition-colors border shrink-0"
           style={calcActive ? {
             backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`,
             borderColor: `${withOpacity(STATUS_SUCCESS, OPACITY_25)}`,

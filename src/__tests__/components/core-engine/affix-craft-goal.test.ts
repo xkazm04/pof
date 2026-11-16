@@ -149,3 +149,31 @@ describe('useAffixWorkbench — priceCurrentItem never touches the live wallet',
     expect(result.current.craftCount).toBe(craftCount);
   });
 });
+
+describe('priceCraftGoal — magnitude floors price the rolled item, not just its tags', () => {
+  const start = () => [instantiateAffix(BLAZING, BLAZING.minValue)];
+  const base = { rarity: 'Rare' as const, targetTags: [BLAZING.tag], wallet: defaultWallet(), runs: 2000 };
+
+  it('[closed form] a floor at 10 on Blazing (5..15) costs 1/P Divine Rolls, P = (max - floor + 0.05) / (max - min)', () => {
+    const floor = 10;
+    const p = (BLAZING.maxValue - floor + 0.05) / (BLAZING.maxValue - BLAZING.minValue); // round1 on the roll
+    const r = priced(priceCraftGoal({ ...base, start: start(), minMagnitude: { [BLAZING.tag]: floor }, rng: seeded(21) }));
+    expect(r.successRate).toBe(1);
+    expect(Math.abs(r.spend!.divine.mean - 1 / p)).toBeLessThanOrEqual(0.2);
+  });
+
+  it('a min-rolled and a max-floored item no longer price the same', () => {
+    const free = priced(priceCraftGoal({ ...base, start: start(), minMagnitude: { [BLAZING.tag]: BLAZING.minValue }, rng: seeded(21) }));
+    const high = priced(priceCraftGoal({ ...base, start: start(), minMagnitude: { [BLAZING.tag]: 14 }, rng: seeded(21) }));
+    expect(free.spend!.divine.mean).toBe(0);
+    expect(high.spend!.divine.mean).toBeGreaterThan(5);
+    expect(high.spend!.forging.mean).toBeGreaterThan(free.spend!.forging.mean);
+  });
+
+  it('nextCraftAction divine-rolls when the tags are held but a floor is not', () => {
+    const goal = { rarity: 'Rare' as const, targetTags: [BLAZING.tag], minMagnitude: { [BLAZING.tag]: 12 } };
+    const state = { ...initialCraftState(), affixes: start() };
+    expect(nextCraftAction(state, goal)).toBe('divine_roll');
+    expect(nextCraftAction({ ...state, affixes: [instantiateAffix(BLAZING, 13)] }, goal)).toBeNull();
+  });
+});

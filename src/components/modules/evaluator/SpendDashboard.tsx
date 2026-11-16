@@ -16,6 +16,7 @@ import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 import { SpendBudgetPanel } from './SpendBudgetPanel';
 import { formatUsd, formatTokens } from '@/lib/cli-spend/format';
 import { formatDuration } from '@/lib/format';
+import { addDaysToKey } from '@/lib/analytics/report-window';
 import { taskTypeLabel } from '@/lib/cli-spend/preflight';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, STATUS_STALE } from '@/lib/chart-colors';
 import type { SpendGroupStat, DailySpend, SpendRecord } from '@/types/cli-spend';
@@ -79,7 +80,7 @@ export function SpendDashboard() {
 
       {/* Daily spend trend */}
       {dashboard.daily.length > 0 && (
-        <Section title="Daily spend" subtitle="Cost per day over the last 30 days of activity.">
+        <Section title="Daily spend" subtitle="Cost per UTC day, one slot per calendar day (idle days are empty).">
           <DailyTrend daily={dashboard.daily} max={maxDaily} />
         </Section>
       )}
@@ -133,18 +134,39 @@ function Section({ title, subtitle, children }: { title: string; subtitle: strin
   );
 }
 
-function DailyTrend({ daily, max }: { daily: DailySpend[]; max: number }) {
+/** Most calendar slots the trend draws; older days fall off the left edge. */
+const MAX_TREND_DAYS = 90;
+
+/**
+ * One slot per calendar day from the first to the last recorded day, so the x axis is
+ * real time: a day with no recorded spend is an explicit zero slot, not a missing bar.
+ * Only the chart is filled - the recorded-days array the budget preview replays is untouched.
+ */
+function fillIdleDays(daily: DailySpend[]): DailySpend[] {
+  if (daily.length === 0) return daily;
+  const byDay = new Map(daily.map((d) => [d.day, d]));
+  const last = daily[daily.length - 1].day;
+  const floor = addDaysToKey(last, -(MAX_TREND_DAYS - 1));
+  const slots: DailySpend[] = [];
+  for (let day = daily[0].day < floor ? floor : daily[0].day; day <= last; day = addDaysToKey(day, 1)) {
+    slots.push(byDay.get(day) ?? { day, costUsd: 0, tokensIn: 0, tokensOut: 0, runs: 0 });
+  }
+  return slots;
+}
+
+function DailyTrend({ daily: recorded, max }: { daily: DailySpend[]; max: number }) {
+  const daily = fillIdleDays(recorded);
   return (
     <SurfaceCard level={2} className="px-4 py-3">
       <div className="flex items-end gap-1 h-24" role="img" aria-label="Daily spend bar chart">
         {daily.map((d) => {
           const pct = Math.max(2, (d.costUsd / max) * 100);
           return (
-            <Tooltip key={d.day} content={`${d.day}: ${formatUsd(d.costUsd)} · ${d.runs} run${d.runs === 1 ? '' : 's'}`}>
+            <Tooltip key={d.day} content={d.runs === 0 ? `${d.day}: no spend recorded` : `${d.day}: ${formatUsd(d.costUsd)} · ${d.runs} run${d.runs === 1 ? '' : 's'}`}>
               <div className="flex-1 h-full flex items-end" tabIndex={0}>
                 <div
                   className="w-full rounded-t transition-all"
-                  style={{ height: `${pct}%`, backgroundColor: EVALUATOR_ACCENT, minWidth: 3 }}
+                  style={{ height: `${d.runs === 0 ? 2 : pct}%`, backgroundColor: EVALUATOR_ACCENT, minWidth: 3, opacity: d.runs === 0 ? 0.25 : 1 }}
                 />
               </div>
             </Tooltip>

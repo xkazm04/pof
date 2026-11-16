@@ -57,6 +57,12 @@ export function useDiskCheck(moduleId: string, items?: ChecklistItem[]) {
       setSlot({ moduleId, state: { phase: 'error', reason: res.error } });
       return;
     }
+    // A project switch during the await cleared this store and loaded the next
+    // project's progress; these verdicts describe the old project's headers.
+    if (useProjectStore.getState().projectPath !== projectPath) {
+      setSlot({ moduleId, state: { phase: 'error', reason: 'the open project changed during the check' } });
+      return;
+    }
     const asked = new Set(verifiableIds);
     const results = (res.data.results ?? []).filter((r) => r.moduleId === moduleId && asked.has(r.itemId));
     const { setVerification } = useModuleStore.getState();

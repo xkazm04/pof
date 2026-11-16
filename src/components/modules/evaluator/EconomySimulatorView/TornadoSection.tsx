@@ -7,11 +7,19 @@ import { apiFetch } from '@/lib/api-utils';
 import type { SimulationConfig } from '@/types/economy-simulator';
 import type { SweepResult, SweepOutput } from '@/lib/economy/sensitivity-sweep';
 import { nodeKindOf } from '@/lib/economy/node-audit';
-import { ACCENT_EMERALD_DARK, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
+import { ACCENT_CYAN, ACCENT_EMERALD_DARK, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
 import { SWEEP_OUTPUT_LABELS } from './constants';
 import { formatGold } from './helpers';
 
 // ── Tornado: parameter sensitivity sweep ───────────────────────────────────
+
+// Dot colour by functional node kind, mirroring GoalSeekPanel's Sources /
+// Converters / Drains grouping: a converter (vendor sale) is neither a faucet
+// nor a sink and must not be keyed as one.
+function kindColor(kind: string): string {
+  const k = nodeKindOf(kind);
+  return k === 'drain' ? ACCENT_PURPLE_BOLD : k === 'converter' ? ACCENT_CYAN : ACCENT_EMERALD_DARK;
+}
 
 export function TornadoSection({ config }: { config: SimulationConfig }) {
   const [output, setOutput] = useState<SweepOutput>('gini');
@@ -44,7 +52,10 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
     return { min: min - pad, max: max + pad };
   }, [sweep]);
   const pct = (v: number) => (bounds ? ((v - bounds.min) / (bounds.max - bounds.min)) * 100 : 0);
-  const fmt = (v: number) => (output === 'gini' ? v.toFixed(3) : output === 'criticalAlerts' ? String(Math.round(v)) : formatGold(v));
+  // Format by the output the drawn sweep was RUN for (applied), not the toggle
+  // (entered): moving the toggle after a sweep must not reformat a Gini as gold.
+  const shownOutput = sweep?.output ?? output;
+  const fmt = (v: number) => (shownOutput === 'gini' ? v.toFixed(3) : shownOutput === 'criticalAlerts' ? String(Math.round(v)) : formatGold(v));
 
   return (
     <SurfaceCard className="p-4">
@@ -57,6 +68,7 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
             <button
               key={o}
               onClick={() => setOutput(o)}
+              aria-pressed={output === o}
               className={`px-2.5 py-1 rounded-lg text-2xs font-medium border transition-colors ${
                 output === o ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 'border-border text-text-muted bg-surface hover:text-text'
               }`}
@@ -83,6 +95,10 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
         </p>
       )}
 
+      {sweep && sweep.entries.length === 0 && (
+        <p className="text-2xs text-text-muted">No faucet/sink parameters to sweep.</p>
+      )}
+
       {sweep && sweep.entries.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-2xs text-text-muted/60">
@@ -98,7 +114,7 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
             return (
               <div key={e.paramId} className="flex items-center gap-2 group">
                 <span className="w-40 shrink-0 truncate text-2xs text-text-muted" title={e.label}>
-                  <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: nodeKindOf(e.kind) === 'drain' ? ACCENT_PURPLE_BOLD : ACCENT_EMERALD_DARK }} />
+                  <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: kindColor(e.kind) }} />
                   {e.label}
                 </span>
                 <div className="relative flex-1 h-4 rounded bg-surface-deep">
@@ -114,6 +130,7 @@ export function TornadoSection({ config }: { config: SimulationConfig }) {
           })}
           <div className="flex items-center gap-3 text-2xs text-text-muted mt-2 pt-2 border-t border-border/50">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_EMERALD_DARK }} /> Faucet</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_CYAN }} /> Converter</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_PURPLE_BOLD }} /> Sink</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400" /> baseline</span>
             <span className="ml-auto">±{Math.round(sweep.range * 100)}% per parameter · sorted by impact</span>

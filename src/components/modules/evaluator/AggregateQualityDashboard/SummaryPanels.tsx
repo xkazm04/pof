@@ -27,6 +27,8 @@ export function SummaryPanels({
   staleModules,
   customStaleDays,
 }: SummaryPanelsProps) {
+  // Same rule as overallPct (lib/feature-done): implemented OR improved is done.
+  const done = totals.implemented + totals.improved;
   return (
     <>
       {/* ── Top metrics row ─────────────────────────────────────────────── */}
@@ -35,7 +37,7 @@ export function SummaryPanels({
           icon={TrendingUp}
           label="Overall Progress"
           value={`${overallPct}%`}
-          sub={`${totals.implemented} / ${totals.total} features`}
+          sub={`${done} / ${totals.total} features`}
           accent={STATUS_SUCCESS}
         />
         <MetricCard
@@ -68,15 +70,15 @@ export function SummaryPanels({
             Project Completion
           </span>
           <span className="text-xs text-text-muted">
-            {totals.implemented} implemented / {totals.partial} partial / {totals.missing} missing / {totals.unknown} unknown
+            {done} done / {totals.partial} partial / {totals.missing} missing / {totals.unknown} unknown
           </span>
         </div>
         <div className="h-2.5 bg-border rounded-full overflow-hidden flex">
-          {totals.implemented > 0 && (
+          {done > 0 && (
             <motion.div
               className="h-full"
               initial={{ width: 0 }}
-              animate={{ width: `${(totals.implemented / totals.total) * 100}%` }}
+              animate={{ width: `${(done / totals.total) * 100}%` }}
               transition={{ duration: MOTION.slow, ease: MOTION.ease }}
               style={{ backgroundColor: STATUS_SUCCESS }}
             />

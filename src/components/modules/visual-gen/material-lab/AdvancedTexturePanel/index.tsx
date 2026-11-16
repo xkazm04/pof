@@ -2,15 +2,16 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles, Loader2, ArrowUpRight, Maximize2, Workflow, Brush, ArrowRight, Wand2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
-import { isNotConfigured } from './helpers';
+import { TileError } from '../TileError';
 import { PBR_MAP_CHANNELS, tileBtn, tileInput } from './constants';
 import { useAdvancedTexturePanel } from './useAdvancedTexturePanel';
+import { LiveImageIdNote, VariationResultView } from './variationResultView';
 
 export function AdvancedTexturePanel() {
   const {
     prompt, setPrompt, modelId, setModelId, pbr, pbrErr, pbrLoading,
-    imageId, setImageId, style, setStyle, jobId, upErr, upLoading,
-    uzImageId, setUzImageId, uzPrompt, setUzPrompt, uzJob, uzErr, uzLoading,
+    imageId, setImageId, style, setStyle, upResult, upErr, upLoading,
+    uzImageId, setUzImageId, uzPrompt, setUzPrompt, uzResult, uzErr, uzLoading,
     cnPrompt, setCnPrompt, cnImageId, setCnImageId, cnPreproc, setCnPreproc, cnResult, cnErr, cnLoading,
     ipPrompt, setIpPrompt, ipImageId, setIpImageId, ipMaskId, setIpMaskId, ipResult, ipErr, ipLoading,
     appliedChannels,
@@ -26,7 +27,7 @@ export function AdvancedTexturePanel() {
           <Sparkles className="w-4 h-4" /> Scenario PBR set
         </header>
         <textarea
-          data-testid="scenario-prompt"
+          data-testid="scenario-prompt" aria-label="Scenario PBR prompt"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="dark fantasy dungeon stone, seamless PBR"
@@ -34,7 +35,7 @@ export function AdvancedTexturePanel() {
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
         />
         <input
-          data-testid="scenario-model"
+          data-testid="scenario-model" aria-label="Scenario model id"
           value={modelId}
           onChange={(e) => setModelId(e.target.value)}
           placeholder="Scenario model id (optional)"
@@ -43,20 +44,14 @@ export function AdvancedTexturePanel() {
         <button
           data-testid="scenario-generate"
           onClick={runScenario}
-          disabled={pbrLoading}
+          disabled={pbrLoading || !prompt.trim()}
           className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg text-xs font-medium bg-[var(--visual-gen)]/10 text-[var(--visual-gen)] hover:bg-[var(--visual-gen)]/20 disabled:opacity-40"
         >
           {pbrLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
           Generate PBR set
         </button>
 
-        {pbrErr && (
-          <div data-testid="scenario-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">
-            {isNotConfigured(pbrErr)
-              ? 'Configure SCENARIO_API_KEY + SCENARIO_API_SECRET in the app .env to use Scenario PBR generation.'
-              : pbrErr}
-          </div>
-        )}
+        {pbrErr && <TileError error={pbrErr} onRetry={runScenario} testId="scenario-error" />}
 
         {pbr && (
           <>
@@ -75,7 +70,7 @@ export function AdvancedTexturePanel() {
                       className="w-full aspect-square object-cover rounded border border-white/10"
                     />
                     <div className="absolute inset-x-0 bottom-0 px-1.5 pb-1 flex items-center justify-between gap-1 bg-gradient-to-t from-black/80 via-black/40 to-transparent rounded-b">
-                      <span className="text-[10px] uppercase tracking-wide text-white/80">{label}</span>
+                      <span className="text-2xs uppercase tracking-wide text-white/80">{label}</span>
                       <motion.button
                         type="button"
                         data-testid={`${id}-send`}
@@ -96,7 +91,7 @@ export function AdvancedTexturePanel() {
               <div
                 data-testid="scenario-seam-badge"
                 title={`Wrap-around edge deltas — sides ${Math.round(pbr.seam.horizontal.delta * 100)}%, top/bottom ${Math.round(pbr.seam.vertical.delta * 100)}% (flagged above ${Math.round(pbr.seam.threshold * 100)}%)`}
-                className="flex items-center justify-between gap-2 text-[11px] text-red-400 bg-red-500/10 border border-red-500/30 rounded px-2 py-1.5"
+                className="flex items-center justify-between gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded px-2 py-1.5"
               >
                 <span className="flex items-center gap-1.5 font-medium">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -156,22 +151,24 @@ export function AdvancedTexturePanel() {
         <header className="flex items-center gap-2 text-sm font-medium text-[var(--visual-gen)]">
           <ArrowUpRight className="w-4 h-4" /> Universal Upscaler
         </header>
+        <LiveImageIdNote />
         <input
-          data-testid="upscale-image-id"
+          data-testid="upscale-image-id" aria-label="Image id to upscale"
           value={imageId}
           onChange={(e) => setImageId(e.target.value)}
-          placeholder="Leonardo generated image id"
+          placeholder="Id of an image still on your Leonardo account"
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
         />
         <select
-          data-testid="upscale-style"
+          data-testid="upscale-style" aria-label="Upscale style"
           value={style}
           onChange={(e) => setStyle(e.target.value)}
           className="w-full rounded bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
         >
           <option value="GENERAL">General</option>
-          <option value="ARTISTIC">Artistic</option>
-          <option value="REALISTIC">Realistic</option>
+          <option value="CINEMATIC">Cinematic</option>
+          <option value="2D ART &amp; ILLUSTRATION">2D art and illustration</option>
+          <option value="CG ART &amp; GAME ASSETS">CG art and game assets</option>
         </select>
         <button
           data-testid="upscale-run"
@@ -183,14 +180,8 @@ export function AdvancedTexturePanel() {
           Upscale
         </button>
 
-        {upErr && (
-          <div data-testid="upscale-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{upErr}</div>
-        )}
-        {jobId && (
-          <div data-testid="upscale-job" className="text-[11px] text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
-            Upscale job started: {jobId}
-          </div>
-        )}
+        {upErr && <TileError error={upErr} onRetry={runUpscale} testId="upscale-error" />}
+        {upResult && <VariationResultView result={upResult} testId="upscale" filename="upscaled.png" />}
       </section>
 
       {/* Tile C — Unzoom (outpaint) */}
@@ -198,15 +189,16 @@ export function AdvancedTexturePanel() {
         <header className="flex items-center gap-2 text-sm font-medium text-[var(--visual-gen)]">
           <Maximize2 className="w-4 h-4" /> Unzoom (extend borders)
         </header>
+        <LiveImageIdNote />
         <input
-          data-testid="unzoom-image-id"
+          data-testid="unzoom-image-id" aria-label="Image id to unzoom"
           value={uzImageId}
           onChange={(e) => setUzImageId(e.target.value)}
-          placeholder="Leonardo generated image id"
+          placeholder="Id of an image still on your Leonardo account"
           className={tileInput}
         />
         <input
-          data-testid="unzoom-prompt"
+          data-testid="unzoom-prompt" aria-label="Unzoom fill prompt"
           value={uzPrompt}
           onChange={(e) => setUzPrompt(e.target.value)}
           placeholder="what to paint into the extended region (optional)"
@@ -216,12 +208,8 @@ export function AdvancedTexturePanel() {
           {uzLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Maximize2 className="w-3.5 h-3.5" />}
           Unzoom
         </button>
-        {uzErr && <div data-testid="unzoom-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{uzErr}</div>}
-        {uzJob && (
-          <div data-testid="unzoom-job" className="text-[11px] text-emerald-400 bg-emerald-500/10 rounded px-2 py-1.5">
-            Unzoom job started: {uzJob}
-          </div>
-        )}
+        {uzErr && <TileError error={uzErr} onRetry={runUnzoom} testId="unzoom-error" />}
+        {uzResult && <VariationResultView result={uzResult} testId="unzoom" filename="unzoomed.png" />}
       </section>
 
       {/* Tile D — ControlNet guided generation */}
@@ -230,20 +218,20 @@ export function AdvancedTexturePanel() {
           <Workflow className="w-4 h-4" /> ControlNet (guided)
         </header>
         <input
-          data-testid="controlnet-prompt"
+          data-testid="controlnet-prompt" aria-label="ControlNet prompt"
           value={cnPrompt}
           onChange={(e) => setCnPrompt(e.target.value)}
           placeholder="prompt — e.g. an icon matching this silhouette"
           className={tileInput}
         />
         <input
-          data-testid="controlnet-image-id"
+          data-testid="controlnet-image-id" aria-label="ControlNet init image id"
           value={cnImageId}
           onChange={(e) => setCnImageId(e.target.value)}
           placeholder="uploaded init image id"
           className={tileInput}
         />
-        <select data-testid="controlnet-preprocessor" value={cnPreproc} onChange={(e) => setCnPreproc(e.target.value)} className={tileInput}>
+        <select data-testid="controlnet-preprocessor" aria-label="ControlNet preprocessor" value={cnPreproc} onChange={(e) => setCnPreproc(e.target.value)} className={tileInput}>
           <option value="67">Style Reference</option>
           <option value="19">Depth</option>
           <option value="20">Normal</option>
@@ -254,7 +242,7 @@ export function AdvancedTexturePanel() {
           {cnLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Workflow className="w-3.5 h-3.5" />}
           Generate (ControlNet)
         </button>
-        {cnErr && <div data-testid="controlnet-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{cnErr}</div>}
+        {cnErr && <TileError error={cnErr} onRetry={runControlNet} testId="controlnet-error" />}
         {cnResult?.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img data-testid="controlnet-result" src={cnResult.imageUrl} alt="controlnet result" className="w-full aspect-square object-cover rounded border border-white/10" />
@@ -267,21 +255,21 @@ export function AdvancedTexturePanel() {
           <Brush className="w-4 h-4" /> Inpaint (fix a region)
         </header>
         <input
-          data-testid="inpaint-prompt"
+          data-testid="inpaint-prompt" aria-label="Inpaint prompt"
           value={ipPrompt}
           onChange={(e) => setIpPrompt(e.target.value)}
           placeholder="what to paint into the masked region"
           className={tileInput}
         />
         <input
-          data-testid="inpaint-image-id"
+          data-testid="inpaint-image-id" aria-label="Inpaint base image id"
           value={ipImageId}
           onChange={(e) => setIpImageId(e.target.value)}
           placeholder="base image id"
           className={tileInput}
         />
         <input
-          data-testid="inpaint-mask-id"
+          data-testid="inpaint-mask-id" aria-label="Inpaint mask image id"
           value={ipMaskId}
           onChange={(e) => setIpMaskId(e.target.value)}
           placeholder="mask image id (optional)"
@@ -291,7 +279,7 @@ export function AdvancedTexturePanel() {
           {ipLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brush className="w-3.5 h-3.5" />}
           Inpaint
         </button>
-        {ipErr && <div data-testid="inpaint-error" className="text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1.5">{ipErr}</div>}
+        {ipErr && <TileError error={ipErr} onRetry={runInpaint} testId="inpaint-error" />}
         {ipResult?.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img data-testid="inpaint-result" src={ipResult.imageUrl} alt="inpaint result" className="w-full aspect-square object-cover rounded border border-white/10" />

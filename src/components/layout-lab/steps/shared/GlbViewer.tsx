@@ -40,7 +40,9 @@ export function GlbViewer({ url, height = 260 }: GlbViewerProps) {
       data-testid="glb-viewer"
       style={{ width: '100%', height, borderRadius: 8, overflow: 'hidden', background: 'rgb(11,13,18)', position: 'relative' }}
     >
-      <GlbBoundary onError={() => (
+      {/* Keyed by url: the boundary's `failed` latch must not outlive the mesh that set it,
+          or one bad candidate leaves every later selection on the failure message. */}
+      <GlbBoundary key={url} onError={() => (
         <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: 'rgb(138,143,152)', fontSize: 12 }}>
           Could not load mesh
         </div>

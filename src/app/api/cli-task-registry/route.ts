@@ -49,7 +49,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { action, taskId, sessionId, status, requirementName, executionId } = body as {
       action?: TaskRegistryAction;
       taskId?: string;
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
       case 'heartbeat': {
         const record = taskRegistry.get(taskId);
         if (record && record.status === 'running') { record.startedAt = Date.now(); return apiSuccess({ record }); }
-        return apiError('Task not found or not running');
+        return apiError('Task not found or not running', 404);
       }
       case 'clear': {
         if (!sessionId) return apiError('sessionId is required for clear', 400);

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { FileOutput, ExternalLink } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
+import { formatBytes } from '@/lib/format';
 import type { FbxConvertResponse } from '@/lib/visual-gen/fbx-convert';
 import { TabHeader } from '@/components/modules/shared/TabHeader';
 import {
@@ -17,16 +18,17 @@ import {
 
 const ENDPOINT = '/api/visual-gen/fbx-convert';
 
-function formatBytes(bytes: number | undefined): string {
-  if (bytes === undefined) return 'size unknown';
-  return bytes >= 1_048_576 ? `${(bytes / 1_048_576).toFixed(1)} MB` : `${(bytes / 1024).toFixed(1)} KB`;
-}
+const sizeText = (bytes: number | null | undefined): string =>
+  typeof bytes === 'number' && Number.isFinite(bytes) ? formatBytes(bytes) : 'size unknown';
 
-/** The receipt line for a converted GLB. Pure. */
+/** A count the route measured. A missing marker parses to NaN, which JSON carries as `null`. */
+const measured = (n: number | null | undefined): n is number => typeof n === 'number' && Number.isFinite(n);
+
+/** The receipt line for a converted GLB; an unmeasured count reads "unknown", never 0. Pure. */
 function receiptText(r: Extract<FbxConvertResponse, { converted: true }>): string {
-  const meshes = r.meshes ?? 0;
-  const tris = (r.tris ?? 0).toLocaleString('en-US');
-  return `Converted ${meshes} mesh${meshes === 1 ? '' : 'es'} · ${tris} triangles · ${formatBytes(r.bytes)}\n`
+  const meshes = measured(r.meshes) ? `${r.meshes} mesh${r.meshes === 1 ? '' : 'es'}` : 'mesh count unknown';
+  const tris = measured(r.tris) ? `${r.tris.toLocaleString('en-US')} triangles` : 'triangle count unknown';
+  return `Converted ${meshes} · ${tris} · ${sizeText(r.bytes)}\n`
     + `-> generated/converted/${r.name}`;
 }
 
@@ -73,7 +75,7 @@ export function FBXConversionTab() {
         <MCPField
           label="Input FBX Path"
           htmlFor="fbx-input"
-          hint="Absolute path on this machine, with forward slashes. Blender does not need to be open."
+          hint="Absolute path on this machine; forward slashes or backslashes both work. Blender does not need to be open."
         >
           <MCPTextInput
             id="fbx-input"

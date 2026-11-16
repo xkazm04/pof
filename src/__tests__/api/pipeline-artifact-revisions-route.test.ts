@@ -21,6 +21,7 @@ import { GET, POST } from '@/app/api/pipeline-artifacts/revisions/route';
 import { upsertArtifact, listRevisions, getArtifact } from '@/lib/pipeline-artifacts-db';
 import { getDb } from '@/lib/db';
 import { gradeArtifact } from '@/lib/catalog/headless';
+import { acquireLeases, releaseLeases, leaseKeysForFilter, __resetLeases } from '@/lib/test-gate-runner/drain-lease';
 
 const CAT = 'rev-route-test'; // unregistered catalog → no server checker → statuses kept
 const ENT = 'e1';
@@ -32,6 +33,7 @@ const post = (body: unknown) => POST(new NextRequest('http://localhost/api/pipel
 }));
 
 beforeEach(() => {
+  __resetLeases();
   listRevisions(CAT, ENT, STEP); // force the lazy DDL
   const db = getDb();
   db.prepare('DELETE FROM pipeline_artifacts WHERE catalog_id = ?').run(CAT);
@@ -147,5 +149,41 @@ describe('POST /api/pipeline-artifacts/revisions { dryRun: true } (compare befor
     expect(body.data.artifact.data).toEqual({ brief: 'v1' });
     expect(body.data.regraded).toBe(false);
     expect(body.data.archivedStatus).toBe('fail');
+  });
+});
+
+describe('POST /api/pipeline-artifacts/revisions — drain lease', () => {
+  const keys = () => leaseKeysForFilter({ catalogId: CAT, entityId: ENT });
+
+  it('409s a restore while a drain holds the entity, writes nothing, then restores once released', async () => {
+    write('v1'); write('v2');
+    const [rev] = listRevisions(CAT, ENT, STEP);
+    vi.mocked(upsertArtifact).mockClear();
+    expect(acquireLeases(keys()).ok).toBe(true);
+    try {
+      const res = await post({ revisionId: rev.id });
+      expect(res.status).toBe(409);
+      expect(upsertArtifact).not.toHaveBeenCalled();
+      expect(getArtifact(CAT, ENT, STEP)?.data).toEqual({ brief: 'v2' });
+    } finally {
+      releaseLeases(keys());
+    }
+    const ok = await post({ revisionId: rev.id });
+    expect(ok.status).toBe(200);
+    expect(getArtifact(CAT, ENT, STEP)?.data).toEqual({ brief: 'v1' });
+    // The restore released its own lease.
+    expect(acquireLeases(keys()).ok).toBe(true);
+    releaseLeases(keys());
+  });
+
+  it('a dry run is exempt while a drain holds the entity', async () => {
+    write('v1'); write('v2');
+    const [rev] = listRevisions(CAT, ENT, STEP);
+    expect(acquireLeases(keys()).ok).toBe(true);
+    try {
+      expect((await post({ revisionId: rev.id, dryRun: true })).status).toBe(200);
+    } finally {
+      releaseLeases(keys());
+    }
   });
 });

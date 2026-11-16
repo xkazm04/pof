@@ -63,7 +63,8 @@ const SANKEY_FLOW_PATHS: { d: string; color: string }[] = (() => {
 
 export function ProportionalSankey() {
   return (
-    <svg width="100%" height={SANKEY_SVG_H + 10} viewBox={`0 0 ${SANKEY_SVG_W} ${SANKEY_SVG_H + 10}`} className="overflow-visible" preserveAspectRatio="xMidYMid meet">
+    <svg width="100%" height={SANKEY_SVG_H + 10} viewBox={`0 0 ${SANKEY_SVG_W} ${SANKEY_SVG_H + 10}`} className="overflow-visible" preserveAspectRatio="xMidYMid meet"
+      role="img" aria-label={`Damage flow from ${SANKEY_COLUMNS.map(c => c.label).join(' to ')}`}>
       {/* Column labels */}
       {SANKEY_COLUMNS.map((col, ci) => (
         <text key={col.label} x={SANKEY_COL_X[ci] + SANKEY_NODE_W / 2} y={12} textAnchor="middle" style={{ fontSize: 9 }} className="font-mono font-bold uppercase" fill="var(--text-muted)">{col.label}</text>

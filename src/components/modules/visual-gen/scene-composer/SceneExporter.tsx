@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Download } from 'lucide-react';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { exportSceneScript } from '@/lib/blender-mcp/scripts/export-scene';
 import { readReceipt } from '@/lib/blender-mcp/receipt';
 
@@ -11,9 +11,19 @@ export function SceneExporter() {
   const [format, setFormat] = useState<'fbx' | 'gltf'>('gltf');
   const [status, setStatus] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleExport = async () => {
-    if (!outputPath) return;
+    if (!outputPath || exporting) return;
+    setExporting(true);
+    try {
+      await runExport();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const runExport = async () => {
     setStatus('Exporting…');
     setFailed(false);
     const code = exportSceneScript({ outputPath, format });
@@ -51,6 +61,7 @@ export function SceneExporter() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <select
+          aria-label="Export format"
           value={format}
           onChange={(e) => setFormat(e.target.value as 'fbx' | 'gltf')}
           className="bg-surface-tertiary border border-border rounded px-2 py-1 text-xs text-text"
@@ -60,6 +71,7 @@ export function SceneExporter() {
         </select>
         <input
           type="text"
+          aria-label="Output file path"
           value={outputPath}
           onChange={(e) => setOutputPath(e.target.value)}
           placeholder="Output file path..."
@@ -67,7 +79,7 @@ export function SceneExporter() {
         />
         <button
           onClick={handleExport}
-          disabled={!outputPath}
+          disabled={!outputPath || exporting}
           className="flex items-center gap-1 px-3 py-1 rounded bg-accent/10 text-accent text-xs hover:bg-accent/20 disabled:opacity-40"
         >
           <Download className="w-3 h-3" /> Export

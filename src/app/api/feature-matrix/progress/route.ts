@@ -43,19 +43,19 @@ export async function GET(request: NextRequest) {
       }
     } catch {
       // File may be partially written / invalid JSON — try to count feature entries
-      try {
-        const raw = fs.readFileSync(filePath, 'utf-8');
-        // Count occurrences of "featureName" keys as a rough progress indicator
-        const matches = raw.match(/"featureName"\s*:/g);
-        scanned = matches ? matches.length : 0;
-      } catch {
-        scanned = 0;
-      }
+      // A read that fails HERE is a real failure (EISDIR, EACCES), not a partial file:
+      // it propagates to the outer catch and answers an error, never a fabricated 0.
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      // Count occurrences of "featureName" keys as a rough progress indicator
+      const matches = raw.match(/"featureName"\s*:/g);
+      scanned = matches ? matches.length : 0;
     }
 
     return apiSuccess({ scanned, total });
   } catch (error) {
     console.error('Feature matrix progress error:', error);
-    return apiSuccess({ scanned: 0, total: 0 });
+    // `total: 0` already means "this module has no definitions", so a failed read must
+    // not wear it: say it failed (the review poll ignores a non-ok response).
+    return apiError(error instanceof Error ? error.message : 'Feature matrix progress read failed', 500);
   }
 }

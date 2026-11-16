@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { MALFORMED_BODY_ERROR, readJsonObject } from '@/app/api/blender-mcp/_lib/body';
 import { checkLocalPath, checkModuleName } from '@/app/api/filesystem/_lib/pathGuard';
 
 // ── Types ──
@@ -35,6 +37,8 @@ export interface AnimBPScanResult {
   montageRefs: string[];
   /** Variables exposed for animation (Speed, Direction, etc.) */
   animVariables: string[];
+  /** True when the source walk stopped at its file cap, so the scan may be partial. */
+  truncated?: boolean;
   scanDurationMs: number;
 }
 
@@ -50,17 +54,22 @@ async function directoryExists(dirPath: string): Promise<boolean> {
 }
 
 /**
- * Recursively collect all .h and .cpp files under a directory.
+ * Recursively collect all .h and .cpp files under a directory, up to a cap; `truncated` is
+ * true only when a further file existed past it.
  */
-async function collectSourceFiles(dir: string, extensions: string[], maxFiles = 500): Promise<string[]> {
+async function collectSourceFiles(
+  dir: string,
+  extensions: string[],
+  maxFiles = 500,
+): Promise<{ files: string[]; truncated: boolean }> {
   const results: string[] = [];
 
   async function walk(current: string) {
-    if (results.length >= maxFiles) return;
+    if (results.length > maxFiles) return;
     try {
       const entries = await fs.readdir(current, { withFileTypes: true });
       for (const entry of entries) {
-        if (results.length >= maxFiles) return;
+        if (results.length > maxFiles) return;
         const full = path.join(current, entry.name);
         if (entry.isDirectory() && !entry.name.startsWith('.')) {
           await walk(full);
@@ -74,7 +83,7 @@ async function collectSourceFiles(dir: string, extensions: string[], maxFiles = 
   }
 
   await walk(dir);
-  return results;
+  return { files: results.slice(0, maxFiles), truncated: results.length > maxFiles };
 }
 
 /**
@@ -235,6 +244,7 @@ async function scanAnimBP(projectPath: string, moduleName: string): Promise<Anim
     transitions: [],
     montageRefs: [],
     animVariables: [],
+    truncated: false,
     scanDurationMs: 0,
   };
 
@@ -244,7 +254,8 @@ async function scanAnimBP(projectPath: string, moduleName: string): Promise<Anim
   }
 
   // Collect all source files
-  const sourceFiles = await collectSourceFiles(sourceRoot, ['.h', '.cpp']);
+  const { files: sourceFiles, truncated } = await collectSourceFiles(sourceRoot, ['.h', '.cpp']);
+  result.truncated = truncated;
   const sourceRootParent = path.join(projectPath, 'Source');
 
   // Read all files in parallel (batch of 20)
@@ -322,8 +333,12 @@ async function scanAnimBP(projectPath: string, moduleName: string): Promise<Anim
 // ── Route handler ──
 
 export async function POST(request: NextRequest) {
+  // Reads the local disk: no cross-site page, and no caller without the token when one is set.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const { moduleName } = body;
 
     const checked = checkLocalPath(body.projectPath, 'projectPath');

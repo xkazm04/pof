@@ -16,8 +16,7 @@ import {
   type ZonePlaytimeEstimate,
   type PlaytimePathMode,
 } from '@/lib/world/world-model';
-import { bindingChain, type WorldLever } from '@/lib/world/playtime-scenario';
-import { STATIC_WORLD } from '../_shared/data';
+import { bindingChain, sameLever, type WorldLever } from '@/lib/world/playtime-scenario';
 
 /** Seconds in 6 hours — the recommendation in the requirement. */
 export const DEFAULT_TARGET_SEC = 6 * 3600;
@@ -178,6 +177,21 @@ export function suggestLevers(
   return out.slice(0, 3);
 }
 
+/**
+ * An applied lever the current suggestions no longer contain (the target moved,
+ * so the suggestion was re-sized): listed as itself so it can still be undone.
+ */
+function carriedLever(l: WorldLever, costs?: Partial<PlaytimeCosts>): Lever {
+  const { secPerEnemy, secPerBossPhase } = resolveCosts(costs);
+  const n = Math.abs(l.amount);
+  const verb = l.amount < 0 ? 'Cut' : 'Add';
+  const [what, sec] =
+    l.kind === 'enemies' ? [`${n} enemy spawn${n === 1 ? '' : 's'}`, l.amount * secPerEnemy]
+    : l.kind === 'bossPhases' ? [`${n} boss phase${n === 1 ? '' : 's'}`, l.amount * secPerBossPhase]
+    : [`${formatPlaytime(n)} of ${l.kind === 'sideBeat' ? 'side content' : 'traversal'}`, l.amount];
+  return { ...l, label: `${verb} ${what}`, detail: 'Applied at an earlier target', savesSec: -sec };
+}
+
 /** One targeter row: the scenario's time vs its budget, with levers sized on the baseline. */
 export interface BudgetRow extends ZoneBudget {
   zoneName: string;
@@ -215,7 +229,11 @@ export function buildBudgetReport(
     const listed = b.flag !== 'on' || classifyZone(baselineSec, b.budgetSec) !== 'on' || applied.some((l) => l.zoneId === b.zoneId);
     if (!listed) return [];
     const zoneName = zoneById.get(b.zoneId)?.name ?? b.zoneId;
-    return [{ ...b, zoneName, baselineSec, levers: baseZp ? suggestLevers(baseZp, b.budgetSec, costs) : [] }];
+    const suggested = baseZp ? suggestLevers(baseZp, b.budgetSec, costs) : [];
+    const carried = applied
+      .filter((l) => l.zoneId === b.zoneId && !suggested.some((s) => sameLever(s, l)))
+      .map((l) => carriedLever(l, costs));
+    return [{ ...b, zoneName, baselineSec, levers: [...carried, ...suggested] }];
   });
   return { chain, rows };
 }
@@ -231,17 +249,12 @@ export interface InterestPoint {
 }
 
 /**
- * Interest points along a world's cumulative path. `buildInterestPoints(mode)`
- * prices the static world; pass any WorldModel (a generated candidate, a what-if
- * scenario) as `buildInterestPoints(world, mode, costs?)`.
+ * Interest points along a world's cumulative path: the static world, a
+ * generated candidate or a what-if scenario.
  */
-export function buildInterestPoints(mode: PlaytimePathMode): InterestPoint[];
-export function buildInterestPoints(world: WorldModel, mode: PlaytimePathMode, costs?: Partial<PlaytimeCosts>): InterestPoint[];
 export function buildInterestPoints(
-  worldOrMode: WorldModel | PlaytimePathMode, modeArg?: PlaytimePathMode, costs?: Partial<PlaytimeCosts>,
+  world: WorldModel, mode: PlaytimePathMode, costs?: Partial<PlaytimeCosts>,
 ): InterestPoint[] {
-  const world = typeof worldOrMode === 'string' ? STATIC_WORLD : worldOrMode;
-  const mode = typeof worldOrMode === 'string' ? worldOrMode : modeArg ?? 'critical';
   const playtimeByZoneId = new Map(computeZonePlaytime(world, costs).map(p => [p.zoneId, p]));
   return computeCumulativePath(world, mode, costs).nodes.map((n) => {
     const zp = playtimeByZoneId.get(n.zoneId);

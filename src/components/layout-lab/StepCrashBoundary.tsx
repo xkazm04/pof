@@ -145,7 +145,7 @@ export class StepCrashBoundary extends Component<StepCrashBoundaryProps, State> 
               <summary className={t.fontMono} style={{ cursor: 'pointer', color: t.muted, fontSize: 'var(--lab-fs-xs)', listStyle: 'revert' }}>
                 Stack (top frames)
               </summary>
-              <pre className={t.fontMono} style={{ margin: 0, padding: 'var(--lab-s3)', fontSize: 13, lineHeight: 1.5, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, overflow: 'auto', maxHeight: 200, whiteSpace: 'pre-wrap' }}>
+              <pre className={t.fontMono} style={{ margin: 0, padding: 'var(--lab-s3)', fontSize: 'var(--lab-fs-xs)', lineHeight: 1.5, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, overflow: 'auto', maxHeight: 200, whiteSpace: 'pre-wrap' }}>
                 {stack}
               </pre>
             </details>

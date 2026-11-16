@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { apiSuccess, withRoute } from '@/lib/api-utils';
+import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { getScanHistory } from '@/lib/evaluator/evaluator-results-db';
 import { deriveScanDeltas } from '@/lib/evaluator/scan-delta';
 
@@ -12,8 +12,12 @@ import { deriveScanDeltas } from '@/lib/evaluator/scan-delta';
 export const GET = withRoute(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get('project') || undefined;
-  const limitRaw = Number(searchParams.get('limit'));
-  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 200) : 30;
+  const limitRaw = searchParams.get('limit');
+  const limitParsed = limitRaw === null ? 30 : Number(limitRaw);
+  if (limitRaw !== null && (limitRaw.trim() === '' || !Number.isInteger(limitParsed) || limitParsed < 1)) {
+    return apiError('limit must be an integer >= 1', 400);
+  }
+  const limit = Math.min(limitParsed, 200);
 
   const scans = getScanHistory(limit, projectId);
   return apiSuccess({ deltas: deriveScanDeltas(scans) });

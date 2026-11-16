@@ -1,0 +1,72 @@
+{
+ "schema": "conform-run/1",
+ "worker": "23268b6c-f39c-4855-9472-9bfc33f6a2c2",
+ "subject": "streaming-output",
+ "evaluatedAt": "2026-11-02T22:02:59.314014+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "streaming-zone-planner",
+   "subject": "streaming-output",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:32 This context is a synchronous grid painter. Its only producer boundary is a fire-and-forget onGenerate(config) callback plus an isGenerating boolean, so no incremental model output is consumed or rendered here. A search of all 11 files for ReadableStream, getReader, TextDecoder, EventSource and AbortController found nothing, and neither did a broader search for chunk, delta, token, abort and fetch(.",
+   "techniques": [
+    {
+     "technique": "stream-parsing",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:32 The context hands a config out and parses no wire chunks or events."
+    },
+    {
+     "technique": "cancellation-and-finalization",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/index.tsx:33 The run state arrives as a parent-owned boolean prop. No stream lifecycle or terminal outcome is handled in this context."
+    },
+    {
+     "technique": "run-attribution",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:16 State is a local design-plan reducer driven by user ops. There are no runs whose output could be misattributed."
+    },
+    {
+     "technique": "buffering-and-backpressure",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:29 Input is discrete user clicks, not an unbounded producer, so there is no buffer to size."
+    },
+    {
+     "technique": "render-throttling",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/useStreamingZonePlanner.ts:29 Renders happen per user op. There is no event-rate stream to throttle."
+    }
+   ],
+   "absenceTerms": [
+    "ReadableStream",
+    "getReader",
+    "TextDecoder",
+    "EventSource",
+    "AbortController"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-02T22:02:59.314014+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "streaming-output"
+   ],
+   "techniques": [
+    "buffering-and-backpressure",
+    "cancellation-and-finalization",
+    "render-throttling",
+    "run-attribution",
+    "stream-parsing"
+   ],
+   "deviations": 0,
+   "context": "streaming-zone-planner",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

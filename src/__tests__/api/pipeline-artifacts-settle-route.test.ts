@@ -260,3 +260,24 @@ describe('settle scoped to ONE entity (optional entityId)', () => {
     expect((m.db.get(key('bestiary', 'e2', 'Stat Blocks')) as Row).status).toBe('pass');
   });
 });
+
+describe('POST settle body parsing', () => {
+  const raw = (body: string) => new NextRequest('http://localhost:3000/api/pipeline-artifacts/settle', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body,
+  });
+  it('names a malformed body as invalid JSON, not as a missing catalogId', async () => {
+    const res = await POST(raw('{"catalogId":"bestiary"'));
+    expect(res.status).toBe(400);
+    const error = ((await res.json()) as { error: string }).error;
+    expect(error).toMatch(/JSON/);
+    expect(error).not.toMatch(/catalogId is required/);
+  });
+  it('an empty body still reports the missing catalogId; a non-object body is refused as such', async () => {
+    const empty = await POST(raw(''));
+    expect(empty.status).toBe(400);
+    expect(((await empty.json()) as { error: string }).error).toMatch(/catalogId is required/);
+    const arr = await POST(raw('[1]'));
+    expect(arr.status).toBe(400);
+    expect(((await arr.json()) as { error: string }).error).toMatch(/JSON object/);
+  });
+});

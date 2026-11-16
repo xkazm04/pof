@@ -137,7 +137,8 @@ export function parseArdyOutput(stdout: string): ParsedArdy {
   // A python traceback can still be followed by nothing at all, so absence of the save line
   // is the real failure signal — never report ok on a stdout we did not understand.
   const error = trace
-    ? (stdout.match(/^(\w*(?:Error|Exception).*)$/m)?.[1]?.trim() ?? 'python traceback (see stdout)')
+    // `[\w.]*`: a module-qualified class (torch.cuda.OutOfMemoryError) is the GPU failure.
+    ? (stdout.match(/^([\w.]*(?:Error|Exception).*)$/m)?.[1]?.trim() ?? 'python traceback (see stdout)')
     : npzPath
       ? undefined
       : ARDY_NO_SAVE;
@@ -233,20 +234,32 @@ export async function preflightArdy(
   });
 
   const probe = 'import torch;from motion_correction import motion_postprocess;print("POF_ARDY_PREFLIGHT_OK",torch.cuda.is_available())';
-  const { stdout } = await run(resolved.py, ['-c', probe], 120_000);
+  const probeTimeoutMs = 120_000;
+  const outcome = await run(resolved.py, ['-c', probe], probeTimeoutMs);
+  const { stdout } = outcome;
   const line = stdout.match(/^POF_ARDY_PREFLIGHT_OK (True|False)$/m);
+  // The probe must have reached the import before its silence can be read as a verdict on
+  // motion_correction: a python that never started, a timer kill or a broken torch all
+  // print no OK line too, and the pip advice below would send the operator the wrong way.
+  const probeBroke = !line && (
+    !!outcome.spawnError || !!outcome.timedOut || (outcome.code !== 0 && !/motion_correction/i.test(stdout))
+  );
   checks.push({
     name: 'motion_correction',
     ok: !!line,
     detail: line
       ? undefined
-      : 'C++ extension not importable — run `pip install ./MotionCorrection --no-cache-dir --no-build-isolation`. '
-        + 'Note `import MotionCorrection` (capitalised) would have SUCCEEDED here as an empty namespace package.',
+      : probeBroke
+        ? `not checked — ${processFailureReason(outcome, { tool: 'the ARDY preflight probe', timeoutMs: probeTimeoutMs })}`
+        : 'C++ extension not importable — run `pip install ./MotionCorrection --no-cache-dir --no-build-isolation`. '
+          + 'Note `import MotionCorrection` (capitalised) would have SUCCEEDED here as an empty namespace package.',
   });
   checks.push({
     name: 'cuda',
     ok: line?.[1] === 'True',
-    detail: line?.[1] === 'True' ? undefined : 'torch reports no CUDA device — generation would run on CPU or fail',
+    detail: line?.[1] === 'True'
+      ? undefined
+      : line ? 'torch reports no CUDA device — generation would run on CPU or fail' : 'not measured — the probe printed no result',
   });
 
   return { ok: checks.every((c) => c.ok), checks };
@@ -279,7 +292,9 @@ export async function runArdy(spec: ArdySpec, deps: ArdyDeps = {}): Promise<Ardy
   // "No save line" from a process that did not exit cleanly is really the process's story
   // (timeout, crash, could not start); a traceback's own Error line still wins.
   const clean = outcome.code === 0 && !outcome.timedOut && !outcome.spawnError;
-  const parsedError = parsed.error === ARDY_NO_SAVE && !clean
+  // "Saving the npz output to" is printed BEFORE the write, so the line alone proves nothing
+  // about a process that then died: the file on disk may be partial, or a previous run's.
+  const parsedError = (parsed.ok || parsed.error === ARDY_NO_SAVE) && !clean
     ? processFailureReason(outcome, { tool: 'ARDY generate.py', timeoutMs })
     : parsed.error;
 
@@ -288,7 +303,7 @@ export async function runArdy(spec: ArdySpec, deps: ArdyDeps = {}): Promise<Ardy
   // for a file written in the wrong place, which is exactly how the cwd bug hid.
   const reported = parsed.npzPath;
   const abs = reported && !isAbsolute(reported) ? join(resolved.root, reported) : reported;
-  const npzPath = abs && fileExists(abs) ? abs : undefined;
+  const npzPath = clean && abs && fileExists(abs) ? abs : undefined;
 
   return {
     ok: parsed.ok && !!npzPath,

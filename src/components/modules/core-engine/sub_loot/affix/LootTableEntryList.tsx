@@ -9,15 +9,25 @@ interface LootTableEntryListProps {
   groupedEntries: { source: LootSource; entries: LootEditorEntryExpanded[] }[];
   sourceFilter: LootSource | 'all';
   editorTotalWeight: number;
+  /** Table NothingWeight: part of the drop denominator, same as the live preview bar. */
+  nothingWeight?: number;
   filteredEntries: LootEditorEntryExpanded[];
   onUpdateWeight: (id: string, weight: number) => void;
+  /** Gesture boundary (pointer release / key release / blur): the next change starts a new undo step. */
+  onWeightCommit?: () => void;
   onRemoveEntry: (id: string) => void;
 }
 
 export function LootTableEntryList({
-  groupedEntries, sourceFilter, editorTotalWeight, filteredEntries,
-  onUpdateWeight, onRemoveEntry,
+  groupedEntries, sourceFilter, editorTotalWeight, nothingWeight = 0, filteredEntries,
+  onUpdateWeight, onWeightCommit, onRemoveEntry,
 }: LootTableEntryListProps) {
+  // The slider scale follows the table: an imported DropWeight of 250 (or 2.5) must not be
+  // pinned to 100 / rounded to an integer on the first touch.
+  // 25% headroom so the heaviest row can still be raised.
+  const sliderMax = Math.max(100, Math.ceil(Math.max(0, ...filteredEntries.map((e) => e.weight)) * 1.25));
+  const shareDenom = editorTotalWeight + nothingWeight;
+  const sliderStep = filteredEntries.every((e) => Number.isInteger(e.weight)) ? 1 : 'any';
   return (
     <div className="space-y-3 mb-3 max-h-[28rem] overflow-y-auto pr-1">
       {groupedEntries.map(({ source, entries }) => (
@@ -36,9 +46,13 @@ export function LootTableEntryList({
                   <input
                     type="range"
                     min={0}
-                    max={100}
+                    max={sliderMax}
+                    step={sliderStep}
                     value={entry.weight}
                     onChange={(e) => onUpdateWeight(entry.id, Number(e.target.value))}
+                    onPointerUp={onWeightCommit}
+                    onKeyUp={onWeightCommit}
+                    onBlur={onWeightCommit}
                     aria-label={`Weight for ${entry.name}`}
                     className="flex-1 h-2 rounded-full appearance-none bg-surface-deep cursor-pointer focus-ring
                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:bg-[var(--thumb)] [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer
@@ -52,8 +66,8 @@ export function LootTableEntryList({
                     <span className="text-text-muted">wt</span> {entry.weight}
                   </span>
                   {/* Normalized drop probability across the visible table. */}
-                  <span className="text-2xs font-mono w-20 text-right tabular-nums text-text-muted" title="Share of total drop weight">
-                    {editorTotalWeight > 0 ? ((entry.weight / editorTotalWeight) * 100).toFixed(1) : '0.0'}% <span className="opacity-60">share</span>
+                  <span className="text-2xs font-mono w-20 text-right tabular-nums text-text-muted" title={nothingWeight > 0 ? 'Chance per roll, including the no-drop weight' : 'Share of total drop weight'}>
+                    {shareDenom > 0 ? ((entry.weight / shareDenom) * 100).toFixed(1) : '0.0'}% <span className="opacity-60">share</span>
                   </span>
                   <button
                     type="button"

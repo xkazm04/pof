@@ -64,6 +64,14 @@ export function EventCard({
             <TruncateWithTooltip className="text-xs font-semibold text-text truncate block" side="bottom">
               {event.title}
             </TruncateWithTooltip>
+            {(event.meta?.count ?? 1) > 1 && (
+              <span
+                aria-label={`Repeated ${event.meta?.count} times`}
+                className="text-2xs font-medium text-text-muted flex-shrink-0 tabular-nums"
+              >
+                ×{event.meta?.count}
+              </span>
+            )}
             {event.meta?.success !== undefined && (
               <span
                 className="text-2xs font-bold uppercase tracking-wider px-1 py-0.5 rounded"

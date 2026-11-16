@@ -1,18 +1,8 @@
 'use client';
 
 import type { RoomNode } from '@/types/level-design';
-import {
-  STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_ERROR,
-} from '@/lib/chart-colors';
 import { HorizontalGridLines } from '@/components/ui/svg/ChartAxes';
-
-const DIFFICULTY_COLORS: Record<number, string> = {
-  1: STATUS_SUCCESS,
-  2: STATUS_LIME,
-  3: STATUS_WARNING,
-  4: STATUS_BLOCKER,
-  5: STATUS_ERROR,
-};
+import { DIFFICULTY_COLORS } from './RoomDetailPanel/constants';
 
 const PACING_ICONS: Record<string, string> = {
   rest: '\u25CB',      // ○
@@ -103,7 +93,19 @@ export function DifficultyArcChart({
 
         {/* Points */}
         {points.map((p) => (
-          <g key={p.room.id} style={{ cursor: 'pointer' }} onClick={() => onSelectRoom(p.room.id)}>
+          <g
+            key={p.room.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`${p.room.name}, difficulty ${p.room.difficulty}, pacing ${p.room.pacing}`}
+            style={{ cursor: 'pointer' }}
+            onClick={() => onSelectRoom(p.room.id)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              onSelectRoom(p.room.id);
+            }}
+          >
             <circle cx={p.x} cy={p.y} r={6} fill="var(--surface)" stroke={DIFFICULTY_COLORS[p.room.difficulty]} strokeWidth={2} />
             <text
               x={p.x}

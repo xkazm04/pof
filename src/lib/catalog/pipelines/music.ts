@@ -10,7 +10,8 @@ import { valueWithinDeclaredBand } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 
 /**
  * Music pipeline (catalogId: 'music').

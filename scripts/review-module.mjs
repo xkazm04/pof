@@ -14,7 +14,7 @@
 // (~/.pof/review-runner-ledger.json, or --ledger / env POF_REVIEW_LEDGER) the moment the app
 // accepts a review, so a crash mid-review still counts. A refused request is not counted.
 // APP MUST BE UP: this is an HTTP client of POST /api/feature-matrix/batch-review on the
-// running PoF app (--origin, default http://localhost:3000); it starts no server and writes
+// running PoF app (--origin, default http://localhost:$PORT, else :3000); it starts no server and writes
 // the DB only through the app. It refuses when the app is down or a batch is already running.
 //
 // Exit 0 = reviewed, or a dry-run. Non-zero = refusal, failure, timeout, or bad arguments.

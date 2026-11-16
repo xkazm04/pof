@@ -70,7 +70,7 @@ export function InterestCurveChart({ mode, world, baseline }: Props) {
       <SectionHeader icon={Activity} label="Tension / Interest Curve" color={ACCENT_VIOLET} />
 
       <div className="bg-surface-deep/30 rounded-lg p-2">
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible" role="img" aria-label="Interest curve across critical path">
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="overflow-visible" role="img" aria-label={`Interest curve across ${mode === 'critical' ? 'critical path' : 'all paths'}`}>
           {/* Grind / dead threshold bands */}
           <rect
             x={PAD_L} y={yFor(1)}

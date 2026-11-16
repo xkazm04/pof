@@ -53,10 +53,27 @@ export async function POST(request: NextRequest) {
   } catch {
     return apiError('Invalid JSON body', 400);
   }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
 
   const { name, intent, frameDir, framePaths, durationSeconds, model } = body;
   if (!name || !intent) {
     return apiError('Missing "name" or "intent"', 400);
+  }
+  if (typeof name !== 'string' || typeof intent !== 'string') {
+    return apiError('"name" and "intent" must be strings', 400);
+  }
+  // Refused rather than coerced: each of these used to fall back to its default, so the
+  // caller got a judgement from another eye, camera or loop rule than the one it named.
+  for (const [field, allowed] of [['provider', ['qwen', 'gemini']], ['cam', ['main', 'side']], ['loopIntent', ['loop', 'oneshot']]] as const) {
+    const v = body[field];
+    if (v !== undefined && !(allowed as readonly string[]).includes(v)) {
+      return apiError(`Invalid "${field}": expected one of ${allowed.join(' | ')}`, 400);
+    }
+  }
+  if (body.maxFrames !== undefined && (!Number.isInteger(body.maxFrames) || body.maxFrames < 1)) {
+    return apiError('"maxFrames" must be an integer >= 1', 400);
   }
 
   // The clip is read BEFORE anything else can reach for an eye: a bad path is the caller's

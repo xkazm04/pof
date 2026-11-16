@@ -6,8 +6,7 @@ import { MODULE_COLORS } from '@/lib/constants';
 import { ACCENT_VIOLET } from '@/lib/chart-colors';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
-import { tryApiFetch } from '@/lib/api-utils';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { logger } from '@/lib/logger';
 import { CATEGORY_META, SHADER_SCRIPT_MAP, MATERIAL_PATTERNS } from './constants';
 import { PatternCard } from './PatternCard';
@@ -39,11 +38,7 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
     setBlenderResult(null);
     try {
       const code = scriptFn();
-      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
+      const result = await executeViaMCP('Shader pattern preview', code);
       if (result.ok) {
         setBlenderResult({ patternId: pattern.id, message: result.data.output || 'Shader created in Blender', isError: false });
       } else {
@@ -53,7 +48,8 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
       logger.warn('Blender preview failed', e);
       setBlenderResult({ patternId: pattern.id, message: e instanceof Error ? e.message : 'Preview failed', isError: true });
     } finally {
-      setBlenderPreviewing(null);
+      // Clear only our own marker: a later preview started meanwhile is still in flight.
+      setBlenderPreviewing((cur) => (cur === pattern.id ? null : cur));
     }
   }, []);
 

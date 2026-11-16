@@ -8,6 +8,7 @@ import type Database from 'better-sqlite3';
 import type { StyleDna } from './style-dna';
 import { CANON_PROFILES, DEFAULT_CANON_PROFILE } from '@/lib/catalog/canon/profiles';
 import type { SubjectClass } from '@/lib/catalog/canon/subjectClass';
+import { logger } from '@/lib/logger';
 
 export interface StyleDnaProfile {
   id: string;
@@ -50,15 +51,43 @@ interface Row {
   canon_profile: string | null;
 }
 
-const toProfile = (r: Row): StyleDnaProfile => ({
-  id: r.id,
-  name: r.name,
-  dna: JSON.parse(r.dna) as StyleDna,
-  sourceImageCount: r.source_image_count,
-  active: r.active === 1,
-  canonProfile: r.canon_profile ?? null,
-  createdAt: r.created_at,
-});
+const DNA_KEYS = ['palette', 'materials', 'mood', 'render', 'motifs'] as const satisfies readonly (keyof StyleDna)[];
+
+/** The stored JSON as a StyleDna (a missing or non-array dimension reads empty), or null when it is not one. */
+function parseDna(raw: string): StyleDna | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  const source = parsed as Record<string, unknown>;
+  const list = (k: string) => (Array.isArray(source[k]) ? (source[k] as unknown[]).map(String) : []);
+  return Object.fromEntries(DNA_KEYS.map((k) => [k, list(k)])) as unknown as StyleDna;
+}
+
+/**
+ * One unreadable row is contained to that row: without this a single bad `dna` value made the
+ * list, the active read and so every styled generation throw, and the row could not be reached
+ * to delete it. The row is logged and reads as absent.
+ */
+const toProfile = (r: Row): StyleDnaProfile | null => {
+  const dna = parseDna(r.dna);
+  if (!dna) {
+    logger.warn(`style_dna row ${r.id} holds unreadable DNA and was skipped`);
+    return null;
+  }
+  return {
+    id: r.id,
+    name: r.name,
+    dna,
+    sourceImageCount: r.source_image_count,
+    active: r.active === 1,
+    canonProfile: r.canon_profile ?? null,
+    createdAt: r.created_at,
+  };
+};
 
 export interface SaveStyleDnaInput {
   name: string;
@@ -138,7 +167,8 @@ export function styleDnaForProfile(
   const row = db
     .prepare('SELECT * FROM style_dna WHERE canon_profile = ? ORDER BY created_at DESC, id DESC LIMIT 1')
     .get(bound) as Row | undefined;
-  if (row) return toProfile(row);
+  const stored = row ? toProfile(row) : null;
+  if (stored) return stored;
   // No DB binding: the profile's SHIPPED generation-ready style (D13b), in the variant for the
   // subject's class when it ships one (D15), else its base style.
   const profile = CANON_PROFILES[bound];
@@ -152,7 +182,9 @@ export function styleDnaForProfile(
 
 export function listStyleDna(db: Database.Database): StyleDnaProfile[] {
   createStyleDnaDb(db);
-  return (db.prepare('SELECT * FROM style_dna ORDER BY created_at DESC, id DESC').all() as Row[]).map(toProfile);
+  return (db.prepare('SELECT * FROM style_dna ORDER BY created_at DESC, id DESC').all() as Row[])
+    .map(toProfile)
+    .filter((p): p is StyleDnaProfile => p !== null);
 }
 
 export function setActiveStyleDna(db: Database.Database, id: string): boolean {

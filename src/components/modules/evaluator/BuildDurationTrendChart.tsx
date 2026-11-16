@@ -2,9 +2,8 @@
 
 import { useMemo } from 'react';
 import type { DurationTrendPoint } from '@/lib/ue5-bridge/build-health';
-import {
-  MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL, STATUS_WARNING,
-} from '@/lib/chart-colors';
+import { MODULE_COLORS } from '@/lib/chart-colors';
+import { statusColor } from './BuildHealthDashboard/helpers';
 
 interface BuildDurationTrendChartProps {
   data: DurationTrendPoint[];
@@ -20,13 +19,6 @@ function fmtSeconds(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(0)}s`;
   return `${(ms / 60_000).toFixed(1)}m`;
-}
-
-function statusColor(status: DurationTrendPoint['status']): string {
-  if (status === 'success') return STATUS_SUCCESS;
-  if (status === 'failed') return STATUS_ERROR;
-  if (status === 'aborted') return STATUS_WARNING;
-  return STATUS_NEUTRAL;
 }
 
 /**
@@ -74,7 +66,13 @@ export function BuildDurationTrendChart({ data, baselineMs, height = 180 }: Buil
 
     const baselineY = baselineMs != null ? yFor(baselineMs) : null;
 
-    return { pts, polyline, yTicks, xLabels, baselineY };
+    // Text equivalent of the plot: the points alone convey nothing to a screen reader.
+    const last = data[data.length - 1];
+    const summary = `Build duration trend: ${data.length} build${data.length === 1 ? '' : 's'}, `
+      + `${fmtSeconds(Math.min(...durations))} to ${fmtSeconds(Math.max(...durations))}; `
+      + `latest ${fmtSeconds(last.durationMs)}, ${last.status}`;
+
+    return { pts, polyline, yTicks, xLabels, baselineY, summary };
   }, [data, baselineMs, height]);
 
   if (!view) {
@@ -86,7 +84,7 @@ export function BuildDurationTrendChart({ data, baselineMs, height = 180 }: Buil
   }
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Build duration trend">
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="xMidYMid meet" role="img" aria-label={view.summary}>
       {/* Grid lines */}
       {view.yTicks.map((t, i) => (
         <line key={i} x1={PADDING.left} y1={t.y} x2={width - PADDING.right} y2={t.y} stroke="var(--border)" strokeWidth="0.5" />

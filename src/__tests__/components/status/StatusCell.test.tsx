@@ -133,3 +133,28 @@ describe('StatusCell — the acceptance tier survives as metadata', () => {
     expect(b.textContent).toContain('no engine');
   });
 });
+
+describe('StatusCell craft coverage mark', () => {
+  const craft = {
+    craft: { level: 'A2' as const, state: 'gauged' as const, because: 'x' },
+    lens: 'writing' as never,
+    deliverable: 'text-config' as never,
+    ceiling: 'A4' as const,
+  };
+  const baseCell = { label: 'L', engine: 'Claude', grade: 'trusted' as const, counts: { pass: 1, deferred: 0, fail: 0, pending: 0 } };
+
+  it('prints gauged/total beside a level read from partial gauging', () => {
+    const { container } = render(<StatusCell cell={baseCell} craft={{ ...craft, coverage: { gauged: 2, total: 12 } }} />);
+    const chip = container.querySelector('[data-testid="craft-code"]')!;
+    expect(chip.textContent).toBe('A2 2/12');
+    expect(chip.getAttribute('data-craft-partial')).toBe('2/12');
+    expect(chip.getAttribute('title')).toContain('2 of 12 entities');
+  });
+
+  it('a fully gauged cell prints the bare level', () => {
+    const { container } = render(<StatusCell cell={baseCell} craft={craft} />);
+    const chip = container.querySelector('[data-testid="craft-code"]')!;
+    expect(chip.textContent).toBe('A2');
+    expect(chip.getAttribute('data-craft-partial')).toBeNull();
+  });
+});

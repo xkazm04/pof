@@ -2,13 +2,14 @@ import { registerCatalogPipeline } from '../pipeline-registry';
 import { allOf } from '@/lib/catalog/acceptance/combinators';
 import { budgetWithinCap, descendingSeries } from '@/lib/catalog/acceptance/invariants';
 import { wiringContractSound } from '@/lib/catalog/acceptance/wiringCheckers';
-import { minLength, fieldsPopulated, selected, minCount, withinPercent } from '../acceptance/dataCheckers';
+import { minLength, fieldsPopulated, selected, minCount, atMost } from '../acceptance/dataCheckers';
 import { entityRuntimeDeferred } from '../acceptance/deferred';
 import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 
 /**
  * VFX pipeline (catalogId: 'vfx').
@@ -172,7 +173,7 @@ registerCatalogPipeline({
         const s = slug(e.name);
         // Per-class GPU budget: 0.8 ms at 60 Hz.
         // Target leaves 40% headroom → 60% of the budget consumed → 0.48 ms peak emission.
-        // gpuPct (as ms value) = 0.48 — withinPercent checks this against 0.48 ±15%.
+        // gpuPct (as ms value) = 0.48 — atMost checks this against the 0.552 ms ceiling (0.48 +15%).
         const classBudgetMs = 0.8;
         const headroomPct = 0.40;
         const gpuPct = classBudgetMs * (1 - headroomPct); // 0.48 ms peak = 60% consumed
@@ -228,7 +229,7 @@ registerCatalogPipeline({
       accept: allOf(
         budgetWithinCap('gpuBudget', 'gpuMs', 'classBudgetMs', 'Peak GPU cost within the declared class budget'),
         descendingSeries('gpuBudget.lodTiers', ['LOD0', 'LOD1'], 'LOD ladder gets cheaper per tier', 'gpuBudgetMs'),
-        withinPercent('gpuBudget.gpuMs', 'GPU cost within ±15% of class budget target (0.48 ms)', 0.48, 15),
+        atMost('gpuBudget.gpuMs', 'GPU cost at most 0.552 ms (0.48 ms class budget + 15%)', 0.552),
         wiringContractSound(),
       ),
     },

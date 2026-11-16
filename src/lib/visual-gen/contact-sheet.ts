@@ -169,6 +169,9 @@ function familyLines(catalogId: string | undefined): string[] {
 export function buildContactSheetPrompt(spec: ContactSheetSpec): Result<string, string> {
   const n = spec.cols * spec.rows;
   if (spec.cols < 1 || spec.rows < 1) return err('a contact sheet needs at least 1 column and 1 row');
+  if (!Number.isInteger(spec.cols) || !Number.isInteger(spec.rows)) {
+    return err(`a contact sheet grid must be a whole number of columns and rows, got ${spec.cols}x${spec.rows}`);
+  }
   if (spec.cast.length !== n) {
     return err(
       `cast does not fill the grid: ${spec.cols}x${spec.rows} needs ${n} subjects, got ${spec.cast.length}`,

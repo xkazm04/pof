@@ -16,6 +16,7 @@ import type { PatternCategory } from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COLORS, OPACITY_10, STATUS_ERROR } from '@/lib/chart-colors';
 import { AntiPatternList } from '../AntiPatternList';
+import { SUB_MODULES } from '@/lib/module-registry';
 import {
   type LibraryTab,
   EMPTY_PATTERNS,
@@ -30,6 +31,9 @@ import { StatCard } from './StatCard';
 import { PatternCard } from './PatternCard';
 import { AuthorPatternModal } from './AuthorPatternModal';
 
+/** The sort the dashboard list already arrives in (pattern-library-db CURATION_ORDER). */
+const DEFAULT_SORT = 'success-rate';
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function PatternLibraryView() {
@@ -42,6 +46,7 @@ export function PatternLibraryView() {
   const isLoading = usePatternLibraryStore((s) => s.isLoading);
   const isExtracting = usePatternLibraryStore((s) => s.isExtracting);
   const error = usePatternLibraryStore((s) => s.error);
+  const mutationError = usePatternLibraryStore((s) => s.mutationError);
 
   const searchQuery = usePatternLibraryStore((s) => s.searchQuery);
   const moduleFilter = usePatternLibraryStore((s) => s.moduleFilter);
@@ -66,10 +71,12 @@ export function PatternLibraryView() {
     fetchDashboard();
   }, [fetchDashboard]);
 
-  // Debounced search — also restores the full list when every filter is cleared
+  // Debounced search — also restores the full list when every filter is cleared.
+  // A non-default sort counts as a filter: the dashboard list is always in the default
+  // (success-rate) curation order and ignores sortBy, so only the search action sorts.
   const filtersWereActiveRef = useRef(false);
   useEffect(() => {
-    const hasFilters = Boolean(searchQuery || moduleFilter || categoryFilter);
+    const hasFilters = Boolean(searchQuery || moduleFilter || categoryFilter || sortBy !== DEFAULT_SORT);
     if (hasFilters) {
       filtersWereActiveRef.current = true;
       const timer = setTimeout(() => searchPatterns(), 300);
@@ -92,6 +99,12 @@ export function PatternLibraryView() {
 
   // Unique module IDs from top modules
   const moduleIds = useMemo(() => topModules.map((m) => m.moduleId), [topModules]);
+  // Authoring may target ANY module (that is what a hand-authored pattern is for), not just the
+  // top modules that already have mined patterns; those lead so the common case stays first.
+  const authorModuleIds = useMemo(() => {
+    const leading = new Set(moduleIds);
+    return [...moduleIds, ...SUB_MODULES.map((m) => m.id as SubModuleId).filter((id) => !leading.has(id))];
+  }, [moduleIds]);
 
   return (
     <div className="flex flex-col h-full">
@@ -259,11 +272,16 @@ export function PatternLibraryView() {
           <LoadingRow label="Loading patterns…" color={MODULE_COLORS.systems} />
         )}
 
+        {activeTab === 'patterns' && mutationError && (
+          <p role="alert" className="mb-3 text-xs text-red-400">{mutationError}</p>
+        )}
+
         {activeTab === 'patterns' && error && !isLoading && (
           <FetchError message={error} onRetry={fetchDashboard} />
         )}
 
-        {activeTab === 'patterns' && !isLoading && patterns.length === 0 && (
+        {/* Empty only when the list was actually read: a failed load shows its error alone. */}
+        {activeTab === 'patterns' && !isLoading && !error && patterns.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${MODULE_COLORS.systems}${OPACITY_10}` }}>
               <BookOpen className="w-6 h-6 text-violet-400" />
@@ -295,7 +313,7 @@ export function PatternLibraryView() {
       <AuthorPatternModal
         open={authorOpen}
         onClose={() => setAuthorOpen(false)}
-        moduleIds={moduleIds}
+        moduleIds={authorModuleIds}
       />
     </div>
   );

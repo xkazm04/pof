@@ -1,0 +1,127 @@
+{
+ "schema": "conform-run/1",
+ "worker": "ab027b01-1e28-4f4a-b956-30a0cbd5f7db",
+ "subject": "agent-memory",
+ "evaluatedAt": "2026-11-08T02:49:07.083620+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "crash-analysis",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/index.tsx:37 The view reads stored crash diagnoses from a UI store only to display them. A search of src/components/modules/evaluator (including CrashAnalyzerView and CrashTimeMachine) for consolidat/episod/belief/recall/memories found no hits; the only memory term was the crash-type key 'out_of_memory'. A repo search also found no prompt builder that feeds crash_history back to an agent, so there is no agent memory pipeline here to judge.",
+   "techniques": [],
+   "absenceTerms": [
+    "consolidat",
+    "episod",
+    "belief",
+    "recall",
+    "memories"
+   ]
+  },
+  {
+   "context": "blueprint-transpiler-game-systems",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView/index.tsx:31 The workbench runs a one-shot Blueprint-to-C++ transpile keyed on project and module, and the game-system views only configure. A search of src/components/modules/game-systems for consolidat/episod/belief/recall/memories found no hits, so no agent memory store, recall or distillation exists in this context.",
+   "techniques": [],
+   "absenceTerms": [
+    "consolidat",
+    "episod",
+    "belief",
+    "recall",
+    "memories"
+   ]
+  },
+  {
+   "context": "ai-behavior-testing",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/game-systems/AIBehaviorView/index.tsx:11 The context authors and runs AI test scenarios through useAITesting and useModuleCLI, and its 'freshness' logic tracks test-run staleness, not remembered agent knowledge. A search of src/components/modules/game-systems for consolidat/episod/belief/recall/memories found no hits; any memory sits in the shared CLI layer, not here.",
+   "techniques": [],
+   "absenceTerms": [
+    "consolidat",
+    "episod",
+    "belief",
+    "recall",
+    "memories"
+   ]
+  },
+  {
+   "context": "blender-mcp-bridge",
+   "subject": "agent-memory",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/lib/blender-mcp/service.ts:70 This is a TCP command bridge to Blender with no LLM agent state. A search of src/lib/blender-mcp for consolidat/episod/belief/recall/memories found no hits. The only nearby terms are in generation-ledger.ts ('remembers' jobId/provider, 'in-memory') and mcp-gate.ts ('forget' memoised verdicts in tests); those are job and verdict caches, not agent memory.",
+   "techniques": [],
+   "absenceTerms": [
+    "consolidat",
+    "episod",
+    "belief",
+    "recall",
+    "memories"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "agent-memory",
+   "context": "cli-terminal-system",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T02:49:07.083620+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T02:49:07.083620+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "blueprint-transpiler-game-systems",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T02:49:07.083620+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ai-behavior-testing",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-08T02:49:07.083620+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "agent-memory"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "blender-mcp-bridge",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

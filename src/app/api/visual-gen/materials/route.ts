@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { listMaterials, createMaterial, updateMaterial, deleteMaterial } from '@/lib/visual-gen/material-db';
 
 /**
@@ -40,10 +41,11 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const { id, name, params } = body;
 
-    if (!id || !name || !params) {
+    if (typeof id !== 'string' || !id || typeof name !== 'string' || !name || !params) {
       return apiError('Missing required fields: id, name, params', 400);
     }
     if (!isParamsObject(params)) {
@@ -53,6 +55,9 @@ export async function POST(request: NextRequest) {
     const material = createMaterial(id, name, params);
     return apiSuccess(material, 201);
   } catch (error) {
+    if ((error as { code?: string }).code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+      return apiError(reason(error, 'A material with this id already exists'), 409);
+    }
     return apiError(reason(error, 'Failed to create material'));
   }
 }
@@ -64,11 +69,15 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const { id, name, params } = body;
 
-    if (!id) {
+    if (typeof id !== 'string' || !id) {
       return apiError('Missing required field: id', 400);
+    }
+    if (name !== undefined && typeof name !== 'string') {
+      return apiError('name must be a string', 400);
     }
     if (params !== undefined && !isParamsObject(params)) {
       return apiError('params must be an object of material parameters', 400);
@@ -92,10 +101,11 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     const { id } = body;
 
-    if (!id) {
+    if (typeof id !== 'string' || !id) {
       return apiError('Missing required field: id', 400);
     }
 

@@ -1,6 +1,6 @@
 export { pluginFor, register } from './registry';
 
-// Side-effect imports — keep this list complete (30 catalogs).
+// Side-effect imports — one per plugin file; plugins.test.ts fails on a file left out.
 import './items';
 import './bestiary';
 import './spellbook';
@@ -33,3 +33,4 @@ import './input-schemes';
 import './tutorial-beats';
 import './currencies';
 import './characters';
+import './affixes';

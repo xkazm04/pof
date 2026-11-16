@@ -12,6 +12,7 @@ import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { ArchetypeConfig, EliteModifier } from '../_shared/data';
 import { ARCHETYPES, ELITE_MODIFIERS, applyModifiers, TIER_GLOW_COLORS, STAT_AVERAGES } from '../_shared/data';
 import { inertStatMods } from '@/lib/bestiary/elite-stat-axes';
+import { mixedScaleStatLabels } from '@/lib/bestiary/stat-vocabulary';
 import { ExpandedDetails } from './ExpandedDetails';
 import { ArchetypeIconGlyph } from './ArchetypeIconGlyph';
 
@@ -23,19 +24,7 @@ import { ArchetypeIconGlyph } from './ArchetypeIconGlyph';
  * average tick would be a meaningless mark — those labels are listed here and the
  * tick is suppressed rather than drawn as if it were a real baseline.
  */
-const MIXED_SCALE_STATS: ReadonlySet<string> = (() => {
-  const vocabsByStat = new Map<string, Set<string>>();
-  for (const arch of ARCHETYPES) {
-    const vocab = arch.stats.map(s => s.label).sort().join('|');
-    for (const stat of arch.stats) {
-      if (!vocabsByStat.has(stat.label)) vocabsByStat.set(stat.label, new Set());
-      vocabsByStat.get(stat.label)!.add(vocab);
-    }
-  }
-  return new Set(
-    [...vocabsByStat.entries()].filter(([, vocabs]) => vocabs.size > 1).map(([label]) => label),
-  );
-})();
+const MIXED_SCALE_STATS: ReadonlySet<string> = mixedScaleStatLabels(ARCHETYPES);
 
 interface ArchetypeCardProps {
   archetype: ArchetypeConfig;
@@ -83,7 +72,7 @@ export function ArchetypeCard({
 
         <button
           onClick={() => onToggle(archetype.id)}
-          className="w-full text-left p-3 hover:bg-surface-hover/20 transition-colors relative z-10 focus:outline-none flex-1 flex flex-col cursor-pointer"
+          className="w-full text-left p-3 hover:bg-surface-hover/20 transition-colors relative z-10 focus-ring-inset flex-1 flex flex-col cursor-pointer"
         >
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
@@ -98,7 +87,7 @@ export function ArchetypeCard({
                   <span className="text-xs font-mono uppercase tracking-[0.15em] opacity-80" style={{ color: archetype.color }}>
                     {archetype.class} / {archetype.role}
                   </span>
-                  <span className="text-[9px] font-mono font-bold uppercase px-1 py-px rounded border"
+                  <span className="text-2xs font-mono font-bold uppercase px-1 py-px rounded border"
                     style={{ color: tierColor, borderColor: withOpacity(tierColor, OPACITY_25), backgroundColor: withOpacity(tierColor, OPACITY_10) }}>
                     {archetype.tier}
                   </span>

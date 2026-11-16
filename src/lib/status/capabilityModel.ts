@@ -27,7 +27,7 @@ import stepFactsJson from './step-facts.json';
 import ceilingFactsJson from './ceiling-facts.json';
 import capabilityBenchmarksJson from './capability-benchmarks.json';
 import { deliverableClassOf } from '@/lib/judge/dimensions';
-import { getStepFact, isSyntheticEntity, judgedContentOfRow, type FactAddress, type StepFact } from './statusModel';
+import { getHeadlessFact, getStepFact, isSyntheticEntity, judgedContentOfRow, type FactAddress, type HeadlessLookup, type StepFact } from './statusModel';
 import { verdictProvenance, type JudgedContent } from '@/lib/catalog/acceptance/judgeBridge';
 import { RUBRIC_VERSION } from '@/lib/judge/rubrics';
 import type { JudgeVerdict } from './judge-verdicts-db';
@@ -413,6 +413,7 @@ export function buildCapabilityRows(
   verdicts: JudgeVerdict[],
   artifacts: ArtifactVerdictRow[] = [],
   benchmarks: CapabilityBenchmarkRow[] = CAPABILITY_BENCHMARKS,
+  headless: HeadlessLookup = getHeadlessFact,
 ): CapabilityRow[] {
   const ev = new Map<string, ClassEvidence>();
   const get = (k: string): ClassEvidence => {
@@ -458,8 +459,10 @@ export function buildCapabilityRows(
     const fact = getStepFact(a.catalogId, a.step);
     if (!fact) continue;
     const e = get(capabilityClassOf(fact.deliverable, a.catalogId));
+    // A pass only a person can drive is not a gate the machine can reproduce (`gateHeadless`
+    // holds the map to the same rule): it stays declared, unproven.
     if (a.status === 'pass') {
-      e.gatePassed += 1;
+      if (headless(a.catalogId, a.step)?.operable) e.gatePassed += 1;
       e.gateDeclared += 1;
     } else if (a.status === 'deferred' || a.status === 'fail') {
       e.gateDeclared += 1; // declared but unproven (deferred = not-run, fail = failing)
@@ -498,7 +501,7 @@ function buildRow(klass: string, e: ClassEvidence, s: ClassStats | undefined, ha
     const gapStatement =
       e.gateDeclared === 0
         ? GAP[klass] ?? 'No declared L3/L4 gates recorded for this class yet.'
-        : `${e.gatePassed}/${e.gateDeclared} declared L3/L4 gates pass — ${unproven} still deferred or failing. Runtime capability is provable only by these gates, not the panel.`;
+        : `${e.gatePassed}/${e.gateDeclared} declared L3/L4 gates pass — ${unproven} still deferred, failing or not headless-reproducible. Runtime capability is provable only by these gates, not the panel.`;
     return { ...base, grade, median: null, n: 0, gatesPassed: e.gatePassed, gatesDeclared: e.gateDeclared, stream: 'gates', cappedByTechnique: false, gapStatement };
   }
 

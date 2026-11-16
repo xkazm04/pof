@@ -68,6 +68,11 @@ export const DEMO_AFFIX_POOL: DNAAffix[] = [
 
 /* ── Helpers ───────────────────────────────────────────────────────────── */
 
+/** The one display form of an affix on an item: "Fierce Item" / "Item of Strength". */
+export function affixDisplayName(affix: Pick<DNAAffix, 'name' | 'isPrefix'>): string {
+  return affix.isPrefix ? `${affix.name} Item` : `Item ${affix.name}`;
+}
+
 export function createId(): string {
   return Math.random().toString(36).slice(2, 10);
 }

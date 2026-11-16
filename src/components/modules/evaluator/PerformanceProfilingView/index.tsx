@@ -78,6 +78,9 @@ export function PerformanceProfilingView() {
     else void handleGenerate();
   }, [lastAction, handleTriage, handleGenerate]);
 
+  // isImporting is the store's one busy flag for both generate and CSV import;
+  // only call it "Generating" when generate is the action in flight.
+  const isGenerating = isImporting && lastAction === 'generate';
   const summary = activeSession?.summary;
   const critCount = findings.filter((f) => f.priority === 'critical').length;
   const highCount = findings.filter((f) => f.priority === 'high').length;
@@ -109,8 +112,8 @@ export function PerformanceProfilingView() {
               disabled={isImporting}
               className="flex items-center gap-1.5 px-4 py-2 bg-rose-500/10 border border-rose-500/25 rounded-lg text-rose-400 text-xs font-medium hover:bg-rose-500/20 transition-colors disabled:opacity-50"
             >
-              {isImporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-              {isImporting ? 'Generating...' : 'Generate Sample'}
+              {isGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+              {isGenerating ? 'Generating...' : 'Generate Sample'}
             </button>
           }
         />

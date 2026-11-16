@@ -1,0 +1,71 @@
+{
+ "schema": "conform-run/1",
+ "worker": "49a0958c-fa90-42d8-ac01-89b817fe854d",
+ "subject": "accumulate-then-aggregate-metrics",
+ "evaluatedAt": "2026-11-09T04:56:24.655349+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "combat-metrics",
+   "subject": "accumulate-then-aggregate-metrics",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:187 The DPS read-outs come from one synchronous reduction over a static authored weapon table, with no model, validation set, batch loop or process sharding; a case-insensitive search of sub_combat/_shared and sub_combat/metrics for mean_over_batch, all_reduce, nanmean, world_size, .detach(, buffer, accumulat and reduction found nothing, so the subject's precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "per-iteration-buffering",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:187 The whole finite table is evaluated in one call at module load, with no per-batch append or aggregate seam; the technique says a set evaluated in one call needs no buffer."
+    },
+    {
+     "technique": "nan-as-undefined-not-zero",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/_shared/data-metrics.ts:196 This is an empty-denominator 0 in form, but it averages authored catalog rows per weapon category, not per-sample scores with undefined cells. Every category in the static table has rows, so the branch is not reached with current data."
+    },
+    {
+     "technique": "lazy-rank-synchronization",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/KpisMetric.tsx:8 A module-scope computation in one client process over the full table; there are no shards and nothing to gather."
+    },
+    {
+     "technique": "reduction-axis-vocabulary",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/GroupedDpsBarChart.tsx:10 The chart reads ready-made category groups; there is no samples-by-classes table and no caller-selected reduction."
+    },
+    {
+     "technique": "detached-buffer-reads",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_combat/metrics/WeaponMatchupPanel.tsx:32 The ranking is memoized from the static catalog; no accumulator storage exists to detach at append or clone at read."
+    }
+   ],
+   "absenceTerms": [
+    "mean_over_batch",
+    "all_reduce",
+    "nanmean",
+    "world_size"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T04:56:24.655349+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "accumulate-then-aggregate-metrics"
+   ],
+   "techniques": [
+    "detached-buffer-reads",
+    "lazy-rank-synchronization",
+    "nan-as-undefined-not-zero",
+    "per-iteration-buffering",
+    "reduction-axis-vocabulary"
+   ],
+   "deviations": 0,
+   "context": "combat-metrics",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

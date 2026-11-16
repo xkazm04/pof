@@ -269,7 +269,9 @@ export async function runSkintokens(
   }
 
   const args = buildSkintokensArgs(spec, modelDir);
-  const maxAttempts = Math.max(1, spec.maxAttempts ?? 8);
+  // A whole, finite number (same rule as best-of-n): non-finite runs once, a fraction floors.
+  const requested = spec.maxAttempts ?? 8;
+  const maxAttempts = Number.isFinite(requested) ? Math.max(1, Math.floor(requested)) : 1;
   let attempts = 0;
   let lastError = 'skintokens-cli failed';
 

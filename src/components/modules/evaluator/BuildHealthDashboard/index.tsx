@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
 import { formatDuration } from '@/lib/format';
+import { logger } from '@/lib/logger';
 import { useProjectStore } from '@/stores/projectStore';
 import { useBuildRun } from '@/hooks/useBuildRun';
 import { isRunActive } from '@/lib/ue5-bridge/build-run';
@@ -14,6 +15,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { FetchError } from '../../shared/FetchError';
+import { InlineErrorRetry } from '../../shared/InlineErrorRetry';
 import { BuildDurationTrendChart } from '../BuildDurationTrendChart';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, STATUS_STALE, successRateColor,
@@ -25,6 +27,14 @@ import { RegressionBanner } from './RegressionBanner';
 import { TargetRow } from './TargetRow';
 import { RecurringErrorRow } from './RecurringErrorRow';
 import { BuildNowBar } from './BuildNowBar';
+
+/** An aborted build has no verdict, so it never counts toward "all passing". */
+function totalBuildsVerdict(failed: number, aborted: number): string {
+  const parts: string[] = [];
+  if (failed > 0) parts.push(`${failed} failed`);
+  if (aborted > 0) parts.push(`${aborted} aborted`);
+  return parts.length > 0 ? parts.join(' · ') : 'all passing';
+}
 
 export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProps) {
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -47,7 +57,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
       );
       setReport(data);
     } catch (e) {
-      console.error('[BuildHealthDashboard] Failed to fetch build health:', e);
+      logger.error('[BuildHealthDashboard] Failed to fetch build health:', { projectPath, error: e });
       setError(e instanceof Error ? e.message : 'Failed to load build health');
     } finally {
       setLoading(false);
@@ -65,7 +75,9 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
     fetchReport();
   }, [initialReport, fetchReport]);
 
-  if (loading) {
+  // Only the first load owns the full-panel spinner; a refetch keeps the rendered
+  // rows and spins the Refresh icon instead.
+  if (loading && !report) {
     return (
       <div className="flex items-center justify-center py-12">
         <Activity className="w-5 h-5 animate-spin text-text-muted" />
@@ -73,7 +85,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
     );
   }
 
-  if (error) {
+  if (error && !report) {
     return <FetchError message={error} onRetry={fetchReport} />;
   }
 
@@ -127,6 +139,9 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
         </div>
       </div>
 
+      {/* A failed refetch keeps the rows on screen and says so inline. */}
+      {error && <InlineErrorRetry message={error} onRetry={fetchReport} />}
+
       {/* Regression alerts */}
       {regressions.length > 0 && (
         <RegressionBanner regressions={regressions} onRebuild={run.rebuild} rebuildDisabled={isRunActive(run.state)} />
@@ -156,7 +171,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
           icon={<ListChecks className="w-3.5 h-3.5" style={{ color: STATUS_STALE }} />}
           label="Total Builds"
           value={<span data-stat="total-builds">{summary.totalBuilds}</span>}
-          sub={summary.failedCount > 0 ? `${summary.failedCount} failed` : 'all passing'}
+          sub={totalBuildsVerdict(summary.failedCount, summary.abortedCount)}
         />
         <KPICard
           layout="vertical"

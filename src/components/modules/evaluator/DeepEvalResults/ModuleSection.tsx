@@ -22,6 +22,7 @@ export function ModuleSection({
   onBatchFix,
   onRunSingle,
   isFixRunning,
+  isRunning = false,
   fixTargetId,
 }: {
   module: ModuleFindings;
@@ -36,6 +37,8 @@ export function ModuleSection({
   onBatchFix: () => void;
   onRunSingle: () => void;
   isFixRunning: boolean;
+  /** A deep-eval job is running: a re-evaluation cannot start until it settles. */
+  isRunning?: boolean;
   /** The finding id or `module:<id>` currently being fixed, or null. */
   fixTargetId: string | null;
 }) {
@@ -49,6 +52,7 @@ export function ModuleSection({
       {/* Module header */}
       <button
         onClick={onToggleModule}
+        aria-expanded={isExpanded}
         className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface bg-surface-deep"
       >
         {isExpanded ? (
@@ -112,7 +116,9 @@ export function ModuleSection({
                 )}
                 <button
                   onClick={onRunSingle}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all bg-surface text-text-muted border border-border hover:text-text"
+                  disabled={isRunning}
+                  title={isRunning ? 'A scan is running - re-evaluate once it finishes' : undefined}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all bg-surface text-text-muted border border-border hover:text-text disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Play className="w-3 h-3" />
                   Re-evaluate
@@ -128,6 +134,7 @@ export function ModuleSection({
                   <div key={catKey} className="rounded-md border border-border/50">
                     <button
                       onClick={() => onToggleCategory(catKey)}
+                      aria-expanded={isCatExpanded}
                       className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface"
                     >
                       {isCatExpanded ? (

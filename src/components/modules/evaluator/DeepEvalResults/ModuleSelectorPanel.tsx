@@ -56,6 +56,7 @@ export function ModuleSelectorPanel({
                   <button
                     key={id}
                     onClick={() => toggleSelectedModule(id as SubModuleId)}
+                    aria-pressed={selected}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all border ${
                       selected
                         ? 'text-text bg-border border-border-bright'

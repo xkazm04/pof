@@ -4,16 +4,20 @@ import {
   STATUS_SUBDUED, ACCENT_CYAN_LIGHT,
   MODULE_COLORS,
 } from '@/lib/chart-colors';
-import type { EmitterType } from '@/types/audio-scene';
+import type { EmitterType, ReverbPreset } from '@/types/audio-scene';
 
 export const MINIMAP_W = 120;
 export const MINIMAP_H = 90;
+
+/** Screen pixels an item press must travel before it becomes a drag (below it: a click). */
+export const DRAG_THRESHOLD_PX = 3;
 
 export const CHROME_ACCENT = MODULE_COLORS.content;
 
 // ── Constants ──
 
-export const ZONE_COLORS: Record<string, string> = {
+// Keyed by the ReverbPreset union, so a preset added to the type without a hue fails tsc.
+export const ZONE_COLORS: Record<ReverbPreset, string> = {
   'none': 'var(--text-muted)',
   'small-room': STATUS_INFO,
   'large-hall': ACCENT_VIOLET,
@@ -25,6 +29,15 @@ export const ZONE_COLORS: Record<string, string> = {
   'forest': ACCENT_EMERALD,
   'custom': ACCENT_PINK,
 };
+
+/**
+ * Colors a newly drawn zone cycles through: every preset hue EXCEPT `none`, whose
+ * neutral `--text-muted` token means "no reverb preset" and would paint the first
+ * drawn zone as if it were unconfigured.
+ */
+export const NEW_ZONE_PALETTE: string[] = Object.entries(ZONE_COLORS)
+  .filter(([preset]) => preset !== 'none')
+  .map(([, color]) => color);
 
 export const EMITTER_COLORS: Record<EmitterType, string> = {
   ambient: STATUS_SUCCESS,

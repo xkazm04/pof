@@ -14,9 +14,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 export interface PollUntilReadyOptions<T> {
-  /** Fetch + parse one status snapshot. Return `undefined` to skip this attempt (transient failure). */
+  /** Fetch + parse one status snapshot. Return `undefined` or reject to skip this attempt (transient failure). */
   fetchStatus: () => Promise<T | undefined>;
-  /** Terminal success: return the resolved value to stop polling and return it. Return `undefined` to keep polling. */
+  /** Terminal success: true stops polling and returns the snapshot; false keeps polling. */
   isDone: (snapshot: T) => boolean;
   /** Terminal failure: throw to stop polling with an error. */
   isFailed: (snapshot: T) => boolean;
@@ -40,7 +40,10 @@ export interface PollUntilReadyOptions<T> {
 export async function pollUntilReady<T>(opts: PollUntilReadyOptions<T>): Promise<T> {
   for (let attempt = 0; attempt < opts.maxAttempts; attempt++) {
     await sleep(opts.intervalMs);
-    const snapshot = await opts.fetchStatus();
+    // A rejected read (a dropped socket, a non-JSON body) is the same transient failure as an
+    // `undefined` snapshot: only our view of the job failed, not the job. Letting it escape
+    // made Leonardo's `deleteIfThrows` delete a generation that was still rendering.
+    const snapshot = await opts.fetchStatus().catch(() => undefined);
     if (snapshot === undefined) continue; // transient failure → skip this attempt
     if (opts.isDone(snapshot)) return snapshot;
     if (opts.isFailed(snapshot)) throw opts.onFailed(snapshot);

@@ -1,5 +1,7 @@
+import { useId } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 import { ZONE_TYPES, PRIORITY_COLORS } from './constants';
 import type { StreamingZone, ZoneType, LoadPriority } from './types';
 
@@ -15,6 +17,7 @@ export function ZoneEditor({
   onClose: () => void;
 }) {
   const cfg = ZONE_TYPES[zone.type];
+  const id = useId();
 
   return (
     <SurfaceCard level={2} className="p-4 space-y-3">
@@ -28,7 +31,7 @@ export function ZoneEditor({
           </span>
           <span className="text-xs font-semibold text-text">Edit Zone</span>
         </div>
-        <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
+        <button type="button" aria-label="Close zone editor" onClick={onClose} className="text-text-muted hover:text-text transition-colors">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -36,8 +39,9 @@ export function ZoneEditor({
       <div className="grid grid-cols-2 gap-3">
         {/* Name */}
         <div className="space-y-1">
-          <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">Name</label>
+          <label htmlFor={`${id}-name`} className="text-2xs uppercase tracking-wider text-text-muted font-semibold">Name</label>
           <input
+            id={`${id}-name`}
             type="text"
             value={zone.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
@@ -47,9 +51,10 @@ export function ZoneEditor({
 
         {/* Type */}
         <div className="space-y-1">
-          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
+          <label htmlFor={`${id}-type`} className="text-xs uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
           <div className="relative">
             <select
+              id={`${id}-type`}
               value={zone.type}
               onChange={(e) => onUpdate({ type: e.target.value as ZoneType })}
               className="w-full px-3 py-2 bg-black/40 border border-violet-900/40 rounded-lg text-xs font-mono text-violet-100 outline-none focus:border-violet-500 appearance-none transition-colors"
@@ -64,7 +69,7 @@ export function ZoneEditor({
 
         {/* Load priority */}
         <div className="space-y-1 col-span-2 mt-2">
-          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">LOAD PRIORITY</label>
+          <label className="text-xs uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">LOAD PRIORITY</label>
           <div className="flex gap-2">
             {(['low', 'normal', 'high', 'always'] as LoadPriority[]).map((p) => {
               const active = zone.loadPriority === p;
@@ -72,6 +77,8 @@ export function ZoneEditor({
               return (
                 <button
                   key={p}
+                  type="button"
+                  aria-pressed={active}
                   onClick={() => onUpdate({ loadPriority: p, alwaysLoaded: p === 'always' })}
                   className="flex-1 py-1.5 rounded-lg text-xs uppercase font-mono font-bold transition-all border shadow-sm"
                   style={{
@@ -90,9 +97,10 @@ export function ZoneEditor({
 
         {/* Preload radius */}
         <div className="space-y-1 col-span-2 pt-2 border-t border-violet-900/30">
-          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD SECS / RADIUS</label>
+          <label htmlFor={`${id}-radius`} className="text-xs uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD RADIUS (CELLS)</label>
           <div className="flex items-center gap-3">
             <input
+              id={`${id}-radius`}
               type="range"
               value={zone.preloadRadius}
               onChange={(e) => onUpdate({ preloadRadius: Math.max(0, Math.min(4, Number(e.target.value) || 0)) })}
@@ -112,16 +120,17 @@ export function ZoneEditor({
         <input
           type="checkbox"
           checked={zone.alwaysLoaded}
-          onChange={(e) => onUpdate({ alwaysLoaded: e.target.checked, loadPriority: e.target.checked ? 'always' : zone.loadPriority })}
-          className="accent-[#f59e0b] w-3 h-3"
+          onChange={(e) => onUpdate({ alwaysLoaded: e.target.checked, loadPriority: e.target.checked ? 'always' : zone.loadPriority === 'always' ? 'normal' : zone.loadPriority })}
+          className="w-3 h-3"
+          style={{ accentColor: STATUS_WARNING }}
         />
-        <span className="text-xs text-[#d0d4e8]">Always loaded (persistent zone)</span>
+        <span className="text-xs text-text">Always loaded (persistent zone)</span>
       </label>
 
       {/* Grid position */}
       <div className="flex items-center gap-4 text-2xs text-text-muted">
         <span>Grid: ({zone.gridX}, {zone.gridY})</span>
-        <span className="text-[#2a2a4a]">|</span>
+        <span className="text-border">|</span>
         <span>Priority: <span style={{ color: PRIORITY_COLORS[zone.loadPriority] }}>{zone.loadPriority}</span></span>
       </div>
     </SurfaceCard>

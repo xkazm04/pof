@@ -141,7 +141,11 @@ export function applyVerdict(job: GateJob, verdict: GateVerdict): DrainResult {
   // (genHistory, produced payloads, …). The bounded `GateEvidence` (capped samples, truncated
   // judge text — see @/types/observation) makes the flip auditable without re-running the gate.
   const prevData = existing?.data ?? {};
-  const data = verdict.evidence ? { ...prevData, evidence: verdict.evidence } : prevData;
+  // Evidence binds to the run that produced it: a verdict WITHOUT evidence must not inherit the
+  // previous run's proof, so the stale `evidence` key is dropped and the audit lists the row as missing.
+  const prevWithoutEvidence: Record<string, unknown> = { ...(prevData as Record<string, unknown>) };
+  delete prevWithoutEvidence.evidence;
+  const data = verdict.evidence ? { ...prevWithoutEvidence, evidence: verdict.evidence } : prevWithoutEvidence;
   upsertArtifact({
     catalogId: job.catalogId,
     entityId: job.entityId,

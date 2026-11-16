@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
+import { isFeatureDone } from '@/lib/feature-done';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { FeatureRowItem } from './FeatureRowItem';
 import type { FeatureMatrixState } from './useFeatureMatrixState';
@@ -64,7 +65,7 @@ export function FeatureList({
           categories.map((cat) => {
             const catFeatures = grouped[cat];
             const isCollapsed = collapsedCategories.has(cat);
-            const catImplemented = catFeatures.filter((f) => f.status === 'implemented' || f.status === 'improved').length;
+            const catImplemented = catFeatures.filter((f) => isFeatureDone(f.status)).length;
 
             return (
               <div key={cat}>

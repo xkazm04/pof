@@ -71,6 +71,8 @@ interface BridgeDoctorState {
   // ── Restore flow (non-persisted) ──────────────────────────────────────
   restorePhase: RestorePhase;
   restorePreview: RestorePreview | null;
+  /** Why the last preview did not produce a verdict (probe threw / refused); null otherwise. Never persisted. */
+  restoreError: string | null;
   /** The live config captured when a restore was applied; Undo writes it back. */
   undoSnapshot: LiveConfig | null;
 
@@ -98,6 +100,7 @@ export const useBridgeDoctorStore = create<BridgeDoctorState>()(
       latest: null,
       restorePhase: 'idle',
       restorePreview: null,
+      restoreError: null,
       undoSnapshot: null,
 
       beginRun: () => set({ running: true }),
@@ -125,8 +128,15 @@ export const useBridgeDoctorStore = create<BridgeDoctorState>()(
 
       previewRestore: async (good, probe) => {
         const st = get();
-        if (st.running || st.restorePhase === 'previewing') return null;
-        set({ restorePhase: 'previewing', restorePreview: null });
+        if (st.running) {
+          set({ restoreError: 'Diagnostics are running — try again when they finish.' });
+          return null;
+        }
+        if (st.restorePhase === 'previewing') {
+          set({ restoreError: 'A restore preview is already in progress.' });
+          return null;
+        }
+        set({ restorePhase: 'previewing', restorePreview: null, restoreError: null });
         try {
           const candidate: LiveConfig = {
             host: good.host,
@@ -140,10 +150,14 @@ export const useBridgeDoctorStore = create<BridgeDoctorState>()(
           const preview: RestorePreview = report.allGreen
             ? { verdict: 'would-fix', good: candidate }
             : { verdict: 'still-failing', good: candidate, channels: failed };
-          set({ restorePhase: 'previewed', restorePreview: preview });
+          set({ restorePhase: 'previewed', restorePreview: preview, restoreError: null });
           return preview;
-        } catch {
-          set({ restorePhase: 'idle', restorePreview: null });
+        } catch (err) {
+          set({
+            restorePhase: 'idle',
+            restorePreview: null,
+            restoreError: `Could not test the last good config: ${err instanceof Error ? err.message : String(err)}`,
+          });
           return null;
         }
       },
@@ -165,7 +179,7 @@ export const useBridgeDoctorStore = create<BridgeDoctorState>()(
         return true;
       },
 
-      resetRestore: () => set({ restorePhase: 'idle', restorePreview: null }),
+      resetRestore: () => set({ restorePhase: 'idle', restorePreview: null, restoreError: null }),
     }),
     {
       name: 'pof-bridge-doctor',

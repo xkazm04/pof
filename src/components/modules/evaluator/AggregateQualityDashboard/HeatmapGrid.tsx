@@ -79,6 +79,7 @@ export function HeatmapGrid({
             onClick={fetchData}
             className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
             title="Refresh data"
+            aria-label="Refresh data"
           >
             <RefreshCw className="w-3 h-3" />
           </button>
@@ -96,6 +97,7 @@ export function HeatmapGrid({
           const isStale =
             cell.lastReviewedAt === null || (cell.daysSinceReview ?? Infinity) > customStaleDays;
           const reviewState = cellReviewState(batch, cell.moduleId);
+          const done = cell.implemented + cell.improved;
 
           return (
             <motion.button
@@ -202,11 +204,11 @@ export function HeatmapGrid({
 
               {/* Mini progress bar */}
               <div className="h-1 bg-black/30 rounded-full overflow-hidden flex mb-1.5">
-                {cell.implemented > 0 && (
+                {done > 0 && (
                   <div
                     className="h-full"
                     style={{
-                      width: `${(cell.implemented / cell.total) * 100}%`,
+                      width: `${(done / cell.total) * 100}%`,
                       backgroundColor: STATUS_SUCCESS,
                     }}
                   />
@@ -233,9 +235,15 @@ export function HeatmapGrid({
 
               {/* Status counts */}
               <div className="flex items-center gap-2 text-2xs">
-                <span style={{ color: STATUS_SUCCESS }}>{cell.implemented}</span>
-                <span style={{ color: STATUS_WARNING }}>{cell.partial}</span>
-                <span style={{ color: STATUS_ERROR }}>{cell.missing}</span>
+                <span style={{ color: STATUS_SUCCESS }}>
+                  <span aria-hidden="true">{'✓'} </span><span className="sr-only">Done </span>{done}
+                </span>
+                <span style={{ color: STATUS_WARNING }}>
+                  <span aria-hidden="true">{'◐'} </span><span className="sr-only">Partial </span>{cell.partial}
+                </span>
+                <span style={{ color: STATUS_ERROR }}>
+                  <span aria-hidden="true">{'✕'} </span><span className="sr-only">Missing </span>{cell.missing}
+                </span>
                 <span className="text-text-muted ml-auto">
                   {cell.total} total
                 </span>

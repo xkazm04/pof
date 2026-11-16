@@ -16,7 +16,7 @@
  * and commits with a pathspec itself. Codex never commits (it is told so in every brief).
  */
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { routeTask } from '../../src/lib/codex-exec/routing';
@@ -24,6 +24,7 @@ import { buildCodexExecArgs, buildCodexResumeArgs, PROMPT_FROM_STDIN } from '../
 import { parseCodexEvents } from '../../src/lib/codex-exec/events';
 import { CODEX_REPORT_SCHEMA, renderBrief, type CodexTask } from '../../src/lib/codex-exec/brief';
 import { parseLedger, summarizeLedger, type CodexVerdict, type LedgerEntry } from '../../src/lib/codex-exec/ledger';
+import { latestWeeklyPercent, meterRefusal } from '../../src/lib/codex-exec/meter';
 import { runCodex, stallMinutes, type RunEnd } from './runner';
 
 const REPO = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', '..');
@@ -33,6 +34,7 @@ const LEDGER = process.env.POF_CODEX_LEDGER ?? join(homedir(), 'Documents/Obsidi
 const runDir = (id: string) => join(HOME, 'runs', id);
 const wtDir = (id: string) => join(HOME, 'wt', id);
 const git = (cwd: string, ...args: string[]) => spawnSync('git', args, { cwd, encoding: 'utf8' });
+const repoOf = (task: CodexTask) => task.repo ?? REPO;
 
 interface RunState {
   task: CodexTask; model: string; effort: string; cwd: string; threadId: string | null;
@@ -81,28 +83,51 @@ function report(id: string, eventsPath: string, lastPath: string, secs: number, 
   console.log(`report:\n${last || '(no final message)'}`);
 }
 
+/** The weekly meter as the newest session log reports it; null when no recent log carries one. */
+function weeklyMeter(): number | null {
+  // The sessions folder also holds loose files from older Codex versions, so only directories are walked.
+  const newestDirs = (d: string) => readdirSync(d).sort().reverse().map((n) => join(d, n)).filter((p) => statSync(p).isDirectory());
+  const base = join(homedir(), '.codex/sessions');
+  try {
+    for (const y of newestDirs(base)) for (const m of newestDirs(y)) for (const day of newestDirs(m)) {
+      const logs = readdirSync(day).filter((f) => f.endsWith('.jsonl')).map((f) => join(day, f)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs).slice(0, 20);
+      for (const f of logs) {
+        const used = latestWeeklyPercent(readFileSync(f, 'utf8'));
+        if (used !== null) return used;
+      }
+    }
+  } catch { /* an unreadable log is an unknown meter, never a stop */ }
+  return null;
+}
+
 async function run(taskPath: string, timeoutMin: number) {
   const task = JSON.parse(readFileSync(taskPath, 'utf8')) as CodexTask;
+  const refusal = meterRefusal(weeklyMeter());
+  if (refusal) throw new Error(refusal);
   const dir = runDir(task.id);
   if (existsSync(dir)) throw new Error(`run ${task.id} already exists — discard it or pick a new id`);
   mkdirSync(dir, { recursive: true });
-  const route = routeTask(task.tier, task.hints);
+  const routed = routeTask(task.tier, task.hints);
+  const route = task.model ? { ...routed, model: task.model } : routed;
   let cwd = REPO;
   let base: string | undefined;
   if (task.access === 'write-verified') {
     cwd = wtDir(task.id);
-    const add = git(REPO, 'worktree', 'add', '-b', `codex/${task.id}`, cwd, 'HEAD');
+    const add = git(repoOf(task), 'worktree', 'add', '-b', `codex/${task.id}`, cwd, task.base ?? 'HEAD');
     if (add.status !== 0) throw new Error(`worktree add failed: ${add.stderr}`);
     base = git(cwd, 'rev-parse', 'HEAD').stdout.trim() || undefined;
-    const j = spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, 'node_modules'), join(REPO, 'node_modules')], { encoding: 'utf8' });
-    if (j.status !== 0) throw new Error(`node_modules junction failed: ${j.stderr || j.stdout}`);
-    // The pinned reference clone is a git-EXCLUDED junction in the main tree (/diablo W16), so a fresh worktree lacks it and a
-    // delegate cannot check the engine source (cx-b13 had to skip its spot-checks). Mirror it; remove it with rmdir, never recursively.
-    if (existsSync(join(REPO, '.reference'))) spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, '.reference'), join(REPO, '.reference')], { encoding: 'utf8' });
-    // Gitignored GENERATED files are absent from a fresh worktree, and typecheck needs them
-    // (cx-001 had to discover this and run the generator itself).
-    const gen = spawnSync(process.execPath, ['scripts/gen-pipeline-registry.mjs'], { cwd, encoding: 'utf8' });
-    if (gen.status !== 0) throw new Error(`gen:pipelines failed in the worktree: ${gen.stderr || gen.stdout}`);
+    for (const p of task.copyIgnored?.paths ?? []) cpSync(join(task.copyIgnored!.from, p), join(cwd, p), { recursive: true });
+    if (!task.repo) {
+      const j = spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, 'node_modules'), join(REPO, 'node_modules')], { encoding: 'utf8' });
+      if (j.status !== 0) throw new Error(`node_modules junction failed: ${j.stderr || j.stdout}`);
+      // The pinned reference clone is a git-EXCLUDED junction in the main tree (/diablo W16), so a fresh worktree lacks it and a
+      // delegate cannot check the engine source (cx-b13 had to skip its spot-checks). Mirror it; remove it with rmdir, never recursively.
+      if (existsSync(join(REPO, '.reference'))) spawnSync('cmd', ['/c', 'mklink', '/J', join(cwd, '.reference'), join(REPO, '.reference')], { encoding: 'utf8' });
+      // Gitignored GENERATED files are absent from a fresh worktree, and typecheck needs them
+      // (cx-001 had to discover this and run the generator itself).
+      const gen = spawnSync(process.execPath, ['scripts/gen-pipeline-registry.mjs'], { cwd, encoding: 'utf8' });
+      if (gen.status !== 0) throw new Error(`gen:pipelines failed in the worktree: ${gen.stderr || gen.stdout}`);
+    }
   }
   const brief = renderBrief(task);
   writeFileSync(join(dir, 'brief.md'), brief);
@@ -187,14 +212,14 @@ function land(id: string) {
   const files = git(cwd, ...read, '--name-only').stdout.split('\n').filter(Boolean);
   if (!files.length) { console.log('nothing to land'); return; }
   // Refuse to land onto another session's live WIP in the shared tree.
-  const busy = git(REPO, 'status', '--porcelain', '--', ...files).stdout.split('\n').filter(Boolean);
+  const busy = git(repoOf(task), 'status', '--porcelain', '--', ...files).stdout.split('\n').filter(Boolean);
   if (busy.length) throw new Error(`main tree has uncommitted changes in files this patch touches — resolve first:\n  ${busy.join('\n  ')}`);
   const patch = git(cwd, ...read, '--binary').stdout;
   const patchPath = join(runDir(id), 'land.patch');
   writeFileSync(patchPath, patch);
   // Working tree ONLY: `--3way` would stage into the SHARED index, where another session's bare
   // `git commit` sweeps it up (repo law since 906783b6). The overseer stages with a pathspec.
-  const ap = git(REPO, 'apply', patchPath);
+  const ap = git(repoOf(task), 'apply', patchPath);
   if (ap.status !== 0) throw new Error(`git apply failed:\n${ap.stderr}`);
   console.log(`landed ${files.length} file(s) from ${id} into the main tree (NOT committed):\n  ${files.join('\n  ')}`);
   console.log(`commit with a pathspec, e.g.: git commit -m "…" -- ${files.join(' ')}`);
@@ -212,8 +237,8 @@ function discard(id: string) {
     if (existsSync(nm)) spawnSync('cmd', ['/c', 'rmdir', nm]);
     const ref = join(st.cwd, '.reference');
     if (existsSync(ref)) spawnSync('cmd', ['/c', 'rmdir', ref]);
-    git(REPO, 'worktree', 'remove', '--force', st.cwd);
-    git(REPO, 'branch', '-D', `codex/${id}`);
+    git(repoOf(st.task), 'worktree', 'remove', '--force', st.cwd);
+    git(repoOf(st.task), 'branch', '-D', `codex/${id}`);
   }
   st.status = 'discarded'; saveState(id, st);
   console.log(`discarded ${id} (run records kept in ${runDir(id)})`);

@@ -163,6 +163,7 @@ node scripts/anim-critique.mjs --dir <frames> --intent "…" --provider qwen
 | `src/lib/anim-critique/qwen.ts` | Qwen vision seam + measured quota fallback chain (qwen3.7-flash→3.8-27b→3.8-max→3.6-flash→3.6-plus→3.7-plus) |
 | `shots/mha_capture.py` | ingest + body-only solve + export (the 5 fixes #1–3 here) |
 | `shots/mha_retarget.py` | IK rig + retargeter (op stack) + batch retarget (fix #4) |
+| `shots/contact_window.py` | measures an attack clip's contact window from the motion (frames + rate basis + clip fingerprint) and states it beside GA_MeleeAttack's authored hit time; read-only |
 | `shots/veo_manny.json` | render scenario (`play_anim`) |
 | `shots/make_preview.py` | editor preview map builder |
 | `scripts/anim-critique.mjs` | CLI grader → `/api/verify/animation` |
@@ -174,6 +175,7 @@ node scripts/anim-critique.mjs --dir <frames> --intent "…" --provider qwen
 1. Generate: `node shots/veo_gen.mjs` (or Leonardo/Wan once swapped).
 2. Capture: `UnrealEditor-Cmd … -run=pythonscript -script=shots/mha_capture.py -AllowCommandletRendering`.
 3. Retarget: same, `shots/mha_retarget.py`.
+   3b. Contact window (attacks only): same, `shots/contact_window.py` (env `CW_ANIM`, `CW_BONES`, `CW_DIR`). A clip wired as an attack carries this window; a constant or authored hit time that falls outside it is a second answer, not a default.
 4. Render: `UnrealEditor-Cmd … /Game/Maps/VerticalSlice -game -PoFScenario=shots/veo_manny.json -RenderOffScreen`.
 5. Grade: `node scripts/anim-critique.mjs --dir shots/veo_manny_strip --intent "…"`.
 

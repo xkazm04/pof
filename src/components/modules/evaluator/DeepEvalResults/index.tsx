@@ -133,6 +133,7 @@ export function DeepEvalResults() {
           onBatchFix={handleBatchFix}
           onRunSingle={handleRunSingle}
           isFixRunning={fixCli.isRunning}
+          isRunning={isRunning}
           fixTargetId={fixTargetId}
         />
       )}

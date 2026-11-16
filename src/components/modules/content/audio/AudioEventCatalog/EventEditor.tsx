@@ -3,13 +3,24 @@
 import { useState, useCallback } from 'react';
 import { Plus, X, ChevronDown, Zap } from 'lucide-react';
 import {
-  ACCENT_EMERALD, STATUS_INFO,
+  ACCENT_EMERALD, STATUS_INFO, STATUS_ERROR,
   withOpacity, OPACITY_10, OPACITY_50,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { AudioEvent, EventCategory, PriorityLevel, SpatialMode } from './types';
-import { CATEGORY_CONFIG, PRIORITY_CONFIG, CATEGORIES } from './constants';
+import {
+  CATEGORY_CONFIG, PRIORITY_CONFIG, CATEGORIES, MAX_EVENT_CONCURRENCY, clampEventConcurrency,
+} from './constants';
 import { EventSoundPicker, type EventSoundLibrary } from './EventSoundPicker';
+
+/** Upper bound for a retrigger gap: a minute is already "once per scene beat"; more is a typo. */
+export const MAX_EVENT_COOLDOWN_MS = 60_000;
+
+/** Whole, non-negative milliseconds, capped at MAX_EVENT_COOLDOWN_MS. */
+export function clampEventCooldown(raw: number): number {
+  const n = Number.isFinite(raw) ? Math.round(raw) : 0;
+  return Math.min(MAX_EVENT_COOLDOWN_MS, Math.max(0, n));
+}
 
 // -- EventEditor --
 
@@ -19,6 +30,7 @@ export function EventEditor({
   onClose,
   soundLibrary,
   soundOnlyIds,
+  problem,
 }: {
   event: AudioEvent;
   onUpdate: (patch: Partial<AudioEvent>) => void;
@@ -27,6 +39,8 @@ export function EventEditor({
   soundLibrary: EventSoundLibrary;
   /** Restrict the sound picker to these sets (a tie the suggester left open). */
   soundOnlyIds?: readonly string[];
+  /** Why this row would be refused by Generate (blank / duplicate trigger, blank name). */
+  problem?: string;
 }) {
   const [newTag, setNewTag] = useState('');
   const cfg = CATEGORY_CONFIG[event.category];
@@ -94,11 +108,15 @@ export function EventEditor({
             onChange={(e) => onUpdate({ trigger: e.target.value })}
             placeholder="OnGameEvent..."
             aria-describedby={fid('trigger-hint')}
+            aria-invalid={problem ? true : undefined}
             className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text font-mono focus-ring-inset transition-all shadow-inner"
           />
           <p id={fid('trigger-hint')} className="text-xs text-text-muted">
             Gameplay event name the audio manager binds to.
           </p>
+          {problem && (
+            <p role="alert" className="text-xs font-semibold" style={{ color: STATUS_ERROR }}>{problem}</p>
+          )}
         </div>
 
         {/* Category */}
@@ -184,8 +202,8 @@ export function EventEditor({
               id={fid('concurrency')}
               type="number"
               value={event.concurrency}
-              onChange={(e) => onUpdate({ concurrency: Math.max(1, Math.min(16, Number(e.target.value) || 1)) })}
-              min={1} max={16}
+              onChange={(e) => onUpdate({ concurrency: clampEventConcurrency(e.target.value) })}
+              min={1} max={MAX_EVENT_CONCURRENCY}
               aria-describedby={fid('concurrency-hint')}
               className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text font-mono text-center focus-ring-inset transition-all shadow-inner"
             />
@@ -198,8 +216,9 @@ export function EventEditor({
               id={fid('cooldown')}
               type="number"
               value={event.cooldownMs}
-              onChange={(e) => onUpdate({ cooldownMs: Math.max(0, Number(e.target.value) || 0) })}
+              onChange={(e) => onUpdate({ cooldownMs: clampEventCooldown(Number(e.target.value)) })}
               min={0}
+              max={MAX_EVENT_COOLDOWN_MS}
               aria-describedby={fid('cooldown-hint')}
               className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text font-mono text-center focus-ring-inset transition-all shadow-inner"
             />

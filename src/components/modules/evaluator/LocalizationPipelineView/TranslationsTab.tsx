@@ -48,12 +48,12 @@ export function TranslationsTab({
       {/* Filters */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <label htmlFor="loc-translations-search" className="sr-only">Search translations by source text</label>
+          <label htmlFor="loc-translations-search" className="sr-only">Search translations by source text or key</label>
           <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
           <input
             id="loc-translations-search"
             type="text"
-            placeholder="Search source text..."
+            placeholder="Search source text or key..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-indigo-500/40"

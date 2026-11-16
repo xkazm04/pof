@@ -83,5 +83,6 @@ export function xpOverlaySeries(baseXp: number, curveExp: number, maxLevel: numb
   for (let x = 0; x <= maxLevel; x += 5) {
     points.push({ x, y: calculateXpForLevel(Math.max(x, 1), baseXp, curveExp) });
   }
+  if (maxLevel % 5 !== 0) points.push({ x: maxLevel, y: calculateXpForLevel(maxLevel, baseXp, curveExp) });
   return points;
 }

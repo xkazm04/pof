@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { copyToClipboard } from '@/lib/clipboard';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   STATUS_SUCCESS,
@@ -136,11 +137,16 @@ interface CopyButtonProps {
 
 export function CopyButton({ getText, accent, label, className }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(getText());
+  // The "Copied" receipt follows the verified write (lib/clipboard), never the attempt;
+  // a re-press restarts the window instead of stacking timers.
+  const handleCopy = useCallback(async () => {
+    if (!(await copyToClipboard(getText()))) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
     setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+    timerRef.current = setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [getText]);
 
   const idleLabel = label?.idle ?? 'Copy';

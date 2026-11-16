@@ -50,7 +50,7 @@ export function RadarMetric() {
           strokeWidth={0.5}
         />
       </svg>
-      <div className="text-[10px] font-mono leading-tight">
+      <div className="text-2xs font-mono leading-tight">
         <span style={{ color: ACCENT_CYAN }} title={weakest?.label}>{weakest?.label?.slice(0, 3)}</span>
         <span style={{ color: withOpacity(ACCENT_RED, OPACITY_50) }}> vs </span>
         <span style={{ color: ACCENT_RED }} title={strongest?.label}>{strongest?.label?.slice(0, 3)}</span>

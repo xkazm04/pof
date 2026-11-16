@@ -36,10 +36,12 @@ export function DataRecoveryTool() {
             const isCurrent = i === stepIndex;
             return (
               <div key={step.id} className="flex items-center gap-1">
-                <motion.div
+                <motion.button
+                  type="button"
+                  aria-current={isCurrent ? 'step' : undefined}
                   initial={{ scale: 0.8 }}
                   animate={{ scale: isCurrent ? 1.1 : 1 }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm ${SAVE_TYPE.body} font-semibold border transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm ${SAVE_TYPE.body} font-semibold border transition-all cursor-pointer focus-ring ${
                     !isCurrent && !isComplete ? 'border-border/20 bg-surface-deep text-text-muted' : ''
                   }`}
                   style={isCurrent ? {
@@ -53,7 +55,7 @@ export function DataRecoveryTool() {
                 >
                   {isComplete && !isCurrent && <CheckCircle2 className="w-3 h-3" />}
                   {step.label}
-                </motion.div>
+                </motion.button>
                 {i < arr.length - 1 && (
                   <div className={`w-6 h-px ${isComplete ? '' : 'bg-border/20'}`} style={isComplete ? { backgroundColor: withOpacity(ACCENT_EMERALD, OPACITY_40) } : undefined} />
                 )}

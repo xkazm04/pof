@@ -1,6 +1,7 @@
 import { AlertTriangle, Zap } from 'lucide-react';
 import type { EvaluatorReport, Recommendation } from '@/types/evaluator';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_WARNING } from '@/lib/chart-colors';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { EVAL_ACCENT, PRIORITY_COLORS } from './constants';
 import { priorityOrder } from './helpers';
@@ -17,7 +18,7 @@ export function TopRecommendations({
   return (
     <SurfaceCard level={3} className="p-4">
       <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="w-3.5 h-3.5 text-[#fbbf24]" />
+        <AlertTriangle className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
         <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Top Recommendations
         </span>
@@ -26,7 +27,7 @@ export function TopRecommendations({
         </span>
       </div>
       <div className="space-y-2">
-        {lastScan.recommendations
+        {[...lastScan.recommendations]
           .sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority))
           .slice(0, 5)
           .map((rec) => {
@@ -39,7 +40,7 @@ export function TopRecommendations({
               >
                 <span
                   className="text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
-                  style={{ color: pc.text, backgroundColor: `${pc.text}15` }}
+                  style={{ color: pc.text, backgroundColor: pc.badge }}
                 >
                   {rec.priority}
                 </span>

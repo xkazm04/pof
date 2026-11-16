@@ -87,27 +87,8 @@ describe('withGenericFixCopy', () => {
     expect(out.fixDirection).toContain('bad');
   });
 
-  it('prefers the spec bespoke copy when present', () => {
-    const out = withGenericFixCopy(
-      aSpec({ copy: () => ({ why: 'bespoke why', suggestion: 'bespoke fix', fixDirection: 'do X' }) }),
-      res('fail', 'ignored reason'), {},
-    );
-    expect(out.why).toBe('bespoke why');
-    expect(out.suggestion).toBe('bespoke fix');
-    expect(out.fixDirection).toBe('do X');
-  });
-
-  it('backfills a bespoke copy that omits (or blanks) fixDirection — defaultDirection first', () => {
-    const withDefault = withGenericFixCopy(
-      aSpec({ defaultDirection: 'house style: terse', copy: () => ({ why: 'w', suggestion: 's', fixDirection: '  ' }) }),
-      res('fail', 'bad'), {},
-    );
-    expect(withDefault.fixDirection).toBe('house style: terse');
-
-    const derived = withGenericFixCopy(
-      aSpec({ copy: () => ({ why: 'w', suggestion: 's' }) }),
-      res('fail', 'bad'), {},
-    );
+  it('derives a direction naming the checker reason', () => {
+    const derived = withGenericFixCopy(aSpec(), res('fail', 'bad'), {});
     expect(derived.fixDirection).toContain('bad');
   });
 
@@ -132,7 +113,7 @@ describe('fleet-wide guarantee: no step dispatches an empty direction', () => {
             expect(out.fixDirection, where).toBeTruthy();
             expect((out.fixDirection ?? '').trim().length, where).toBeGreaterThan(20);
             // Situation-specific: names the step and, when the checker gave one, the reason.
-            if (!spec.copy && !spec.defaultDirection) {
+            if (!spec.defaultDirection) {
               expect(out.fixDirection, where).toContain(spec.label);
               if (reason) expect(out.fixDirection, where).toContain(reason);
             }

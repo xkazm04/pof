@@ -1,4 +1,5 @@
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { logger } from '@/lib/logger';
 
 declare global {
   interface Window {
@@ -44,6 +45,11 @@ export function dispatchPromptWhenReady(tabId: string, prompt: string, taskType?
   setTimeout(() => {
     if (fired) return;
     window.removeEventListener('pof-cli-terminal-ready', onReady);
+    // Loud: the terminal never announced readiness, so it may have no listener and
+    // this prompt can be lost without a trace.
+    logger.warn(
+      `[cli-dispatch] terminal "${tabId}" never announced readiness within ${UI_TIMEOUTS.terminalReadyFallback} ms — dispatching via the fallback; the prompt is lost if nothing is listening`,
+    );
     dispatch();
   }, UI_TIMEOUTS.terminalReadyFallback);
 }

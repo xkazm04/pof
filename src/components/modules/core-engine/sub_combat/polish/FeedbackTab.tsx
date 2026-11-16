@@ -9,11 +9,12 @@ import {
   withOpacity, OPACITY_25, OPACITY_8, OPACITY_50, GLOW_MD,
 } from '@/lib/chart-colors';
 import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import { TimelineStrip } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import {
   ACCENT, FEEDBACK_PARAMS, FEEDBACK_PRESETS, FEEDBACK_CATEGORIES,
-  HITSTOP_ABILITIES, MAX_HITSTOP,
+  HITSTOP_ABILITIES,
   STAGGER_TIMELINE, STAGGER_CONFIG,
 } from '../_shared/data';
 import type { FeedbackPreset, FeedbackCategory } from '../_shared/data';
@@ -24,6 +25,9 @@ const CATEGORY_ICONS: Record<FeedbackCategory, typeof Gauge> = {
   Particles: Sparkles,
   Sound: Volume2,
 };
+
+/** One time axis for the Hitstop Timing bars: the longest authored animation, so width = duration. */
+const HITSTOP_AXIS_SEC = Math.max(...HITSTOP_ABILITIES.map((a) => a.animDuration));
 
 /** Displayed value string for a param — also used as the slider's aria-valuetext. */
 function formatParamValue(value: number, step: number, unit: string): string {
@@ -54,16 +58,26 @@ interface FeedbackTabProps {
 export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: FeedbackTabProps) {
   const juiceColor = juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE;
 
-  const [copied, setCopied] = useState(false);
+  /* 'copied' only once writeText resolved; 'failed' when there is no clipboard
+     or the write was refused, so the button never claims a copy that did not happen. */
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
   /* The range inputs are transparent overlays on the NeonBar, so their own
      focus ring is invisible — track focus and draw it on the bar wrapper. */
   const [focusedParam, setFocusedParam] = useState<string | null>(null);
   const activePreset = useMemo(() => matchingPreset(feedbackValues), [feedbackValues]);
   const feelScript = useMemo(() => buildCombatFeelPython(feedbackValues), [feedbackValues]);
-  const copyFeel = useCallback(() => {
-    void navigator.clipboard?.writeText(feelScript);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const copyFeel = useCallback(async () => {
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(feelScript);
+        ok = true;
+      }
+    } catch {
+      ok = false;
+    }
+    setCopyState(ok ? 'copied' : 'failed');
+    setTimeout(() => setCopyState('idle'), UI_TIMEOUTS.copyFeedback);
   }, [feelScript]);
 
   return (
@@ -165,8 +179,8 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
                 <motion.div key={ability.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3">
                   <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[100px] flex-shrink-0">{ability.name}</span>
                   <div className="flex-1 h-2 rounded-full border border-border/20 bg-surface-deep relative">
-                    <div className="absolute top-0 bottom-0 left-0 bg-surface-hover border-r border-border/50" style={{ width: `${(ability.animDuration / 1.5) * 100}%` }} />
-                    <div className="absolute top-0 bottom-0 left-0 animate-pulse" style={{ width: `${(ability.hitstop / MAX_HITSTOP) * 30}%`, left: '10%', backgroundColor: ability.color, boxShadow: `${GLOW_MD} ${withOpacity(ability.color, OPACITY_50)}` }} />
+                    <div className="absolute top-0 bottom-0 left-0 bg-surface-hover border-r border-border/50" style={{ width: `${(ability.animDuration / HITSTOP_AXIS_SEC) * 100}%` }} />
+                    <div className="absolute top-0 bottom-0 left-0 animate-pulse" style={{ width: `${(ability.hitstop / HITSTOP_AXIS_SEC) * 100}%`, backgroundColor: ability.color, boxShadow: `${GLOW_MD} ${withOpacity(ability.color, OPACITY_50)}` }} />
                   </div>
                   <span className="text-xs font-mono font-bold w-[45px] text-right" style={{ color: ability.color }}>{ability.hitstop}s</span>
                 </motion.div>
@@ -192,8 +206,8 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
       <BlueprintPanel color={ACCENT} className="p-3">
         <div className="flex items-center justify-between mb-2">
           <SectionHeader label="Export to UE (apply to GA_MeleeAttack)" color={ACCENT} icon={Download} />
-          <button data-testid="combat-feel-export" onClick={copyFeel} className="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer">
-            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}{copied ? 'Copied' : 'Copy Python'}
+          <button type="button" data-testid="combat-feel-export" onClick={copyFeel} className={`flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer ${FOCUS_RING_CLASS}`} style={focusRingStyle(ACCENT)}>
+            {copyState === 'copied' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}{copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy Python'}
           </button>
         </div>
         <pre className="text-[10px] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto text-text-muted">{feelScript}</pre>

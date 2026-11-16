@@ -53,15 +53,36 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/** Shape check: a non-string prompt threw on .slice, and a non-numeric duration skewed the rollups. */
+function badSessionField(b: Record<string, unknown>): string | null {
+  for (const key of ['moduleId', 'sessionKey', 'prompt'] as const) {
+    if (typeof b[key] !== 'string') return `${key} must be a string`;
+  }
+  for (const key of ['hadProjectContext', 'success'] as const) {
+    if (b[key] != null && typeof b[key] !== 'boolean') return `${key} must be a boolean`;
+  }
+  if (b.durationMs != null && !(typeof b.durationMs === 'number' && Number.isFinite(b.durationMs))) return 'durationMs must be a number';
+  for (const key of ['startedAt', 'completedAt'] as const) {
+    const at = b[key];
+    if (at != null && !(typeof at === 'string' && Number.isFinite(Date.parse(at)))) return `${key} must be a parseable date`;
+  }
+  return null;
+}
+
 // POST /api/session-analytics
 // Body: { moduleId, sessionKey, prompt, hadProjectContext, success, durationMs, startedAt, completedAt }
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
 
     if (!body.moduleId || !body.sessionKey || body.prompt === undefined) {
       return apiError('moduleId, sessionKey, prompt required', 400);
     }
+    const invalid = badSessionField(body);
+    if (invalid) return apiError(invalid, 400);
 
     const record = recordSession({
       moduleId: body.moduleId,

@@ -154,7 +154,9 @@ export function tunerReducer(state: TunerState, action: TunerAction): TunerState
 }
 
 /** EV before → after for one binding, both read against the state's gold table. */
-export function tunedSummary(state: TunerState, id: string): TunedSummary | null {
+type LintInputs = Pick<TunerState, 'baseline' | 'bindings' | 'rarityGold'>;
+
+export function tunedSummary(state: LintInputs, id: string): TunedSummary | null {
   const before = findBinding(state.baseline, id);
   const after = findBinding(state.bindings, id);
   if (!before || !after) return null;
@@ -172,14 +174,27 @@ export function tierGroups(baseline: readonly EnemyLootBinding[]): Array<{ tier:
   return LOOT_TIERS.map((tier) => ({ tier, bindings: baseline.filter((b) => lootTierOf(b.dropChance) === tier) }));
 }
 
+function lintOne(
+  b: EnemyLootBinding, state: LintInputs, tierById: ReadonlyMap<string, LootTier>,
+): EconomyFinding[] {
+  const tier = tierById.get(b.archetypeId) ?? lootTierOf(b.dropChance);
+  const peers = state.bindings.filter((p) => (tierById.get(p.archetypeId) ?? lootTierOf(p.dropChance)) === tier);
+  return lintLootEconomy(b, peers, state.rarityGold);
+}
+
+const untunedTiers = (baseline: readonly EnemyLootBinding[]) =>
+  new Map(baseline.map((b) => [b.archetypeId, lootTierOf(b.dropChance)]));
+
+/** Lint ONE tuned binding against the tuned peers of its UNTUNED tier (what the tuner shows). */
+export function bindingFindings(state: LintInputs, id: string): EconomyFinding[] {
+  const b = findBinding(state.bindings, id);
+  return b ? lintOne(b, state, untunedTiers(state.baseline)) : [];
+}
+
 /** Lint every tuned binding against the tuned peers of its UNTUNED tier. */
-export function rosterFindings(state: TunerState): Record<string, EconomyFinding[]> {
-  const tierById = new Map(state.baseline.map((b) => [b.archetypeId, lootTierOf(b.dropChance)]));
+export function rosterFindings(state: LintInputs): Record<string, EconomyFinding[]> {
+  const tierById = untunedTiers(state.baseline);
   const out: Record<string, EconomyFinding[]> = {};
-  for (const b of state.bindings) {
-    const tier = tierById.get(b.archetypeId) ?? lootTierOf(b.dropChance);
-    const peers = state.bindings.filter((p) => (tierById.get(p.archetypeId) ?? lootTierOf(p.dropChance)) === tier);
-    out[b.archetypeId] = lintLootEconomy(b, peers, state.rarityGold);
-  }
+  for (const b of state.bindings) out[b.archetypeId] = lintOne(b, state, tierById);
   return out;
 }

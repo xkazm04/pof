@@ -24,6 +24,18 @@ interface DRCodeGeneratorProps {
   onConfigsChange: (next: DRConfig[]) => void;
 }
 
+const clampTo = (v: number, lo: number, hi: number) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo);
+
+/** Pin each field to the range its input declares; the inputs themselves stay free while typing. */
+function toExportConfig(c: DRConfig): DRConfig {
+  return {
+    ...c,
+    softCap: Math.round(clampTo(c.softCap, 10, 100)),
+    baseValuePerPoint: clampTo(c.baseValuePerPoint, 0.001, 100),
+    postCapMultiplier: clampTo(c.postCapMultiplier, 0.05, 1),
+  };
+}
+
 export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeGeneratorProps) {
   const [codeGenTab, setCodeGenTab] = useState<'header' | 'source' | 'csv' | 'datatable'>('header');
 
@@ -31,11 +43,12 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
     onConfigsChange(drConfigs.map((c, i) => (i === idx ? { ...c, [field]: value } : c)));
 
   const generatedCode = useMemo(() => {
+    const exportConfigs = drConfigs.map(toExportConfig);
     switch (codeGenTab) {
-      case 'header': return generateGEHeader(drConfigs);
-      case 'source': return generateGESource(drConfigs);
-      case 'csv': return generateCurveTableCSV(drConfigs);
-      case 'datatable': return generateDataTableJSON(drConfigs);
+      case 'header': return generateGEHeader(exportConfigs);
+      case 'source': return generateGESource(exportConfigs);
+      case 'csv': return generateCurveTableCSV(exportConfigs);
+      case 'datatable': return generateDataTableJSON(exportConfigs);
     }
   }, [codeGenTab, drConfigs]);
 
@@ -60,6 +73,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   <span className="text-2xs text-text-muted font-mono">Soft Cap</span>
                   <input
                     type="number" min={10} max={100} step={5}
+                    aria-label={`${config.attribute} soft cap`}
                     value={config.softCap}
                     onChange={e => setField(idx, 'softCap', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
@@ -69,6 +83,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   <span className="text-2xs text-text-muted font-mono">Base/pt</span>
                   <input
                     type="number" min={0.001} max={100} step={0.5}
+                    aria-label={`${config.attribute} base value per point`}
                     value={config.baseValuePerPoint}
                     onChange={e => setField(idx, 'baseValuePerPoint', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
@@ -78,6 +93,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   <span className="text-2xs text-text-muted font-mono">Post-Cap</span>
                   <input
                     type="number" min={0.05} max={1} step={0.05}
+                    aria-label={`${config.attribute} post-cap multiplier`}
                     value={config.postCapMultiplier}
                     onChange={e => setField(idx, 'postCapMultiplier', Number(e.target.value))}
                     className="w-14 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-amber-500/50"
@@ -92,7 +108,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
                   const pts = config.softCap + 20;
                   const linear = pts * config.baseValuePerPoint;
                   const effective = drEffectiveBonus(config, pts);
-                  const savings = ((1 - effective / linear) * 100).toFixed(0);
+                  const savings = linear > 0 ? ((1 - effective / linear) * 100).toFixed(0) : '0';
                   return (
                     <div className="flex items-center gap-2 text-2xs font-mono">
                       <span className="text-text-muted">Linear: <span className="text-text">{linear.toFixed(1)}</span></span>
@@ -118,6 +134,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
           <button
             key={tab.id}
             onClick={() => setCodeGenTab(tab.id)}
+            aria-pressed={codeGenTab === tab.id}
             className="px-2.5 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all border"
             style={{
               backgroundColor: codeGenTab === tab.id ? `${ACCENT}${OPACITY_15}` : 'transparent',
@@ -176,7 +193,7 @@ export function DRCodeGenerator({ configs: drConfigs, onConfigsChange }: DRCodeG
         >
           {drConfigs.map((config) => {
             const color = config.color;
-            const maxLinear = 100 * config.baseValuePerPoint;
+            const maxLinear = 100 * config.baseValuePerPoint || 1;
             const points: string[] = [];
             const linearPoints: string[] = [];
             for (let pts = 0; pts <= 100; pts += 5) {

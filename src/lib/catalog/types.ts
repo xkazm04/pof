@@ -8,9 +8,12 @@ import type { GraphNode } from '@/types/unique-tab-improvements';
 import type { ZoneRecord } from '@/components/modules/core-engine/sub_world/_shared/data';
 import type { MontageEntry } from '@/components/modules/core-engine/sub_animation/_shared/data';
 
-/** Where a catalog entity is in the generate-into-UE pipeline. */
-export type LifecycleState =
-  | 'planned' | 'scaffolded' | 'generated' | 'wired' | 'verified' | 'failed';
+/**
+ * Where a catalog entity is in the generate-into-UE pipeline — the ONE declaration. The forward
+ * ladder (`lifecycle.ts` LIFECYCLE_LADDER) and the route's zod enum (`validation.ts`) derive from it.
+ */
+export const LIFECYCLE_STATES = ['planned', 'scaffolded', 'generated', 'wired', 'verified', 'failed'] as const;
+export type LifecycleState = (typeof LIFECYCLE_STATES)[number];
 
 /** Functional-test verdict from the verify step. */
 export type TestResult = 'pass' | 'fail';
@@ -31,7 +34,7 @@ export interface CatalogLink {
  * studio's design work. So the licence rides on every row rather than in a README that the
  * row can be separated from.
  */
-export interface EntityProvenance {
+export interface IngestProvenance {
   kind: 'ingest';
   /** Human name of the originating game, with its year: 'Diablo I (1996)'. */
   sourceGame: string;
@@ -50,6 +53,23 @@ export interface EntityProvenance {
   /** Canon profile the entity's prompts are written for (`canon/profiles.ts`), stamped from its source. */
   canonProfile?: string;
 }
+
+/**
+ * An entity AUTHORED for a game other than PoF's own (spark gtai-uprising-project): it has no
+ * source row to cite, but it must still say which canon profile its prompts are written for —
+ * without it the entity silently falls back to PoF's world (`canonProfileOf`).
+ */
+export interface AuthoredProvenance {
+  kind: 'authored';
+  /** A registered canon profile (`canon/profiles.ts`); its game is `gameOfProfile(canonProfile)`. */
+  canonProfile: string;
+  /** Which door minted it. */
+  authoredVia: 'intake' | 'user' | 'one-shot';
+  authoredAt: string;
+}
+
+/** Where an entity came from when it is not one of PoF's own code-seeded/authored rows. */
+export type EntityProvenance = IngestProvenance | AuthoredProvenance;
 
 /** The shared envelope every catalog entity carries. */
 export interface CatalogEntityBase {

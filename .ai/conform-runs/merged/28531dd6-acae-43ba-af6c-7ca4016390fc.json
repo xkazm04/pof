@@ -1,0 +1,105 @@
+{
+ "schema": "conform-run/1",
+ "worker": "28531dd6-acae-43ba-af6c-7ca4016390fc",
+ "subject": "judgeable-spec-authoring",
+ "evaluatedAt": "2026-11-07T04:58:41.668184+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ability-blueprint",
+   "subject": "judgeable-spec-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:147 The channel template claims per-tick damage and per-second mana drain, but EditorEffect has no period field and the sandbox applies each duration effect's modifiers once, so a 5 s GE_ManaDrain_PerSec costs 8 mana in total and the stated cadence never comes out of running the mechanism.",
+   "techniques": [
+    {
+     "technique": "simulate-the-mechanism-not-the-constant",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:166 In runSimulation (simulation.ts), modifiers are applied once when the effect triggers, and the per-cooldownSec reapplication was removed, so 'PerSec' is a name rather than a simulated rate."
+    },
+    {
+     "technique": "one-field-one-question",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/template-base.ts:125 Template data uses cooldownSec as a DoT tick period (Ignite, DrainBeam 0.5, Poison/Bleed 1), while codegen.ts:125 and simulation.ts:98 treat it as the ability cooldown. The fix kept one reading and did not name a second axis (period), so the DoT templates still contradict that reading."
+    },
+    {
+     "technique": "interpolated-counts-over-typed-counts",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_ability/blueprint/TemplatePicker.tsx:61 Template card counts (attrs/effects/rules/slots) are interpolated from array lengths, not typed."
+    }
+   ]
+  },
+  {
+   "context": "item-catalog-pipeline",
+   "subject": "judgeable-spec-authoring",
+   "bundle": "game-production",
+   "state": "deviation",
+   "evidence": "src/lib/catalog/pipelines/items.ts:569 The DPS note's first sentence is interpolated, but this typed continuation adds a flat +17 to the declared 12\u201318 base and states 22\u201335. Applied literally, the rule gives 29\u201335 (avg 32, about 26.7 DPS), so every downstream figure in the worked chain fails to reproduce.",
+   "techniques": [
+    {
+     "technique": "execute-the-rules-against-the-worked-example",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/items.ts:569 Literal execution: 12+17=29 and 18+17=35, not 22\u201335. Separately, the pfx-2 label at line 375 renders 'Adds 14\u201317' for a single rolled value of 17."
+    },
+    {
+     "technique": "interpolated-counts-over-typed-counts",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/items.ts:422 The typed 'base 5%' contradicts the computed critChance = 0.055 at line 547. totalExplicits: 6 (line 418) is also typed beside the arrays it counts."
+    },
+    {
+     "technique": "enumeration-closure-as-arithmetic",
+     "verdict": "deviation",
+     "evidence": "src/lib/catalog/pipelines/items.ts:436 The target-attribute list leaves out Accuracy, even though the same dependency list names GE_Implicit_SwordAccuracy and the grant law gives the implicit its own handle. The L3 assertion on 'AttackPower delta' (line 447) also names an attribute that no listed GE targets."
+    },
+    {
+     "technique": "quantity-ownership-and-the-bindable-row",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/pipelines/items.ts:590 The shared power-budget quantity is assigned to the Economy step on a stated principle, so this step checks internal DPS consistency only."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "judgeable-spec-authoring",
+   "context": "ability-design",
+   "reason": "The context's only file, src/stores/abilitySpecStore.ts, is a Zustand cache keyed by catalog/entity. It holds EnrichedAbilitySpec records but writes no spec prose, counts, rules or worked examples, so none of the seven techniques can be judged on it. A not-applicable verdict would rest on vocabulary like 'spec' that does appear in the file, and the spec content itself lives outside this context (src/lib/ability/spec)."
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T04:58:41.668184+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "judgeable-spec-authoring"
+   ],
+   "techniques": [
+    "interpolated-counts-over-typed-counts",
+    "one-field-one-question",
+    "simulate-the-mechanism-not-the-constant"
+   ],
+   "deviations": 1,
+   "context": "ability-blueprint",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:58:41.668184+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "judgeable-spec-authoring"
+   ],
+   "techniques": [
+    "enumeration-closure-as-arithmetic",
+    "execute-the-rules-against-the-worked-example",
+    "interpolated-counts-over-typed-counts",
+    "quantity-ownership-and-the-bindable-row"
+   ],
+   "deviations": 1,
+   "context": "item-catalog-pipeline",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

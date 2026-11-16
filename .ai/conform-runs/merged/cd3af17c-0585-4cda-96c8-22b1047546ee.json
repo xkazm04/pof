@@ -1,0 +1,133 @@
+{
+ "schema": "conform-run/1",
+ "worker": "cd3af17c-0585-4cda-96c8-22b1047546ee",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-11-07T00:29:07.761553+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "game-design-studio-api",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/gdd-compliance/route.ts:33 resolve-gap stores a dismissal of a design-doc-vs-code gap keyed only by a stable gap id (gap-<module>-<kind>-<item>), without the evidence revision it dismissed, so every later audit re-applies it even after the code or the GDD moves; a disputed design claim then reads as settled, which is the dismiss-transition failure earned-verification-state names.",
+   "techniques": [
+    {
+     "technique": "earned-verification-state",
+     "verdict": "deviation",
+     "evidence": "src/app/api/gdd-compliance/route.ts:33 The resolution stores resolved_at and a note but no evidence binding. The lib's runComplianceAudit re-marks the gap resolved by id on every re-audit, so there is no reaffirm-against-moved-evidence path."
+    }
+   ],
+   "registryProposal": "earned-verification-state could say outright that a durable 'resolve/dismiss' on a design-doc-vs-code gap must record the evidence revision it dismissed, or else lapse when that evidence changes. In-product doc-compliance tools hit this pattern, not only rot scanners."
+  },
+  {
+   "context": "gdd-compliance",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/GameDesignDocView/index.tsx:39 GameDesignDocView treats an unchanged checklist as proof the synthesized GDD is current and renders no generatedAt. The document's sections come from feature_matrix, level docs, eval findings and builds (gdd-synthesizer.ts:156,189), so after a feature review the view shows a stale GDD as current with no age on screen.",
+   "techniques": [
+    {
+     "technique": "earned-verification-state",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/GameDesignDocView/index.tsx:39 The GDD view's freshness is assumed from a partial input key and its age is not shown. The sibling GDDComplianceView does conform (constants.ts:57 keeps the evidence age separate from the audit stamp and never rounds unknown up to fresh)."
+    },
+    {
+     "technique": "doc-rot-detection",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/constants.ts:116 An unmeasured design-vs-code gap is its own 'unmeasured' state with no lean, not folded into compliant. This is unverifiable-is-not-clean."
+    },
+    {
+     "technique": "checked-vs-skipped-denominators",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/EvidenceStrip.tsx:10 The score is printed as a fraction of what was checked. index.tsx:126 says 'unmeasured \u2014 no evidence' when nothing was checked."
+    },
+    {
+     "technique": "source-doc-mapping",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/evaluator/GDDComplianceView/MappingStrip.tsx:22 Reports the coverage of the checklist\u2192feature map (unmapped, guessed by label substring, dangling mappings at :23), not just its membership. It is a report, not a gate."
+    }
+   ]
+  },
+  {
+   "context": "feature-design-state-hooks",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/hooks/useGameDesignDoc.ts:113 The freshness gate keys the cached GDD on project and checklist hash only, while synthesizeGDD also reads feature_matrix, level_design_docs, audio scenes, eval findings and builds. The hook therefore adopts a document as 'still-fresh' after inputs it never digested have changed, and only a forced refresh rechecks.",
+   "techniques": [
+    {
+     "technique": "earned-verification-state",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useGameDesignDoc.ts:113 A freshness claim is granted without checking most of the evidence the document is derived from (gdd-synthesizer.ts:156 featureSummary, :189 evalFindings). Cache key at :135."
+    },
+    {
+     "technique": "doc-rot-detection",
+     "verdict": "conformant",
+     "evidence": "src/hooks/useDesignDocument.ts:71 Level design docs with no code link are counted as unlinked, separate from synced. The uncheckable are not folded into clean."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "ue5-state-sync",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "project-setup-core",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T00:29:07.761553+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "earned-verification-state"
+   ],
+   "deviations": 1,
+   "context": "game-design-studio-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:29:07.761553+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "checked-vs-skipped-denominators",
+    "doc-rot-detection",
+    "earned-verification-state",
+    "source-doc-mapping"
+   ],
+   "deviations": 1,
+   "context": "gdd-compliance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T00:29:07.761553+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "doc-rot-detection",
+    "earned-verification-state"
+   ],
+   "deviations": 1,
+   "context": "feature-design-state-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

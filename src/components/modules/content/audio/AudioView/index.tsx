@@ -6,6 +6,7 @@ import {
   Library, Sparkles,
 } from 'lucide-react';
 import { FetchError } from '@/components/modules/shared/FetchError';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { RoadmapChecklist } from '@/components/modules/shared/RoadmapChecklist';
 import { FeatureMatrix } from '@/components/modules/shared/FeatureMatrix';
 import { AudioEventCatalog } from '@/components/modules/content/audio/AudioEventCatalog';
@@ -87,6 +88,9 @@ export function AudioView() {
     commitSetting,
   } = useAudioView();
   const [forgeTargetSetId, setForgeTargetSetId] = useState<string | null>(null);
+  // Deleting drops the scene row AND its persisted Event Catalog, so it asks
+  // first; a refused delete (`deleteDoc` resolves false) stays open with a reason.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // The full-screen spinner is for the FIRST load only. `useCRUD.refetch` raises
   // `isLoading` on every background refetch (each save triggers one), and blanking
@@ -110,6 +114,8 @@ export function AudioView() {
       {/* Toast notification */}
       {rvToast && (
         <div
+          role={rvToast.type === 'success' ? 'status' : 'alert'}
+          aria-live={rvToast.type === 'success' ? 'polite' : 'assertive'}
           className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
             rvToast.type === 'success'
               ? 'bg-surface border-green-500/30 text-green-400'
@@ -117,6 +123,7 @@ export function AudioView() {
           }`}
         >
           <span
+            aria-hidden="true"
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: rvToast.type === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
           />
@@ -158,6 +165,7 @@ export function AudioView() {
               </div>
 
               <button
+                type="button"
                 onClick={handleGenerateAll}
                 disabled={audioCli.isRunning || (activeDoc.zones.length === 0 && activeDoc.emitters.length === 0)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
@@ -168,20 +176,35 @@ export function AudioView() {
                 }}
               >
                 {audioCli.isRunning ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Zap className="w-3 h-3" />
+                  <Zap className="w-3 h-3" aria-hidden="true" />
                 )}
                 {audioCli.isRunning ? 'Generating...' : 'Generate Audio System'}
               </button>
 
               <button
-                onClick={() => deleteDoc(activeDoc.id)}
-                className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors focus-ring"
                 title="Delete scene"
+                aria-label="Delete scene"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
+              <ConfirmDialog
+                open={confirmDelete}
+                onClose={() => setConfirmDelete(false)}
+                onConfirm={async () => {
+                  if (!(await deleteDoc(activeDoc.id))) {
+                    throw new Error('The scene could not be deleted — it is still here.');
+                  }
+                }}
+                title="Delete this audio scene?"
+                description={<>&ldquo;{activeDoc.name}&rdquo; and its Event Catalog will be removed. This cannot be undone.</>}
+                confirmLabel="Delete"
+                busyLabel="Deleting…"
+              />
             </div>
 
             {/* Tab bar */}
@@ -282,6 +305,7 @@ export function AudioView() {
                   key={activeDoc.id}
                   activeDoc={activeDoc}
                   commitSetting={commitSetting}
+                  scene={sceneSession.buffer}
                 />
               )}
 

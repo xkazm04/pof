@@ -35,7 +35,9 @@ const PAD_BOTTOM = 20;
 
 /* ── Variant props ──────────────────────────────────────────────────────── */
 
-export interface BarsRow { label: string; value: number; color?: string; highlight?: boolean; unit?: string }
+export interface BarsRow { label: string; value: number; color?: string; highlight?: boolean; unit?: string;
+  /** Printed instead of `value` when the number alone would read wrong (`1` beside `0.08`): the bar still draws `value`. */
+  valueText?: string }
 export interface ScatterPoint { x: number; y: number; color?: string; size?: number; label?: string }
 
 export type ChartPanelProps = {
@@ -62,16 +64,16 @@ export function ChartPanel(props: ChartPanelProps) {
   const reduce = useReducedMotion();
   const stagger = (reduce ? 0 : props.staggerMs ?? 25) / 1000;
   switch (props.variant) {
-    case 'bars': return <BarsChart {...props} staggerSec={stagger} />;
-    case 'scatter': return <ScatterChart {...props} staggerSec={stagger} />;
-    case 'histogram': return <HistogramChart {...props} staggerSec={stagger} />;
-    case 'waveform': return <WaveformChart {...props} staggerSec={stagger} />;
+    case 'bars': return <BarsChart {...props} staggerSec={stagger} reduced={!!reduce} />;
+    case 'scatter': return <ScatterChart {...props} staggerSec={stagger} reduced={!!reduce} />;
+    case 'histogram': return <HistogramChart {...props} staggerSec={stagger} reduced={!!reduce} />;
+    case 'waveform': return <WaveformChart {...props} staggerSec={stagger} reduced={!!reduce} />;
   }
 }
 
 /* ── Bars ───────────────────────────────────────────────────────────────── */
 
-function BarsChart({ t, rows, max, labelWidth = 90, ariaLabel, staggerSec }: Extract<ChartPanelProps, { variant: 'bars' }> & { staggerSec: number }) {
+function BarsChart({ t, rows, max, labelWidth = 90, ariaLabel, staggerSec, reduced }: Extract<ChartPanelProps, { variant: 'bars' }> & { staggerSec: number; reduced: boolean }) {
   const domainMax = max ?? Math.max(...rows.map((r) => r.value), 1) * 1.1;
   const scale = scaleLinear([0, domainMax], [0, 100]);
   return (
@@ -81,16 +83,19 @@ function BarsChart({ t, rows, max, labelWidth = 90, ariaLabel, staggerSec }: Ext
         return (
           <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: labelWidth, fontSize: 14, color: t.text, flexShrink: 0 }}>{r.label}</span>
-            <div style={{ flex: 1, height: 16, background: t.line, opacity: 0.4 }}>
+            <div style={{ flex: 1, height: 16, position: 'relative' }}>
+              {/* The tint is a SIBLING layer: opacity composes, so a dimmed track wrapping the fill dimmed it too. */}
+              <div aria-hidden style={{ position: 'absolute', inset: 0, background: t.line, opacity: 0.4 }} />
               <motion.div
+                data-testid="bar-fill"
                 initial={{ width: 0 }}
-                animate={{ width: `${scale(r.value)}%` }}
-                transition={{ duration: 0.55, delay: i * staggerSec, ease: 'easeOut' }}
-                style={{ height: '100%', background: fill, opacity: r.highlight ? 1 : 0.85 }}
+                animate={{ width: `${Math.min(100, Math.max(0, scale(r.value)))}%` }}
+                transition={{ duration: reduced ? 0 : 0.55, delay: i * staggerSec, ease: 'easeOut' }}
+                style={{ position: 'relative', height: '100%', background: fill, opacity: r.highlight ? 1 : 0.85 }}
               />
             </div>
             <span className={t.fontMono} style={{ width: 44, textAlign: 'right', fontSize: 14, color: t.text }}>
-              {r.value}{r.unit ? r.unit : ''}
+              {r.valueText ?? r.value}{r.unit ? r.unit : ''}
             </span>
           </div>
         );
@@ -103,8 +108,8 @@ function BarsChart({ t, rows, max, labelWidth = 90, ariaLabel, staggerSec }: Ext
 
 function ScatterChart({
   t, reference, points = [], xDomain, yDomain,
-  width = 320, height = 170, xLabel, yLabel, ariaLabel, staggerSec,
-}: Extract<ChartPanelProps, { variant: 'scatter' }> & { staggerSec: number }) {
+  width = 320, height = 170, xLabel, yLabel, ariaLabel, staggerSec, reduced,
+}: Extract<ChartPanelProps, { variant: 'scatter' }> & { staggerSec: number; reduced: boolean }) {
   const sx = scaleLinear(xDomain, [PAD_LEFT, width - PAD_RIGHT]);
   const sy = scaleLinear(yDomain, [height - PAD_BOTTOM, PAD_TOP]);
   const refPath = reference.map((p) => `${sx(p.x)},${sy(p.y)}`).join(' ');
@@ -117,7 +122,7 @@ function ScatterChart({
       <motion.polyline
         initial={{ opacity: 0, pathLength: 0 }}
         animate={{ opacity: 0.6, pathLength: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
+        transition={{ duration: reduced ? 0 : 0.6, ease: 'easeOut' }}
         fill="none" stroke={t.ink} strokeWidth={1.5} strokeDasharray="5 3"
         points={refPath}
       />
@@ -125,7 +130,7 @@ function ScatterChart({
         <motion.circle
           key={`ref-${i}`} cx={sx(p.x)} cy={sy(p.y)} r={3.5} fill={t.muted}
           initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3, delay: i * staggerSec }}
+          transition={{ duration: reduced ? 0 : 0.3, delay: i * staggerSec }}
         />
       ))}
       {points.map((p, i) => (
@@ -133,7 +138,7 @@ function ScatterChart({
           key={`pt-${i}`} cx={sx(p.x)} cy={sy(p.y)} r={p.size ?? 6.5}
           fill={p.color ?? t.ok} stroke={t.bg} strokeWidth={2}
           initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.35, delay: 0.4 + i * staggerSec, ease: 'easeOut' }}
+          transition={{ duration: reduced ? 0 : 0.35, delay: 0.4 + i * staggerSec, ease: 'easeOut' }}
         >
           {p.label && <title>{p.label}</title>}
         </motion.circle>
@@ -144,7 +149,7 @@ function ScatterChart({
 
 /* ── Histogram ──────────────────────────────────────────────────────────── */
 
-function HistogramChart({ t, bars, max, height = 130, ariaLabel, staggerSec }: Extract<ChartPanelProps, { variant: 'histogram' }> & { staggerSec: number }) {
+function HistogramChart({ t, bars, max, height = 130, ariaLabel, staggerSec, reduced }: Extract<ChartPanelProps, { variant: 'histogram' }> & { staggerSec: number; reduced: boolean }) {
   const width = 320;
   const domainMax = max ?? Math.max(...bars.map((b) => b.value), 1);
   const sy = scaleLinear([0, domainMax], [0, height - 20]);
@@ -153,7 +158,7 @@ function HistogramChart({ t, bars, max, height = 130, ariaLabel, staggerSec }: E
   return (
     <svg role="img" aria-label={ariaLabel ?? 'histogram'} viewBox={`0 0 ${width} ${height}`} width="100%" height={height} style={{ marginTop: 8 }}>
       {bars.map((b, i) => {
-        const h = sy(b.value);
+        const h = Math.min(height - 20, Math.max(0, sy(b.value)));
         const fill = b.highlight ? t.ink : t.line;
         return (
           <motion.rect
@@ -162,7 +167,7 @@ function HistogramChart({ t, bars, max, height = 130, ariaLabel, staggerSec }: E
             fill={fill} opacity={b.highlight ? 1 : 0.55}
             initial={{ scaleY: 0, transformOrigin: `center ${height - 10}px` }}
             animate={{ scaleY: 1 }}
-            transition={{ duration: 0.45, delay: i * staggerSec, ease: 'easeOut' }}
+            transition={{ duration: reduced ? 0 : 0.45, delay: i * staggerSec, ease: 'easeOut' }}
           />
         );
       })}
@@ -172,7 +177,7 @@ function HistogramChart({ t, bars, max, height = 130, ariaLabel, staggerSec }: E
 
 /* ── Waveform ───────────────────────────────────────────────────────────── */
 
-function WaveformChart({ t, samples, active, height = 70, ariaLabel, staggerSec }: Extract<ChartPanelProps, { variant: 'waveform' }> & { staggerSec: number }) {
+function WaveformChart({ t, samples, active, height = 70, ariaLabel, staggerSec, reduced }: Extract<ChartPanelProps, { variant: 'waveform' }> & { staggerSec: number; reduced: boolean }) {
   const width = 300;
   const slot = width / Math.max(samples.length, 1);
   const barWidth = Math.max(2, slot - 2);
@@ -187,7 +192,7 @@ function WaveformChart({ t, samples, active, height = 70, ariaLabel, staggerSec 
             fill={active ? t.ink : t.line} opacity={active ? 0.8 : 0.4}
             initial={{ scaleY: 0, transformOrigin: `center ${height / 2}px` }}
             animate={{ scaleY: 1 }}
-            transition={{ duration: 0.35, delay: i * staggerSec * 0.5, ease: 'easeOut' }}
+            transition={{ duration: reduced ? 0 : 0.35, delay: i * staggerSec * 0.5, ease: 'easeOut' }}
           />
         );
       })}

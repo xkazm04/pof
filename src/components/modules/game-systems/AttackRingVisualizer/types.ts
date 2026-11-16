@@ -1,1 +1,1 @@
-export type RingPoint = { x: number; y: number; angle: number };
+export type { RingPoint } from '@/components/ui/svg/polar-layout';

@@ -54,7 +54,7 @@ export function PathBrowser(props: PathBrowserProps) {
   } = usePathBrowser(props);
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden bg-[#0d0d24]">
+    <div className="border border-border rounded-lg overflow-hidden bg-surface-deep">
       {/* Path bar */}
       <div className="flex items-center gap-2 px-3 py-2 bg-surface border-b border-border">
         <FolderOpen className="w-4 h-4 text-accent-setup shrink-0" aria-hidden="true" />
@@ -116,10 +116,10 @@ export function PathBrowser(props: PathBrowserProps) {
               <button
                 key={engine.path}
                 onClick={() => handleEngineClick(engine)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#3b82f6]/5 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-status-blue-subtle transition-colors"
               >
-                <ChevronRight className="w-3 h-3 text-[#3b82f6] shrink-0" />
-                <span className="text-sm text-[#3b82f6] font-medium">UE {engine.version}</span>
+                <ChevronRight className="w-3 h-3 text-[var(--core)] shrink-0" />
+                <span className="text-sm text-[var(--core)] font-medium">UE {engine.version}</span>
                 <span className="text-xs text-text-muted truncate ml-auto">{engine.path}</span>
               </button>
             ))}

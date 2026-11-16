@@ -76,7 +76,7 @@ for i, f in enumerate(picks):
     cam.location = target + mathutils.Vector((2.6, -2.6, 1.4))
     direction = target - cam.location
     cam.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
-    scene.render.filepath = strip_path.replace(".png", f"_{i}.png")
+    scene.render.filepath = f"{os.path.splitext(strip_path)[0]}_{i}.png"
     bpy.ops.render.render(write_still=True)
     tiles.append(scene.render.filepath)
 

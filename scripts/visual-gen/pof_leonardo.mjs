@@ -41,7 +41,11 @@ async function req(method, url, body) {
 async function main() {
   const a = parseArgs(process.argv);
   if (!API_KEY) { console.log('POF_LEO_ERROR=no LEONARDO_API_KEY'); process.exit(1); }
-  if (!a.prompt || !a.output) { console.log('POF_LEO_ERROR=need --prompt --output'); process.exit(1); }
+  // A flag with no value parses as `true`, which would pay first and fail at resolve(true).
+  if (typeof a.prompt !== 'string' || typeof a.output !== 'string') { console.log('POF_LEO_ERROR=need --prompt --output'); process.exit(1); }
+  for (const dim of ['width', 'height']) {
+    if (a[dim] !== undefined && !(Number.parseInt(a[dim], 10) > 0)) { console.log(`POF_LEO_ERROR=--${dim} must be a positive integer`); process.exit(1); }
+  }
 
   const params = {
     quality: a.quality || 'HIGH',
@@ -54,6 +58,21 @@ async function main() {
   if (a.style) params.style = a.style;
 
   let genId;
+  // Idempotent: the `finally` below and a signal can both reach it.
+  async function deleteGeneration() {
+    if (!genId || a['no-cleanup']) return;
+    const id = genId;
+    genId = undefined;
+    try { await req('DELETE', `${V1}/generations/${id}`); console.log('POF_LEO_CLEANED=' + id); }
+    catch { console.log('POF_LEO_CLEANUP_FAILED=' + id); }
+  }
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.once(sig, () => {
+      console.log('POF_LEO_ERROR=interrupted by ' + sig);
+      deleteGeneration().finally(() => process.exit(sig === 'SIGINT' ? 130 : 143));
+    });
+  }
+
   try {
     const sub = await req('POST', `${V2}/generations`, { public: false, model: a.model || 'gpt-image-2', parameters: params });
     genId = sub.generate?.generationId;
@@ -62,15 +81,24 @@ async function main() {
 
     let gen;
     for (let i = 0; i < 80; i++) {
-      const d = await req('GET', `${V1}/generations/${genId}`);
+      let d;
+      // A flaky poll must not cost a paid generation (same rule as lib/leonardo.ts): only a
+      // 4xx other than 429 says retrying is pointless.
+      try { d = await req('GET', `${V1}/generations/${genId}`); }
+      catch (e) {
+        if (/^4(?!29)\d\d:/.test(String(e.message))) throw e;
+        await sleep(3000);
+        continue;
+      }
       gen = d.generations_by_pk;
       if (gen?.status === 'COMPLETE') break;
       if (gen?.status === 'FAILED') throw new Error('generation FAILED');
       await sleep(3000);
     }
-    const img = (gen.generated_images || [])[0];
+    const img = (gen?.generated_images || [])[0];
     if (!img) throw new Error('no images (timed out?)');
     const r = await fetch(img.url);
+    if (!r.ok) throw new Error(`image download ${r.status}`);
     const buf = Buffer.from(await r.arrayBuffer());
     const p = resolve(a.output);
     mkdirSync(dirname(p), { recursive: true });
@@ -78,11 +106,9 @@ async function main() {
     console.log(`POF_LEO_DONE=${p.replace(/\\/g, '/')} bytes=${buf.length}`);
   } catch (e) {
     console.log('POF_LEO_ERROR=' + String(e.message || e).slice(0, 300));
+    process.exitCode = 1;
   } finally {
-    if (genId && !a['no-cleanup']) {
-      try { await req('DELETE', `${V1}/generations/${genId}`); console.log('POF_LEO_CLEANED=' + genId); }
-      catch { console.log('POF_LEO_CLEANUP_FAILED=' + genId); }
-    }
+    await deleteGeneration();
   }
 }
 main();

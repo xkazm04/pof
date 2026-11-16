@@ -58,6 +58,20 @@ export function archetypeIcon(a: { iconKey?: string }): LucideIcon {
 }
 
 export type EnemyRole = 'melee' | 'ranged' | 'tank' | 'healer' | 'caster' | 'swarm';
+
+/**
+ * The one role -> colour vocabulary for every bestiary chart (role donut, spawn formation).
+ * A role keeps the same hue on every surface; keyed by EnemyRole so a new role cannot
+ * fall through to a shared neutral.
+ */
+export const ENEMY_ROLE_COLORS: Record<EnemyRole, string> = {
+  melee: ACCENT_RED,
+  ranged: ACCENT_PURPLE_BOLD,
+  tank: MODULE_COLORS.content,
+  healer: ACCENT_EMERALD,
+  caster: ACCENT_CYAN,
+  swarm: ACCENT_PINK,
+};
 export type EnemyCategory = 'Humanoid' | 'Beast' | 'Droid' | 'Force-sensitive' | 'Undead';
 export type EnemyTier = 'minion' | 'standard' | 'elite' | 'boss' | 'raid-boss';
 
@@ -299,7 +313,7 @@ export const ELITE_MODIFIERS: EliteModifier[] = [
       { stat: 'Speed', mult: 1.2, label: '+20% Speed' },
       { stat: 'HP', mult: 0.8, label: '-20% HP' },
     ],
-    geClass: 'GE_Elite_Enraged', excludes: ['pacified'],
+    geClass: 'GE_Elite_Enraged', excludes: ['bolstered'],
   },
   {
     id: 'shielded', name: 'Shielded', color: ACCENT_CYAN, icon: '\u{1F6E1}\u{FE0F}',
@@ -326,7 +340,7 @@ export const ELITE_MODIFIERS: EliteModifier[] = [
       { stat: 'HP', mult: 1.4, label: '+40% HP' },
       { stat: 'Speed', mult: 0.85, label: '-15% Speed' },
     ],
-    geClass: 'GE_Elite_Bolstered',
+    geClass: 'GE_Elite_Bolstered', excludes: ['enraged'],
   },
   {
     id: 'arcane', name: 'Arcane', color: STATUS_INFO, icon: '\u{2728}',
@@ -554,17 +568,24 @@ export const DIFFICULTY_BRUTE: DifficultyPoint[] = [
   { level: 45, value: 32 }, { level: 50, value: 28 },
 ];
 
+/** Difficulty-curve series; label + colour resolved from ARCHETYPES by id. */
+export const DIFFICULTY_SERIES: { id: string; label: string; color: string; data: DifficultyPoint[] }[] = [
+  { id: 'melee-grunt', data: DIFFICULTY_GRUNT },
+  { id: 'ranged-caster', data: DIFFICULTY_CASTER },
+  { id: 'brute', data: DIFFICULTY_BRUTE },
+].map(s => ({ ...s, ...archetypeIdentity(s.id) }));
+
 /* ── 5.5 Spawn Wave Choreographer data ───────────────────────────────── */
 
 export interface SpawnPoint { id: number; x: number; y: number; order: number; role?: EnemyRole; color?: string; }
 
 export const SPAWN_POINTS: SpawnPoint[] = [
-  { id: 1, x: 70, y: 15.6, order: 1, role: 'melee', color: ACCENT_RED },
-  { id: 2, x: 116.7, y: 38.9, order: 2, role: 'ranged', color: ACCENT_PURPLE_BOLD },
-  { id: 3, x: 116.7, y: 93.3, order: 3, role: 'tank', color: MODULE_COLORS.content },
-  { id: 4, x: 70, y: 120.6, order: 4, role: 'melee', color: ACCENT_RED },
-  { id: 5, x: 23.3, y: 93.3, order: 5, role: 'caster', color: ACCENT_CYAN },
-  { id: 6, x: 23.3, y: 38.9, order: 6, role: 'healer', color: ACCENT_EMERALD },
+  { id: 1, x: 70, y: 15.6, order: 1, role: 'melee', color: ENEMY_ROLE_COLORS.melee },
+  { id: 2, x: 116.7, y: 38.9, order: 2, role: 'ranged', color: ENEMY_ROLE_COLORS.ranged },
+  { id: 3, x: 116.7, y: 93.3, order: 3, role: 'tank', color: ENEMY_ROLE_COLORS.tank },
+  { id: 4, x: 70, y: 120.6, order: 4, role: 'melee', color: ENEMY_ROLE_COLORS.melee },
+  { id: 5, x: 23.3, y: 93.3, order: 5, role: 'caster', color: ENEMY_ROLE_COLORS.caster },
+  { id: 6, x: 23.3, y: 38.9, order: 6, role: 'healer', color: ENEMY_ROLE_COLORS.healer },
 ];
 
 export interface WaveConfig { id: number; delay: string; count: number; archetype: string; }
@@ -594,12 +615,23 @@ export interface ArchetypeStats {
   dangerRank: number;
 }
 
-export const KILL_DEATH_STATS: ArchetypeStats[] = [
-  { id: 'melee-grunt', label: 'Forest Grunt', color: ACCENT_RED, timesSpawned: 1247, timesKilled: 1198, avgLifespan: '18.3s', totalDmgDealt: 45230, killsOnPlayer: 23, dangerRank: 3 },
-  { id: 'ranged-caster', label: 'Dark Mage', color: ACCENT_PURPLE_BOLD, timesSpawned: 843, timesKilled: 801, avgLifespan: '24.7s', totalDmgDealt: 67890, killsOnPlayer: 31, dangerRank: 4 },
-  { id: 'brute', label: 'Stone Brute', color: MODULE_COLORS.content, timesSpawned: 412, timesKilled: 356, avgLifespan: '42.1s', totalDmgDealt: 89450, killsOnPlayer: 67, dangerRank: 1 },
-  { id: 'elite-knight', label: 'Hollow Knight', color: MODULE_COLORS.core, timesSpawned: 298, timesKilled: 241, avgLifespan: '38.5s', totalDmgDealt: 72340, killsOnPlayer: 52, dangerRank: 2 },
+type KillDeathRow = Omit<ArchetypeStats, 'label' | 'color'>;
+
+/** Label + colour for an archetype id: ARCHETYPES is the single owner of identity. */
+export function archetypeIdentity(id: string): { label: string; color: string } {
+  const a = ARCHETYPES.find(x => x.id === id);
+  if (!a) throw new Error(`Unknown archetype id: ${id}`);
+  return { label: a.label, color: a.color };
+}
+
+const KILL_DEATH_ROWS: KillDeathRow[] = [
+  { id: 'melee-grunt', timesSpawned: 1247, timesKilled: 1198, avgLifespan: '18.3s', totalDmgDealt: 45230, killsOnPlayer: 23, dangerRank: 3 },
+  { id: 'ranged-caster', timesSpawned: 843, timesKilled: 801, avgLifespan: '24.7s', totalDmgDealt: 67890, killsOnPlayer: 31, dangerRank: 4 },
+  { id: 'brute', timesSpawned: 412, timesKilled: 356, avgLifespan: '42.1s', totalDmgDealt: 89450, killsOnPlayer: 67, dangerRank: 1 },
+  { id: 'elite-knight', timesSpawned: 298, timesKilled: 241, avgLifespan: '38.5s', totalDmgDealt: 72340, killsOnPlayer: 52, dangerRank: 2 },
 ];
+
+export const KILL_DEATH_STATS: ArchetypeStats[] = KILL_DEATH_ROWS.map(r => ({ ...r, ...archetypeIdentity(r.id) }));
 
 export const MAX_KILLS_ON_PLAYER = Math.max(...KILL_DEATH_STATS.map(a => a.killsOnPlayer)) || 1;
 
@@ -667,6 +699,9 @@ export const TACTICS_ENEMIES: TacticsEnemy[] = [
   { id: 4, x: 24, y: 104, role: 'waiting', label: 'WAIT-1' },
   { id: 5, x: 136, y: 24, role: 'waiting', label: 'WAIT-2' },
 ];
+
+/** Group-tactics rules the planner map and its config chips both read. */
+export const TACTICS_CONFIG = { maxSimultaneous: 2, flankingEnabled: true } as const;
 
 export const TACTICS_ROLE_COLORS: Record<TacticsEnemy['role'], string> = {
   attacking: ACCENT_RED,

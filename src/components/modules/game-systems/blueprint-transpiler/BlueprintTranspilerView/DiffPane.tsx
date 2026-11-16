@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import type { SemanticDiffResult } from '@/types/blueprint';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
-import { OPACITY_20, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
+import { OPACITY_20, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { ACCENT, CONFLICT_STYLES } from './constants';
 import { ChangeCard } from './ChangeCard';
 
@@ -49,6 +49,7 @@ export function DiffPane({
           </div>
           <textarea
             className="flex-1 min-h-[140px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+            aria-label="Blueprint JSON to compare"
             placeholder="Paste Blueprint JSON..."
             value={blueprintJson}
             onChange={(e) => setBlueprintJson(e.target.value)}
@@ -64,6 +65,7 @@ export function DiffPane({
           </div>
           <textarea
             className="flex-1 min-h-[140px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+            aria-label="Existing C++ to compare"
             placeholder="Paste existing C++ header/source to compare..."
             value={existingCpp}
             onChange={(e) => setExistingCpp(e.target.value)}
@@ -92,7 +94,7 @@ export function DiffPane({
 
       {/* Error */}
       {error && (
-        <div className="px-3 py-2 bg-status-red-subtle border-t border-status-red-strong text-xs text-red-400 flex items-center gap-2">
+        <div className="px-3 py-2 bg-status-red-subtle border-t border-status-red-strong text-xs flex items-center gap-2" style={{ color: STATUS_ERROR }}>
           <XCircle className="w-3.5 h-3.5" /> {error}
         </div>
       )}

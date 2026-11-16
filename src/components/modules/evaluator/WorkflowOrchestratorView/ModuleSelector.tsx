@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Play } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { SubModuleId } from '@/types/modules';
@@ -15,10 +15,11 @@ export function ModuleSelector({
   onToggle: (id: SubModuleId) => void;
   onStart: () => void;
 }) {
-  const [selectAll, setSelectAll] = useState(false);
+  // Derived, never stored: a remembered flag drifted as soon as a chip was clicked.
+  const allSelected = AVAILABLE_MODULES.every((m) => selected.includes(m));
 
   const handleSelectAll = useCallback(() => {
-    if (selectAll) {
+    if (allSelected) {
       // Deselect all
       for (const m of selected) onToggle(m as SubModuleId);
     } else {
@@ -26,8 +27,7 @@ export function ModuleSelector({
         if (!selected.includes(m)) onToggle(m);
       }
     }
-    setSelectAll(!selectAll);
-  }, [selectAll, selected, onToggle]);
+  }, [allSelected, selected, onToggle]);
 
   return (
     <SurfaceCard className="p-4 mt-4">
@@ -38,7 +38,7 @@ export function ModuleSelector({
           onClick={handleSelectAll}
           className="text-2xs text-cyan-400 hover:text-cyan-300 transition-colors"
         >
-          {selectAll ? 'Deselect All' : 'Select All'}
+          {allSelected ? 'Deselect All' : 'Select All'}
         </button>
       </div>
 

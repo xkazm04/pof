@@ -1,11 +1,13 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { drainPythonAll, readDispatch, hasResult, type PythonDrainDeps } from '@/lib/catalog/acceptance/pythonDrain';
 import { listAllArtifacts } from '@/lib/pipeline-artifacts-db';
 import { persistRegrade, realArtifactIO, createTouched, parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
 import { gradeArtifact } from '@/lib/catalog/headless';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { runPython } from '@/lib/bridge/run-python';
+import { readSweepBody } from '@/app/api/pipeline-artifacts/_lib/sweepBody';
 import '@/lib/catalog/pipelines/registry.generated';
 
 /**
@@ -13,13 +15,33 @@ import '@/lib/catalog/pipelines/registry.generated';
  * (`/pof/python/run`) and re-grades the artifact with the module's own return.
  *
  * The editor must be RUNNING with the PoF bridge (default http://localhost:30040); with it
- * closed every step reports `bridge-error` and NOTHING is written — "we could not ask" is
+ * closed the first step of each entity reports `bridge-error` (its later steps `upstream-failed`, not dispatched) and NOTHING is written — "we could not ask" is
  * not "the step failed". This is the opposite prerequisite to `/drain`, which spawns its own
  * headless editor and therefore needs the editor CLOSED.
  *
  * The module's return is persisted through the one re-grade door (`acceptance/regrade.ts`), and
  * each entity it wrote gets its lifecycle re-derived once after the run.
  */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * The editor bridge is a LOCAL process: a caller-supplied `bridgeUrl` is fetched by the server,
+ * so only an explicit-port http(s) loopback address is accepted (anything else is an SSRF
+ * pivot to an arbitrary host). Returns the reason it was refused, or null when acceptable.
+ */
+function bridgeUrlProblem(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return 'bridgeUrl is not a valid URL';
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'bridgeUrl must be http(s)';
+  if (!LOOPBACK_HOSTS.has(u.hostname)) return 'bridgeUrl must be a loopback address (localhost, 127.0.0.1 or [::1])';
+  if (!u.port) return 'bridgeUrl must include a port';
+  return null;
+}
+
 function makeDeps(bridgeUrl?: string): PythonDrainDeps & { flushLifecycle: () => void } {
   const touched = createTouched();
   return {
@@ -84,10 +106,25 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as {
-      catalogId?: string; entityId?: string; force?: boolean; continueOnFail?: boolean; bridgeUrl?: string; apply?: boolean;
+    const denied = requireOperator(req);
+    if (denied) return denied;
+    const read = await readSweepBody(req);
+    if (!read.ok) return read.error;
+    const body = read.data as {
+      catalogId?: string; entityId?: string; force?: boolean; continueOnFail?: boolean; bridgeUrl?: unknown; apply?: boolean;
     };
-    const deps = makeDeps(body.bridgeUrl);
+    // A flag that is present must be a boolean: `apply: 'false'` used to read as a LIVE apply.
+    for (const flag of ['apply', 'force', 'continueOnFail'] as const) {
+      if (body[flag] !== undefined && typeof body[flag] !== 'boolean') return apiError(`${flag} must be a boolean`, 400);
+    }
+    let bridgeUrl: string | undefined;
+    if (body.bridgeUrl !== undefined) {
+      if (typeof body.bridgeUrl !== 'string') return apiError('bridgeUrl must be a string', 400);
+      const problem = bridgeUrlProblem(body.bridgeUrl);
+      if (problem) return apiError(problem, 400);
+      bridgeUrl = body.bridgeUrl;
+    }
+    const deps = makeDeps(bridgeUrl);
     const summary = await drainPythonAll(
       parseSweepFilter(body),
       deps,

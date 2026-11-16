@@ -10,7 +10,7 @@
 import type { CatalogDistribution } from './index';
 import { gapBasisOf } from './coverage';
 import { pluginFor } from './plugins';
-import { planClosure, type ClosurePlan } from './closurePlan';
+import { gapDeficit, planClosure, type ClosurePlan } from './closurePlan';
 
 /** One under-represented bucket of one catalog, as a proposal target. */
 export interface GapTarget {
@@ -42,8 +42,13 @@ function cmp(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-function byStableIdentity(a: GapTarget, b: GapTarget): number {
-  return b.deficit - a.deficit
+interface RankedTarget { target: GapTarget; deficit: number }
+
+/** Order by the un-rounded deficit (`gapDeficit`, the closure plan's rule); ties fall to stable identity. */
+function byStableIdentity(x: RankedTarget, y: RankedTarget): number {
+  const a = x.target;
+  const b = y.target;
+  return y.deficit - x.deficit
     || cmp(a.catalogId, b.catalogId)
     || cmp(a.attribute, b.attribute)
     || cmp(a.value, b.value);
@@ -54,16 +59,23 @@ export function rankCatalogGaps(
   sharesOf: (catalogId: string) => Record<string, Record<string, number>> = (id) => pluginFor(id)?.expectedShare ?? {},
 ): CatalogGapRanking {
   const plans: Record<string, ClosurePlan> = {};
-  const targets: GapTarget[] = [];
+  const targets: RankedTarget[] = [];
   const unmeasured: string[] = [];
   const balanced: string[] = [];
   for (const d of distributions) {
     if (d.underrepresented.length) {
-      plans[d.catalogId] = planClosure(d, sharesOf(d.catalogId));
+      const shares = sharesOf(d.catalogId);
+      plans[d.catalogId] = planClosure(d, shares);
       for (const u of d.underrepresented) {
+        const share = shares[u.attribute]?.[u.value];
+        const total = Object.values(d.byAttribute[u.attribute] ?? {}).reduce((a, b) => a + b, 0);
         targets.push({
-          catalogId: d.catalogId, attribute: u.attribute, value: u.value,
-          count: u.count, expected: u.expected, deficit: u.expected - u.count,
+          target: {
+            catalogId: d.catalogId, attribute: u.attribute, value: u.value,
+            count: u.count, expected: u.expected, deficit: u.expected - u.count,
+          },
+          // No declared share to re-derive from: the rounded gap is all there is.
+          deficit: share === undefined ? u.expected - u.count : gapDeficit(u.count, share, total),
         });
       }
     } else if (gapBasisOf(d) === 'expected-share') {
@@ -73,7 +85,7 @@ export function rankCatalogGaps(
     }
   }
   return {
-    targets: targets.sort(byStableIdentity),
+    targets: targets.sort(byStableIdentity).map((r) => r.target),
     unmeasured: unmeasured.sort(cmp),
     balanced: balanced.sort(cmp),
     plans: Object.fromEntries(Object.keys(plans).sort(cmp).map((k) => [k, plans[k]])),
@@ -90,15 +102,20 @@ export function gapTargetLine(t: GapTargetSpec): string {
   return `${t.attribute}=${t.value}: expected ~${t.expected}, have ${t.count}`;
 }
 
-/** Narrow an untrusted value (a request body) to a target, or `null`. */
+/**
+ * Narrow an untrusted value (a request body) to a target, or `null`. Every target `rankCatalogGaps`
+ * or an under-represented row can produce has integer `count >= 0` and `expected > count` (a gap
+ * is a deficit of at least one), so anything else is refused before a CLI run is spent on it.
+ */
 export function asGapTarget(v: unknown): GapTarget | null {
   if (!v || typeof v !== 'object') return null;
   const t = v as Record<string, unknown>;
   const str = (k: string) => typeof t[k] === 'string' && (t[k] as string).length > 0;
-  const num = (k: string) => typeof t[k] === 'number' && Number.isFinite(t[k]);
-  if (!str('catalogId') || !str('attribute') || !str('value') || !num('count') || !num('expected')) return null;
+  const int = (k: string) => typeof t[k] === 'number' && Number.isInteger(t[k]) && (t[k] as number) >= 0;
+  if (!str('catalogId') || !str('attribute') || !str('value') || !int('count') || !int('expected')) return null;
   const count = t.count as number;
   const expected = t.expected as number;
+  if (expected <= count) return null;
   return {
     catalogId: t.catalogId as string, attribute: t.attribute as string, value: t.value as string,
     count, expected, deficit: expected - count,

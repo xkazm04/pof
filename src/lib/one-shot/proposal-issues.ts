@@ -1,4 +1,3 @@
-import { seededEntities } from '@/lib/catalog/seed';
 import { validateProposal, type ValidationContext, type ValidationIssue } from './validate-proposal';
 
 /** What the propose and refine routes answer with: the proposal plus what is wrong with it. */
@@ -24,25 +23,7 @@ export function proposalEnvelope(
   };
 }
 
-/**
- * Link resolution against the seeded catalogs: `seededEntities` is read lazily and once per
- * catalog for the lifetime of the returned context (one request).
- */
-export function seededLinkContext(): Pick<ValidationContext, 'resolveLink' | 'knownCatalog'> {
-  const cache = new Map<string, Set<string>>();
-  const idsOf = (catalogId: string): Set<string> => {
-    let ids = cache.get(catalogId);
-    if (!ids) {
-      ids = new Set(seededEntities(catalogId).map((e) => e.id));
-      cache.set(catalogId, ids);
-    }
-    return ids;
-  };
-  return {
-    resolveLink: (catalogId, entityId) => idsOf(catalogId).has(entityId),
-    knownCatalog: (catalogId) => idsOf(catalogId).size > 0,
-  };
-}
+/** Link resolution (`seededLinkContext`) is server-only: see `proposal-link-context.ts`. */
 
 /** One corrective refine direction for the issues; `null` when there is nothing to fix. */
 export function issueRefineDirection(issues: ValidationIssue[] | undefined): string | null {

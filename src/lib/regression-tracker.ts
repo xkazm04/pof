@@ -665,16 +665,18 @@ export function getAllAlerts(): RegressionAlert[] {
   return rows.map(rowToAlert);
 }
 
-export function dismissAlert(alertId: string) {
+/** True when an alert with this id existed and was dismissed (false: no such row). */
+export function dismissAlert(alertId: string): boolean {
   ensureTables();
   const db = getDb();
-  db.prepare('UPDATE regression_alerts SET dismissed = 1 WHERE id = ?').run(alertId);
+  return db.prepare('UPDATE regression_alerts SET dismissed = 1 WHERE id = ?').run(alertId).changes > 0;
 }
 
-export function markResolved(fingerprintId: string) {
+/** True when a fingerprint with this id existed and was resolved (false: no such row). */
+export function markResolved(fingerprintId: string): boolean {
   ensureTables();
   const db = getDb();
-  db.prepare("UPDATE regression_fingerprints SET status = 'resolved' WHERE id = ?").run(fingerprintId);
+  return db.prepare("UPDATE regression_fingerprints SET status = 'resolved' WHERE id = ?").run(fingerprintId).changes > 0;
 }
 
 export function getRegressionStats(): RegressionStats {

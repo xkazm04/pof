@@ -28,6 +28,7 @@ import { SIM_TOOLS } from './sims.js';
 import { UE_TOOLS } from './ue.js';
 import { DESIGN_TOOLS } from './design.js';
 import { ASSET_TOOLS } from './assets.js';
+import { STORY_TOOLS } from './story.js';
 
 /** The env var an operator sets per client to trim the advertised surface. */
 export const GROUPS_ENV = 'POF_MCP_TOOL_GROUPS';
@@ -50,6 +51,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
   { name: 'ue', description: 'UE truth & growth — bridge status, automation tests, disk scans, builds, packaging. Several need a live editor.', tools: UE_TOOLS },
   { name: 'design', description: 'Design truth & quality signals — feature matrix, GDD compliance, project health, crash/regression reads.', tools: DESIGN_TOOLS },
   { name: 'assets', description: 'Produce & inspect generated assets — image/text-to-3D generation, the render gate that LOOKS at a mesh, icons rendered from a mesh, the asset library. Three of these SPEND credits, GPU or vision quota.', tools: ASSET_TOOLS },
+  { name: 'story', description: 'Story decision graphs (pof.storygraph/1) — read a stored graph (bounded), its structural findings, the bounded walker whose findings are LEADS, and import.', tools: STORY_TOOLS },
 ];
 
 export const GROUP_NAMES: string[] = TOOL_GROUPS.map((g) => g.name);
@@ -121,7 +123,7 @@ export const GROUPS_TOOL: ToolDef = {
   // no editor and no disk, so it is the most auto-approvable tool the server has.
   annotations: readOnly('Tool groups'),
   description:
-    "List pof-mcp's tool groups and which are advertised this session. pof-mcp's surface is split into families (pipeline, harness, sims, ue, design) and an operator may trim it per client via the POF_MCP_TOOL_GROUPS env var. Call this when a tool you expected is absent: it names every hidden group and the tools inside it, so you can say what you are missing instead of assuming the capability does not exist. Gating is static — hidden tools return an explicit error rather than silently missing.",
+    "List pof-mcp's tool groups and which are advertised this session. pof-mcp's surface is split into families (pipeline, harness, sims, ue, design, assets, story) and an operator may trim it per client via the POF_MCP_TOOL_GROUPS env var. Call this when a tool you expected is absent: it names every hidden group and the tools inside it, so you can say what you are missing instead of assuming the capability does not exist. Gating is static — hidden tools return an explicit error rather than silently missing.",
   inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   example: { args: {}, note: 'Read-only; reports the group table for the running server.' },
   handler: async () => groupReport(process.env[GROUPS_ENV]),

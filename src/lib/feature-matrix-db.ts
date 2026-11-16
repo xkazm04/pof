@@ -205,14 +205,18 @@ interface RawRow {
   source: string | null;
 }
 
+/** `file_paths` as the `string[]` its type promises. Same degrade-don't-throw contract as
+ *  catalog-db's `ue_assets`: non-string elements are dropped (not every write path validates
+ *  elements), and a corrupt or non-array blob reads as [] with a warning, never silently. */
 function safeParseJsonArray(value: string | null | undefined, rowId: number): string[] {
   try {
-    const parsed = JSON.parse(value || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(value || '[]');
+    if (Array.isArray(parsed)) return parsed.filter((p): p is string => typeof p === 'string');
   } catch {
-    logger.warn(`[feature-matrix-db] Corrupt file_paths JSON in row ${rowId}, falling back to []`);
-    return [];
+    /* fall through to the logged fallback */
   }
+  logger.warn(`[feature-matrix-db] Corrupt file_paths JSON in row ${rowId}, falling back to []`);
+  return [];
 }
 
 function toFeatureRow(raw: RawRow): FeatureRow {
@@ -243,7 +247,7 @@ function toFeatureRow(raw: RawRow): FeatureRow {
  *
  * The query must alias `feature_matrix` as `fm`.
  */
-function shadowedScopeSql(projectId: string): { sql: string; params: string[] } {
+export function shadowedScopeSql(projectId: string): { sql: string; params: string[] } {
   if (!projectId) return projectScopeSql(projectId, 'fm.project_id');
   return {
     sql:
@@ -549,17 +553,6 @@ export function updateFeatureStatus(
   if (statusChanged) captureReviewSnapshot(moduleId, projectId);
 
   return { updated: true, previousStatus, statusChanged, reviewedAt, source, foreignOwner: null };
-}
-
-/** Delete a module's rows WITHIN the active project's scope (see {@link projectScopeSql}).
- *  An unscoped call clears only the unattributed legacy rows — it can never reach
- *  another project's matrix. */
-export function clearModuleFeatures(moduleId: SubModuleId, projectId?: string): void {
-  ensureTables();
-  const scope = projectScopeSql(normalizeProjectId(projectId));
-  getDb()
-    .prepare(`DELETE FROM feature_matrix WHERE module_id = ? AND ${scope.sql}`)
-    .run(moduleId, ...scope.params);
 }
 
 // ─── Aggregate queries for project-wide dashboard ─────────────────────────────

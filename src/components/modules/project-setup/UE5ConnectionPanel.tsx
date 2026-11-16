@@ -40,18 +40,20 @@ export function UE5ConnectionPanel() {
   const httpPort = useUE5BridgeStore((s) => s.httpPort);
 
   const [pending, setPending] = useState<'connect' | 'disconnect' | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  // A failed verb is about one connection state: once the stream reports the other
+  // one, the failure is history and must not sit beside a contradicting status.
+  const [actionFailure, setActionFailure] = useState<{ message: string; whileConnected: boolean } | null>(null);
 
   const runAction = useCallback(
     async (kind: 'connect' | 'disconnect') => {
       setPending(kind);
-      setActionError(null);
+      setActionFailure(null);
       // The verb's Result is only used for the failure reason. The resulting
       // STATE arrives on the SSE stream — applying the POST response here too
       // would make this component a second writer racing the stream.
       const result = await (kind === 'connect' ? connect() : disconnect());
       setPending(null);
-      if (!result.ok) setActionError(result.error);
+      if (!result.ok) setActionFailure({ message: result.error, whileConnected: kind === 'disconnect' });
     },
     [connect, disconnect],
   );
@@ -61,6 +63,7 @@ export function UE5ConnectionPanel() {
 
   // `error` is the server's last connection error, carried on the SSE frame;
   // `actionError` is a verb that never reached the server at all.
+  const actionError = actionFailure?.whileConnected === isConnected ? actionFailure.message : null;
   const shownError = actionError ?? (isStateLive ? error : null);
 
   return (

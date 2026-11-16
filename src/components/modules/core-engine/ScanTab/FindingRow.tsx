@@ -56,6 +56,10 @@ export const FindingRow = memo(function FindingRow({
         {/* Selection checkbox */}
         {onSelect && (
           <button
+            type="button"
+            role="checkbox"
+            aria-checked={!!selected}
+            aria-label={`Select finding: ${finding.category}`}
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
             className="flex-shrink-0 p-2 pt-2.5 text-text-muted hover:text-text transition-colors"
           >
@@ -66,7 +70,9 @@ export const FindingRow = memo(function FindingRow({
         )}
 
         <button
+          type="button"
           onClick={onToggle}
+          aria-expanded={isExpanded}
           className="flex-1 flex items-start gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors min-w-0"
           style={onSelect ? { paddingLeft: 0 } : undefined}
         >

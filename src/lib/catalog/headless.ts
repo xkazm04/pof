@@ -24,7 +24,7 @@ import { listVerdicts } from '@/lib/status/judge-verdicts-db';
 import { commitArtifact, type CommitDeps } from '@/lib/catalog/artifactCommit';
 import type { Provenance } from '@/lib/provenance';
 import { resolveStepAcceptance, verdictsForStep } from '@/lib/catalog/acceptance/resolveStepAcceptance';
-import { bespokeCheckerFor } from '@/lib/catalog/acceptance/stepGradability';
+import { bespokeCheckerFor, bespokeStepLabels } from '@/lib/catalog/acceptance/stepGradability';
 import { canonCategoriesForStep } from '@/lib/catalog/contractPrompt';
 import { buildStepProducePrompt } from '@/lib/catalog/stepPrompt';
 import { stampTemplate } from '@/lib/catalog/produceTemplate';
@@ -130,14 +130,17 @@ function bridgeAcceptance(
   /** The data actually graded, so each verdict's content binding can be checked. Falls back
    *  to the persisted artifact when the caller doesn't hand it over. */
   data?: Record<string, unknown>,
+  /** Rows the caller already read — a loop over an entity's steps passes them so it does not
+   *  re-read every catalog verdict once per step (the N+1 `nextEntityStep` used to pay). */
+  preloaded?: { verdicts: ReturnType<typeof listVerdicts>; art: ReturnType<typeof listArtifacts>[number] | undefined },
 ): AcceptanceResult {
-  const art = listArtifacts(catalogId, entityId).find((a) => a.step === step);
+  const art = preloaded ? preloaded.art : listArtifacts(catalogId, entityId).find((a) => a.step === step);
   // The ONE shared truth (`resolveStepAcceptance`), the same function the lab's banner,
   // rail, matrix, coaches and rollup call. No `persisted` here: server-side the checker is
   // graded against the artifact itself, so there is no separate drain verdict to overlay.
   return resolveStepAcceptance({
     catalogId, step, local: result,
-    verdicts: verdictsForStep(listVerdicts(catalogId), entityId, step),
+    verdicts: verdictsForStep(preloaded ? preloaded.verdicts : listVerdicts(catalogId), entityId, step),
     data: data ?? art?.data ?? {},
     ...(art?.updatedAt ? { updatedAt: art.updatedAt } : {}),
   });
@@ -289,9 +292,19 @@ export interface EntityLifecycleView extends DerivedLifecycle {
  * distinct step labels actually persisted when the catalog has no pipeline.
  */
 function totalStepsFor(catalogId: string, arts: ReturnType<typeof listArtifacts>, canonProfile?: string): number {
+  return entityStepLabels(catalogId, canonProfile)?.size ?? new Set(arts.map((a) => a.step)).size;
+}
+
+/**
+ * The step labels an entity of `canonProfile` owns in a registered catalog: its profile-scoped
+ * pipeline labels PLUS the catalog's bespoke labels (graded server-side through `stepGradability`,
+ * and shown by the lab's manifest). The one list for both the denominator and the row filter, so
+ * produced can never exceed total. `null` when the catalog has no pipeline (nothing to scope to).
+ */
+function entityStepLabels(catalogId: string, canonProfile?: string): Set<string> | null {
   const pipeline = getCatalogPipeline(catalogId);
-  if (pipeline) return stepsForProfile(pipeline, canonProfile).length;
-  return new Set(arts.map((a) => a.step)).size;
+  if (!pipeline) return null;
+  return new Set([...stepsForProfile(pipeline, canonProfile).map((s) => s.label), ...bespokeStepLabels(catalogId)]);
 }
 
 /**
@@ -311,7 +324,10 @@ function derivedByEntity(catalogId: string, entityId?: string): Map<string, Deri
     byEntity.set(a.entityId, arr);
   }
   const out = new Map<string, DerivedLifecycle>();
-  for (const [id, arts] of byEntity) out.set(id, deriveEntityLifecycle(arts, totalStepsFor(catalogId, allArts, profileOf.get(id))));
+  for (const [id, arts] of byEntity) {
+    const labels = entityStepLabels(catalogId, profileOf.get(id));
+    out.set(id, deriveEntityLifecycle(labels ? arts.filter((a) => labels.has(a.step)) : arts, totalStepsFor(catalogId, allArts, profileOf.get(id))));
+  }
   return out;
 }
 
@@ -523,9 +539,11 @@ function nextEntityStep(catalogId: string, entityId: string): EntityStepPick | n
   if (!pipeline) return null;
   const entity = seededEntities(catalogId).find((e) => e.id === entityId);
   const arts = new Map(listArtifacts(catalogId, entityId).map((a) => [a.step, a]));
+  // ONE catalog verdict read for the whole walk, not one per produced step.
+  const verdicts = listVerdicts(catalogId);
   return entityNextStep(stepsForProfile(pipeline, canonProfileOf(entity)), (step) => {
     const a = arts.get(step);
-    return a ? bridgeAcceptance(catalogId, entityId, step, { label: step, tier: a.tier ?? 'L0', status: a.status, detail: '', ...(a.reason ? { reason: a.reason } : {}) }, a.data) : null;
+    return a ? bridgeAcceptance(catalogId, entityId, step, { label: step, tier: a.tier ?? 'L0', status: a.status, detail: '', ...(a.reason ? { reason: a.reason } : {}) }, a.data, { verdicts, art: a }) : null;
   });
 }
 

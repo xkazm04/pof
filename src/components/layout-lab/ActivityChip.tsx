@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { Z_INDEX } from '@/lib/constants';
 import { useDynamicTitle } from '@/hooks/useDynamicTitle';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { LANE_GLYPH, LANE_WORD, drainSubject, type ActivityLane, type LaneState } from './activityModel';
 import { useLabRunnerStore, type DrainRun } from './labRunnerStore';
 import { useLabActivity } from './hooks/useLabActivity';
+import { useHeaderPopover } from './hooks/useHeaderPopover';
 import { Button } from './ui/Button';
 import { labPanelStyle, type LabTheme } from './theme';
 
@@ -36,32 +37,15 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
   // The lab shell's tab title: this chip is always mounted in the header and already holds
   // the summary, so the tab reports outcomes (failed / needs you / done) from the same read.
   useDynamicTitle(summary);
-  const [open, setOpen] = useState(false);
-  const wrapperRef = useRef<HTMLSpanElement | null>(null);
+  const { open, close, toggle, panelRef, wrapperProps } = useHeaderPopover();
   const setPanelOpen = useOneShotLabStore((s) => s.setPanelOpen);
   const runMap = useLabRunnerStore((s) => s.runs);
   const drainRun = useMemo(() => drainSubject(Object.values(runMap)), [runMap]);
 
-  // Close on outside click / Escape (mirrors LabBridgeStrip's popover behaviour).
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  const toggle = useCallback(() => setOpen((v) => !v), []);
   const tone = toneOf(summary.state, t);
 
   return (
-    <span ref={wrapperRef} style={{ position: 'relative', display: 'inline-flex' }}>
+    <span {...wrapperProps} style={{ position: 'relative', display: 'inline-flex' }}>
       <Button
         onClick={toggle}
         mono
@@ -69,7 +53,8 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
         aria-expanded={open}
         data-testid="lab-activity-chip"
         data-state={summary.state}
-        ariaLabel="What is running right now"
+        // An aria-label replaces the label text inside the button, so the answer rides in it.
+        ariaLabel={`What is running right now — ${summary.label}`}
         title={summary.detail}
         style={{ color: tone, borderColor: summary.state === 'idle' ? t.line : tone, background: 'transparent' }}
       >
@@ -79,6 +64,8 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
 
       {open && (
         <div
+          ref={panelRef}
+          tabIndex={-1}
           role="dialog"
           aria-label="What is running right now"
           data-testid="lab-activity-panel"
@@ -97,12 +84,12 @@ export function ActivityChip({ t, onOpenDrain }: { t: LabTheme; onOpenDrain?: (c
               t={t}
               actions={
                 lane.id === 'one-shot' && lane.state !== 'idle'
-                  ? [{ label: 'Open panel', onClick: () => { setPanelOpen(true); setOpen(false); }, aria: 'open one-shot panel' }]
-                  : lane.id === 'drain' ? drainActions(drainRun, onOpenDrain, () => setOpen(false)) : []
+                  ? [{ label: 'Open panel', onClick: () => { setPanelOpen(true); close(); }, aria: 'open one-shot panel' }]
+                  : lane.id === 'drain' ? drainActions(drainRun, onOpenDrain, close) : []
               }
             />
           ))}
-          <p style={{ margin: 0, fontSize: 'var(--lab-fs-xs)', color: t.muted, fontFamily: t.fontMono }}>
+          <p style={{ margin: 0, fontSize: 'var(--lab-fs-xs)', color: t.muted, fontFamily: 'var(--lab-font-mono)' }}>
             Not covered here: a CLI produce dispatch in flight (its state lives in the step panel that
             started it) and anything launched outside the browser. These engines stay separate runtimes —
             this panel only reads them.
@@ -138,10 +125,10 @@ function LaneRow({ lane, t, actions }: {
   return (
     <div data-testid={`lab-activity-lane-${lane.id}`} data-state={lane.state} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)', flexWrap: 'wrap' }}>
-        <span style={{ fontFamily: t.fontMono, fontSize: 'var(--lab-fs-xs)', color: tone }}>
+        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: tone }}>
           <span aria-hidden="true">{LANE_GLYPH[lane.state]}</span> {LANE_WORD[lane.state]}
         </span>
-        <span style={{ fontFamily: t.fontMono, fontSize: 'var(--lab-fs-xs)', color: t.ink }}>{lane.title}</span>
+        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: t.ink }}>{lane.title}</span>
         {actions.map((a, i) => (
           <Button key={a.aria} onClick={a.onClick} ariaLabel={a.aria} mono style={i === 0 ? { marginLeft: 'auto' } : undefined}>
             {a.label}

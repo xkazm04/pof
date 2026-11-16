@@ -5,7 +5,7 @@ import { Boxes, Loader2 } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { StatusTag } from '@/components/ui/StatusTag';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { useSuspendableEffect, useSuspendableSelector } from '@/hooks/useSuspend';
 import type { CollisionPlan, CollisionUse } from '@/lib/visual-gen/ue-import';
 import type { CollisionPlanBasis } from '@/lib/visual-gen/ue-import-job-store';
 import type { ScalePlanBasis } from '@/lib/visual-gen/ue-import-plan';
@@ -87,7 +87,8 @@ interface PlanPreview {
 type Preview = { key: string; request: PlanRequest } & ({ data: PlanPreview } | { error: string });
 
 export function UeImportPanel() {
-  const jobs = useForgeStore((s) => s.jobs);
+  // Every poll tick of every job replaces this array; a hidden pane need not render it.
+  const jobs = useSuspendableSelector(useForgeStore, (s) => s.jobs);
   const candidates = useMemo(() => importCandidates(jobs), [jobs]);
   const [candidateId, setCandidateId] = useState('');
   const [glbPath, setGlbPath] = useState('');

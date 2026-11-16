@@ -16,6 +16,9 @@ export const ELEMENTS_DEFAULT_PROFILE = 'pof';
 export const ELEMENTS_BY_PROFILE: Readonly<Record<string, readonly string[]>> = {
   pof: ['fire', 'ice', 'lightning', 'chaos'],
   diablo1: ['magic', 'fire', 'lightning'],
+  // GTAI: Uprising — PROVISIONAL crime-sandbox damage set (guns, fire, blasts, EMP), set at the
+  // game's registration (2026-11-01); the pitch intake's accepted canon may revise it.
+  gtai: ['ballistic', 'fire', 'explosive', 'electric'],
 };
 
 /** The element set in force for a canon profile (the project's own when none is given). */

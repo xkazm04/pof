@@ -4,6 +4,7 @@ import { ChartLegend } from '@/components/ui/ChartLegend';
 import { MetricLabel } from '@/components/ui/MetricLabel';
 import { STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 import type { ThreatBreakdown } from '@/types/combat-simulator';
+import { NO_NERF_NEEDED, THREAT_CUTS } from '@/lib/combat/simulation-engine';
 import { pct, formatNumber } from './helpers';
 
 // ── Threat Breakdown (Death Recap) ──────────────────────────────────────────
@@ -11,7 +12,17 @@ import { pct, formatNumber } from './helpers';
 export function ThreatBreakdownPanel({ breakdown }: { breakdown: ThreatBreakdown }) {
   const { bySource, byEnemy, totalDeaths, totalDamageTaken } = breakdown;
 
-  if (totalDamageTaken === 0 && bySource.length === 0) return null;
+  if (totalDamageTaken === 0 && bySource.length === 0) {
+    return (
+      <SurfaceCard className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Skull className="w-4 h-4 text-red-400" />
+          <h2 className="text-sm font-medium text-text">Death Recap & Threat Breakdown</h2>
+        </div>
+        <p className="text-xs text-text-muted">No damage was taken in this run, so there is no threat to rank.</p>
+      </SurfaceCard>
+    );
+  }
 
   const topSource = bySource[0];
 
@@ -40,7 +51,7 @@ export function ThreatBreakdownPanel({ breakdown }: { breakdown: ThreatBreakdown
           <Flame className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
           <span className="text-xs text-text">{headline}</span>
         </div>
-        {topSource && topSource.nerfSuggestion !== 'Within tolerance.' && (
+        {topSource && topSource.nerfSuggestion !== NO_NERF_NEEDED && (
           <div className="mt-1 ml-5 text-2xs text-text-muted/90 italic">
             Nerf hint: {topSource.nerfSuggestion}
           </div>
@@ -122,8 +133,8 @@ function ThreatRow({
   killCount: number;
   nerfSuggestion: string;
 }) {
-  const isTopThreat = killShare >= 0.4 || damageShare >= 0.3;
-  const hasNerf = nerfSuggestion !== 'Within tolerance.';
+  const isTopThreat = killShare >= THREAT_CUTS.headlineKill || damageShare >= THREAT_CUTS.spammedDamage;
+  const hasNerf = nerfSuggestion !== NO_NERF_NEEDED;
   return (
     <div className="flex flex-col gap-1 px-2 py-1.5 rounded bg-surface-deep/50">
       <div className="flex items-center gap-2">

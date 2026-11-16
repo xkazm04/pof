@@ -12,7 +12,7 @@ import type { SubModuleId } from '@/types/modules';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { EVAL_ACCENT, RADAR_R } from './constants';
-import { polarToXY, scoreColor } from './helpers';
+import { alignToAxes, polarToXY, scoreColor } from './helpers';
 import type { ProjectHealthDashboardProps } from './types';
 import { useScannerFeed } from './useScannerFeed';
 import { RegressionAlerts } from './RegressionAlerts';
@@ -107,16 +107,11 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
 
   // Previous scan for overlay
   const prevRadarData = useMemo(() => {
-    if (!showHistoryOverlay || scanHistory.length < 2) return null;
+    if (!showHistoryOverlay || scanHistory.length < 2 || !radarData) return null;
     const prev = scanHistory[scanHistory.length - 2];
     if (!prev || prev.moduleScores.length === 0) return null;
-    const scores = prev.moduleScores;
-    const angleStep = 360 / scores.length;
-    return scores.map((ms, i) => ({
-      ...ms,
-      angle: i * angleStep,
-    }));
-  }, [showHistoryOverlay, scanHistory]);
+    return alignToAxes(radarData, prev.moduleScores);
+  }, [showHistoryOverlay, scanHistory, radarData]);
 
   // Build the radar polygon path
   const radarPath = useMemo(() => {
@@ -177,6 +172,7 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
       <HealthHeader
         lastScan={lastScan}
         isLoading={feed.loading}
+        loadFailed={feed.error !== null}
         scanHistory={scanHistory}
         showHistoryOverlay={showHistoryOverlay}
         setShowHistoryOverlay={setShowHistoryOverlay}
@@ -210,7 +206,7 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
       )}
 
       {/* ── All Recommendations (when no module selected) ── */}
-      {!selectedModule && lastScan && lastScan.recommendations.length > 0 && (
+      {!selectedDetail && lastScan && lastScan.recommendations.length > 0 && (
         <TopRecommendations lastScan={lastScan} handleFix={handleFix} fixCli={fixCli} />
       )}
 

@@ -32,7 +32,7 @@ export function QualityScoreRow({ score, index, animate }: { score: PromptQualit
       </div>
 
       {/* Trend */}
-      <TrendIcon className="w-3 h-3 flex-shrink-0" style={{ color: trendColor }} />
+      <TrendIcon className="w-3 h-3 flex-shrink-0" style={{ color: trendColor }} role="img" aria-label={`Trend: ${score.trend}`} />
 
       {/* Sessions count */}
       <span className="text-2xs text-text-muted w-16 text-right">{score.sessionsRecorded} sessions</span>

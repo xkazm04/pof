@@ -53,7 +53,7 @@ export function IconSetPanel() {
   const catalog = catalogs.find((c) => c.catalogId === pickedCatalog) ?? catalogs[0] ?? null;
   const catalogId = catalog?.catalogId ?? '';
   const step = pickedStep && catalog?.steps.includes(pickedStep) ? pickedStep : catalog?.steps[0] ?? '';
-  const entitiesQ = useCRUD(`/api/catalog/entities?catalogId=${encodeURIComponent(catalogId)}`, NO_ENTITIES, { skipInitialFetch: !catalogId });
+  const entitiesQ = useCRUD(`/api/catalog/entities?catalogId=${encodeURIComponent(catalogId)}`, NO_ENTITIES, { skipInitialFetch: !catalogId, resetOnEndpointChange: true });
   const iconsQ = useCRUD('/api/visual-gen/icons', NO_ICONS, { errorMessage: 'the icon library did not load' });
   const capsQ = useCRUD('/api/visual-gen/generate-2d', NO_CAPS, { errorMessage: 'the server did not answer' });
 

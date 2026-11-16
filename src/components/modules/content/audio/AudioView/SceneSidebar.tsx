@@ -133,19 +133,23 @@ export function SceneSidebar({
             onChange={(e) => setNewDocName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreateDoc(); }}
             placeholder="New audio scene..."
+            aria-label="New audio scene name"
             className="flex-1 px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors min-w-0"
           />
           <button
+            type="button"
             onClick={handleCreateDoc}
             disabled={!newDocName.trim() || isCreating}
-            className="px-2 py-2 rounded-md transition-colors disabled:opacity-50 flex-shrink-0"
+            aria-label="Create audio scene"
+            title="Create audio scene"
+            className="px-2 py-2 rounded-md transition-colors disabled:opacity-50 flex-shrink-0 focus-ring"
             style={{
               backgroundColor: `${MODULE_COLORS.content}15`,
               color: MODULE_COLORS.content,
               border: `1px solid ${MODULE_COLORS.content}30`,
             }}
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>

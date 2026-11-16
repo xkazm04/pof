@@ -34,6 +34,8 @@ export function AbilityCategoryGroup({ category, abilities, sortKey, sortDir }: 
     <div>
       <button
         onClick={() => setCollapsed((c) => !c)}
+        type="button"
+        aria-expanded={!collapsed}
         className="flex items-center gap-2 mb-1.5 pb-1 border-b w-full text-left cursor-pointer group transition-colors"
         style={{ borderColor: withOpacity(def.color, OPACITY_12) }}
       >

@@ -38,7 +38,7 @@ export function SetBonusSection() {
         <div className="flex items-center gap-2">
           <Filter className="w-3.5 h-3.5 text-text-muted" />
           {(['all', 'complete', 'incomplete'] as const).map(f => (
-            <button key={f} onClick={() => setSetFilter(f)}
+            <button key={f} onClick={() => setSetFilter(f)} aria-pressed={setFilter === f}
               className="text-xs font-mono px-2 py-1 rounded-md transition-all cursor-pointer"
               style={{
                 backgroundColor: setFilter === f ? `${withOpacity(ACCENT, OPACITY_12)}` : 'transparent',
@@ -60,7 +60,7 @@ export function SetBonusSection() {
               style={{ borderColor: `${withOpacity(set.color, OPACITY_25)}`, backgroundColor: `${withOpacity(set.color, OPACITY_5)}` }}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               {/* Collapsible header */}
-              <button onClick={() => toggleSet(set.name)}
+              <button onClick={() => toggleSet(set.name)} aria-expanded={isExpanded}
                 className="w-full flex items-center justify-between p-3 hover:bg-surface-hover/20 transition-colors cursor-pointer">
                 <div className="flex items-center gap-2">
                   <motion.div animate={{ rotate: isExpanded ? 0 : -90 }} transition={{ duration: 0.15 }}>

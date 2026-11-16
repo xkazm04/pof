@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { logger } from '@/lib/logger';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { AuditionMix } from '@/lib/audio-scene-audition';
 
 /** Web Audio time constant (seconds) for parameter glides as the listener moves. */
@@ -26,6 +27,8 @@ interface Graph {
   voices: Map<string, Voice>;
   loading: Set<string>;
   reverbKey: string;
+  /** Pending trailing impulse build (a Decay drag coalesces into one). */
+  irTimer: ReturnType<typeof setTimeout> | null;
 }
 
 /** Exponentially decaying stereo noise: -60 dB at `decayTime`. */
@@ -113,12 +116,25 @@ export function useSceneAudition(mix: AuditionMix | null) {
   /** Apply a mix to a live graph: glide params in place; only a newly heard emitter adds a voice. */
   const sync = useCallback((g: Graph, m: AuditionMix): Promise<unknown> => {
     const t = g.ctx.currentTime;
-    const reverbKey = `${m.reverb.decayTime}|${m.reverb.wetDry}`;
+    // The impulse depends on the decay alone: rebuilding it (up to MAX_IR_S of
+    // stereo noise) and swapping the convolver buffer on a wet-only change would
+    // cost a full IR per Wet/Dry slider frame and click on every swap.
+    // A Decay slider drag changes it every frame, so after the first build the
+    // rebuild is a trailing debounce: the final decay is applied once it settles.
+    const reverbKey = String(m.reverb.decayTime);
     if (reverbKey !== g.reverbKey) {
+      const initial = g.reverbKey === '';
       g.reverbKey = reverbKey;
-      g.convolver.buffer = impulse(g.ctx, m.reverb.decayTime);
-      g.wet.gain.setTargetAtTime(m.reverb.wetDry, t, GLIDE_S);
+      if (g.irTimer) clearTimeout(g.irTimer);
+      const decayTime = m.reverb.decayTime;
+      const build = () => {
+        g.irTimer = null;
+        if (graphRef.current === g) g.convolver.buffer = impulse(g.ctx, decayTime);
+      };
+      if (initial) { g.irTimer = null; build(); }
+      else g.irTimer = setTimeout(build, UI_TIMEOUTS.textEditDebounce);
     }
+    g.wet.gain.setTargetAtTime(m.reverb.wetDry, t, GLIDE_S);
     const adds: Promise<void>[] = [];
     for (const [id, v] of g.voices) {
       const h = m.heard[id];
@@ -145,7 +161,10 @@ export function useSceneAudition(mix: AuditionMix | null) {
   const stop = useCallback(() => {
     const g = graphRef.current;
     graphRef.current = null;
-    if (g) void g.ctx.close();
+    if (g) {
+      if (g.irTimer) clearTimeout(g.irTimer);
+      void g.ctx.close();
+    }
     setPlaying(false);
   }, []);
 
@@ -161,7 +180,7 @@ export function useSceneAudition(mix: AuditionMix | null) {
     wet.gain.value = 0;
     convolver.connect(wet);
     wet.connect(ctx.destination);
-    const g: Graph = { ctx, dry, wet, convolver, voices: new Map(), loading: new Set(), reverbKey: '' };
+    const g: Graph = { ctx, dry, wet, convolver, voices: new Map(), loading: new Set(), reverbKey: '', irTimer: null };
     graphRef.current = g;
     setError(null);
     setPlaying(true);

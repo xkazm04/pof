@@ -26,6 +26,7 @@ export function AssetCodeOracleView() {
     fix, remedy, remedyRunning,
   } = useAssetCodeOracle();
   const projectPath = useProjectStore((s) => s.projectPath);
+  const nothingScanned = result !== null && result.stats.totalClasses + result.stats.totalAssets === 0;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<FilterSeverity>('all');
@@ -95,9 +96,30 @@ export function AssetCodeOracleView() {
         </div>
       )}
 
-      {/* Results */}
-      {result && (
-        <>
+      {/* Nothing scanned: an empty input has no consistency to grade (the oracle's score
+          defaults to 100 for it), so refuse the verdict and say what to check instead. */}
+      {result && nothingScanned && (
+        <div
+          data-testid="oracle-nothing-scanned"
+          role="status"
+          className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
+          style={{ color: STATUS_WARNING, backgroundColor: statusBg(STATUS_WARNING), border: `1px solid ${statusBorder(STATUS_WARNING)}` }}
+        >
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          No C++ classes or Content/ assets were found under {projectPath}, so there is nothing to grade.
+          Check the project path and module name, then run the analysis again.
+        </div>
+      )}
+
+      {/* Results (kept, dimmed, while a rescan is pending) */}
+      {result && !nothingScanned && (
+        <div className={`space-y-5 transition-opacity ${loading ? 'opacity-60' : ''}`} aria-busy={loading}>
+          {loading && (
+            <p role="status" className="flex items-center gap-1.5 text-2xs text-text-muted">
+              <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+              Rescanning - showing the previous result until it lands.
+            </p>
+          )}
           {/* Stats bar — consistency hero spans 2 columns, supporting metrics fill the rest */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <ConsistencyHeroCard score={result.stats.consistencyScore} delta={scanDelta} />
@@ -127,7 +149,7 @@ export function AssetCodeOracleView() {
             </div>
           )}
 
-          <RemedyBar violations={result.violations} onFix={fix} running={remedyRunning} remedy={remedy} />
+          <RemedyBar violations={result.violations} onFix={fix} running={remedyRunning || loading} remedy={remedy} />
 
           {/* Section toggle */}
           <div className="flex items-center gap-1 border-b border-border">
@@ -201,7 +223,7 @@ export function AssetCodeOracleView() {
               edges={result.dependencyGraph.edges}
             />
           )}
-        </>
+        </div>
       )}
 
       {/* Empty state */}

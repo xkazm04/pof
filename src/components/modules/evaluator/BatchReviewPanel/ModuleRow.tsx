@@ -2,10 +2,18 @@
 
 import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/constants';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_ERROR } from '@/lib/chart-colors';
 import { formatDurationBetween } from '@/lib/format';
 import type { ModuleProgress } from '@/types/batch-review';
 import { STATUS_ICON, STATUS_COLOR } from './constants';
+
+/**
+ * Alpha tint that also works for `var(--…)` colours (pending/skipped use
+ * `var(--text-muted)`, where a hex suffix produced an invalid, dropped value).
+ */
+function tint(color: string, pct: number): string {
+  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+}
 
 export function ModuleRow({ mod }: { mod: ModuleProgress }) {
   const Icon = STATUS_ICON[mod.status];
@@ -40,13 +48,13 @@ export function ModuleRow({ mod }: { mod: ModuleProgress }) {
         </span>
       )}
       {mod.error && (
-        <span className="text-2xs text-[#f87171] flex-shrink-0 truncate max-w-[120px]" title={mod.error}>
+        <span className="text-2xs flex-shrink-0 truncate max-w-[120px]" style={{ color: STATUS_ERROR }} title={mod.error}>
           {mod.error}
         </span>
       )}
       <span
         className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-        style={{ color, backgroundColor: color + '15', border: `1px solid ${color}25` }}
+        style={{ color, backgroundColor: tint(color, 8), border: `1px solid ${tint(color, 15)}` }}
       >
         {mod.status}
       </span>

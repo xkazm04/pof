@@ -8,9 +8,8 @@ import { MODULE_COLORS } from '@/lib/constants';
 import { ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
-import { tryApiFetch } from '@/lib/api-utils';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 import { compositorStackScript } from '@/lib/blender-mcp/scripts/compositor-stack';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { estimateGPUBudget } from '@/lib/post-process-studio/gpu-estimator';
 import { specFromStudioState, toCompositorSettings, type PostProcessStackSpec } from '@/lib/post-process-studio/stack-spec';
@@ -99,11 +98,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
     try {
       // The tuned stack, not the defaults: read the live slider/preset values.
       const code = compositorStackScript(toCompositorSettings(effects));
-      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
+      const result = await executeViaMCP('Post-process compositor preview', code);
       if (result.ok) {
         setBlenderResult({ message: result.data.output || 'Compositor stack applied in Blender', isError: false });
       } else {
@@ -269,7 +264,10 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
 
         {/* Blender result */}
         {blenderResult && (
-          <div className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+          <div
+            role={blenderResult.isError ? 'alert' : 'status'}
+            data-testid="pp-blender-result"
+            className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
             {blenderResult.message}
           </div>
         )}

@@ -35,14 +35,8 @@ export const MIGRATION_PATH = SCHEMA_VERSIONS.map(v => ({
   breaking: v.breaking,
 }));
 
-export const COMPAT_MATRIX: { from: string; to: string; compat: 'full' | 'partial' | 'none' }[] = [
-  { from: 'V1.0', to: 'V1.1', compat: 'full' },
-  { from: 'V1.0', to: 'V1.2', compat: 'full' },
-  { from: 'V1.0', to: 'V2.0', compat: 'partial' },
-  { from: 'V1.1', to: 'V1.2', compat: 'full' },
-  { from: 'V1.1', to: 'V2.0', compat: 'partial' },
-  { from: 'V1.2', to: 'V2.0', compat: 'full' },
-];
+/** One row per real migration: a SAVE_SCHEMA_VERSION bump adds it alongside its SCHEMA_VERSIONS entry. */
+export const COMPAT_MATRIX: { from: string; to: string; compat: 'full' | 'partial' | 'none' }[] = [];
 
 export const COMPAT_VERSIONS = MIGRATION_PATH.map(n => n.version);
 export const COMPAT_LOOKUP = new Map(COMPAT_MATRIX.map(c => [`${c.from}->${c.to}`, c.compat]));
@@ -95,12 +89,12 @@ export const AUTO_SAVE_TRIGGERS: AutoSaveTrigger[] = [
   { id: 'boss', label: 'Boss Kill', enabled: true, description: 'Save after defeating a boss' },
   { id: 'quest', label: 'Quest Complete', enabled: true, description: 'Save on quest completion' },
   { id: 'timer', label: 'Timer Interval', enabled: true, description: 'Periodic auto-save on timer' },
-  { id: 'levelup', label: 'Level Up', enabled: false, description: 'Save on character level up' },
+  { id: 'levelup', label: 'Level Up', enabled: true, description: 'Save on character level up' },
   { id: 'merchant', label: 'Merchant Close', enabled: false, description: 'Save after closing merchant UI' },
 ];
 
 export const AUTO_SAVE_CONFIG = {
-  intervalSeconds: 120, maxAutoSaves: 5,
+  intervalSeconds: 120, maxAutoSaves: 1,
   combatSaveEnabled: false, compressionEnabled: true,
 };
 
@@ -113,11 +107,11 @@ export interface RecoveryResult {
   confidence: number; detail: string;
 }
 
-export const RECOVERY_STEPS: { id: RecoveryStep; label: string; icon: string }[] = [
-  { id: 'detect', label: 'Detect', icon: 'scan' },
-  { id: 'recover', label: 'Recover', icon: 'restore' },
-  { id: 'verify', label: 'Verify', icon: 'check' },
-  { id: 'confirm', label: 'Confirm', icon: 'done' },
+export const RECOVERY_STEPS: { id: RecoveryStep; label: string }[] = [
+  { id: 'detect', label: 'Detect' },
+  { id: 'recover', label: 'Recover' },
+  { id: 'verify', label: 'Verify' },
+  { id: 'confirm', label: 'Confirm' },
 ];
 
 export const RECOVERY_RESULTS: RecoveryResult[] = [

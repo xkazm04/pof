@@ -1,0 +1,126 @@
+{
+ "schema": "conform-run/1",
+ "worker": "645faf2c-de92-4d06-ad84-45c7ad28f70c",
+ "subject": "quality-gates",
+ "evaluatedAt": "2026-11-09T01:12:41.862120+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ue5-state-sync",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/project-setup/BidirectionalStateSyncPanel/WriteOutcomeChip.tsx:10 The only refusal in this context is the editor's rejection of a property write, shown as a coloured outcome chip on a transport log; searching both panel directories for gate, verdict, waiver, exit code, threshold, severity, blocking, pre-commit and quality gate found zero hits, so there is no check here that renders a quality verdict.",
+   "techniques": [],
+   "absenceTerms": [
+    "waiver",
+    "exit code",
+    "pre-commit"
+   ]
+  },
+  {
+   "context": "save-system",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:111 A missing or unreadable Source/ directory walks zero headers and arrives as the ordinary 'no save class' result, which offers a Create button that dispatches a UE write task, so could-not-run shares one path with a real finding even though the count of 0 is printed.",
+   "techniques": [
+    {
+     "technique": "gate-liveness",
+     "verdict": "deviation",
+     "evidence": "src/app/api/save-schema/audit/route.ts:36 collectHeaders returns [] when Source/ does not exist and silently skips unreadable directories; the route reports success at headersScanned 0 instead of treating an empty walk as could-not-run."
+    },
+    {
+     "technique": "unmeasurable-criteria",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:106 Narrow: a thrown audit failure reaches a distinct state with no findings shown. The zero-header case is judged under gate-liveness."
+    },
+    {
+     "technique": "self-reported-gate-inputs",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:40 The audit parses the project's actual headers rather than trusting checklist progress or any other claim about them."
+    },
+    {
+     "technique": "refusal-names-a-reachable-remedy",
+     "verdict": "conformant",
+     "evidence": "src/components/modules/core-engine/sub_save/schema/SaveHeaderAudit.tsx:165 Each finding prints its fix rule, and the Fix action on the same panel dispatches that repair; no out-of-tree path is named."
+    },
+    {
+     "technique": "vacuous-by-evaluation",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_save/index.tsx:111 IntegrityValidator's overall PASS/WARN/FAIL comes from a literal array that cannot change, but the tab discloses it as sample data, so it is not offered as a check."
+    }
+   ]
+  },
+  {
+   "context": "crash-analysis",
+   "subject": "quality-gates",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/CrashAnalyzerView/NoDiagnosisNotice.tsx:48 The strongest outcome in this context is a display tag on a triage view; searching CrashAnalyzerView and CrashTimeMachine for gate, verdict, waiver, exit code, threshold, blocking, pre-commit and quality gate found zero hits, 'gate' also has none in CrashHealthMap.tsx, and the signature match floor only withholds a diagnosis rather than refusing any change.",
+   "techniques": [],
+   "absenceTerms": [
+    "waiver",
+    "exit code",
+    "pre-commit"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "quality-gates",
+   "context": "gdd-compliance",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "quality-gates",
+   "context": "blender-mcp-bridge",
+   "reason": "evidence leans on generate/status/route.ts, which is not a tracked file"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T01:12:41.862120+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "ue5-state-sync",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:12:41.862120+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [
+    "gate-liveness",
+    "refusal-names-a-reachable-remedy",
+    "self-reported-gate-inputs",
+    "unmeasurable-criteria",
+    "vacuous-by-evaluation"
+   ],
+   "deviations": 1,
+   "context": "save-system",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:12:41.862120+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "quality-gates"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

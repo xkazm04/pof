@@ -28,6 +28,13 @@ def main() -> int:
     ap.add_argument("--fidelity", action="store_true", help="render NeRF views + CLIP-compare to the input image")
     ap.add_argument("--fidelity-views", type=int, default=4)
     args = ap.parse_args()
+    # A native crash or a timeout kill must not take the markers already printed with it.
+    sys.stdout.reconfigure(line_buffering=True)
+
+    # Before any import: a wrong path should not cost a model load to discover.
+    if not os.path.isfile(args.image):
+        print("POF_TRIPOSR_ERROR=input image not found: " + args.image)
+        return 1
 
     sys.path.insert(0, args.triposr_root)
     try:

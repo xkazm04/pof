@@ -849,6 +849,16 @@ export function computeThreatBreakdown(
   };
 }
 
+/** Nerf suggestion meaning "no change needed"; the threat view hides the hint when it sees this. */
+export const NO_NERF_NEEDED = 'Within tolerance.';
+
+/**
+ * Share cuts that make an ability a "top threat": the nerf suggestion ('Headline
+ * killer' / 'Spammed source') and the threat row's red highlight both read these,
+ * so tuning one side cannot leave the other disagreeing.
+ */
+export const THREAT_CUTS = { headlineKill: 0.4, spammedDamage: 0.3 } as const;
+
 function suggestAbilityNerf(
   ability: CombatAbility | undefined,
   damageShare: number,
@@ -857,11 +867,11 @@ function suggestAbilityNerf(
   if (!ability) {
     return killShare > 0.25 || damageShare > 0.25
       ? 'Reduce base damage or extend cooldown.'
-      : 'Within tolerance.';
+      : NO_NERF_NEEDED;
   }
 
   // Top killer with one-shot risk — usually a high-baseDamage burst
-  if (killShare >= 0.4) {
+  if (killShare >= THREAT_CUTS.headlineKill) {
     if (ability.baseDamage >= 25) {
       return `Headline killer (${pct(killShare)} of deaths) — cut baseDamage from ${ability.baseDamage} to ~${Math.round(ability.baseDamage * 0.75)} or raise cooldown to ${Math.max(ability.cooldownSec, 1) * 1.5}s.`;
     }
@@ -869,7 +879,7 @@ function suggestAbilityNerf(
   }
 
   // High sustained damage share — usually spammed basic attacks
-  if (damageShare >= 0.3 && (ability.cooldownSec === 0 || ability.cooldownSec < 1)) {
+  if (damageShare >= THREAT_CUTS.spammedDamage && (ability.cooldownSec === 0 || ability.cooldownSec < 1)) {
     return `Spammed source (${pct(damageShare)} of damage taken) — add a 1.5–2.0s cooldown or lower attackPowerScaling.`;
   }
 
@@ -892,7 +902,7 @@ function suggestAbilityNerf(
     return `Notable threat — minor 10–15% baseDamage trim or telegraph the wind-up.`;
   }
 
-  return 'Within tolerance.';
+  return NO_NERF_NEEDED;
 }
 
 function suggestEnemyNerf(killShare: number, damageShare: number): string {
@@ -905,7 +915,7 @@ function suggestEnemyNerf(killShare: number, damageShare: number): string {
   if (damageShare >= 0.4) {
     return `Damage-tax enemy (${pct(damageShare)} of damage) — reduce attackPower or attackInterval.`;
   }
-  return 'Within tolerance.';
+  return NO_NERF_NEEDED;
 }
 
 function pct(v: number): string {

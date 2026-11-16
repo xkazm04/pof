@@ -7,7 +7,7 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_SUBDUED, ACCENT_CY
 } from '@/lib/chart-colors';
 import { DiffViewer } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
-import { ACCENT, ENHANCED_SLOTS, SAVE_DIFF_ENTRIES, buildSlotDiff } from '../_shared/data';
+import { ACCENT, ENHANCED_SLOTS, buildSlotDiff } from '../_shared/data';
 import type { DiffEntry } from '@/types/unique-tab-improvements';
 
 export function SaveDiffSection() {
@@ -18,7 +18,7 @@ export function SaveDiffSection() {
   const resolvedSlotB = ENHANCED_SLOTS.find(s => s.id === diffSlotB);
   const diffEntries: DiffEntry[] = resolvedSlotA && resolvedSlotB
     ? buildSlotDiff(resolvedSlotA, resolvedSlotB)
-    : SAVE_DIFF_ENTRIES;
+    : [];
 
   return (
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">

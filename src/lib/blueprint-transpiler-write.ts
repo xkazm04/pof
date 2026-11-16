@@ -48,6 +48,11 @@ export interface WritePlan {
   project: ProjectReality;
 }
 
+/** Type-checked: `RegExp.test` would stringify `['Foo']` into a pass. */
+export function isCppIdentifier(name: unknown): name is string {
+  return typeof name === 'string' && IDENT.test(name);
+}
+
 function assertIdent(name: string, label: string): void {
   if (!IDENT.test(name)) throw new Error(`Invalid ${label}: "${name}" (must be a C++ identifier)`);
 }

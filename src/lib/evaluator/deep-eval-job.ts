@@ -44,6 +44,8 @@ interface DeepEvalJob {
   snap: DeepEvalJobSnapshot;
   controller: AbortController;
   done: Promise<DeepEvalResult>;
+  /** True once the run has settled. Cancel flips `snap.status` at once, so the start guard reads this instead. */
+  settled: boolean;
 }
 
 export interface StartDeepEvalJobOptions {
@@ -93,11 +95,14 @@ export function startDeepEvalJob(
   opts: StartDeepEvalJobOptions,
 ): Result<{ scanId: string; done: Promise<DeepEvalResult> }, 'already-running'> {
   const { projectPath } = opts;
-  if (jobs.get(projectPath)?.snap.status === 'running') return err('already-running');
+  // Guarded on the run being unsettled, not on status: a cancel flips status to 'cancelled'
+  // before the killed passes have settled, and a start then would overlap the old CLI runs.
+  const existing = jobs.get(projectPath);
+  if (existing && !existing.settled) return err('already-running');
 
   const scanId = opts.scanId ?? `deep-${Date.now()}`;
   const moduleIds = opts.moduleIds ?? getEvaluableModuleIds();
-  const resumeFrom = opts.scanId ? readPassLedger(scanId) : [];
+  const resumeFrom = opts.scanId ? readPassLedger(scanId, projectPath) : [];
   const controller = new AbortController();
   const executePass = opts.executePass ?? cliExecutor(
     resolveDispatchModelChoice({ model: opts.model, effort: opts.effort, taskClass: 'judge-content' }),
@@ -134,9 +139,22 @@ export function startDeepEvalJob(
     snap.error = snap.progress.error;
     snap.finishedAt = Date.now();
     return result;
+  }, (e: unknown) => {
+    // A rejected run must still settle the job: left `running`, the project would refuse
+    // every later start (409) until the process restarted.
+    if (snap.status === 'running') snap.status = 'error';
+    snap.error = e instanceof Error ? e.message : String(e);
+    snap.finishedAt = Date.now();
+    logger.error('deep-eval: run rejected', e);
+    throw e;
   });
+  // The route only `void`s `done`; this branch keeps a rejection from going unhandled.
+  done.catch(() => undefined);
 
-  jobs.set(projectPath, { snap, controller, done });
+  const job: DeepEvalJob = { snap, controller, done, settled: false };
+  const markSettled = () => { job.settled = true; };
+  done.then(markSettled, markSettled);
+  jobs.set(projectPath, job);
   return ok({ scanId, done });
 }
 
@@ -156,7 +174,7 @@ export async function cancelDeepEvalJob(projectPath: string): Promise<DeepEvalJo
   if (job.snap.status === 'running') {
     job.snap.status = 'cancelled';
     job.controller.abort();
-    await job.done;
+    await job.done.catch(() => undefined);
   }
   return job.snap;
 }

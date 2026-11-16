@@ -11,6 +11,13 @@ import { FLOW_NODES, FLOW_EDGES, FLOW_GROUP_COLORS } from '../_shared/data';
 
 const ACCENT = ACCENT_PINK;
 
+/** Ring geometry: centred in the viewBox, radius leaving room for the largest node (28) plus its focus ring (+5). */
+const VIEW = 340;
+const CENTER = VIEW / 2;
+const RADIUS = 130;
+/** A transition drawn in both directions: each direction is shifted this far to its own side of the chord. */
+const PAIR_OFFSET = 5;
+
 interface FlowGraphProps {
   highlightedFlowNode: string | null;
   onToggleNode: (id: string) => void;
@@ -24,7 +31,7 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
     <BlueprintPanel color={ACCENT} className="p-3">
       <SectionHeader label="Interactive Screen Flow Graph" color={ACCENT} icon={Network} />
       <div className="flex justify-center min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-        <svg width={340} height={340} viewBox="0 0 340 340" className="overflow-visible">
+        <svg width={VIEW} height={VIEW} viewBox={`0 0 ${VIEW} ${VIEW}`} className="overflow-visible">
           <style>{`g.flow-node:focus { outline: none; } g.flow-node:focus-visible .focus-ring { opacity: 0.6; }`}</style>
           {FLOW_EDGES.map((edge, i) => {
             const si = FLOW_NODES.findIndex((n) => n.id === edge.source);
@@ -33,11 +40,17 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
             const count = FLOW_NODES.length;
             const angleS = (2 * Math.PI * si) / count - Math.PI / 2;
             const angleT = (2 * Math.PI * ti) / count - Math.PI / 2;
-            const radius = 140;
-            const sx = 200 + radius * Math.cos(angleS);
-            const sy = 200 + radius * Math.sin(angleS);
-            const tx = 200 + radius * Math.cos(angleT);
-            const ty = 200 + radius * Math.sin(angleT);
+            // A reverse edge shares this chord: shift along the direction-relative normal, so the pair lands on opposite sides.
+            const hasReverse = FLOW_EDGES.some((o) => o.source === edge.target && o.target === edge.source);
+            const dx = Math.cos(angleT) - Math.cos(angleS);
+            const dy = Math.sin(angleT) - Math.sin(angleS);
+            const dist = Math.hypot(dx, dy) || 1;
+            const ox = hasReverse ? (-dy / dist) * PAIR_OFFSET : 0;
+            const oy = hasReverse ? (dx / dist) * PAIR_OFFSET : 0;
+            const sx = CENTER + RADIUS * Math.cos(angleS) + ox;
+            const sy = CENTER + RADIUS * Math.sin(angleS) + oy;
+            const tx = CENTER + RADIUS * Math.cos(angleT) + ox;
+            const ty = CENTER + RADIUS * Math.sin(angleT) + oy;
             const mx = (sx + tx) / 2;
             const my = (sy + ty) / 2;
             const isHighlighted = highlightedFlowNode === edge.source || highlightedFlowNode === edge.target;
@@ -64,7 +77,7 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
                   } as const, prefersReduced)}
                   style={isHighlighted ? { filter: `drop-shadow(0 0 3px ${withOpacity(ACCENT, OPACITY_50)})` } : undefined}
                 />
-                {edge.label && (
+                {edge.label && edge.style !== 'dashed' && (
                   <text x={mx} y={my - 6} textAnchor="middle"
                     className="text-xs font-mono"
                     fill={isHighlighted ? ACCENT : 'var(--text-muted)'}
@@ -76,9 +89,8 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
           {FLOW_NODES.map((node, i) => {
             const count = FLOW_NODES.length;
             const angle = (2 * Math.PI * i) / count - Math.PI / 2;
-            const radius = 140;
-            const x = 200 + radius * Math.cos(angle);
-            const y = 200 + radius * Math.sin(angle);
+            const x = CENTER + RADIUS * Math.cos(angle);
+            const y = CENTER + RADIUS * Math.sin(angle);
             const nodeColor = node.color ?? ACCENT;
             const isHighlighted = highlightedFlowNode === node.id;
             return (

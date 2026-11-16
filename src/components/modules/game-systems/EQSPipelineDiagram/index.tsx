@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { STATUS_WARNING, OPACITY_10 } from '@/lib/chart-colors';
 import { ChartLegend } from '@/components/ui/ChartLegend';
@@ -12,16 +13,18 @@ export type { StepKind, PipelineStep, QueryPipeline } from './types';
 // ── Main export ────────────────────────────────────────────────────────────
 
 export function EQSPipelineDiagram() {
+  // Generated, not fixed, so a second mount can't steal the region's label.
+  const headingId = useId();
   return (
     <div
       className="p-4 space-y-4 overflow-y-auto h-full"
       data-testid="eqs-pipeline-diagram"
       role="region"
-      aria-labelledby="eqs-pipeline-heading"
+      aria-labelledby={headingId}
     >
       {/* Intro */}
       <div className="space-y-1">
-        <h2 id="eqs-pipeline-heading" className="text-sm font-bold text-text">EQS Query Pipelines</h2>
+        <h2 id={headingId} className="text-sm font-bold text-text">EQS Query Pipelines</h2>
         <p className="text-xs text-text-muted leading-relaxed max-w-2xl">
           How the {CUSTOM_COMPONENT_COUNT} custom EQS components compose into complete queries.
           Context resolves an actor reference, Generator produces a <code className="font-mono">TArray&lt;FNavLocation&gt;</code>,

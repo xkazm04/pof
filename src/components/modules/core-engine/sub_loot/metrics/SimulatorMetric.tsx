@@ -1,15 +1,16 @@
 'use client';
 
-import { AFFIX_POOL, ACCENT } from '../_shared/data';
+import { ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
+import type { MetricReading } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
 
-const poolSize = AFFIX_POOL.length;
-
-export function SimulatorMetric() {
+/** Affix pool size - the view's reading. */
+export function SimulatorMetric({ reading }: { reading: MetricReading }) {
   return (
-    <div className="text-[10px] font-mono leading-tight">
-      <span className="font-bold" style={{ color: ACCENT }}>{poolSize}</span>
-      <span style={{ color: withOpacity(ACCENT, OPACITY_50) }}> affixes in pool</span>
+    <div className={`${TEXT_SCALE.meta} font-mono leading-tight`}>
+      <span className="font-bold" style={{ color: ACCENT }}>{reading.value ?? '?'}</span>
+      <span style={{ color: withOpacity(ACCENT, OPACITY_50) }}> {reading.unit}</span>
     </div>
   );
 }

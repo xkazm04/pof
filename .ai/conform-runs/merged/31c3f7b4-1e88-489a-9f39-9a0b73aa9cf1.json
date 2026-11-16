@@ -1,0 +1,66 @@
+{
+ "schema": "conform-run/1",
+ "worker": "31c3f7b4-1e88-489a-9f39-9a0b73aa9cf1",
+ "subject": "schema-driven-ui",
+ "evaluatedAt": "2026-10-31T22:22:28.970424+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "ability-design",
+   "subject": "schema-driven-ui",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/stores/abilitySpecStore.ts:27 The only file in this context is a 51-line Zustand cache of per-entity GAS ability specs (effects/tagRules/attributes/loadout data that feed editors and C++ codegen, per src/lib/ability/spec.ts:75). It is not a layout spec rendered from a component registry, and a case-insensitive grep of src/stores for renderSpec/nodeKind/componentRegistry/SpecRenderer/uiSpec/layoutSpec found no hits. The map matched this subject only on the tokens 'spec'/'specs'/'design', so the subject's precondition (data describing a UI that a registry-backed renderer realizes) does not hold here.",
+   "techniques": [
+    {
+     "technique": "node-vocabulary-design",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/abilitySpecStore.ts:8 The slot holds gameplay ability data, not a closed set of UI node kinds."
+    },
+    {
+     "technique": "registry-mapping",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/abilitySpecStore.ts:12 This is a map from entity key to data, not from node kind to component. Nothing is rendered by dispatch."
+    },
+    {
+     "technique": "spec-validation-and-repair",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/abilitySpecStore.ts:17 The store sets edited ability data optimistically. There is no render-time validation door because no UI spec is rendered."
+    },
+    {
+     "technique": "host-capability-injection",
+     "verdict": "not-applicable",
+     "evidence": "src/stores/abilitySpecStore.ts:49 This is an ordinary store selector hook. There is no spec renderer whose capabilities would need injecting."
+    }
+   ],
+   "absenceTerms": [
+    "renderSpec",
+    "nodeKind",
+    "componentRegistry",
+    "SpecRenderer"
+   ],
+   "registryProposal": "The map's token matcher pairs schema-driven-ui with any context whose code says 'spec'. Here it matched a domain-data 'spec' (a GAS ability spec). Matching could require a co-occurring renderer or registry term (render, kind, component registry) before proposing this subject."
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-31T22:22:28.970424+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "schema-driven-ui"
+   ],
+   "techniques": [
+    "host-capability-injection",
+    "node-vocabulary-design",
+    "registry-mapping",
+    "spec-validation-and-repair"
+   ],
+   "deviations": 0,
+   "context": "ability-design",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

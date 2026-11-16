@@ -133,6 +133,14 @@ export function resolveTerrainBasis(config: TerrainConfig): Result<TerrainBasis,
     );
   }
 
+  const steps = config.size - 1;
+  if (!Number.isInteger(config.size) || steps < 1 || (steps & (steps - 1)) !== 0) {
+    return err(
+      `size must be a power of two plus one (2^n + 1, e.g. 65, 129, 257), got ${config.size} — ` +
+        'Diamond-Square halves the step each pass and any other size is walked off the grid',
+    );
+  }
+
   const sampleSpan = config.maxHeight - config.minHeight;
   if (!Number.isFinite(sampleSpan) || sampleSpan <= 0) {
     return err(
@@ -246,7 +254,9 @@ export function heightmapToUint16(heightmap: number[][]): Uint16Array {
   const data = new Uint16Array(size * size);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      data[y * size + x] = Math.round(heightmap[y][x] * 65535);
+      // Clamp to the 0-1 band first: a Uint16Array assignment wraps modulo 65536, which
+      // turns an above-band sample into low ground.
+      data[y * size + x] = Math.round(Math.min(1, Math.max(0, heightmap[y][x])) * UINT16_LEVELS);
     }
   }
   return data;

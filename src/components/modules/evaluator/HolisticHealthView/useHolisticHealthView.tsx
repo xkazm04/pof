@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useProjectHealthStore } from '@/stores/projectHealthStore';
 import { useModuleStore } from '@/stores/moduleStore';
@@ -34,12 +35,16 @@ export function useHolisticHealthView() {
   const perfSession = usePerformanceProfilingStore((s) => s.activeSession);
   const crashStats = useCrashAnalyzerStore((s) => s.stats);
   const fetchCrashAnalysis = useCrashAnalyzerStore((s) => s.fetchAnalysis);
+  // A failed crash read leaves the stats at their zero defaults, which the health
+  // engine reads as "no crash data" (a "Ready" signal). Carry the reason instead.
+  const crashError = useCrashAnalyzerStore((s) => s.error);
 
   const [viewTab, setViewTab] = useState<ViewTab>('overview');
 
   // Pull persisted crash data once so the crash signal is real even when the
   // user hasn't opened the Crashes tab this session.
-  useEffect(() => {
+  // Suspendable: a hidden (LRU-cached) dashboard fetches nothing; it reads on resume.
+  useSuspendableEffect(() => {
     fetchCrashAnalysis();
   }, [fetchCrashAnalysis]);
 
@@ -83,9 +88,10 @@ export function useHolisticHealthView() {
     [checklistProgress, scanHistory, lastScan, perfInput, crashInput, completionLedger],
   );
 
-  useEffect(() => {
+  // Suspendable: while the module is hidden, store churn elsewhere (checklist ticks in
+  // another module) must not re-POST; the effect re-runs once on resume instead.
+  useSuspendableEffect(() => {
     handleRefresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputsSignature]);
 
   const trendIcon = useMemo(() => {
@@ -110,6 +116,7 @@ export function useHolisticHealthView() {
     subsystemSignals,
     isLoading,
     error,
+    crashError,
     perfTriage,
     perfSession,
     viewTab,

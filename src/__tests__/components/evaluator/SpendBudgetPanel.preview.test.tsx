@@ -65,6 +65,8 @@ describe('SpendBudgetPanel preview', () => {
     );
     const line = screen.getByText(/projected/i);
     expect(line.textContent).toMatch(/\$100\.00/);
-    expect(line.textContent).toMatch(/19 Sep/);
+    // the reach date follows the viewer locale (same as the reset time), not a pinned en-GB
+    const reach = new Date('2026-09-19T12:00:00.000Z').toLocaleDateString([], { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    expect(line.textContent).toContain(reach);
   });
 });

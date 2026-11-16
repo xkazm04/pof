@@ -25,6 +25,7 @@ export function RoadmapHeader({ summary, setScrollOffset }: RoadmapHeaderProps) 
       <div className="flex items-center gap-1">
         <button
           onClick={() => setScrollOffset((p) => p - 4)}
+          aria-label="Show earlier weeks"
           className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -37,6 +38,7 @@ export function RoadmapHeader({ summary, setScrollOffset }: RoadmapHeaderProps) 
         </button>
         <button
           onClick={() => setScrollOffset((p) => p + 4)}
+          aria-label="Show later weeks"
           className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
         >
           <ChevronRight className="w-4 h-4" />

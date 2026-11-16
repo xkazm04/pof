@@ -11,7 +11,7 @@ import { buildResidue, type ResidueFile } from '@/lib/blueprint-transpiler/resid
 import { CodeViewer } from '@/components/ui/CodeViewer';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
-import { OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import { OPACITY_20, OPACITY_30, OPACITY_40, STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
 import { WriteToProjectButton } from './WriteToProjectButton';
 import { ResidueList } from './ResidueList';
@@ -80,6 +80,7 @@ export function TranspilePane({
         </div>
         <textarea
           className="flex-1 min-h-[160px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+          aria-label="Blueprint JSON to transpile"
           placeholder="Paste Blueprint JSON here (from UE5 commandlet export or copy graph)..."
           value={blueprintJson}
           onChange={(e) => setBlueprintJson(e.target.value)}
@@ -104,7 +105,7 @@ export function TranspilePane({
       {/* Right: Output */}
       <div className="w-full md:w-1/2 flex flex-col min-h-[280px] md:min-h-0">
         {error && (
-          <div className="px-3 py-2 bg-status-red-subtle border-b border-status-red-strong text-xs text-red-400 flex items-center gap-2">
+          <div className="px-3 py-2 bg-status-red-subtle border-b border-status-red-strong text-xs flex items-center gap-2" style={{ color: STATUS_ERROR }}>
             <XCircle className="w-3.5 h-3.5" /> {error}
           </div>
         )}
@@ -119,7 +120,10 @@ export function TranspilePane({
           </div>
         )}
 
-        {isLoading && (
+        {/* First run only: a re-transpile (e.g. a module change) keeps the
+            previous code on screen and the Transpile button shows the spinner,
+            instead of a second flex-1 region halving the code view. */}
+        {isLoading && !result && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: ACCENT }} />
             <span className="text-xs text-text-muted">Transpiling Blueprint graph...</span>
@@ -146,7 +150,8 @@ export function TranspilePane({
                   aria-expanded={residueOpen}
                   aria-controls="transpile-residue"
                   title={LEDGER_TITLE}
-                  className="flex items-center gap-1 text-2xs text-amber-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-bright rounded"
+                  className="flex items-center gap-1 text-2xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-bright rounded"
+                  style={{ color: STATUS_WARNING }}
                 >
                   <span data-testid="transpile-fidelity">{fidelity.label}</span>
                   <ChevronDown className={`w-3 h-3 transition-transform ${residueOpen ? 'rotate-180' : ''}`} aria-hidden />
@@ -154,14 +159,15 @@ export function TranspilePane({
               ) : (
                 <span
                   data-testid="transpile-fidelity"
-                  className={`text-2xs ${fidelity.todo > 0 ? 'text-amber-400' : 'text-text-muted'}`}
+                  className={`text-2xs ${fidelity.todo > 0 ? '' : 'text-text-muted'}`}
+                  style={fidelity.todo > 0 ? { color: STATUS_WARNING } : undefined}
                   title={fidelity.perNode ? LEDGER_TITLE : WARNING_TITLE}
                 >
                   {fidelity.label}
                 </span>
               )}
               {result.warnings.length > 0 && (
-                <span className="text-2xs text-amber-400 flex items-center gap-1">
+                <span className="text-2xs flex items-center gap-1" style={{ color: STATUS_WARNING }}>
                   <AlertTriangle className="w-3 h-3" /> {result.warnings.length} warnings
                 </span>
               )}
@@ -176,6 +182,8 @@ export function TranspilePane({
             {/* Code tabs */}
             <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border">
               <button
+                type="button"
+                aria-pressed={showCode === 'header'}
                 onClick={() => setShowCode('header')}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors ${
                   showCode === 'header' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'
@@ -185,6 +193,8 @@ export function TranspilePane({
                 {result.className}.h
               </button>
               <button
+                type="button"
+                aria-pressed={showCode === 'source'}
                 onClick={() => setShowCode('source')}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors ${
                   showCode === 'source' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'
@@ -201,7 +211,8 @@ export function TranspilePane({
                     onClick={onTranspile}
                     disabled={isLoading || !blueprintJson.trim()}
                     title="The code below was generated from an earlier version of the Blueprint JSON"
-                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs text-amber-400 border border-amber-400/40 disabled:opacity-40"
+                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs disabled:opacity-40"
+                    style={{ color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}${OPACITY_40}` }}
                   >
                     <RefreshCw className="w-3 h-3" />
                     Blueprint changed - re-transpile
@@ -237,9 +248,10 @@ export function TranspilePane({
                 <StaggerContainer className="p-2 space-y-1">
                   {result.warnings.map((w, i) => (
                     <StaggerItem key={i} className="flex items-start gap-2 px-2 py-1 rounded bg-surface text-2xs">
-                      <AlertTriangle className={`w-3 h-3 flex-shrink-0 mt-0.5 ${
-                        w.severity === 'error' ? 'text-red-400' : w.severity === 'warning' ? 'text-amber-400' : 'text-text-muted'
-                      }`} />
+                      <AlertTriangle
+                        className={`w-3 h-3 flex-shrink-0 mt-0.5 ${w.severity === 'error' || w.severity === 'warning' ? '' : 'text-text-muted'}`}
+                        style={w.severity === 'error' ? { color: STATUS_ERROR } : w.severity === 'warning' ? { color: STATUS_WARNING } : undefined}
+                      />
                       <DecoratedJargon text={w.message} className="text-text-muted" />
                     </StaggerItem>
                   ))}

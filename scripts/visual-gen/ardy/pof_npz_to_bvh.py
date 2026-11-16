@@ -42,7 +42,7 @@ def write_bvh(npz_path: str, out_path: str) -> None:
     skel, names, parents, neutral = load_skeleton()
 
     err = fk_check(d, skel)
-    if err > 1e-3:
+    if not np.isfinite(err) or err > 1e-3:  # NaN clears a bare `>`
         raise SystemExit(f"FK round-trip failed ({err:.4f} m) — local_rot_mats do not reproduce posed_joints")
     print(f"FK round-trip ok (max err {err * 1000:.3f} mm)")
 

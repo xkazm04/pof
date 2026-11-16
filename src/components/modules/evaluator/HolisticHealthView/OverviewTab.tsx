@@ -1,5 +1,6 @@
 import { Layers, Target, Activity } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import type { EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
 import type { ModuleHealthSummary, Milestone, SubsystemSignal } from '@/types/project-health';
 import { ModuleHeatCell } from './ModuleHeatCell';
 import { MilestoneRow } from './MilestoneRow';
@@ -14,7 +15,7 @@ export function OverviewTab({
   moduleHealth: ModuleHealthSummary[];
   milestones: Milestone[];
   subsystemSignals: SubsystemSignal[];
-  onNavigateTab?: (tab: string) => void;
+  onNavigateTab?: (tab: EvaluatorTabId) => void;
 }) {
   return (
     <div className="space-y-4">

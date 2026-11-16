@@ -1,0 +1,4 @@
+Generated one image using built-in imagegen with the prompt from `PROMPT.scientist.md` and saved it as `./scientist.png`.
+
+Original path:
+`C:\Users\kazda\.codex\generated_images\01a19d74-6ede-7310-9566-ca22c343902d\exec-48787be6-bb50-44d8-8b08-87bb9348b4a4.png`

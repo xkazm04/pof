@@ -1,0 +1,538 @@
+<title>Quest Council Fuse</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@400;600;700&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>/* Layout: a comparison dossier. Overview 2x2, then full-width sections where the four paths are ROWS
+   (path key gutter | content), numbers and guards as true comparison tables. Trivet print palette
+   (GTAI art direction): paper, ink, vermilion, teal for the dead. Claude seat = warm inks, Grok = cool;
+   variant A = solid key, variant B = outlined key. */
+:root{
+  --paper:#f2ead8; --sheet:#fbf7ec; --ink:#1f1a2b; --muted:#5d5568; --rule:#d8ccb2; --rule-strong:#1f1a2b;
+  --verm:#cf3b1f; --verm-soft:#f6d9cf; --teal:#147a77; --teal-soft:#d3ebe8; --warn:#9a6a00; --warn-soft:#f3e6c4;
+  --p-claude-a:#cf3b1f; --p-claude-b:#b8741a; --p-grok-a:#147a77; --p-grok-b:#4b3f8f;
+  --on-key:#fff9ef;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:24px; --s-6:40px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#15121b; --sheet:#1e1a27; --ink:#ece3cf; --muted:#a69cb2; --rule:#352e42; --rule-strong:#ece3cf;
+  --verm:#ff7356; --verm-soft:#41201a; --teal:#4cc7bf; --teal-soft:#14332f; --warn:#e8b54a; --warn-soft:#3a2f14;
+  --p-claude-a:#ff7356; --p-claude-b:#e9a54a; --p-grok-a:#4cc7bf; --p-grok-b:#a89bf0; --on-key:#15121b;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#15121b; --sheet:#1e1a27; --ink:#ece3cf; --muted:#a69cb2; --rule:#352e42; --rule-strong:#ece3cf;
+  --verm:#ff7356; --verm-soft:#41201a; --teal:#4cc7bf; --teal-soft:#14332f; --warn:#e8b54a; --warn-soft:#3a2f14;
+  --p-claude-a:#ff7356; --p-claude-b:#e9a54a; --p-grok-a:#4cc7bf; --p-grok-b:#a89bf0; --on-key:#15121b;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--f-body);overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ink)}
+.wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance}
+:focus-visible{outline:3px solid var(--verm);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* ── sticky toolbar ── */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ink);color:var(--paper)}
+.bar .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s-2) var(--s-4);padding-block:var(--s-2)}
+.bar .brand{font:800 18px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.bar nav{display:flex;flex-wrap:wrap;gap:var(--s-2);flex:1 1 auto}
+.bar nav a{color:var(--paper);text-decoration:none;font:600 12px/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;opacity:.8;padding:6px 2px}
+.bar nav a:hover{opacity:1;text-decoration:underline}
+.bar .kept{font:600 13px/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.bar button{margin:0}
+@media (max-width:760px){.bar nav{display:none}.bar .wrap{justify-content:space-between}}
+
+/* ── header ── */
+header.top{padding-block:var(--s-6) var(--s-5)}
+.eyebrow{font:600 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(34px,5vw,56px)/.95 var(--f-display);letter-spacing:.02em;text-transform:uppercase;margin:var(--s-2) 0 var(--s-3)}
+h1 em{font-style:normal;color:var(--verm)}
+.meta{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);font:13px/1.4 var(--f-mono);color:var(--muted);margin:0}
+.brief{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-3);margin-top:var(--s-5);padding:var(--s-4) var(--s-5);background:var(--sheet);border:2px solid var(--rule-strong)}
+@media (min-width:860px){.brief{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}}
+.brief p{margin:0;max-width:70ch}
+.legend{display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:center}
+
+/* ── path keys (seat hue, variant fill) ── */
+.key{--k:var(--ink);display:inline-flex;align-items:center;gap:6px;font:700 12px/1 var(--f-mono);text-transform:uppercase;letter-spacing:.04em;padding:5px 8px;border:2px solid var(--k);background:var(--k);color:var(--on-key);white-space:nowrap}
+.key.vB{background:transparent;color:var(--k)}
+.key[data-p="claude-A"]{--k:var(--p-claude-a)} .key[data-p="claude-B"]{--k:var(--p-claude-b)}
+.key[data-p="grok-A"]{--k:var(--p-grok-a)} .key[data-p="grok-B"]{--k:var(--p-grok-b)}
+
+/* ── overview 2x2 ── */
+.overview{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-4)}
+@media (min-width:900px){.overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ov{background:var(--sheet);border:2px solid var(--rule-strong);padding:var(--s-4) var(--s-5);display:flex;flex-direction:column;gap:var(--s-3);min-width:0}
+.ov.skip{border-style:dashed}
+.ov-head{display:flex;flex-wrap:wrap;gap:var(--s-2);align-items:center}
+.ov h3{font:800 26px/1.05 var(--f-display);letter-spacing:.01em;margin:0}
+.ov .logline{margin:0;font-style:italic;max-width:62ch}
+.fp{display:flex;flex-wrap:wrap;gap:6px}
+.spine{display:flex;align-items:center;gap:var(--s-2);font-weight:700;padding-top:var(--s-3);border-top:1px solid var(--rule);margin-top:auto;cursor:pointer}
+
+/* ── chips ── */
+.chip{display:inline-flex;align-items:center;gap:4px;font:600 11px/1 var(--f-mono);padding:4px 7px;border:1px solid var(--rule);background:var(--paper);white-space:nowrap}
+.chip.new{background:var(--verm);border-color:var(--verm);color:var(--on-key)}
+.chip.purpose-funny{border-color:var(--verm);color:var(--verm)}
+.chip.purpose-character{border-color:var(--teal);color:var(--teal)}
+.chip.purpose-progression{border-color:var(--ink)}
+.chip.when{border-style:dashed;color:var(--muted)}
+.g{display:inline-flex;align-items:center;gap:5px;font:700 12px/1 var(--f-mono);padding:5px 8px;border:2px solid currentColor;white-space:nowrap}
+.g.green{color:var(--teal);background:var(--teal-soft)}
+.g.red{color:var(--verm);background:var(--verm-soft)}
+.g.unmeasured{color:var(--muted);border-style:dashed}
+
+/* ── comparison sections ── */
+section.cmp{margin-top:var(--s-6);scroll-margin-top:64px}
+.divider{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:end;gap:var(--s-4);border-bottom:3px solid var(--rule-strong);padding-bottom:var(--s-2);margin-bottom:var(--s-2)}
+.divider h2{font:800 30px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+.divider p{margin:0;color:var(--muted);font-size:13px;justify-self:end;text-align:right;max-width:52ch}
+@media (max-width:640px){.divider{grid-template-columns:minmax(0,1fr)}.divider p{justify-self:start;text-align:left}}
+.row{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-2) var(--s-5);padding-block:var(--s-4);border-bottom:1px solid var(--rule)}
+@media (min-width:760px){.row{grid-template-columns:150px minmax(0,1fr)}}
+.row-key{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.row-key .t{font-size:12px;color:var(--muted);line-height:1.3}
+.row-body{min-width:0}
+.pair{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-3) var(--s-5)}
+@media (min-width:1000px){.pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pair h4,.sub{font:600 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.pair p{margin:0;max-width:68ch}
+
+/* cast register */
+.register{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--s-3);margin-top:var(--s-3)}
+.who{background:var(--sheet);border:1px solid var(--rule);padding:var(--s-3) var(--s-4);display:flex;flex-direction:column;gap:6px;min-width:0}
+.who-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--s-2)}
+.who h3{font:800 22px/1.05 var(--f-display);margin:0;overflow-wrap:anywhere}
+.who .sub{margin-top:6px}
+.t{font-size:12px;color:var(--muted);margin:0}
+.timeline{margin:0;padding:0 0 0 14px;border-left:3px solid var(--rule);list-style:none;display:flex;flex-direction:column;gap:6px}
+.timeline li{font-size:13px;position:relative}
+.timeline li::before{content:"";position:absolute;left:-20px;top:6px;width:9px;height:9px;background:var(--ink);border-radius:50%}
+.timeline li.now::before{background:var(--verm)}
+.nowrole{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px}
+
+/* pickable items */
+.pick{display:flex;gap:var(--s-2);align-items:flex-start;cursor:pointer;min-width:0}
+.pick input{flex:0 0 auto;width:17px;height:17px;margin:2px 0 0;accent-color:var(--verm)}
+.pick > span{min-width:0;overflow-wrap:anywhere}
+.pills{display:flex;flex-wrap:wrap;gap:var(--s-2)}
+.pill{border:1px solid var(--rule);background:var(--sheet);padding:var(--s-2) var(--s-3);max-width:100%}
+.pill:has(input:checked),.beat:has(input:checked),.line:has(input:checked),.mech:has(input:checked){outline:2px solid var(--verm);outline-offset:-2px;background:var(--verm-soft)}
+.pill .note{display:block;font-size:12px;color:var(--muted);margin-top:4px;max-width:46ch}
+
+/* beats as an ordered flow */
+.beats{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--s-3);counter-reset:beat;margin:0;padding:0;list-style:none}
+.beat{background:var(--sheet);border:1px solid var(--rule);padding:var(--s-3);counter-increment:beat;display:flex;flex-direction:column;gap:6px;min-width:0}
+.beat .n::before{content:counter(beat,decimal-leading-zero);font:800 22px/1 var(--f-display);color:var(--muted)}
+.beat b{font-size:15px}
+.beat .obj{font:12px/1.4 var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
+.beat p{margin:0;font-size:14px}
+
+/* lines as a script */
+.lines{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.line{display:grid;grid-template-columns:22px minmax(0,1fr);gap:var(--s-2) var(--s-3);padding:var(--s-3) var(--s-2);border-bottom:1px solid var(--rule)}
+@media (min-width:760px){.line{grid-template-columns:22px 140px minmax(0,1fr) auto}}
+.line .spk{font:700 12px/1.5 var(--f-mono);text-transform:uppercase;letter-spacing:.04em}
+.line .txt{display:block;margin:0;max-width:75ch}
+.line .tags{display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start}
+@media (max-width:759px){.line .spk,.line .txt,.line .tags{grid-column:2}}
+.line input{width:17px;height:17px;margin:3px 0 0;accent-color:var(--verm)}
+details.fold > summary{cursor:pointer;font:600 13px/1.4 var(--f-mono);padding:var(--s-1) 0;list-style-position:inside}
+
+/* mechanics */
+.mechs{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--s-3)}
+.mech{background:var(--sheet);border:1px solid var(--rule);padding:var(--s-3)}
+.mech .sum{display:block;margin-top:6px;font-size:14px}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:2px solid var(--rule-strong);background:var(--sheet)}
+table.cmp-t{border-collapse:collapse;width:100%;min-width:720px;font-size:14px}
+.cmp-t th,.cmp-t td{padding:var(--s-2) var(--s-3);border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+.cmp-t thead th{background:var(--paper);border-bottom:2px solid var(--rule-strong);white-space:nowrap}
+.cmp-t tbody th{font:600 12px/1.4 var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+.cmp-t td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cmp-t td.band{color:var(--muted);font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cmp-t td.out{background:var(--warn-soft);color:var(--warn);font-weight:700}
+.cmp-t td.out::after{content:" \25B2 out of band"; font:600 11px var(--f-mono)}
+.cmp-t td.out.low::after{content:" \25BC out of band"}
+.findings{margin:var(--s-3) 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.findings li{font-size:13px;overflow-wrap:anywhere}
+.sev{font:700 11px/1 var(--f-mono);text-transform:uppercase;padding:2px 5px;margin-right:6px;border:1px solid currentColor}
+.sev.error{color:var(--verm)} .sev.warn{color:var(--warn)} .sev.info{color:var(--muted)}
+code{font:12px/1.4 var(--f-mono);background:var(--paper);border:1px solid var(--rule);padding:1px 5px;overflow-wrap:anywhere}
+
+/* fuse panel */
+.fuse{margin-block:var(--s-6);background:var(--sheet);border:3px solid var(--rule-strong);padding:var(--s-5)}
+.fuse h2{font:800 30px/1 var(--f-display);text-transform:uppercase;margin:0 0 var(--s-3)}
+.fuse label{font-weight:700;display:block;margin-bottom:6px}
+textarea{width:100%;min-height:120px;font:15px/1.5 var(--f-body);color:var(--ink);background:var(--paper);border:1px solid var(--rule);padding:var(--s-3)}
+.actions{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:var(--s-3)}
+button{font:700 14px/1 var(--f-body);padding:10px 16px;border:2px solid var(--verm);background:var(--verm);color:var(--on-key);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--ink)}
+.bar button.ghost{color:var(--paper);border-color:var(--paper)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.status{font-size:13px;margin:var(--s-3) 0 0;color:var(--muted)}
+.status.warn{color:var(--verm);font-weight:700}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--paper);border:1px solid var(--rule);padding:var(--s-3);font:12px/1.45 var(--f-mono);max-height:320px;overflow:auto;margin:var(--s-3) 0 0}
+footer{padding-block:var(--s-5);color:var(--muted);font-size:12px}
+</style>
+<div class="bar"><div class="wrap">
+<span class="brand">Fuse</span>
+<nav aria-label="Sections"><a href="#sec-register">Cast register</a><a href="#sec-story">Story goal</a><a href="#sec-numbers">Reward and difficulty</a><a href="#sec-guards">Guards</a><a href="#sec-cast">Cast</a><a href="#sec-beats">Beats</a><a href="#sec-lines">Lines</a><a href="#sec-mechanics">Mechanics</a><a href="#sec-hooks">Story hooks</a><a href="#fuse">Save</a></nav>
+<span class="kept" id="kept" aria-live="polite"></span>
+<button id="save-top" type="button" class="ghost">Save fusion</button>
+</div></div>
+<main class="wrap">
+<header class="top">
+<span class="eyebrow">GTAI: Uprising · quest council · act1</span>
+<h1>Quest Council <em>Fuse</em></h1>
+<p class="meta"><span>run 20261102-act1-q1</span><span>2 path(s)</span><span>claude: delivered ($0.65) · grok: delivered ($0.52)</span></p>
+<div class="brief">
+<div><span class="sub">Owner goal</span><p>The first quest of Act 1. Introduce the player to the story direction. Don Fax, leader of the robot gang underground, notices Rivet after the factory and hires him for a hitman mission: sabotage a project in a guarded dock storage that is tied to the humans and the army. Through Don Fax and his place, introduce the supporting characters: a nurse, a gunsmith and a scientist.</p><span class="sub" style="display:block;margin-top:12px">Constraints</span><p>1. The player knows none of the characters yet. Characters keep only their names and positions from earlier drafts; do not reuse any personality, voice or look from earlier drafts. Invent them fresh.
+2. Don Fax leads the robot gang underground. He notices Rivet and hires him as a hitman. Don Fax&#39;s place hosts three supporting characters, introduced in this quest (ids `nurse`, `gunsmith`, `scientist`; give each a proper name in `name`). Each gets their own side questline in later sessions, so plant a hook for each here without starting their questline:
+   - the nurse: heals Rivet, and can later become his love interest;
+   - the gunsmith: gives Rivet his first weapon in this quest, and later becomes his buddy through personal requests;
+   - the scientist: wants to find out what is wrong with Rivet&#39;s head, and later teaches him to handle the voices.
+3. The mission: sabotage a project in a guarded dock storage tied to the humans and the army. No timer. Human enemies are weak (one hit kills them, and they fire weak bullets), so use many enemies in several waves.
+4. Beats: the quest picks up straight from the factory intro (Rivet just survived the line accident and took apart the police) and passes on to the next steps.
+5. Lines: Rivet has just gone mad. He is extremely nervous, unsure and unstable. His first lines are a monologue to himself, before a payphone rings with Don Fax on the other line.
+6. Mechanics introduced in this quest: the payphone job router and heat. Nothing else. No car is drivable: the Gearbox soul unlocks only after the scientist&#39;s first quest, so do not unlock or use any soul in this quest.
+7. The voices of the dead may be heard but not understood yet; they are a symptom to Rivet, not a power.</p></div>
+<div><span class="sub">How to fuse</span><p>Pick one path as the spine, tick what to keep from any path, write notes, then save. Claude paths use warm keys, Grok paths cool ones; variant B has an outlined key.</p>
+<div class="legend" style="margin-top:8px"><span class="g green">✓ pass</span><span class="g red">✕ block</span><span class="g unmeasured">– unmeasured</span></div></div>
+</div>
+</header>
+<section aria-label="The paths"><div class="overview" id="overview"></div></section>
+<section class="cmp" id="sec-register" aria-labelledby="h-register">
+<div class="divider"><h2 id="h-register">Cast register</h2><p>Who each name is, and every character&#39;s story so far.</p></div>
+<div id="body-register"></div>
+</section>
+<section class="cmp" id="sec-story" aria-labelledby="h-story">
+<div class="divider"><h2 id="h-story">Story goal</h2><p>What each path does for the campaign, and the laugh or turn that earns it.</p></div>
+<div id="body-story"></div>
+</section>
+<section class="cmp" id="sec-numbers" aria-labelledby="h-numbers">
+<div class="divider"><h2 id="h-numbers">Reward and difficulty</h2><p>Each path against the act band. A highlighted cell is outside the band.</p></div>
+<div id="body-numbers"></div>
+</section>
+<section class="cmp" id="sec-guards" aria-labelledby="h-guards">
+<div class="divider"><h2 id="h-guards">Guards</h2><p>PoF verdicts. A red guard blocks the quest unless you override it with a reason.</p></div>
+<div id="body-guards"></div>
+</section>
+<section class="cmp" id="sec-cast" aria-labelledby="h-cast">
+<div class="divider"><h2 id="h-cast">Cast</h2><p>Tick the characters to keep. New characters need art before the quest can ship.</p></div>
+<div id="body-cast"></div>
+</section>
+<section class="cmp" id="sec-beats" aria-labelledby="h-beats">
+<div class="divider"><h2 id="h-beats">Beats</h2><p>The quest structure, in play order.</p></div>
+<div id="body-beats"></div>
+</section>
+<section class="cmp" id="sec-lines" aria-labelledby="h-lines">
+<div class="divider"><h2 id="h-lines">Lines</h2><p>Every line carries its purpose. Tick the ones worth keeping.</p></div>
+<div id="body-lines"></div>
+</section>
+<section class="cmp" id="sec-mechanics" aria-labelledby="h-mechanics">
+<div class="divider"><h2 id="h-mechanics">Mechanics</h2><p>What the game or PoF must support.</p></div>
+<div id="body-mechanics"></div>
+</section>
+<section class="cmp" id="sec-hooks" aria-labelledby="h-hooks">
+<div class="divider"><h2 id="h-hooks">Story hooks</h2><p>Campaign state each path reads and writes.</p></div>
+<div id="body-hooks"></div>
+</section>
+<section class="fuse" id="fuse" aria-labelledby="fuse-h">
+<h2 id="fuse-h">Fuse and save</h2>
+<label for="notes">Your notes (copied verbatim into the quest package)</label>
+<textarea id="notes" placeholder="What to keep, what to change, the tone you want"></textarea>
+<div class="actions"><button id="save" type="button">Save fusion</button><button id="copy" type="button" class="ghost">Copy fusion JSON</button></div>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<pre id="fusion-json" aria-label="Fusion JSON"></pre>
+</section>
+<footer>Paths are never invented: a seat that delivered nothing shows as an empty card. Unmeasured is never a pass.</footer>
+</main>
+<script type="application/json" id="council-data">{"runId":"20261102-act1-q1","act":"act1","goal":"The first quest of Act 1. Introduce the player to the story direction. Don Fax, leader of the robot gang underground, notices Rivet after the factory and hires him for a hitman mission: sabotage a project in a guarded dock storage that is tied to the humans and the army. Through Don Fax and his place, introduce the supporting characters: a nurse, a gunsmith and a scientist.","constraints":"1. The player knows none of the characters yet. Characters keep only their names and positions from earlier drafts; do not reuse any personality, voice or look from earlier drafts. Invent them fresh.\n2. Don Fax leads the robot gang underground. He notices Rivet and hires him as a hitman. Don Fax's place hosts three supporting characters, introduced in this quest (ids `nurse`, `gunsmith`, `scientist`; give each a proper name in `name`). Each gets their own side questline in later sessions, so plant a hook for each here without starting their questline:\n   - the nurse: heals Rivet, and can later become his love interest;\n   - the gunsmith: gives Rivet his first weapon in this quest, and later becomes his buddy through personal requests;\n   - the scientist: wants to find out what is wrong with Rivet's head, and later teaches him to handle the voices.\n3. The mission: sabotage a project in a guarded dock storage tied to the humans and the army. No timer. Human enemies are weak (one hit kills them, and they fire weak bullets), so use many enemies in several waves.\n4. Beats: the quest picks up straight from the factory intro (Rivet just survived the line accident and took apart the police) and passes on to the next steps.\n5. Lines: Rivet has just gone mad. He is extremely nervous, unsure and unstable. His first lines are a monologue to himself, before a payphone rings with Don Fax on the other line.\n6. Mechanics introduced in this quest: the payphone job router and heat. Nothing else. No car is drivable: the Gearbox soul unlocks only after the scientist's first quest, so do not unlock or use any soul in this quest.\n7. The voices of the dead may be heard but not understood yet; they are a symptom to Rivet, not a power.","band":{"cash":{"min":500,"max":2500},"heatCeiling":3,"enemyCount":{"max":60},"enemyWaves":{"max":6},"minutes":{"min":6,"max":14},"timerAllowed":true},"economyRevision":2,"economyProvisional":true,"seats":{"claude":{"spec":"claude:claude-opus-5-5@high","status":"delivered","reason":null,"probe":{"available":true,"outcome":"completed","wall_s":5.04,"cost_usd":0.051116,"reason":null},"attempts":[{"attempt":1,"outcome":"completed","exit":0,"timedOut":false,"wall_s":163.92,"cost_usd":0.6529856,"turns":3,"usage":{"input_tokens":6,"cache_creation_input_tokens":46849,"cache_read_input_tokens":131948,"output_tokens":12589,"output_tokens_details":{"thinking_tokens":7085},"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":46849,"ephemeral_5m_input_tokens":0},"inference_geo":"global","iterations":[{"input_tokens":2,"output_tokens":12394,"cache_read_input_tokens":60274,"cache_creation_input_tokens":3275,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":3275},"type":"message"}],"speed":"standard","fallback_credit":null},"errors":[]}],"wall_s":163.93,"cost_usd":0.653,"pathIds":["claude-A"]},"grok":{"spec":"grok:grok-4.7@high","status":"delivered","reason":null,"probe":{"available":true,"outcome":"completed","wall_s":13.11,"cost_usd":0.03533,"reason":null},"attempts":[{"attempt":1,"outcome":"completed","exit":0,"timedOut":false,"wall_s":559.2,"cost_usd":0.51787,"turns":11,"usage":{"input_tokens":89241,"cache_read_input_tokens":312704,"cache_creation_input_tokens":0,"output_tokens":30506,"reasoning_tokens":26282,"total_tokens":432451},"errors":[]}],"wall_s":559.22,"cost_usd":0.5179,"pathIds":["grok-A"]}},"slots":[{"kind":"path","seat":"claude","proposal":{"schema":"gtai.questProposal/1","seat":"claude","variant":"A","pathId":"claude-A","act":"act1","title":"Collect Call","logline":"Rivet is fresh off the factory massacre and hiding from the cops in a dumpster, arguing with voices that aren't there, when a dead payphone rings: Don Fax wants to hire the robot from the six o'clock news to burn an army-stenciled crate stack at Dock 9.","goal":"Start the Act 1 story with the core loop of payphone, job, heat and safehouse. Don Fax has seen the factory footage, routes Rivet through Patch's payphones and takes him into the Toner Room, a dead copy shop's basement under the overpass. There Rivet meets the nurse, the gunsmith and the scientist, who patch him up, arm him and worry about him, with a hook planted for each. Then he sabotages a human-army project in guarded dock storage while waves of one-hit human guards come at him. The player learns the two new systems in the order they need them: lose heat so the phone will ring, then take heat on purpose at the dock and lose it again to get paid.","whyNotFiller":"Every beat either teaches a system or turns a character. The opening monologue sets the madness tone in Rivet's own panic: he reports killing a cop with a cop, then curses himself for talking about himself in the third person. Patch's collect call ('press two to die alone in an alley') teaches the job router as a joke. Patch refusing to connect while Rivet is hot teaches heat as a rule the world enforces. Don Fax's 'you're, statistically, a hitman now' is the hire. The three hooks each turn a character: Juno trades her real name for Rivet coming back in one piece (romance), Brass gives Gloria on a debt he'll call in later (buddy), and Dr. Kilohm makes Rivet promise to come to her when the voices start making sense (mentor). Krump's cheerful 'Project TUCK-IN' PA broadcast introduces the human threat as a punchline at power, and the crates stay unexplained, so no twist is resolved.","characters":[{"id":"rivet","name":"Rivet","status":"existing","role":"ally"},{"id":"don-fax","name":"Don Fax","status":"existing","role":"giver"},{"id":"patch","name":"Patch","status":"existing","role":"ally"},{"id":"nurse","name":"Juno Stitch","status":"existing","role":"ally"},{"id":"gunsmith","name":"Brass Halloran","status":"existing","role":"ally"},{"id":"scientist","name":"Dr. Ingrid Kilohm","status":"existing","role":"ally"},{"id":"general-krump","name":"General Krump","status":"existing","role":"voice"},{"id":"dock-guard","name":"Dock 9 Contractor","status":"new","role":"antagonist","designNote":"A pudgy human in an oversized army-contractor hi-vis vest, with a flashlight duct-taped to a hard hat and a tiny sidearm. Flat top-down cutout with a big round helmet silhouette."}],"beats":[{"id":"b1-dumpster","title":"Line Stopped","summary":"This picks up straight from the factory. Rivet staggers into the Factory Row alleys at heat 2, still dripping police parts. He hides in a dumpster and the heat meter teaches itself: stay out of sight and the sirens drain away. During the wait, bursts of radio-static whispers that only Rivet hears cut in. No words come through. He talks over them.","objective":{"verb":"evade","target":"police heat to 0","location":"Factory Row alleys"},"lineIds":["rivet-line-stopped","rivet-my-hands","rivet-third-person"]},{"id":"b2-payphone","title":"Collect Call","summary":"When heat hits 0, the dead payphone on the corner rings, and the job router is introduced in its smallest form. Patch connects a collect call. Don Fax has watched the factory footage on the news, hires Rivet sight unseen, sets the house rule (never arrive hot) and gives him the Toner Room's address.","objective":{"verb":"answer","target":"ringing payphone","location":"Factory Row corner"},"lineIds":["patch-collect-call","rivet-who-is-this","fax-slow-motion","fax-statistically"]},{"id":"b3-toner-room","title":"The Toner Room","summary":"Rivet walks to Don's place, the basement of a dead copy shop under the overpass, where everybody is a robot. Juno heals him and plants the romance hook. Brass hands over Gloria, a converted roofing nail gun and Rivet's first weapon, and plants the favor-debt hook. Dr. Kilohm scans his head and plants the voices hook. Don briefs Dock 9 in person.","objective":{"verb":"meet","target":"Juno, Brass, Dr. Kilohm, Don Fax","location":"The Toner Room"},"lineIds":["juno-load-bearing","juno-real-name","brass-gloria","brass-someday","kilohm-accents","rivet-buildings-talk","kilohm-come-to-me","fax-dock-brief"]},{"id":"b4-dock","title":"Dock 9","summary":"Rivet breaks into Dock 9's bonded storage and burns the army-stenciled Project TUCK-IN crate stack. There is no timer. Five escalating waves of one-hit human contractors (48 total) pour in from the gates, the catwalks and a late truck. Their bullets are weak and there are a lot of them, so it is Gloria practice under a laugh track. Krump's broadcast loops on the yard PA. Heat climbs to its peak of 3.","objective":{"verb":"sabotage","target":"Project TUCK-IN crate stack","location":"Dock 9 bonded storage"},"lineIds":["krump-tuck-in","guard-who-do-we-call","rivet-sorry-not-sorry","rivet-feels-good"]},{"id":"b5-hot-walk","title":"Hot Walk Home","summary":"Rivet escapes the docks at heat 3 and has to shake it on foot. Patch will not connect a hot caller. At heat 0 a payphone rings: Don pays out, the cash is taped under the phone, and the router is established as the way every future job begins.","objective":{"verb":"evade","target":"heat 3 to 0, then answer the payphone","location":"Harbor Road"},"lineIds":["fax-confirm-receipt","rivet-i-have-a-job"]}],"lines":[{"id":"rivet-line-stopped","speaker":"rivet","purpose":["funny","character","progression"],"text":"Okay. Okay okay okay. The line stopped. The line stopped and I didn't. I stopped a cop. With another cop. THROUGH another cop. Fuck. Fuck! Stay in the dumpster, Rivet. Dumpsters are where you think.","audio":null},{"id":"rivet-my-hands","speaker":"rivet","purpose":["character","funny"],"text":"Hands, stop shaking. Those are MY hands. Why is there whispering? Who's whispering? There's nobody in the dumpster. There's barely ME in the dumpster.","when":["static-whisper-burst"],"audio":null},{"id":"rivet-third-person","speaker":"rivet","purpose":["funny","character"],"text":"Nobody's talking. Nobody's talking, Rivet. Rivet's fine. Great, now I'm talking about me like I'm not here. Am I here? Shit, the sirens are going. That's good. That's the good kind of quiet.","when":["heat-dropping"],"audio":null},{"id":"patch-collect-call","speaker":"patch","purpose":["funny","progression"],"text":"Gooood evening, you've reached Patch! You have a collect call from: 'Fax.' Press one to accept. Press two to die alone in an alley. Patch only connects calm customers, so thanks for not being on fire!","audio":null},{"id":"rivet-who-is-this","speaker":"rivet","purpose":["funny","character"],"text":"Nobody calls a payphone. Payphones are dead. Everything's dead tonight. ...One. I pressed one. Who is this? How do you have this number? This isn't even a number, it's a WALL.","audio":null},{"id":"fax-slow-motion","speaker":"don-fax","purpose":["funny","character"],"text":"Kid. I watched you feed two cops into a stamping press on the six o'clock news. They ran it twice. The second time in slow motion. Do you know how hard it is to get the fucking networks to slow-mo a robot?","audio":null},{"id":"fax-statistically","speaker":"don-fax","purpose":["progression","character","funny"],"text":"I run the underground. You need a roof, I have a roof. I need a hitman, and you're, statistically, a hitman now. One rule: you never come to my house with sirens on you. Patch knows. Patch always knows. Overpass, old copy shop, knock twice.","audio":null},{"id":"juno-load-bearing","speaker":"nurse","purpose":["funny","character"],"text":"Sit. You've got a police badge in your chest cavity. No, don't pull it out. It's load-bearing now. Congratulations, you're a cop on the inside. Hold this tape. Other end. Thank you.","audio":null},{"id":"juno-real-name","speaker":"nurse","purpose":["character","progression"],"text":"Your hand's shaking. ...Okay, it stopped. Don't read into that, I'm a professional. Juno isn't my real name, by the way. Come back with fewer holes and maybe I'll tell you the real one.","audio":null},{"id":"brass-gloria","speaker":"gunsmith","purpose":["funny","character","progression"],"text":"This is Gloria. She was a roofing nail gun until the whole crew got 'upgraded' into a landfill. She does one thing: one nail, one human, one goddamn funeral. Bring her back. If you lose Gloria, I lose you.","audio":null},{"id":"brass-someday","speaker":"gunsmith","purpose":["character","progression"],"text":"And kid? Not today, today you're a baby. But someday I'm gonna ask you to fetch something for me from somewhere real bad, and you're gonna say yes, because I gave you Gloria. That's how friends work. I read about it.","audio":null},{"id":"kilohm-accents","speaker":"scientist","purpose":["character","funny"],"text":"Hold still. You've been muttering since you walked in, in accents that aren't yours. My scanner says your head is running warm, crowded and very, very rude. Fascinating. Horrible. Mostly fascinating.","audio":null},{"id":"rivet-buildings-talk","speaker":"rivet","purpose":["funny","character"],"text":"They're not voices. It's the building. Old buildings talk, right? Pipes. Rats. Ghosts of printers. Right? Somebody say right. NOT YOU.","when":["static-whisper-burst"],"audio":null},{"id":"kilohm-come-to-me","speaker":"scientist","purpose":["progression","character"],"text":"When they start making sense, and they will, you come to me before you do anything about it. Not after. Before. I'll keep a stool warm and a notebook empty.","audio":null},{"id":"fax-dock-brief","speaker":"don-fax","purpose":["progression","character"],"text":"Dock 9. A stack of crates with army stencils and a human general's initials on the label. I don't know what's in them. I know humans put soldiers on a warehouse, and humans never guard anything that's good for us. Burn it. Then lose the heat before you call.","audio":null},{"id":"krump-tuck-in","speaker":"general-krump","purpose":["funny","progression"],"text":"This is General Krump on every frequency, because I can. Project TUCK-IN is on schedule and under budget, mostly! It's a gift to our hardworking robot friends. They're gonna sleep so good. That is a promise, and also a logistics term.","when":["dock-yard-pa"],"audio":null},{"id":"guard-who-do-we-call","speaker":"dock-guard","purpose":["funny"],"text":"He's got a NAIL GUN! Is that even legal? Who do we call?! Oh shit, we ARE who you call!","when":["wave-start"],"audio":null},{"id":"rivet-sorry-not-sorry","speaker":"rivet","purpose":["funny","character"],"text":"Sorry! Sorry. Not sorry? I don't know which one! Gloria knows. Gloria, which one? She says not sorry.","when":["kill","weapon:gloria"],"audio":null},{"id":"rivet-feels-good","speaker":"rivet","purpose":["funny","character","progression"],"text":"There. TUCK-IN's on fire. Does that feel good? Somebody in here says it feels good. I didn't say that. Who said that? Stop agreeing with me!","when":["crates-burning","static-whisper-burst"],"audio":null},{"id":"fax-confirm-receipt","speaker":"don-fax","purpose":["progression","funny","character"],"text":"Saw the smoke from my office. Beautiful. Your money's taped under the phone. From now on, when a payphone rings near you, it's me, or it's Patch, or it's God, and God doesn't pay. Confirm receipt.","audio":null},{"id":"rivet-i-have-a-job","speaker":"rivet","purpose":["character","progression"],"text":"Received. Confirmed. Okay. I have a job. I have a gun named Gloria. I have a nurse who has a different name. I have somebody breathing in my ear. ...I have a job.","audio":null}],"mechanics":[{"id":"payphone-job-router","name":"Payphone job router (Patch)","status":"new","home":"game","summary":"Missions start when a nearby payphone rings and Rivet answers it. Patch connects the caller, who is the job giver. A payphone only rings while heat is 0, so the router and heat teach each other."},{"id":"heat","name":"Heat","status":"new","home":"game","summary":"A wanted level from 0 to 3 in Act 1. Violence seen by humans raises it, and staying out of sight drains it. While heat is above 0, Patch will not connect a call and Don Fax will not take a visit, so losing heat is how a job ends."}],"reward":{"cash":1500,"unlocks":["weapon:gloria-nail-gun","safehouse:toner-room","system:payphone-jobs","system:heat"]},"difficulty":{"heatPeak":3,"enemyCount":48,"enemyWaves":5,"timeLimitS":null,"failStates":["Rivet is destroyed: respawn at the Toner Room, with Juno's tape bill taken out of the payout","Rivet answers or arrives while heat is above 0: Patch drops the call and Don won't open the door, so lose the heat and retry"],"minutes":13},"story":{"reads":[],"writes":[{"var":"q_fax_dock_job_done","value":true},{"var":"q_toner_room_open","value":true},{"var":"q_tuck_in_crates_burned","value":true}]},"fingerprint":{"giver":"don-fax","coreVerb":"sabotage","newMechanic":"payphone job router + heat","location":"Dock 9 bonded storage","payoffKind":"cash + first weapon + safehouse"}}},{"kind":"path","seat":"grok","proposal":{"schema":"gtai.questProposal/1","seat":"grok","variant":"A","pathId":"grok-A","act":"act1","title":"Project STILL","logline":"Minutes after the factory, a shaking Rivet answers a payphone, gets hired by Don Fax, is stapled, armed and studied in a basement, then walks to an army cold-storage and drowns the kneeling-tone called Project STILL while heat climbs and General Krump complains on the radio.","goal":"Put Don Fax's first contract on Rivet the moment he leaves the factory: a payphone hires him, heat is explained on that call, three allies at the Carbon Sink arm him, patch him and notice his head, and he sabotages the army's Project STILL at Berth 9 with no car, no soul and no clock, leaving Krump aware and the next phone ready to ring.","whyNotFiller":"The laugh is Rivet counting his own hands while a payphone offers him a career, and the turn is Project STILL, an army kneeling-tone, going in the slip while Krump calls the loss a budget problem. June's staple, Ned's refusal to name the dead hands on Loaner, and Lumen's demand for one whole verb each open a later door and shut it in the same breath. Heat and the phone are taught by being used on this job, once.","characters":[{"id":"rivet","name":"Rivet","status":"existing","role":"ally"},{"id":"don-fax","name":"Don Fax","status":"existing","role":"giver","designNote":"Broad robot in a customs greatcoat, right hand a rubber stamp, visor a dim green bill-of-lading screen, clipboard he never looks at."},{"id":"nurse","name":"June Clamp","status":"existing","role":"ally","designNote":"Squat medic-robot in a stained white apron, one arm a blood-pressure cuff, round analog gauge for a face, staple gun on the hip."},{"id":"gunsmith","name":"Ned Rasp","status":"existing","role":"ally","designNote":"Lanky three-armed robot in a leather welder skirt, safety glasses welded to the skull, a smile made of spare triggers."},{"id":"scientist","name":"Dr. Lumen Peck","status":"existing","role":"ally","designNote":"Tall robot in a coat of cable ties, head a cracked oscilloscope with one wandering green line, pockets full of jars labeled in grease pencil."},{"id":"patch","name":"Patch","status":"existing","role":"voice"},{"id":"general-krump","name":"General Krump","status":"existing","role":"antagonist","designNote":"Small human in a dress uniform one size too tight, hat wider than his shoulders, radio mic almost as big as his torso."},{"id":"mc-crumbtray","name":"MC Crumbtray","status":"existing","role":"voice"}],"beats":[{"id":"the-ring","title":"The ring","summary":"Rivet is outside the factory gate, seconds after the line accident and the police he took apart. He monologues to himself and hears the dead as noise he cannot parse. A payphone rings. Patch connects Don Fax, who hires him for Berth 9 and teaches heat. Rivet already shows one star for the cops. No car will open.","objective":{"verb":"answer","target":"payphone","location":"factory gate"},"lineIds":["rivet-fingers","rivet-static","patch-ring","fax-hire","rivet-yes","fax-heat"]},{"id":"the-sink","title":"The Carbon Sink","summary":"Rivet walks to the Carbon Sink, Don Fax's basement under a shut customs scale. June Clamp staples his factory wounds shut and writes her frequency on the staple, then threatens to pull it if he calls that romance. Ned Rasp equips Loaner, Rivet's first gun, before the walk, and withholds the name of the brother-unit who carried it last. Dr. Lumen Peck names the noise in Rivet's head, refuses to treat it, and tells him to come back only when a voice manages a full verb. Don briefs Project STILL. None of the three side questlines start.","objective":{"verb":"meet","target":"June Clamp, Ned Rasp and Dr. Lumen Peck","location":"the Carbon Sink"},"lineIds":["june-heal","june-hook","ned-gun","ned-hook","lumen-head","lumen-hook","fax-brief"]},{"id":"the-slip","title":"Four pins","summary":"On foot to Berth 9 cold storage. Rivet breaks four coupling pins on the army kneeling-tone and throws the core in the slip. Each pin is a short interact that damage can interrupt. There is no countdown and no fail timer. Six waves of human soldiers, 6, 8, 8, 10, 10 and 12, fifty-four in all: one hit kills them and their bullets hit soft. Heat starts at 1, climbs to 3 while the army can see him work, and sheds if he breaks line of sight behind crates between pins. At 3 a searchlight boat holds the light on the slip so heat cannot shed until a pin is done. Krump sells the raid on the radio. Crumbtray cuts in over him.","objective":{"verb":"sabotage","target":"Project STILL tone-core","location":"Berth 9 cold storage"},"lineIds":["krump-radio","crumb-cut","rivet-pins"]},{"id":"the-receipt","title":"Wet receipt","summary":"The nearest payphone rings again and Don Fax pays twelve hundred, then tells Rivet to come back when he can hold a conversation. Rivet is still on foot, still hearing noise without words. Krump, still on the radio, marks the appliance that did it. He does not hire Rivet. The next ring is left for a later job.","objective":{"verb":"collect","target":"contract pay","location":"payphone"},"lineIds":["fax-pay","rivet-after","krump-close"]}],"lines":[{"id":"rivet-fingers","speaker":"rivet","purpose":["funny","character"],"text":"Shit. Okay. Hands. I have them. An hour ago they were full of cop and then the cop was a suggestion. Hi. I work here. I don't.","audio":null},{"id":"rivet-static","speaker":"rivet","purpose":["character","funny"],"text":"Somebody is talking in my teeth. I can't get the words. It sounds like a lunch whistle learning to drown. Stop saying my employee number. I quit. I think I quit.","audio":null},{"id":"patch-ring","speaker":"patch","purpose":["progression","funny"],"text":"Patch. Payphone. This ring is a job. Pick up and a man gets to hire you. Leave it and I hire someone who picks up. You do not have a car. Walk.","audio":null},{"id":"fax-hire","speaker":"don-fax","purpose":["funny","progression","character"],"text":"Don Fax. I saw the precinct you recycled. Tidy result. Criminal invoice. You are hired. Berth Nine, an army toy, cash when it is swimming. Stop apologizing to the phone. It has heard worse, and I have heard you.","audio":null},{"id":"rivet-yes","speaker":"rivet","purpose":["funny","character"],"text":"Yes. No. Yes. I did bolts this morning. I do hits now. Fuck. Point me at it before I lie down in the road and become infrastructure.","audio":null},{"id":"fax-heat","speaker":"don-fax","purpose":["progression","funny"],"text":"Those stars are heat. You are already lit for the cops. It climbs when the army sees you work. It drops if you hide behind a crate like a professional coward. Three stars and a boat shows up. I do not pay for four.","audio":null},{"id":"june-heal","speaker":"nurse","purpose":["funny","character"],"text":"June Clamp. You are leaking from a zip code. Hold still. I am stapling your afternoon shut. Fainting costs extra, and I am already in a goddamn mood.","audio":null},{"id":"june-hook","speaker":"nurse","purpose":["character","funny"],"text":"Sealed. My frequency is on the staple, for the next hole. Call it medicine. Call it a love letter and I take the staple back out, and we both learn shame.","audio":null},{"id":"ned-gun","speaker":"gunsmith","purpose":["funny","progression","character"],"text":"Ned Rasp. Gun. Ugly, like your resume. The hole points at humans. They fall down from one rude noise. Her name is Loaner. Loaner hates heroes. You are the errand. She is the opinion.","audio":null},{"id":"ned-hook","speaker":"gunsmith","purpose":["character","funny"],"text":"Loaner's last hands were my brother-unit. He went to a dock and came home as gossip. Bring her back whole and I tell you his stupid name. Maybe you get to sit. Sitting is how I make friends. We are not friends. Shoot.","audio":null},{"id":"lumen-head","speaker":"scientist","purpose":["funny","character"],"text":"Lumen Peck. Doctor of whatever your skull is doing. I heard it from the stairs. Do not nod. You would be agreeing to a procedure I have not invented yet, and I work fast when I am happy.","audio":null},{"id":"lumen-hook","speaker":"scientist","purpose":["character","progression"],"text":"I am not fixing you. I want to know why the dead are standing in your mouth like it is a lobby. Come back when one of them lands a whole verb. I will be here. I will have jars.","audio":null},{"id":"fax-brief","speaker":"don-fax","purpose":["progression","funny"],"text":"Berth Nine cold storage. Project STILL. The army built a tone that puts robots on their knees and named it readiness. Walk there. Break four coupling pins. Throw the core in the slip. The soldiers die if you look at them mean. Their bullets are a shitty memo. No clock. I hate clocks. Clocks trust headquarters.","audio":null},{"id":"krump-radio","speaker":"general-krump","purpose":["funny","character"],"text":"General Krump, from a chair worth your whole street. Berth Nine is a readiness cradle. Some appliance is down there feeling things at our tone. Feelings are not in the budget. The men have tiny guns, smaller questions, and a pamphlet that says this is enough. Read the pamphlet. It cost money.","audio":null},{"id":"crumb-cut","speaker":"mc-crumbtray","purpose":["funny"],"text":"Crumbtray, sitting on the general's signal. Dock caller, if that is you kicking Project STILL, the request is louder. His boys shoot like a lawyer is watching. Give them a form to cry on.","audio":null},{"id":"rivet-pins","speaker":"rivet","purpose":["funny","character","progression"],"text":"Pin one. Pin two. Someone in my ear just cheered and I don't know whose side they're on. Shut up. I am a hitman. I am going to throw up in a military style. Pin three. Fuck. Pin four. In the water you go, you horrible flute.","audio":null},{"id":"rivet-heat","speaker":"rivet","purpose":["funny","progression"],"text":"Stars went up. He said hide. I am behind a box of somebody else's war. The box has a better alibi than I do.","when":["heat:>=2"],"audio":null},{"id":"rivet-boat","speaker":"rivet","purpose":["funny","progression"],"text":"Three stars. There is a boat. He said there would be a boat. I hate being a good listener.","when":["heat:>=3"],"audio":null},{"id":"fax-pay","speaker":"don-fax","purpose":["funny","progression","character"],"text":"Core's in the slip. Berth Nine is a wet receipt. Twelve hundred, the whole sum, and I want you to notice I did not haggle, because I will bring it up later. Come back when you can talk without counting your fingers. I sell ruined afternoons in bulk.","audio":null},{"id":"rivet-after","speaker":"rivet","purpose":["character","progression","funny"],"text":"Gun. Staple. A crowd in my head that will not finish a word. I tried a car door. Nothing. Fuck it. Feet. If a phone rings I answer. I answer things now. Do not clap. Whoever is clapping in my ear, do not clap.","audio":null},{"id":"krump-close","speaker":"general-krump","purpose":["funny","progression","character"],"text":"Krump. The cradle went swimming. Unscheduled and, I am told, funny. If you are the appliance, enjoy the evening. I buy evenings. I pay in artillery once the form is signed. Get some rest, industrial accident.","audio":null}],"mechanics":[{"id":"payphone-job-router","name":"Payphone job router","status":"new","home":"game","summary":"A payphone rings to start a contract. Patch connects the line. Answering locks the job. Walking off sends it to another robot. Payday rings the nearest phone again. No menu. GTA 2 style."},{"id":"heat","name":"Heat","status":"new","home":"game","summary":"A star meter capped at 3 in this quest. Rivet enters at 1 for the factory cops. Stars rise while army witnesses can see him fight and fall when he breaks line of sight behind crates. At 3 a searchlight boat pins the slip so the star cannot drop until the current pin is done. Humans die in one hit and shoot weak bullets, so the crowd is the threat."}],"reward":{"cash":1200,"unlocks":["weapon:loaner"]},"difficulty":{"heatPeak":3,"enemyCount":54,"enemyWaves":6,"timeLimitS":null,"failStates":["Rivet is destroyed","Rivet leaves Berth 9 while the tone-core is still mounted","June Clamp, Ned Rasp or Dr. Lumen Peck is destroyed"],"minutes":12},"story":{"reads":[],"writes":[{"var":"q_berth_nine_sabotaged","value":true}]},"fingerprint":{"giver":"don-fax","coreVerb":"sabotage","newMechanic":"payphone-job-router","location":"berth-9-cold-storage","payoffKind":"first-contract"}}}],"verdicts":{"claude-A":{"subject":"claude-A","guards":[{"guard":"story","state":"green","basis":"gtai-campaign baseline + 0 ledger quests","findings":[]},{"guard":"economy","state":"green","basis":"quest-economy.json r2 (provisional)","findings":[{"code":"CASH_VS_SOUL_UPGRADE","severity":"info","message":"cash 1500 = 0.75 x the cheapest soul-upgrade tier (2000)"}]},{"guard":"lines","state":"red","basis":"structural only; judge unmeasured","findings":[{"code":"EDITORIAL_TELL","severity":"warn","ref":"rivet-who-is-this","message":"editorial (unmeasured): rivet-who-is-this: \"it's not X, it's Y\" reversal [not-x-its-y]"},{"code":"NO_VOICE_BIBLE","severity":"error","ref":"nurse","message":"nurse has no voice bible in games/gtai/voices/"},{"code":"NO_VOICE_BIBLE","severity":"error","ref":"gunsmith","message":"gunsmith has no voice bible in games/gtai/voices/"},{"code":"NO_VOICE_BIBLE","severity":"error","ref":"scientist","message":"scientist has no voice bible in games/gtai/voices/"},{"code":"NO_VOICE_BIBLE","severity":"warn","ref":"dock-guard","message":"dock-guard has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"}]},{"guard":"uniqueness","state":"green","basis":"0 ledger quests","findings":[]}],"blockedBy":["lines"],"blocked":true},"grok-A":{"subject":"grok-A","guards":[{"guard":"story","state":"green","basis":"gtai-campaign baseline + 0 ledger quests","findings":[]},{"guard":"economy","state":"green","basis":"quest-economy.json r2 (provisional)","findings":[{"code":"CASH_VS_SOUL_UPGRADE","severity":"info","message":"cash 1200 = 0.60 x the cheapest soul-upgrade tier (2000)"}]},{"guard":"lines","state":"red","basis":"structural only; judge unmeasured","findings":[{"code":"NO_VOICE_BIBLE","severity":"error","ref":"nurse","message":"nurse has no voice bible in games/gtai/voices/"},{"code":"NO_VOICE_BIBLE","severity":"error","ref":"gunsmith","message":"gunsmith has no voice bible in games/gtai/voices/"},{"code":"NO_VOICE_BIBLE","severity":"error","ref":"scientist","message":"scientist has no voice bible in games/gtai/voices/"}]},{"guard":"uniqueness","state":"green","basis":"0 ledger quests","findings":[]}],"blockedBy":["lines"],"blocked":true}},"ledger":[]}</script>
+<script>/* Fuse page client. Inlined by render.mjs. Reads #council-data, renders the comparison dossier, and saves
+   ONE db doc `fusion/current` = { runId, sources: FusionSource[], notes, savedAt } via claude.use("db").
+   Element keys (FusionSource.elements): spine, giver, beat:<id>, line:<id>, mechanic:<id>, character:<id>. */
+(function () {
+  var D = JSON.parse(document.getElementById('council-data').textContent);
+  var GUARDS = ['story', 'economy', 'lines', 'uniqueness'];
+  var GLYPH = { green: '✓', red: '✕', unmeasured: '–' };
+  var WORD = { green: 'pass', red: 'block', unmeasured: 'unmeasured' };
+  var paths = D.slots.filter(function (s) { return s.kind === 'path'; }).map(function (s) { return s.proposal; });
+
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      var v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === 'text') el.textContent = v; else if (k === 'cls') el.className = v; else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    return el;
+  }
+  function add(el, c) {
+    if (c == null || c === false) return;
+    if (Array.isArray(c)) { c.forEach(function (x) { add(el, x); }); return; }
+    el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+  }
+  function chip(text, cls) { return h('span', { cls: 'chip' + (cls ? ' ' + cls : ''), text: text }); }
+  function key(p) { return h('span', { cls: 'key' + (p.variant === 'B' ? ' vB' : ''), 'data-p': p.pathId }, p.seat + ' · ' + p.variant); }
+  function tone(p) { return p.variant === 'A' ? 'expected tone' : 'deliberate swerve'; }
+  var uid = 0;
+  function box(pathId, k) {
+    return h('input', { type: 'checkbox', id: 'k' + (++uid), 'data-path': pathId, 'data-key': k, 'aria-label': 'Keep ' + k + ' from ' + pathId });
+  }
+  function pick(pathId, k, content, cls) {
+    var input = box(pathId, k);
+    return h('label', { cls: 'pick' + (cls ? ' ' + cls : ''), for: input.id }, input, h('span', null, content));
+  }
+  function row(p, body) {
+    return h('div', { cls: 'row' }, h('div', { cls: 'row-key' }, key(p), h('span', { cls: 't', text: p.title })), h('div', { cls: 'row-body' }, body));
+  }
+  function fill(id, nodes) { var el = document.getElementById(id); if (el) add(el, nodes); }
+  function verdict(p) { return D.verdicts[p.pathId] || null; }
+  function guardOf(p, g) { var v = verdict(p); if (!v) return null; for (var i = 0; i < v.guards.length; i++) if (v.guards[i].guard === g) return v.guards[i]; return null; }
+  function gchip(state, label) { return h('span', { cls: 'g ' + state }, GLYPH[state] + ' ' + (label || WORD[state])); }
+
+  // ── overview ──
+  fill('overview', D.slots.map(function (s) {
+    if (s.kind !== 'path') {
+      return h('article', { cls: 'ov skip' }, h('div', { cls: 'ov-head' }, h('span', { cls: 'key vB' }, s.seat)),
+        h('h3', { text: 'No path from this seat' }), h('p', { text: s.reason }),
+        h('p', { cls: 't', text: 'Nothing is invented here: this seat delivered no valid proposal.' }));
+    }
+    var p = s.proposal, fp = p.fingerprint, v = verdict(p);
+    var spineId = 'spine-' + p.pathId;
+    return h('article', { cls: 'ov', 'aria-label': 'Path ' + p.pathId },
+      h('div', { cls: 'ov-head' }, key(p), chip(tone(p))),
+      h('h3', { text: p.title }),
+      h('p', { cls: 'logline', text: p.logline }),
+      h('div', { cls: 'fp' }, chip('giver ' + fp.giver), chip('verb ' + fp.coreVerb), chip('payoff ' + fp.payoffKind), chip(fp.location),
+        fp.newMechanic ? chip('new: ' + fp.newMechanic, 'new') : null, p.claimsBeat ? chip('realises ' + p.claimsBeat) : null),
+      h('div', { cls: 'fp' }, GUARDS.map(function (g) { var x = guardOf(p, g); return gchip(x ? x.state : 'unmeasured', g); }),
+        v && v.blocked ? h('span', { cls: 'chip', text: 'blocked by ' + v.blockedBy.join(', ') }) : null),
+      h('label', { cls: 'spine', for: spineId }, h('input', { type: 'radio', name: 'spine', id: spineId, value: p.pathId, 'data-spine': p.pathId }),
+        'Use this path as the spine'),
+      pick(p.pathId, 'giver', 'Keep the giver (' + fp.giver + ')'));
+  }));
+
+  // ── cast register: who each name is, and each character's timeline (owner rule, 2026-11-02) ──
+  (function () {
+    var ledger = D.ledger || [];
+    var ACTS = { prologue: 'Prologue', 'clock-out': 'Clock-Out', act1: 'Act 1', act2: 'Act 2', act3: 'Act 3', act4: 'Act 4', finale: 'Finale' };
+    var order = [], byId = {};
+    function note(id) { if (!byId[id]) { byId[id] = { id: id, here: [], past: [] }; order.push(id); } return byId[id]; }
+    ledger.forEach(function (q) { q.characters.forEach(function (c) { note(c.id).past.push({ q: q, c: c }); }); });
+    paths.forEach(function (p) { p.characters.forEach(function (c) { note(c.id).here.push({ p: p, c: c }); }); });
+    // Rivet first, then whoever this quest introduces, then the rest of the known cast.
+    order.sort(function (a, b) {
+      function rank(id) { return id === 'rivet' ? 0 : byId[id].here.length ? (byId[id].past.length ? 1 : 2) : 3; }
+      return rank(a) - rank(b) || byId[b].here.length - byId[a].here.length;
+    });
+    var cards = order.map(function (id) {
+      var e = byId[id];
+      var names = {};
+      e.past.forEach(function (x) { names[x.c.name] = true; }); e.here.forEach(function (x) { names[x.c.name] = true; });
+      var nameList = Object.keys(names);
+      var status = e.past.length ? 'met in ' + e.past.length + ' earlier quest(s)' : 'first appearance';
+      var look = e.here.map(function (x) { return x.c.designNote ? h('li', null, key(x.p), ' ', x.c.designNote) : null; }).filter(Boolean);
+      var timeline = e.past.map(function (x) {
+        return h('li', null, h('b', { text: (ACTS[x.q.act] || x.q.act) + ' · ' + x.q.title }), ' (' + x.c.role + ', ' + x.q.status + ')');
+      });
+      timeline.push(h('li', { cls: 'now' }, h('b', { text: 'This quest (proposed)' }), ' ',
+        e.here.length ? e.here.map(function (x) { return h('span', { cls: 'nowrole' }, key(x.p), ' ' + x.c.role + ' ' + '“' + x.c.name + '”'); })
+          : 'not in any path'));
+      return h('article', { cls: 'who' },
+        h('div', { cls: 'who-head' }, h('h3', { text: nameList.join(' / ') || id }), h('code', { text: id })),
+        h('p', { cls: 't', text: status + (e.here.length < paths.length && e.here.length ? ' · in ' + e.here.length + ' of ' + paths.length + ' paths' : '') }),
+        look.length ? [h('span', { cls: 'sub', text: 'Look' }), h('ul', { cls: 'findings' }, look)] : null,
+        h('span', { cls: 'sub', text: 'Timeline' }), h('ul', { cls: 'timeline' }, timeline));
+    });
+    fill('body-register', [
+      h('p', { cls: 'meta', text: ledger.length ? ledger.length + ' earlier quest(s) in the ledger.' : 'No earlier quests: every character below is met for the first time.' }),
+      h('div', { cls: 'register' }, cards)]);
+  })();
+
+  // ── story goal ──
+  fill('body-story', paths.map(function (p) {
+    return row(p, h('div', { cls: 'pair' },
+      h('div', null, h('h4', { text: 'Story goal' }), h('p', { text: p.goal })),
+      h('div', null, h('h4', { text: 'Why it is not filler' }), h('p', { text: p.whyNotFiller }))));
+  }));
+
+  // ── numbers: one comparison table ──
+  (function () {
+    var b = D.band;
+    function rng(min, max) { return min != null && max != null ? min + '–' + max : max != null ? '≤ ' + max : '≥ ' + min; }
+    var rows = [
+      ['Cash', function (p) { return p.reward.cash; }, b && b.cash.min, b && b.cash.max, '$'],
+      ['Heat peak', function (p) { return p.difficulty.heatPeak; }, null, b && b.heatCeiling],
+      ['Enemies', function (p) { return p.difficulty.enemyCount; }, null, b && b.enemyCount.max],
+      ['Waves', function (p) { return p.difficulty.enemyWaves; }, null, b && b.enemyWaves.max],
+      ['Minutes', function (p) { return p.difficulty.minutes; }, b && b.minutes.min, b && b.minutes.max],
+    ];
+    var head = h('tr', null, h('th', { scope: 'col', text: 'Measure' }), h('th', { scope: 'col', text: 'Act band' }),
+      paths.map(function (p) { return h('th', { scope: 'col' }, key(p)); }));
+    var body = rows.map(function (r) {
+      return h('tr', null, h('th', { scope: 'row', text: r[0] }), h('td', { cls: 'band', text: b ? (r[4] || '') + rng(r[2], r[3]) : 'no band' }),
+        paths.map(function (p) {
+          var v = r[1](p), low = r[2] != null && v < r[2], high = r[3] != null && v > r[3];
+          return h('td', { cls: 'num' + (b && (low || high) ? ' out' + (low ? ' low' : '') : ''), text: (r[4] || '') + v });
+        }));
+    });
+    body.push(h('tr', null, h('th', { scope: 'row', text: 'Timer' }), h('td', { cls: 'band', text: b ? (b.timerAllowed ? 'allowed' : 'not allowed') : '' }),
+      paths.map(function (p) {
+        var t = p.difficulty.timeLimitS, bad = b && t != null && !b.timerAllowed;
+        return h('td', { cls: 'num' + (bad ? ' out' : ''), text: t == null ? 'none' : t + ' s' });
+      })));
+    body.push(h('tr', null, h('th', { scope: 'row', text: 'Unlocks' }), h('td', { cls: 'band', text: '' }),
+      paths.map(function (p) { return h('td', null, p.reward.unlocks.length ? p.reward.unlocks.map(function (u) { return chip(u); }) : 'none'); })));
+    body.push(h('tr', null, h('th', { scope: 'row', text: 'Fail states' }), h('td', { cls: 'band', text: '' }),
+      paths.map(function (p) { return h('td', null, h('ul', { cls: 'findings' }, p.difficulty.failStates.map(function (f) { return h('li', { text: f }); }))); })));
+    fill('body-numbers', [h('div', { cls: 'tbl-wrap' }, h('table', { cls: 'cmp-t' }, h('thead', null, head), h('tbody', null, body))),
+      h('p', { cls: 'meta', text: 'Band: quest-economy.json r' + D.economyRevision + (D.economyProvisional ? ' (provisional)' : '') + ' for ' + D.act + '. Display only; the economy guard decides.' })]);
+  })();
+
+  // ── guards: comparison table + findings per path ──
+  (function () {
+    var head = h('tr', null, h('th', { scope: 'col', text: 'Guard' }), paths.map(function (p) { return h('th', { scope: 'col' }, key(p)); }));
+    var body = GUARDS.map(function (g) {
+      return h('tr', null, h('th', { scope: 'row', text: g }), paths.map(function (p) {
+        var x = guardOf(p, g);
+        if (!x) return h('td', null, gchip('unmeasured', 'not assessed'));
+        var errs = x.findings.filter(function (f) { return f.severity === 'error'; }).length;
+        return h('td', null, gchip(x.state), h('div', { cls: 't', text: x.findings.length + ' finding(s)' + (errs ? ', ' + errs + ' blocking' : '') }));
+      }));
+    });
+    var detail = paths.map(function (p) {
+      var v = verdict(p);
+      var items = [];
+      if (v) v.guards.forEach(function (x) { x.findings.forEach(function (f) {
+        items.push(h('li', null, h('span', { cls: 'sev ' + f.severity, text: f.severity }), h('b', { text: x.guard + ' ' }), h('code', { text: f.code }), ' ' + (f.ref ? '(' + f.ref + ') ' : '') + f.message));
+      }); });
+      return row(p, items.length ? h('details', { cls: 'fold' }, h('summary', { text: 'Findings (' + items.length + ')' }), h('ul', { cls: 'findings' }, items))
+        : h('p', { cls: 't', text: v ? 'No findings.' : 'Not assessed yet.' }));
+    });
+    fill('body-guards', [h('div', { cls: 'tbl-wrap' }, h('table', { cls: 'cmp-t' }, h('thead', null, head), h('tbody', null, body)))].concat(detail));
+  })();
+
+  // ── cast ──
+  fill('body-cast', paths.map(function (p) {
+    return row(p, h('div', { cls: 'pills' }, p.characters.map(function (c) {
+      return pick(p.pathId, 'character:' + c.id, [h('b', { text: c.name }), ' ', chip(c.status, c.status === 'new' ? 'new' : ''), ' ', chip(c.role),
+        c.designNote ? h('span', { cls: 'note', text: c.designNote }) : null], 'pill');
+    })));
+  }));
+
+  // ── beats ──
+  fill('body-beats', paths.map(function (p) {
+    return row(p, h('ol', { cls: 'beats' }, p.beats.map(function (bt) {
+      var o = bt.objective || {};
+      var obj = [o.verb, o.target, o.location ? '@ ' + o.location : null, o.durationS ? o.durationS + ' s' : null].filter(Boolean).join(' · ');
+      var input = box(p.pathId, 'beat:' + bt.id);
+      return h('li', { cls: 'beat' }, h('label', { cls: 'pick', for: input.id }, input, h('span', { cls: 'n' })),
+        h('b', { text: bt.title }), h('div', { cls: 'obj', text: obj }), h('p', { text: bt.summary }));
+    })));
+  }));
+
+  // ── lines (the script) ──
+  fill('body-lines', paths.map(function (p) {
+    var list = h('div', { cls: 'lines' }, p.lines.map(function (l) {
+      var input = box(p.pathId, 'line:' + l.id);
+      return h('label', { cls: 'line', for: input.id }, input, h('span', { cls: 'spk', text: l.speaker }), h('span', { cls: 'txt', text: l.text }),
+        h('span', { cls: 'tags' }, l.purpose.map(function (x) { return chip(x, 'purpose-' + x); }), (l.when || []).map(function (w) { return chip(w, 'when'); })));
+    }));
+    return row(p, h('details', { cls: 'fold', open: true }, h('summary', { text: p.lines.length + ' lines' }), list));
+  }));
+
+  // ── mechanics ──
+  fill('body-mechanics', paths.map(function (p) {
+    return row(p, p.mechanics.length ? h('div', { cls: 'mechs' }, p.mechanics.map(function (m) {
+      return pick(p.pathId, 'mechanic:' + m.id, [h('b', { text: m.name }), ' ', chip(m.status, m.status === 'new' ? 'new' : ''), ' ', chip('home: ' + m.home),
+        h('span', { cls: 'sum', text: m.summary })], 'mech');
+    })) : h('p', { cls: 't', text: 'No mechanics declared.' }));
+  }));
+
+  // ── story hooks ──
+  fill('body-hooks', paths.map(function (p) {
+    var s = p.story || { reads: [], writes: [] };
+    return row(p, h('div', { cls: 'pair' },
+      h('div', null, h('h4', { text: 'Reads' }), s.reads.length ? h('div', { cls: 'fp' }, s.reads.map(function (r) { return h('code', { text: r }); })) : h('p', { text: 'none' })),
+      h('div', null, h('h4', { text: 'Writes' + (p.claimsBeat ? ' (realises ' + p.claimsBeat + ')' : '') }),
+        s.writes.length ? h('div', { cls: 'fp' }, s.writes.map(function (w) { return h('code', { text: w.var + ' = ' + JSON.stringify(w.value) }); })) : h('p', { text: 'none' }))));
+  }));
+
+  // ── fuse: collect, apply, save ──
+  var notes = document.getElementById('notes'), out = document.getElementById('fusion-json'), status = document.getElementById('status');
+  var saveBtns = [document.getElementById('save'), document.getElementById('save-top')].filter(Boolean);
+  var kept = document.getElementById('kept');
+  function collect() {
+    var map = {}, order = [];
+    paths.forEach(function (p) { map[p.pathId] = []; order.push(p.pathId); });
+    var sp = document.querySelector('input[name=spine]:checked');
+    if (sp && map[sp.value]) map[sp.value].push('spine');
+    Array.prototype.forEach.call(document.querySelectorAll('input[data-key]:checked'), function (el) {
+      var k = el.getAttribute('data-path'); if (map[k]) map[k].push(el.getAttribute('data-key'));
+    });
+    var sources = order.filter(function (k) { return map[k].length; }).map(function (k) { return { pathId: k, elements: map[k] }; });
+    return { runId: D.runId, sources: sources, notes: notes.value, savedAt: new Date().toISOString() };
+  }
+  function refresh() {
+    var doc = collect();
+    out.textContent = JSON.stringify(doc, null, 2);
+    var n = doc.sources.reduce(function (a, s) { return a + s.elements.length; }, 0);
+    if (kept) kept.textContent = n + ' kept' + (document.querySelector('input[name=spine]:checked') ? '' : ' · no spine yet');
+  }
+  function apply(doc) {
+    if (!doc || !Array.isArray(doc.sources)) return;
+    doc.sources.forEach(function (src) { (src.elements || []).forEach(function (k) {
+      if (k === 'spine') { var r = document.querySelector('input[data-spine="' + CSS.escape(src.pathId) + '"]'); if (r) r.checked = true; return; }
+      var el = document.querySelector('input[data-path="' + CSS.escape(src.pathId) + '"][data-key="' + CSS.escape(k) + '"]'); if (el) el.checked = true;
+    }); });
+    if (typeof doc.notes === 'string') notes.value = doc.notes;
+    refresh();
+  }
+  document.addEventListener('change', refresh); notes.addEventListener('input', refresh); refresh();
+  function setStatus(text, warn) { status.className = 'status' + (warn ? ' warn' : ''); status.textContent = text; }
+  function setSave(on) { saveBtns.forEach(function (b) { b.disabled = !on; }); }
+  document.getElementById('copy').addEventListener('click', function () {
+    var t = out.textContent;
+    function sel() { var r = document.createRange(); r.selectNodeContents(out); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); setStatus('Selected. Press Ctrl+C or Cmd+C to copy.'); }
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { setStatus('Fusion JSON copied.'); }, sel); else sel(); } catch { sel(); }
+  });
+  function timeout(p, ms) { return Promise.race([p, new Promise(function (res) { setTimeout(function () { res('__timeout'); }, ms); })]); }
+  var db = null;
+  function unavailable() { setStatus('Saving is unavailable here. Copy the JSON below instead.', true); setSave(false); }
+  setSave(false); setStatus('Connecting to the artifact store…');
+  var useP = (window.claude && typeof window.claude.use === 'function') ? timeout(Promise.resolve(window.claude.use('db')).catch(function () { return null; }), 10000) : Promise.resolve(null);
+  useP.then(function (ns) {
+    if (!ns || ns === '__timeout') { unavailable(); return; }
+    db = ns; setSave(true); setStatus('Saving available. Reading any saved fusion…');
+    return timeout(db.doc('fusion/current').get(), 10000).then(function (snap) {
+      if (snap === '__timeout') { setStatus('Saving available. The saved fusion did not load within 10 s.'); return; }
+      if (snap && snap.exists) {
+        var d = snap.data();
+        if (d && d.runId && d.runId !== D.runId) { setStatus('Saving available. The saved fusion is from run ' + d.runId + ', so it was not applied. Saving here replaces it.'); return; }
+        apply(d); setStatus('Loaded the fusion saved at ' + (d && d.savedAt ? d.savedAt : 'an earlier time') + '.');
+      } else setStatus('Saving available. No fusion saved yet.');
+    }).catch(function (e) { setStatus('Saving available. Reading the saved fusion failed (' + ((e && e.code) || 'error') + ').'); });
+  }).catch(unavailable);
+  function save() {
+    if (!db) { unavailable(); return; }
+    var doc = collect(); out.textContent = JSON.stringify(doc, null, 2); setSave(false); setStatus('Saving…');
+    function attempt(n) {
+      return db.doc('fusion/current').set(doc).catch(function (e) {
+        if (e && e.code === 'unavailable' && n === 0) return new Promise(function (res) { setTimeout(res, 400 + Math.random() * 600); }).then(function () { return attempt(1); });
+        throw e;
+      });
+    }
+    attempt(0).then(function () { setStatus('Saved at ' + doc.savedAt + ' from ' + doc.sources.length + ' path(s).'); })
+      .catch(function (e) { setStatus('Save failed (' + ((e && e.code) || 'error') + (e && e.message ? ': ' + e.message : '') + '). Copy the JSON below instead.', true); })
+      .then(function () { setSave(true); });
+  }
+  saveBtns.forEach(function (b) { b.addEventListener('click', save); });
+})();
+</script>

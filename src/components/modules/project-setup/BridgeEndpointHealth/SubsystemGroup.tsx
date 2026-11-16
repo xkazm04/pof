@@ -39,23 +39,14 @@ export function SubsystemGroup({
           ? <ChevronDown className="w-3 h-3 text-text-muted" />
           : <ChevronRight className="w-3 h-3 text-text-muted" />
         }
-        <span style={{ color: subsystem.notIntegrated ? STATUS_NEUTRAL : subsystem.color }}><SubIcon className="w-3.5 h-3.5" /></span>
-        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: subsystem.notIntegrated ? STATUS_NEUTRAL : subsystem.color }}>
+        <span style={{ color: subsystem.color }}><SubIcon className="w-3.5 h-3.5" /></span>
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: subsystem.color }}>
           {subsystem.label}
         </span>
-        {subsystem.notIntegrated && (
-          <span
-            className="text-2xs font-medium px-1.5 py-0.5 rounded"
-            style={{ color: STATUS_WARNING, backgroundColor: `${STATUS_WARNING}${OPACITY_15}` }}
-            data-testid={`bridge-group-${subsystem.id}-not-integrated`}
-          >
-            Not Integrated
-          </span>
-        )}
         <span className="text-2xs text-text-muted">{subsystem.endpoints.length}</span>
 
         {groupChecked > 0 && (
-          <span className="ml-auto text-2xs font-mono" style={{ color: groupHealthy === groupChecked ? STATUS_SUCCESS : STATUS_WARNING }}>
+          <span className="ml-auto text-xs font-mono" style={{ color: groupHealthy === groupChecked ? STATUS_SUCCESS : STATUS_WARNING }}>
             {groupHealthy}/{groupChecked}
           </span>
         )}
@@ -63,7 +54,7 @@ export function SubsystemGroup({
 
       {/* Endpoints */}
       {isOpen && (
-        <div id={`beh-group-${subsystem.id}`} role="region" aria-label={subsystem.label} className={`pb-1${subsystem.notIntegrated ? ' opacity-50' : ''}`}>
+        <div id={`beh-group-${subsystem.id}`} role="region" aria-label={subsystem.label} className="pb-1">
           {subsystem.endpoints.map((ep) => {
             const h = health[ep.path];
             const plan = planRouteProbe(ep);
@@ -115,13 +106,13 @@ export function SubsystemGroup({
                 {h && (
                   <span className="flex items-center gap-2 shrink-0 ml-auto">
                     {h.kind && (
-                      <span className="text-2xs" style={{ color: h.status === 'timeout' ? STATUS_WARNING : STATUS_ERROR }}>
+                      <span className="text-xs" style={{ color: h.status === 'timeout' ? STATUS_WARNING : STATUS_ERROR }}>
                         {probeKindLabel(h.kind)}
                       </span>
                     )}
                     {h.statusCode && (
                       <span
-                        className="text-2xs font-mono px-1 rounded"
+                        className="text-xs font-mono px-1 rounded"
                         style={{
                           color: h.statusCode < 400 ? STATUS_SUCCESS : STATUS_ERROR,
                           backgroundColor: h.statusCode < 400 ? `${STATUS_SUCCESS}${OPACITY_15}` : `${STATUS_ERROR}${OPACITY_15}`,

@@ -1,7 +1,8 @@
 'use client';
 
 import { Clock } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import {
   STATUS_WARNING, STATUS_SUCCESS, STATUS_LOCKED,
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_PINK,
@@ -12,6 +13,7 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { ZONE_PROGRESSION, TOTAL_ESTIMATED_DAYS, CURRENT_DAY } from '../_shared/data';
 
 export function ProgressionTimeline() {
+  const prefersReduced = useReducedMotion();
   return (
     <BlueprintPanel color={ACCENT_EMERALD} className="p-3">
       <SectionHeader icon={Clock} label="Zone Progression Timeline" color={ACCENT_EMERALD} />
@@ -46,9 +48,9 @@ export function ProgressionTimeline() {
                 <div className="relative flex-1 h-6 bg-surface-deep rounded-md overflow-hidden border border-border/30">
                   {started ? (
                     <motion.div
-                      initial={{ width: 0 }}
+                      initial={prefersReduced ? false : { width: 0 }}
                       animate={{ width: `${widthPct}%` }}
-                      transition={{ duration: 0.6 }}
+                      transition={motionSafe({ duration: 0.6 }, prefersReduced)}
                       className="absolute top-0 bottom-0 rounded-md flex items-center justify-center"
                       style={{
                         left: `${startPct}%`,

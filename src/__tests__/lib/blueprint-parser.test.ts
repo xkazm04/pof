@@ -129,5 +129,12 @@ describe('blueprint-parser', () => {
       expect(blueprintTypeToCpp('int')).toBe('int32');
       expect(blueprintTypeToCpp('vector')).toBe('FVector');
     });
+
+    it('maps a flat Map and a nested Map by splitting at the top-level comma', () => {
+      expect(blueprintTypeToCpp('Map<string, int>')).toBe('TMap<FString, int32>');
+      expect(blueprintTypeToCpp('Map<string, Map<int,bool>>')).toBe('TMap<FString, TMap<int32, bool>>');
+      expect(blueprintTypeToCpp('Map<Array<int>, string>')).toBe('TMap<TArray<int32>, FString>');
+      expect(blueprintTypeToCpp('TMap<int, Map<string, Array<float>>>')).toBe('TMap<int32, TMap<FString, TArray<float>>>');
+    });
   });
 });

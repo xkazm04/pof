@@ -1,3 +1,4 @@
+import { readoutDecimals } from '@/lib/format';
 import { ParamCue } from '@/components/modules/evaluator/ParamCue';
 import type { ParamDef, SurfaceDef } from './types';
 
@@ -20,10 +21,13 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
         {applicableParams.map((p) => {
           const val = paramValues[p.name] ?? p.defaultValue;
           const normalized = (val - p.min) / (p.max - p.min || 1);
-          const display = val.toFixed(p.step < 1 ? 2 : 0);
+          const isUnset = !!p.unset && paramValues[p.name] === undefined;
+          const display = isUnset ? 'not overridden' : val.toFixed(readoutDecimals(p.step));
           // Screen readers otherwise hear a bare number with no scale or unit —
           // mirror what the visible min/max captions say under the track.
-          const valueText = explainMode
+          const valueText = isUnset
+            ? 'not overridden'
+            : explainMode
             ? `${display} — ${p.plain.lowLabel} (${p.min}) to ${p.plain.highLabel} (${p.max})`
             : `${display} of ${p.min} to ${p.max}`;
           return (
@@ -65,8 +69,8 @@ export function ParametersSection({ applicableParams, paramValues, explainMode, 
                 }}
               />
               <div className="flex justify-between mt-0.5">
-                <span className="text-2xs text-[#3a3e5a]">{explainMode ? p.plain.lowLabel : p.min}</span>
-                <span className="text-2xs text-[#3a3e5a]">{explainMode ? p.plain.highLabel : p.max}</span>
+                <span className="text-2xs text-text-subtle">{explainMode ? p.plain.lowLabel : p.min}</span>
+                <span className="text-2xs text-text-subtle">{explainMode ? p.plain.highLabel : p.max}</span>
               </div>
             </div>
           );

@@ -4,12 +4,12 @@
  *
  * This mirrors `tripo-models.ts`, which exists because the app's generate route called
  * `startTripoJob` with no `model_version` and every in-app generation silently ran on
- * the account default. The Hunyuan path has the SAME hole and it is still open:
+ * the account default. The Hunyuan path had the SAME hole:
  * `HunyuanSpec.model` is plumbed end-to-end (`hunyuan-runner.ts` builds `--model` when
  * the spec carries it; `pof_hunyuan.py` defaults the flag to `tencent/Hunyuan3D-2`),
- * but the route's `startHunyuanJob(...)` call never passes it. So the model was chosen
- * by a default buried in a python argparse line, and nothing in the app ever said which
- * model produced a mesh.
+ * but `startHunyuanJob(...)` was called without it. So the model was chosen by a default
+ * buried in a python argparse line, and nothing in the app ever said which model produced
+ * a mesh. `runner-dispatch.ts` now passes `hunyuanModelFor(...)`.
  *
  * The Hunyuan case is in one way WORSE than Tripo's was. Tripo at least had a smoke CLI
  * where a model could be pinned by hand; there is no Hunyuan smoke CLI, so before this

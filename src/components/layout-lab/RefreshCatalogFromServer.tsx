@@ -33,7 +33,7 @@ interface Props {
  */
 export function RefreshCatalogFromServer({ t, onRefresh, refreshing, error, outcome, onDismiss }: Props) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, maxWidth: 460 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 'var(--lab-s2)', maxWidth: 460 }}>
       <Button
         mono
         onClick={onRefresh}
@@ -58,7 +58,7 @@ export function RefreshCatalogFromServer({ t, onRefresh, refreshing, error, outc
           className={t.fontMono}
           role="status"
           data-testid="catalog-refresh-outcome"
-          style={{ fontSize: 12, lineHeight: 1.5, color: t.muted, textAlign: 'right' }}
+          style={{ fontSize: 'var(--lab-fs-xs)', lineHeight: 1.5, color: t.muted, textAlign: 'right' }}
         >
           {describeCatalogRefresh(outcome)}
           {outcome.entities.length > 0 && (

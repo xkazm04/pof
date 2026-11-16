@@ -12,7 +12,8 @@ import { riggedMeshSelected } from '@/lib/catalog/acceptance/rigArtifact';
 import { VISUAL_BRIEF_CRITERIA, visualBriefWritten } from '@/lib/catalog/acceptance/visualBrief';
 import { SPRITE_PROJECTION, spriteSetRendered } from '@/lib/catalog/acceptance/spriteCheckers';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 
 const BESTIARY_GATE_TEST_BY_ENTITY: Record<string, string> = {
   'bestiary-brute': 'PoF.Bestiary.BruteArchetypeConfig',

@@ -116,6 +116,7 @@ export function DocSidebar({ vm }: { vm: LevelDesignVM }) {
           <button
             onClick={handleCreateDoc}
             disabled={!newDocName.trim() || isCreating}
+            aria-label="Create level design"
             className="px-2 py-2 rounded-md transition-colors disabled:opacity-50 flex-shrink-0"
             style={{
               backgroundColor: `${MODULE_COLORS.content}15`,

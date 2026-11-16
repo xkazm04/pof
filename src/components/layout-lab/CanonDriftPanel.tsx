@@ -66,7 +66,10 @@ export function CanonDriftPanel({ t, profileId }: { t: LabTheme; profileId: stri
   const adopt = useCanonStore((s) => s.adopt);
   const keep = useCanonStore((s) => s.keep);
   const undoAdopt = useCanonStore((s) => s.undoAdopt);
-  const reviewError = useCanonStore((s) => s.reviewError);
+  const storedError = useCanonStore((s) => s.reviewError);
+  const errorProfile = useCanonStore((s) => s.reviewErrorProfile);
+  // A failure reads only on the profile it happened on (an unattributable one reads everywhere).
+  const reviewError = errorProfile === null || errorProfile === profileId ? storedError : null;
   const [confirming, setConfirming] = useState(false);
 
   const byVerdict = drift?.byProfile[profileId];

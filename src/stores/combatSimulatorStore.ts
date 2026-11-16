@@ -59,8 +59,7 @@ interface CombatSimulatorState {
 
   // Actions
   fetchDefaults: () => Promise<void>;
-  runSimulation: (scenario: CombatScenario, tuning: TuningOverrides, config: CombatSimConfig) => Promise<SimulationResult | null>;
-  /** Like runSimulation, but consumes the endpoint's SSE stream and updates simProgress per batch. */
+  /** Run a simulation: consumes the endpoint's SSE stream and updates simProgress per batch. */
   runSimulationStreaming: (scenario: CombatScenario, tuning: TuningOverrides, config: CombatSimConfig) => Promise<SimulationResult | null>;
   setTuning: (tuning: TuningOverrides) => void;
   /** Pin the current result as the A/B baseline. No-op if there is no result. */
@@ -113,42 +112,6 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
     }
   },
 
-  runSimulation: async (scenario, tuning, config) => {
-    const runToken = ++simRunCounter;
-    set({ isSimulating: true, error: null });
-    try {
-      const data = await apiFetch<{ result: SimulationResult }>(
-        '/api/combat-simulator',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'simulate', scenario, tuning, config }),
-        },
-      );
-      // A newer run started while we were in flight — discard this result.
-      if (runToken !== simRunCounter) return null;
-
-      // If a baseline is pinned, diff this candidate run against it.
-      const baseline = get().baselineResult;
-      const comparison = baseline
-        ? compareRuns(baseline, data.result, { baseline: 'Baseline', candidate: 'Candidate' })
-        : null;
-
-      set({
-        result: data.result,
-        summary: data.result.summary,
-        alerts: data.result.alerts,
-        comparison,
-        isSimulating: false,
-      });
-      return data.result;
-    } catch (err) {
-      if (runToken !== simRunCounter) return null;
-      set({ error: err instanceof Error ? err.message : String(err), isSimulating: false });
-      return null;
-    }
-  },
-
   runSimulationStreaming: async (scenario, tuning, config) => {
     const runToken = ++simRunCounter;
     set({ isSimulating: true, error: null, simProgress: 0 });
@@ -158,7 +121,18 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'simulate', scenario, tuning, config, stream: true }),
       });
-      if (!res.ok || !res.body) throw new Error(`Simulation request failed (${res.status})`);
+      if (!res.ok || !res.body) {
+        // The route validates BEFORE it streams, so a refusal is a plain `{ success:false, error }`
+        // envelope — carry its reason instead of a bare status code.
+        let reason: string | undefined;
+        if (!res.ok) {
+          try {
+            const env = (await res.json()) as { error?: unknown };
+            if (typeof env?.error === 'string' && env.error) reason = env.error;
+          } catch { /* not an envelope — the status is all there is */ }
+        }
+        throw new Error(`Simulation request failed (${res.status})${reason ? `: ${reason}` : ''}`);
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();

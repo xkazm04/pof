@@ -8,6 +8,7 @@ import {
   BLENDER_RETRY_MAX_ATTEMPTS,
   nextRetryDelay,
 } from '@/lib/blender-mcp/diagnostics';
+import { connectTargetError } from '@/lib/blender-mcp/connect-target';
 import type { BlenderConnection } from '@/lib/blender-mcp/types';
 import {
   DEFAULT_BLENDER_HOST,
@@ -79,6 +80,12 @@ function clearRetryTimer() {
 // self-heal.
 let healthTimer: ReturnType<typeof setInterval> | null = null;
 
+// Generation fence. `disconnect` bumps it; `connect` and `refreshStatus` capture it
+// before their request and drop a response that comes back under a newer
+// generation, so a probe or connect still in flight when the user disconnects can
+// never write `connected: true` back over the disconnect or re-arm the probe loop.
+let generation = 0;
+
 function clearHealthTimer() {
   if (healthTimer) {
     clearInterval(healthTimer);
@@ -143,6 +150,20 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
         connect: async (host?: string, port?: number) => {
           const h = host ?? get().host;
           const p = port ?? get().port;
+          // The route refuses this target with a deterministic 400, so dialling it (and
+          // backing off five times) can never succeed: say why, keep the retry loop idle.
+          const targetError = connectTargetError(h, p);
+          if (targetError) {
+            clearRetryTimer();
+            set({
+              isConnecting: false,
+              lastError: targetError,
+              autoRetrying: false,
+              connection: { host: h, port: p, connected: false },
+            });
+            return;
+          }
+          const gen = generation;
           set({ isConnecting: true, lastError: null });
 
           const result = await tryApiFetch<{
@@ -152,6 +173,12 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'connect', host: h, port: p }),
           });
+
+          if (gen !== generation) {
+            // Disconnected while this connect was in flight: the answer is stale.
+            set({ isConnecting: false });
+            return;
+          }
 
           if (result.ok) {
             clearRetryTimer();
@@ -180,14 +207,26 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
         },
 
         disconnect: async () => {
+          generation += 1;
           clearRetryTimer();
           clearHealthTimer();
           set({ retryAttempt: 0, autoRetrying: false });
-          await tryApiFetch('/api/blender-mcp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'disconnect' }),
-          });
+          const result = await tryApiFetch<{ connection?: BlenderConnection }>(
+            '/api/blender-mcp',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'disconnect' }),
+            },
+          );
+          if (!result.ok) {
+            // The server refused (operator guard, route failure): its socket is
+            // still whatever it was. Claiming "Disconnected" here would hide a
+            // bridge that still accepts `execute`, so keep the state and say why.
+            set({ lastError: result.error });
+            if (get().connection.connected) startHealthCheck();
+            return;
+          }
           set({
             connection: { ...get().connection, connected: false },
             lastError: null,
@@ -196,6 +235,7 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
 
         refreshStatus: async () => {
           const wasConnected = get().connection.connected;
+          const gen = generation;
           const result = await tryApiFetch<{
             connection: BlenderConnection;
           }>('/api/blender-mcp', {
@@ -203,6 +243,9 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'status' }),
           });
+
+          // Disconnected while this probe was in flight: its answer is stale.
+          if (gen !== generation) return;
 
           // A transport failure, OR a success envelope that does not actually
           // carry a connection (a shape only a bug or a stubbed fetch produces —

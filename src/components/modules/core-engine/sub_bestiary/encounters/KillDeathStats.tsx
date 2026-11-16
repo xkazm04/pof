@@ -80,7 +80,9 @@ export function KillDeathStats({ accent }: KillDeathStatsProps) {
 
 /* ── Death causes pie chart ───────────────────────────────────────────── */
 
-function DeathCausesPie() {
+const FULL_SWEEP = 359.99;
+
+export function DeathCausesPie({ causes = DEATH_CAUSES }: { causes?: { cause: string; pct: number; color: string }[] }) {
   return (
     <div className="bg-surface-deep rounded-lg border border-border/30 p-3">
       <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
@@ -88,9 +90,12 @@ function DeathCausesPie() {
       </div>
       <div className="flex items-center gap-3">
         <svg width={200} height={200} viewBox="0 0 64 64" className="flex-shrink-0">
-          {DEATH_CAUSES.map((dc, i) => {
-            const startAngle = DEATH_CAUSES.slice(0, i).reduce((s, d) => s + (d.pct / 100) * 360, 0);
+          {causes.map((dc, i) => {
+            const startAngle = causes.slice(0, i).reduce((s, d) => s + (d.pct / 100) * 360, 0);
             const sliceAngle = (dc.pct / 100) * 360;
+            if (sliceAngle >= FULL_SWEEP) {
+              return <circle key={dc.cause} cx={32} cy={32} r={28} fill={dc.color} opacity={0.8} />;
+            }
             const startRad = (startAngle - 90) * (Math.PI / 180);
             const endRad = (startAngle + sliceAngle - 90) * (Math.PI / 180);
             const largeArc = sliceAngle > 180 ? 1 : 0;
@@ -108,7 +113,7 @@ function DeathCausesPie() {
           })}
         </svg>
         <div className="space-y-1">
-          {DEATH_CAUSES.map(dc => (
+          {causes.map(dc => (
             <div key={dc.cause} className="flex items-center gap-1.5 text-xs">
               <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: dc.color }} />
               <span className="text-text-muted font-medium">{dc.cause}</span>

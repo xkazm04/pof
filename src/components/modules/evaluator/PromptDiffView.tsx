@@ -32,6 +32,10 @@ interface PromptDiffViewProps {
   after: string;
   /** Max-height utility class for the scroll region (default 'max-h-72'). */
   maxHeightClass?: string;
+  /** Split-column heading for `before` (default 'Original'). */
+  beforeLabel?: string;
+  /** Split-column heading for `after` and the copy action's noun (default 'Optimized'). */
+  afterLabel?: string;
 }
 
 /** Inline word spans for a single line; changed runs get a tinted background. */
@@ -113,7 +117,10 @@ function SplitSide({ row, side }: { row: DiffRow | null; side: 'before' | 'after
   );
 }
 
-export function PromptDiffView({ before, after, maxHeightClass = 'max-h-72' }: PromptDiffViewProps) {
+export function PromptDiffView({
+  before, after, maxHeightClass = 'max-h-72', beforeLabel = 'Original', afterLabel = 'Optimized',
+}: PromptDiffViewProps) {
+  const copyNoun = `${afterLabel.toLowerCase()} prompt`;
   const [view, setView] = useState<DiffView>('unified');
   const [copied, setCopied] = useState(false);
 
@@ -123,12 +130,12 @@ export function PromptDiffView({ before, after, maxHeightClass = 'max-h-72' }: P
     try {
       await navigator.clipboard.writeText(after);
       setCopied(true);
-      toast.success('Copied optimized prompt to clipboard');
+      toast.success(`Copied ${copyNoun} to clipboard`);
       setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
     } catch {
       toast.error('Clipboard unavailable in this browser');
     }
-  }, [after]);
+  }, [after, copyNoun]);
 
   const { added, removed } = diff.summary;
 
@@ -173,8 +180,8 @@ export function PromptDiffView({ before, after, maxHeightClass = 'max-h-72' }: P
           <button
             type="button"
             onClick={handleCopy}
-            title="Copy optimized prompt"
-            aria-label="Copy optimized prompt"
+            title={`Copy ${copyNoun}`}
+            aria-label={`Copy ${copyNoun}`}
             className="p-1 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-ring"
           >
             {copied ? <Check className="w-3.5 h-3.5" style={{ color: ADD }} aria-hidden /> : <Copy className="w-3.5 h-3.5" aria-hidden />}
@@ -185,9 +192,9 @@ export function PromptDiffView({ before, after, maxHeightClass = 'max-h-72' }: P
       {/* Split column headers */}
       {view === 'split' && (
         <div className="flex border-b border-border text-2xs font-semibold uppercase tracking-wider text-text-muted">
-          <div className="flex-1 px-3 py-1" style={{ color: DEL }}>Original</div>
+          <div className="flex-1 px-3 py-1" style={{ color: DEL }}>{beforeLabel}</div>
           <div className="w-px bg-border" />
-          <div className="flex-1 px-3 py-1" style={{ color: ADD }}>Optimized</div>
+          <div className="flex-1 px-3 py-1" style={{ color: ADD }}>{afterLabel}</div>
         </div>
       )}
 

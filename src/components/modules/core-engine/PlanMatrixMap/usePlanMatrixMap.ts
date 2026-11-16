@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, type WheelEvent as ReactWheelEvent } from 'react';
 import { useCanvasTransform } from '@/hooks/useCanvasTransform';
 import { useImplementationPlan } from '@/hooks/useImplementationPlan';
 import {
@@ -9,25 +9,23 @@ import {
 } from '@/lib/implementation-planner/layout-engine';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
-import { usePlanDispatch } from '@/hooks/usePlanDispatch';
+import type { PlanDispatchResult } from '@/lib/implementation-planner/plan-dispatch';
 import type { SubModuleId } from '@/types/modules';
 
-export function usePlanMatrixMap(initialModuleId?: string) {
+/**
+ * @param dispatch The host page's ONE plan dispatch door (`usePlanDispatch`).
+ *   The map never opens a door of its own: a second door is a second CLI
+ *   session that the host's Build session cannot see.
+ */
+export function usePlanMatrixMap(initialModuleId: string | undefined, dispatch: (item: PlanItem) => PlanDispatchResult) {
   const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
   const dragCountRef = useRef(0);
 
   const { plan, loading, error } = useImplementationPlan();
-  const { transform, startPan, onPointerMove, endPan, zoomToFit, zoomToCenter, reset, setTransform } = useCanvasTransform();
+  const { transform, startPan, onPointerMove, endPan, onWheel, zoomToFit, zoomToCenter, reset, setTransform } = useCanvasTransform();
   const [isPanningState, setIsPanningState] = useState(false);
-
-  // The ONE plan dispatch door (gated, feature-fix task, refresh on land) —
-  // the same door as the plan table; no prompt is built here.
-  const { dispatch } = usePlanDispatch({
-    sessionKey: 'plan-matrix-map',
-    label: 'Plan Map',
-  });
 
   // --- UI State ---
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -41,6 +39,8 @@ export function usePlanMatrixMap(initialModuleId?: string) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [containerSize, setContainerSize] = useState({ w: 800, h: 560 });
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // --- Computed ---
 
@@ -105,6 +105,13 @@ export function usePlanMatrixMap(initialModuleId?: string) {
     });
   }, [layout]);
 
+  // Feature-name search: non-matches dim through nodeOpacity (like filterModuleId).
+  const matchKeys = useMemo<Set<string> | null>(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || !plan) return null;
+    return new Set(plan.items.filter((i) => i.featureName.toLowerCase().includes(q)).map((i) => i.key));
+  }, [query, plan]);
+
   const selectedNode = selectedKey && layout ? layout.allNodes.get(selectedKey) ?? null : null;
   const hoveredNode = hoveredKey && layout ? layout.allNodes.get(hoveredKey) ?? null : null;
 
@@ -120,6 +127,38 @@ export function usePlanMatrixMap(initialModuleId?: string) {
     }
   }, [layout, zoomToFit]);
 
+  // Wheel zoom. React binds onWheel as a PASSIVE listener, so preventDefault
+  // there cannot stop the page scrolling under the map; bind a native
+  // non-passive listener instead (as AudioScenePainter / OrreryStage do) and
+  // route it through useCanvasTransform's one zoom-to-point. The surface only
+  // exists once a layout does, so re-bind when it appears.
+  const hasSurface = layout !== null;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // The native event carries the same fields onWheel reads (deltaY, clientX/Y,
+    // currentTarget === el during dispatch).
+    const handler = (e: WheelEvent) => onWheel(e as unknown as ReactWheelEvent);
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [hasSurface, onWheel]);
+
+  // Cmd/Ctrl+K inside the map focuses the navigator search. Bound on the map root
+  // (not window) and stopped there so the app-level palette's Cmd+K stays out of it.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.key !== 'k' && e.key !== 'K') || !(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setIsSidebarOpen(true);
+      searchRef.current?.focus();
+    };
+    el.addEventListener('keydown', handler);
+    return () => el.removeEventListener('keydown', handler);
+  }, [hasSurface]);
+
   // Dynamic full-height canvas based on viewport and component position
   useEffect(() => {
     const recalc = () => {
@@ -134,9 +173,10 @@ export function usePlanMatrixMap(initialModuleId?: string) {
     recalc();
     window.addEventListener('resize', recalc);
     return () => window.removeEventListener('resize', recalc);
-  }, []);
+  }, [hasSurface]);
 
-  // Track container dimensions for minimap viewport calculation
+  // Track container dimensions for minimap viewport calculation. Keyed on
+  // hasSurface: the container is not rendered while the plan is still loading.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -146,7 +186,7 @@ export function usePlanMatrixMap(initialModuleId?: string) {
     observer.observe(el);
     setContainerSize({ w: el.clientWidth, h: el.clientHeight });
     return () => observer.disconnect();
-  }, []);
+  }, [hasSurface]);
 
   // --- Handlers ---
 
@@ -196,11 +236,25 @@ export function usePlanMatrixMap(initialModuleId?: string) {
     if (dispatch(item).ok) setSelectedKey(null);
   }, [dispatch]);
 
+  /** Enter in the search: select the first match and centre the view on it. */
+  const selectFirstMatch = useCallback(() => {
+    if (!matchKeys || !layout) return;
+    const first = [...layout.allNodes.values()].find((n) => matchKeys.has(n.key));
+    if (!first) return;
+    setSelectedKey(first.key);
+    setTransform((prev) => ({
+      ...prev,
+      panX: containerSize.w / 2 - first.x * prev.zoom,
+      panY: containerSize.h / 2 - first.y * prev.zoom,
+    }));
+  }, [matchKeys, layout, containerSize, setTransform]);
+
   const nodeOpacity = useCallback((node: CanvasNode): number => {
+    if (matchKeys && !matchKeys.has(node.key)) return 0.08;
     if (filterModuleId && node.item.moduleId !== filterModuleId) return 0.08;
     if (criticalPathMode && cpSet.size > 0 && !cpSet.has(node.key)) return 0.15;
     return 1;
-  }, [filterModuleId, criticalPathMode, cpSet]);
+  }, [matchKeys, filterModuleId, criticalPathMode, cpSet]);
 
   return {
     // refs
@@ -221,12 +275,13 @@ export function usePlanMatrixMap(initialModuleId?: string) {
     isSidebarOpen, setIsSidebarOpen,
     expandedModules,
     containerSize,
+    query, setQuery, searchRef, matchKeys,
     // computed
     layout, cpSet, moduleIds, edges, readyCount, visibleNodes, showNodes, labelScale,
     moduleSectors, selectedNode, hoveredNode,
     // handlers
     handleZoomToFit, handleModuleDblClick, handleSectorSelect, toggleModuleExpansion,
-    handleExecute, nodeOpacity,
+    handleExecute, nodeOpacity, selectFirstMatch,
   };
 }
 

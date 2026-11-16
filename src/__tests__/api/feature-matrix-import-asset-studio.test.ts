@@ -22,7 +22,8 @@ vi.hoisted(() => {
 });
 
 import { POST } from '@/app/api/feature-matrix/import/route';
-import { getFeaturesByModule, clearModuleFeatures } from '@/lib/feature-matrix-db';
+import { getFeaturesByModule } from '@/lib/feature-matrix-db';
+import { clearFeatureMatrixExact } from '@/__tests__/helpers/clearFeatureMatrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import type { SubModuleId } from '@/types/modules';
 
@@ -46,7 +47,7 @@ async function importReport(moduleId: SubModuleId, features: unknown[]) {
 
 describe('feature-matrix import round-trips for the Asset Studio modules', () => {
   it('accepts a report that uses asset-viewer’s declared feature names', async () => {
-    clearModuleFeatures('asset-viewer');
+    clearFeatureMatrixExact('asset-viewer');
     const declared = MODULE_FEATURE_DEFINITIONS['asset-viewer']!;
     expect(declared.length).toBeGreaterThan(0);
 
@@ -74,7 +75,7 @@ describe('feature-matrix import round-trips for the Asset Studio modules', () =>
   });
 
   it('now REJECTS a hallucinated name for the same module', async () => {
-    clearModuleFeatures('asset-viewer');
+    clearFeatureMatrixExact('asset-viewer');
     const { status, body } = await importReport('asset-viewer', [
       { featureName: 'Orbit controls', category: 'Camera', status: 'implemented' },
       { featureName: 'Holographic Ray Tracer', category: 'Camera', status: 'implemented' },
@@ -91,7 +92,7 @@ describe('feature-matrix import round-trips for the Asset Studio modules', () =>
 
   it('accepts the first declared feature of every one of the nine modules', async () => {
     for (const moduleId of ASSET_STUDIO) {
-      clearModuleFeatures(moduleId);
+      clearFeatureMatrixExact(moduleId);
       const first = MODULE_FEATURE_DEFINITIONS[moduleId]![0];
       const { status, body } = await importReport(moduleId, [
         { featureName: first.featureName, category: first.category, status: 'partial' },

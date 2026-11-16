@@ -20,7 +20,16 @@ export function TemplateCard({
   return (
     <SurfaceCard
       interactive
-      className={`p-4 cursor-pointer transition-all ${
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`focus-ring p-4 cursor-pointer transition-all ${
         isSelected
           ? 'border-cyan-500/40 bg-cyan-500/5'
           : ''

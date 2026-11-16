@@ -1,5 +1,6 @@
 # PoF: Blender headless — render an ARDY BVH clip to MP4 (camera tracks the hips).
-# Usage: blender --background --python pof_bvh_render.py -- <in.bvh> <out.mp4>
+# Usage: blender --background --python-exit-code 1 --python pof_bvh_render.py -- <in.bvh> <out.mp4>
+# Always pass --python-exit-code 1: Blender exits 0 after a script exception by default.
 import math
 import sys
 
@@ -15,7 +16,11 @@ bpy.ops.import_anim.bvh(
 )
 arm = bpy.context.object
 scene = bpy.context.scene
-act = arm.animation_data.action
+act = arm.animation_data.action if arm.animation_data else None
+if act is None:
+    # Blender exits 0 after a script exception unless --python-exit-code is passed; say it here.
+    print("POF_RENDER_ERROR=no animation action on the imported armature")
+    sys.exit(1)
 scene.frame_start, scene.frame_end = int(act.frame_range[0]), int(act.frame_range[1])
 
 # skinned-look proxy: box per bone at rest, deformed by the armature

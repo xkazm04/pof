@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { getDb } from '@/lib/db';
 import { forkStyleDna, getStyleDna } from '@/lib/visual-gen/style-dna-db';
 import { validateStyleDna } from '@/lib/visual-gen/style-dna-edit';
@@ -18,7 +19,8 @@ const MAX_NAME_CHARS = 80;
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { fromId?: unknown; name?: unknown; dna?: unknown };
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
     if (typeof body.fromId !== 'string' || !body.fromId) return apiError('Missing required field: fromId', 400);
     if (body.fromId.startsWith('shipped:')) {
       return apiError(`${body.fromId} is a shipped style — shipped canon styles are edited in code`, 400);

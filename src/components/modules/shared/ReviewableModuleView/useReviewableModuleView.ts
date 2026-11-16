@@ -8,6 +8,7 @@ import { useEscapeLayer } from '@/hooks/useHotkey';
 import { TaskFactory } from '@/lib/cli-task';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
+import { tryApiFetch } from '@/lib/api-utils';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -255,22 +256,17 @@ export function useReviewableModuleView({
   }, [fixCli, moduleId, moduleLabel]);
 
   const handleSync = useCallback(async () => {
-    try {
-      const res = await fetch('/api/feature-matrix/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId, projectPath }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Sync failed' }));
-        toast.error(err.error ?? `Sync failed (${res.status})`);
-        return;
-      }
-      const data = await res.json();
-      toast.success(`Imported ${data.imported} features`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to sync review results');
+    // The route answers in the { success, data } envelope — the count lives on `data`.
+    const result = await tryApiFetch<{ imported: number }>('/api/feature-matrix/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ moduleId, projectPath }),
+    });
+    if (!result.ok) {
+      toast.error(result.error || 'Failed to sync review results');
+      return;
     }
+    toast.success(`Imported ${result.data.imported} features`);
   }, [moduleId, projectPath]);
 
   const startReview = useCallback(async () => {

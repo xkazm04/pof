@@ -64,8 +64,8 @@ describe('reward pacing kernel', () => {
   it('case 8 [guard]: generateChartData and calculateXpForLevel unchanged (35355 at the cap)', () => {
     expect(calculateXpForLevel(50, 100, 1.5)).toBe(35355);
     const chart = generateChartData(100, 1.5);
-    expect(chart[0]).toEqual({ level: 1, xp: 100, totalParams: 1 });
-    expect(chart[chart.length - 1]).toEqual({ level: 50, xp: 35355, totalParams: 75 });
+    expect(chart[0]).toEqual({ level: 1, xp: 100 });
+    expect(chart[chart.length - 1]).toEqual({ level: 50, xp: 35355 });
     expect(chart.map((p) => p.level)).toEqual([1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]);
   });
 });

@@ -45,7 +45,7 @@ export function BlenderExportConfirm({
     >
       <p
         data-testid="blender-export-headline"
-        className={`text-xs leading-relaxed ${stale || !plan.isFullSize ? 'text-amber-300' : 'text-emerald-300'}`}
+        className={`text-xs leading-relaxed ${stale || !plan.isFullSize || plan.previewDiffers ? 'text-amber-300' : 'text-emerald-300'}`}
       >
         {stale
           ? 'Settings changed since this plan was prepared. The numbers below describe the old settings - re-prepare before exporting.'

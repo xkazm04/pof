@@ -50,11 +50,18 @@ export function useDebugSnapshot(): DebugSnapshotState {
   const baseId = usePerformanceProfilingStore((s) =>
     isCapture(s.sessionList[0]?.source) ? s.sessionList.slice(1).find((r) => isCapture(r.source))?.id : undefined);
   const [listed, setListed] = useState(false);
+  // The store swallows a failed list into `error` and leaves the list empty:
+  // a failed list is 'unavailable', never 'no-capture'.
+  const [listError, setListError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
   useEffect(() => {
     let live = true;
-    void usePerformanceProfilingStore.getState().listSessions().then(() => { if (live) setListed(true); });
+    void usePerformanceProfilingStore.getState().listSessions().then(() => {
+      if (!live) return;
+      setListError(usePerformanceProfilingStore.getState().error);
+      setListed(true);
+    });
     return () => { live = false; };
   }, []);
 
@@ -76,27 +83,39 @@ export function useDebugSnapshot(): DebugSnapshotState {
       const provenance: DebugProvenance = { kind: 'session', source: session.source, name: session.name, importedAt: session.importedAt };
       setLoaded({ id: session.id, snapshot: projectDebugSnapshot(session, res.data.triage), provenance, latest: LOADING });
 
+      let triageError: string | undefined;
       const [triaged, compared] = await Promise.all([
         res.data.triage
           ? Promise.resolve(res.data.triage)
-          : postProfiling<{ triage: TriageResult }>({ action: 'triage', sessionId: session.id }).then((r) => (r.ok ? r.data.triage ?? null : null)),
+          : postProfiling<{ triage: TriageResult }>({ action: 'triage', sessionId: session.id }).then((r) => {
+            if (!r.ok) { triageError = r.error; return null; }
+            return r.data.triage ?? null;
+          }),
         baseId
-          ? postProfiling<SessionComparisonResponse>({ action: 'compare', baseId, headId: session.id }).then((r) => (r.ok && r.data?.findings ? r.data : null))
+          ? postProfiling<SessionComparisonResponse>({ action: 'compare', baseId, headId: session.id })
           : Promise.resolve(null),
       ]);
+      // A base capture exists but the compare failed: say so, never "no earlier capture".
+      const comparison = compared && compared.ok && compared.data?.findings ? compared.data : null;
+      const compareError = compared && !comparison
+        ? (compared.ok ? 'compare returned no verdict' : compared.error)
+        : undefined;
       if (!live) return;
       const head = { id: session.id, name: session.name, source: session.source, importedAt: session.importedAt };
       setLoaded({
         id: session.id,
         snapshot: projectDebugSnapshot(session, triaged),
         provenance,
-        latest: { kind: 'ready', session: head, triage: triaged, comparison: compared },
+        latest: { kind: 'ready', session: head, triage: triaged, comparison, ...(compareError ? { compareError } : {}), ...(triageError ? { triageError } : {}) },
       });
     })();
     return () => { live = false; };
   }, [newestId, baseId]); // keyed on ids: a re-listed row for the same session is not a new capture
 
-  if (listed && !newest) return { snapshot: SAMPLE_SNAPSHOT, provenance: SAMPLE_PROVENANCE, listed, latest: NO_CAPTURE };
+  if (listed && !newest) {
+    const latest: LatestTriage = listError ? { kind: 'unavailable', reason: listError } : NO_CAPTURE;
+    return { snapshot: SAMPLE_SNAPSHOT, provenance: SAMPLE_PROVENANCE, listed, latest };
+  }
   // A deleted newest session falls back to the sample without a reset effect.
   if (loaded && newest && loaded.id === newest.id) {
     return { snapshot: loaded.snapshot, provenance: loaded.provenance, listed, latest: loaded.latest };

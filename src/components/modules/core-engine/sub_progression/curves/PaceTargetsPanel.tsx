@@ -57,6 +57,8 @@ export function PaceTargetsPanel({ live, previewing, onPreview, onApply, onRever
   ]);
   const [fit, setFit] = useState<CurveFit | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The card states what this fit achieves, so it only speaks while the fit is the live curve.
+  const shownFit = fit && fit.baseXp === live.baseXp && fit.curveExp === live.curveExp ? fit : null;
 
   const edit = (next: Row[]) => { setRows(next); setFit(null); setError(null); };
   const update = (id: number, patch: Partial<Row>) => edit(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -116,20 +118,20 @@ export function PaceTargetsPanel({ live, previewing, onPreview, onApply, onRever
 
       {error && <p role="alert" className="text-2xs font-mono" style={{ color: STATUS_ERROR }}>{error}</p>}
 
-      {fit && (
+      {shownFit && (
         <div data-testid="pace-fit-result" className="space-y-1.5 pt-2 border-t border-border/40">
           <div className="text-xs font-mono text-text">
-            Fitted: base <span className="font-bold">{fit.baseXp}</span> · exp <span className="font-bold">{fit.curveExp.toFixed(2)}</span>
+            Fitted: base <span className="font-bold">{shownFit.baseXp}</span> · exp <span className="font-bold">{shownFit.curveExp.toFixed(2)}</span>
           </div>
-          {fit.residuals.map((r) => (
+          {shownFit.residuals.map((r) => (
             <div key={r.level} className="flex justify-between text-2xs font-mono text-text-muted">
               <span>L{r.level} target {hrs(r.targetHours)}</span>
               <span>achieved <span className="text-text">{hrs(r.achievedHours)}</span> ({signedPct(r.errPct, 1)})</span>
             </div>
           ))}
-          <p data-testid="pace-verdict" data-verdict={fit.verdict} className="text-2xs font-mono font-bold"
-            style={{ color: VERDICT_COLOR[fit.verdict] }}>
-            {verdictText(fit)}
+          <p data-testid="pace-verdict" data-verdict={shownFit.verdict} className="text-2xs font-mono font-bold"
+            style={{ color: VERDICT_COLOR[shownFit.verdict] }}>
+            {verdictText(shownFit)}
           </p>
         </div>
       )}

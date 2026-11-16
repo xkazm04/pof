@@ -3,7 +3,7 @@
 import { TrendingUp, BarChart3 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { EconomyMetrics } from '@/types/economy-simulator';
-import { formatGold } from './helpers';
+import { formatGold, sampleSeries } from './helpers';
 
 // ── Gold Flow Chart (ASCII bar chart) ───────────────────────────────────────
 
@@ -13,9 +13,8 @@ export function GoldFlowChart({ metrics }: { metrics: EconomyMetrics[] }) {
   const maxFlow = Math.max(
     ...metrics.map((m) => Math.max(m.inflowPerHour, m.outflowPerHour, 1)),
   );
-  // Sample ~20 data points for the chart
-  const step = Math.max(1, Math.floor(metrics.length / 20));
-  const sampled = metrics.filter((_, i) => i % step === 0);
+  // Sample ~20 data points for the chart, always ending on the final hour
+  const sampled = sampleSeries(metrics, 20);
   const first = sampled[0];
   const last = sampled[sampled.length - 1];
 

@@ -32,12 +32,12 @@ export function HealthRadarChart({
   return (
     <SurfaceCard level={3} className="p-4">
       <div className="flex items-center gap-2 mb-3">
-        <RadarIcon className="w-3.5 h-3.5 text-[#ef4444]" />
+        <RadarIcon className="w-3.5 h-3.5" style={{ color: EVAL_ACCENT }} />
         <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Module Health Radar
         </span>
         {showHistoryOverlay && prevRadarData && (
-          <span className="text-2xs text-[#8b5cf6] ml-auto">
+          <span className="text-2xs ml-auto" style={{ color: STATUS_STALE }}>
             Purple = previous scan
           </span>
         )}
@@ -109,7 +109,20 @@ export function HealthRadarChart({
           const color = scoreColor(d.score);
 
           return (
-            <g key={d.moduleId} className="cursor-pointer" onClick={() => setSelectedModule(isSelected ? null : d.moduleId)}>
+            <g
+              key={d.moduleId}
+              className="cursor-pointer focus-ring"
+              role="button"
+              tabIndex={0}
+              aria-label={`${d.label}: ${d.score} of 100`}
+              aria-pressed={isSelected}
+              onClick={() => setSelectedModule(isSelected ? null : d.moduleId)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                e.preventDefault();
+                setSelectedModule(isSelected ? null : d.moduleId);
+              }}
+            >
               {/* Hit area */}
               <circle cx={x} cy={y} r={12} fill="transparent" />
               {/* Dot */}

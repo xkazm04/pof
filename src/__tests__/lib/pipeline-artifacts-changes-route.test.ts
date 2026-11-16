@@ -144,4 +144,19 @@ describe('GET /api/pipeline-artifacts/changes', () => {
     expect(churned.revisionsSince).toBe(MAX_REVISIONS - 7);
     expect(churned.priorStatus).toBe('fail');
   });
+
+  // -- The baseline is parsed ONCE: what JS accepted must be what SQLite compares --
+
+  it('counts the same revisions whatever timestamp spelling Date.parse accepted', async () => {
+    write('fmt', 'Twice', 'v1'); write('fmt', 'Twice', 'v2'); // 1 archived, now
+    const base = new Date(Date.now() - 3600_000);
+    // An RFC 1123 stamp parses in JS and is NULL to SQLite's datetime(): the archived count
+    // used to read 0 — a proven change reported as a bare write.
+    for (const since of [base.toISOString(), base.toUTCString()]) {
+      const json = await body(await get(`catalogId=chg-test&since=${encodeURIComponent(since)}`));
+      const row = json.data.rows.find((r) => r.entityId === 'fmt' && r.step === 'Twice')!;
+      expect(row.revisionsSince, since).toBe(1);
+      expect(json.data.since).toBe(since); // still an echo of what the caller sent
+    }
+  });
 });

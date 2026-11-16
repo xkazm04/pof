@@ -12,7 +12,11 @@ import type { CombatScenario, TuningOverrides, CombatSimConfig } from '@/types/c
 import { runCombatSimulation } from './simulation-engine';
 import { solveFor, type SolveOptions, type SolveResult } from '@/lib/balance/goal-seek';
 
-/** Tuning knobs that are continuous multipliers (the slider levers). */
+/**
+ * Tuning knobs that are continuous multipliers (the slider levers). `healingMul`
+ * is deliberately absent: the engine has no HP-restore path and never reads it, so
+ * it would be an inert lever (tuning-lever-sensitivity.test.ts pins this).
+ */
 export type CombatLever = Extract<
   keyof TuningOverrides,
   'playerHealthMul' | 'playerDamageMul' | 'playerArmorMul' | 'enemyHealthMul' | 'enemyDamageMul' | 'critMultiplierMul' | 'armorEffectivenessWeight' | 'healingMul'

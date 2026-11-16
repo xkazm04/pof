@@ -133,6 +133,23 @@ describe('score-ladder edges (vlm on 2d-art — no technique wall)', () => {
   });
 });
 
+describe('gate-judged classes: a pass only the operator can drive is not a machine proof', () => {
+  const arts = Array.from({ length: 10 }, (_, i) => art('achievements', `p${i}`, 'Test Gate', 'pass'));
+  const operable = () => ({ catalogId: '', step: '', operable: true });
+  const notOperable = () => undefined;
+
+  it('a pass from a step with no headless coverage does not count as passed but stays declared', () => {
+    const r = row(buildCapabilityRows([], arts, [], notOperable), 'ue-runtime');
+    expect(r.gatesPassed).toBe(0);
+    expect(r.gatesDeclared).toBe(10);
+  });
+
+  it('the seeded control: the same passes count when the step is headless-operable', () => {
+    const r = row(buildCapabilityRows([], arts, [], operable), 'ue-runtime');
+    expect(r.gatesPassed).toBe(10);
+  });
+});
+
 describe('gate-judged classes (ue-runtime — L3/L4 pass-rate ladder)', () => {
   function gates(pass: number, deferred: number): PipelineArtifact[] {
     const out: PipelineArtifact[] = [];

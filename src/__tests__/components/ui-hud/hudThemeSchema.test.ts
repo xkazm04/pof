@@ -188,7 +188,7 @@ describe('ExportPanel — derived stats and the paste-.h import', () => {
     render(createElement(ExportPanel, {
       theme: DEFAULT_THEME,
       exportConfig: generateUE5Config(DEFAULT_THEME),
-      copied: false,
+      copyState: 'idle',
       handleCopy: () => {},
       handleDownload: () => {},
       onImport: (t: HudTheme) => { imported.push(t); },

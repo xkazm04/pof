@@ -21,6 +21,7 @@ import { ProjectNBACard } from '@/components/modules/shared/ProjectNBACard';
 import { deriveNextStep, type NextStepId } from './nextStep';
 import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ErrorBanner } from './ErrorBanner';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
@@ -66,36 +67,56 @@ export function ProjectSetupModule() {
     hasProject,
     okCount,
     missingToolCount,
+    unknownToolCount,
+    projectReadError,
   } = useProjectScan(projectPath);
 
   // Wire scanRef so the hooks' onComplete can call scan() without circular deps
   useEffect(() => { scanRef.current = scan; }, [scan]);
 
   const [manifestJson, setManifestJson] = useState<string | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const installPlanInFlight = useRef(false);
 
   const handleFixAllMissing = useCallback(async () => {
+    // isRunning only flips after the prompt is sent, so the three install buttons
+    // need their own guard for the fetch window (each extra pass is a winget run).
+    if (installPlanInFlight.current) return;
+    installPlanInFlight.current = true;
+    setInstallError(null);
     try {
       const data = await apiFetch<{ allInstalled: boolean; prompt: string }>('/api/filesystem/browse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'generate-bootstrap' }),
       });
-      if (data.allInstalled) return;
+      // The server sees nothing missing while the checklist does: the checklist is stale.
+      if (data.allInstalled) {
+        scan();
+        return;
+      }
       bootstrapCLI.sendPrompt(data.prompt);
-    } catch {
-      // Non-critical
+    } catch (e) {
+      setInstallError(e instanceof Error ? e.message : 'The install plan could not be built');
+    } finally {
+      installPlanInFlight.current = false;
     }
-  }, [bootstrapCLI]);
+  }, [bootstrapCLI, scan]);
 
   const openInExplorer = useCallback(() => {
     setupCLI.sendPrompt(`Open the folder "${projectPath}" in Windows Explorer.`);
   }, [setupCLI, projectPath]);
 
+  // Before the first result the empty checklist would read as "no project here".
+  const hasScanResult = scanState === 'settled' || checklist.length > 0;
+
   // The single "do this next" action, derived from scan truth. Only shown once
-  // a project path is configured (i.e. after the setup wizard).
+  // a project path is configured (i.e. after the setup wizard). An unreadable
+  // folder says nothing about whether a project is there, so no step is offered:
+  // "Create project" here would scaffold over whatever could not be read.
   const nextStep = useMemo(
-    () => (projectPath.trim() ? deriveNextStep({ missingToolCount, hasProject }) : null),
-    [projectPath, missingToolCount, hasProject],
+    () => (projectPath.trim() && !projectReadError && !unknownToolCount && hasScanResult ? deriveNextStep({ missingToolCount, hasProject }) : null),
+    [projectPath, projectReadError, unknownToolCount, hasScanResult, missingToolCount, hasProject],
   );
 
   const handleNextStepAction = useCallback(() => {
@@ -114,10 +135,16 @@ export function ProjectSetupModule() {
     nextStep?.id === 'create-project' ? setupCLI.isRunning :
     nextStep?.id === 'build-verify' ? buildCLI.isRunning : false;
 
-  const nextStepDisabled =
-    nextStep?.id === 'install-tools' ? scanning :
+  // A re-scan keeps the previous checklist on screen, so nothing it derived may
+  // be acted on until the new result lands (a switched project still reads as
+  // the old one's "no project" until then).
+  const nextStepDisabled = scanning || (
     nextStep?.id === 'create-project' ? (!projectName.trim() || engines.length === 0) :
-    nextStep?.id === 'build-verify' ? engines.length === 0 : false;
+    nextStep?.id === 'build-verify' ? engines.length === 0 : false);
+
+  // Build & Verify is the steady state deriveNextStep always lands on, not a pending
+  // setup step: dimming on it would hold the reference panels at half opacity forever.
+  const setupPending = nextStep !== null && nextStep.id !== 'build-verify';
 
   // De-emphasize every panel except the one matching the suggested next step.
   const dimUnless = (stepId: NextStepId) =>
@@ -153,6 +180,22 @@ export function ProjectSetupModule() {
           Create and configure your Unreal Engine project
         </p>
 
+        {projectReadError && (
+          <ErrorBanner
+            message={`Could not read the project folder: ${projectReadError}. Re-scan once it is reachable.`}
+            className="mb-6"
+            data-testid="pof-setup-project-read-error"
+          />
+        )}
+
+        {installError && (
+          <ErrorBanner
+            message={`Could not prepare the tool install: ${installError}`}
+            className="mb-6"
+            data-testid="pof-setup-install-error"
+          />
+        )}
+
         {/* Guided next step — the one calm "do this next" for the whole module */}
         {nextStep && (
           <NextStepBanner
@@ -169,7 +212,7 @@ export function ProjectSetupModule() {
             I build next", without first guessing which module to open. Dimmed
             like every other panel while a setup step is still pending. */}
         {projectPath.trim() && (
-          <div className={nextStep ? 'opacity-50 transition-opacity duration-base' : ''}>
+          <div className={setupPending ? 'opacity-50 transition-opacity duration-base' : ''}>
             <ProjectNBACard />
           </div>
         )}
@@ -204,11 +247,12 @@ export function ProjectSetupModule() {
         )}
 
         {/* Create Project */}
-        {!hasProject && projectPath.trim() && (
+        {!hasProject && projectPath.trim() && !projectReadError && hasScanResult && (
           <div className={dimUnless('create-project')}>
             <CreateProjectPanel
               engines={engines}
               isRunning={setupCLI.isRunning}
+              scanning={scanning}
               onSendPrompt={setupCLI.sendPrompt}
             />
           </div>
@@ -216,7 +260,7 @@ export function ProjectSetupModule() {
 
         {/* Project Files — reference info, de-emphasized while a step is pending */}
         {hasProject && projectFiles.length > 0 && (
-          <div className={nextStep ? 'opacity-50 transition-opacity duration-base' : ''}>
+          <div className={setupPending ? 'opacity-50 transition-opacity duration-base' : ''}>
             <ProjectFilesPanel
               projectPath={projectPath}
               projectFiles={projectFiles}
@@ -251,7 +295,7 @@ export function ProjectSetupModule() {
         {/* Blueprint Inspector — on-demand bridge introspection, reference info
             like Project Files, so it dims the same way while a step is pending */}
         {hasProject && (
-          <div className={`mb-6 ${nextStep ? 'opacity-50 transition-opacity duration-base' : ''}`}>
+          <div className={`mb-6 ${setupPending ? 'opacity-50 transition-opacity duration-base' : ''}`}>
             <BlueprintInspector />
           </div>
         )}

@@ -7,9 +7,35 @@ import { compareSessions, type ComparedSessionHead, type SessionComparisonRespon
 import { gateCaptureCsvs } from '@/lib/profiling/perf-capture';
 import type { ProfilingSession, TriageResult } from '@/types/performance-profiling';
 
+const SAMPLE_SCENARIOS = new Set(['combat-heavy', 'exploration', 'menu', 'loading', 'custom']);
+
 // In-memory store for sessions (persists per server process)
 const sessions = new Map<string, ProfilingSession>();
 const triageResults = new Map<string, TriageResult>();
+
+/**
+ * Retention cap for the in-memory store: a long-lived dev server must not grow with every
+ * capture. The oldest session (and its triage) is evicted first, and every eviction is
+ * reported to the caller (`evicted`) so a capture is never lost silently.
+ */
+const MAX_SESSIONS = 50;
+
+interface EvictedSession { id: string; name: string }
+
+/** Stores a session, evicting the oldest ones beyond the cap; returns what was evicted. */
+function storeSession(session: ProfilingSession): EvictedSession[] {
+  sessions.delete(session.id);
+  sessions.set(session.id, session);
+  const evicted: EvictedSession[] = [];
+  while (sessions.size > MAX_SESSIONS) {
+    const oldestId = sessions.keys().next().value as string;
+    const oldest = sessions.get(oldestId);
+    sessions.delete(oldestId);
+    triageResults.delete(oldestId);
+    evicted.push({ id: oldestId, name: oldest?.name ?? '' });
+  }
+  return evicted;
+}
 
 /** The stored triage for a session, running (and storing) it first when missing. */
 function ensureTriage(session: ProfilingSession): TriageResult {
@@ -33,29 +59,40 @@ function sessionHead(session: ProfilingSession, triage: TriageResult): ComparedS
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const action = body.action as string;
 
     if (action === 'import-csv') {
       const { csvContent, sessionName, projectPath } = body;
-      if (!csvContent || !sessionName) {
-        return apiError('csvContent and sessionName are required', 400);
+      if (typeof csvContent !== 'string' || !csvContent || typeof sessionName !== 'string' || !sessionName) {
+        return apiError('csvContent and sessionName are required strings', 400);
       }
       const session = buildSessionFromCSV(csvContent, sessionName, projectPath ?? '');
-      sessions.set(session.id, session);
-      return apiSuccess({ session });
+      return apiSuccess({ session, evicted: storeSession(session) });
     }
 
     if (action === 'generate-sample') {
       const { scenarioType, enemyCount, targetFPS, projectPath } = body;
+      if (scenarioType != null && !SAMPLE_SCENARIOS.has(scenarioType)) {
+        return apiError(`scenarioType must be one of ${[...SAMPLE_SCENARIOS].join(', ')}`, 400);
+      }
+      if (enemyCount != null && (typeof enemyCount !== 'number' || !Number.isFinite(enemyCount) || enemyCount < 0)) {
+        return apiError('enemyCount must be a non-negative number', 400);
+      }
+      if (targetFPS != null && (typeof targetFPS !== 'number' || !Number.isFinite(targetFPS) || targetFPS <= 0)) {
+        return apiError('targetFPS must be a positive number', 400);
+      }
       const session = generateSampleSession({
         scenarioType: scenarioType ?? 'combat-heavy',
         enemyCount: Math.min(enemyCount ?? 50, 200),
         targetFPS: targetFPS ?? 60,
         projectPath: projectPath ?? '',
       });
-      sessions.set(session.id, session);
-      return apiSuccess({ session });
+      return apiSuccess({ session, evicted: storeSession(session) });
     }
 
     if (action === 'triage') {
@@ -95,7 +132,7 @@ export async function POST(req: NextRequest) {
           bottleneck: triage?.bottleneck ?? null,
         };
       });
-      return apiSuccess({ sessions: list });
+      return apiSuccess({ sessions: list, cap: MAX_SESSIONS });
     }
 
     if (action === 'compare') {

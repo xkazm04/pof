@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Radio, Trash2, Filter, Zap } from 'lucide-react';
 import { eventBus } from '@/lib/event-bus';
-import type { BusEvent, EventChannel } from '@/types/event-bus';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_STALE, ACCENT_CYAN, OPACITY_8, OPACITY_15 } from '@/lib/chart-colors';
+import type { BusEvent } from '@/types/event-bus';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_STALE, ACCENT_CYAN, OPACITY_8 } from '@/lib/chart-colors';
 
 const MAX_DISPLAY = 200;
+const FALLBACK_COLOR = 'var(--text-muted)';
 
 const NAMESPACE_COLORS: Record<string, string> = {
   cli: MODULE_COLORS.core,
@@ -23,7 +24,16 @@ function getNamespace(channel: string): string {
 }
 
 function getColor(channel: string): string {
-  return NAMESPACE_COLORS[getNamespace(channel)] ?? '#7d82a8';
+  return NAMESPACE_COLORS[getNamespace(channel)] ?? FALLBACK_COLOR;
+}
+
+/** A throw here would be a render throw: one odd payload must not take the shell down. */
+function formatPayload(payload: unknown): string {
+  try {
+    return JSON.stringify(payload, null, 2) ?? String(payload);
+  } catch (err) {
+    return `[payload not serializable: ${err instanceof Error ? err.message : String(err)}]`;
+  }
 }
 
 function formatTime(ts: number): string {
@@ -86,7 +96,7 @@ export function EventBusDevTools() {
   }, []);
 
   const filteredEvents = filter
-    ? events.filter((e) => e.channel.includes(filter) || (e.source ?? '').includes(filter))
+    ? events.filter((e) => getNamespace(e.channel) === filter)
     : events;
 
   // Unique namespaces for filter chips
@@ -136,6 +146,7 @@ export function EventBusDevTools() {
             </button>
             <button
               onClick={() => setOpen(false)}
+              aria-label="Close event bus"
               className="p-1 rounded text-text-muted hover:text-text hover:bg-border transition-colors"
             >
               <X className="w-3.5 h-3.5" />
@@ -155,7 +166,7 @@ export function EventBusDevTools() {
                   ? 'border-current'
                   : 'border-transparent hover:border-border'
               }`}
-              style={{ color: NAMESPACE_COLORS[ns] ?? '#7d82a8' }}
+              style={{ color: NAMESPACE_COLORS[ns] ?? FALLBACK_COLOR }}
             >
               {ns}
             </button>
@@ -184,9 +195,10 @@ export function EventBusDevTools() {
           ) : (
             <div className="divide-y divide-border">
               {filteredEvents.map((event) => (
+                <div key={event.id}>
                 <button
-                  key={event.id}
                   onClick={() => setSelectedEvent(selectedEvent?.id === event.id ? null : event)}
+                  aria-expanded={selectedEvent?.id === event.id}
                   className={`w-full text-left px-3 py-2 hover:bg-surface transition-colors ${
                     selectedEvent?.id === event.id ? 'bg-surface' : ''
                   }`}
@@ -208,13 +220,14 @@ export function EventBusDevTools() {
                       from {event.source}
                     </span>
                   )}
-                  {/* Expanded payload */}
-                  {selectedEvent?.id === event.id && (
-                    <pre className="mt-2 ml-3.5 text-2xs text-text-muted bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all font-mono">
-                      {JSON.stringify(event.payload, null, 2)}
-                    </pre>
-                  )}
                 </button>
+                {/* Expanded payload: a sibling, since a <pre> is not valid button content */}
+                {selectedEvent?.id === event.id && (
+                  <pre className="mb-2 ml-6 mr-3 text-2xs text-text-muted bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all font-mono">
+                    {formatPayload(event.payload)}
+                  </pre>
+                )}
+                </div>
               ))}
             </div>
           )}

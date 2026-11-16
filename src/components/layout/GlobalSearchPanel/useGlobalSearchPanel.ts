@@ -11,7 +11,8 @@ import { apiFetch } from '@/lib/api-utils';
 import type { SearchResult } from '@/lib/search-index';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { resolveSearchIntents } from './searchIntents';
-import { buildHome } from './paletteHome';
+import { OPEN_GLOBAL_SEARCH_EVENT } from './constants';
+import { ALERT_ID_PREFIX, buildHome } from './paletteHome';
 import { readRecents, recordRecent } from './recentSelections';
 
 // ── Index freshness ───────────────────────────────────────────────────────────
@@ -28,16 +29,28 @@ import { readRecents, recordRecent } from './recentSelections';
 // than serving the previous project's stale index.
 let indexEnsuredForPath: string | null = null;
 
+/** Recents are places. An alert row is news with an event id: it goes stale, a place does not. */
+function rememberPlace(projectPath: string | null, result: SearchResult): void {
+  if (!result.id.startsWith(ALERT_ID_PREFIX)) recordRecent(projectPath, result);
+}
+
 export function useGlobalSearchPanel() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [searchResults, setResults] = useState<SearchResult[]>([]);
   const [recents, setRecents] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [lastRebuilt, setLastRebuilt] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const [reindexFailed, setReindexFailed] = useState(false);
+  // Bumped to re-run the current query without changing it (Retry).
+  const [searchNonce, setSearchNonce] = useState(0);
+  // Which search the shown outcome answers. `loading` is derived from it, so the
+  // debounce window counts as searching and cannot read as "No results".
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  const searchKey = query.trim() ? JSON.stringify([query, activeFilter, searchNonce]) : null;
+  const loading = searchKey !== null && settledKey !== searchKey;
 
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -50,6 +63,7 @@ export function useGlobalSearchPanel() {
   const projectPath = useProjectStore((s) => s.projectPath);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
   const feedEvents = useActivityFeedStore((s) => s.events);
+  const dismissEvent = useActivityFeedStore((s) => s.dismissEvent);
   const { sendPromptToModule } = useModuleActions();
   const prefersReduced = useReducedMotion();
 
@@ -57,6 +71,11 @@ export function useGlobalSearchPanel() {
   // mod+k, e.g. the ability Spellbook, outranks it) + Escape as a LIFO layer ──
   useHotkey('mod+k', () => setOpen((prev) => !prev), { allowInInput: true, id: 'shell.global-search' });
   useEscapeLayer('global-search', open, () => setOpen(false));
+  useEffect(() => {
+    const openPalette = () => setOpen(true);
+    window.addEventListener(OPEN_GLOBAL_SEARCH_EVENT, openPalette);
+    return () => window.removeEventListener(OPEN_GLOBAL_SEARCH_EVENT, openPalette);
+  }, []);
 
   // ── Focus input when opening ──
   useEffect(() => {
@@ -84,6 +103,8 @@ export function useGlobalSearchPanel() {
     if (!query.trim()) {
       setResults([]);
       setActiveIndex(0);
+      setSearchFailed(false);
+      searchSeqRef.current++; // an in-flight response no longer answers anything
       return;
     }
 
@@ -94,39 +115,47 @@ export function useGlobalSearchPanel() {
       // token is no longer current is dropped so an out-of-order (slower, older)
       // response can't clobber the results of a newer query.
       const seq = ++searchSeqRef.current;
-      setLoading(true);
       try {
         const params = new URLSearchParams({ q: query });
         if (activeFilter) params.set('types', activeFilter);
         const data = await apiFetch<{ results: SearchResult[]; count: number; lastRebuilt: string | null }>(`/api/search?${params.toString()}`);
         if (seq !== searchSeqRef.current) return; // superseded by a newer search
         setResults(data.results ?? []);
-        setLastRebuilt(data.lastRebuilt ?? null);
+        setSearchFailed(false);
         setActiveIndex(0);
       } catch {
         if (seq !== searchSeqRef.current) return; // superseded by a newer search
         setResults([]);
+        setSearchFailed(true);
       } finally {
-        if (seq === searchSeqRef.current) setLoading(false);
+        if (seq === searchSeqRef.current) setSettledKey(searchKey);
       }
     }, 180);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, activeFilter]);
+    // searchKey is derived from exactly these three.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, activeFilter, searchNonce]);
 
   // ── Rebuild index ──
+  const retrySearch = useCallback(() => setSearchNonce((n) => n + 1), []);
+
   const handleRebuild = useCallback(async (silent = false) => {
-    if (!silent) setRebuilding(true);
+    if (!silent) { setRebuilding(true); setReindexFailed(false); }
     try {
-      await apiFetch('/api/search?rebuild=1');
-      setLastRebuilt(new Date().toISOString());
+      await apiFetch('/api/search?action=rebuild', { method: 'POST' });
       // Mark the index as built for the current project only on success, so a
       // failed first rebuild is retried on the next open rather than left
       // permanently stale, and a later project switch forces a fresh rebuild.
       indexEnsuredForPath = projectPath;
-    } catch { /* ignore */ }
+      // What is on screen was answered by the old index.
+      setSearchNonce((n) => n + 1);
+    } catch {
+      // The silent open-time rebuild is retried on the next open; a click is owed an answer.
+      if (!silent) setReindexFailed(true);
+    }
     if (!silent) setRebuilding(false);
   }, [projectPath]);
 
@@ -155,7 +184,7 @@ export function useGlobalSearchPanel() {
   // ── Navigate to result (Enter / row click — never a paid run) ──
   const handleSelect = useCallback((result: SearchResult) => {
     const { primary } = resolveSearchIntents(result, checklistProgress);
-    recordRecent(projectPath, result);
+    rememberPlace(projectPath, result);
     if (primary) navigateToModule(primary.moduleId);
     setOpen(false);
   }, [navigateToModule, checklistProgress, projectPath]);
@@ -166,10 +195,13 @@ export function useGlobalSearchPanel() {
     const homeRun = homeRows.find((h) => h.result.id === result.id)?.run;
     const run = homeRun ?? resolveSearchIntents(result, checklistProgress).run;
     if (!run) { handleSelect(result); return; }
-    recordRecent(projectPath, result);
+    rememberPlace(projectPath, result);
     sendPromptToModule(run.moduleId, run.prompt);
+    // Same rule as the feed card's Fix: a dispatched fix is a read alert, so a
+    // second Shift+Enter cannot start the same paid run again.
+    if (homeRun && result.id.startsWith(ALERT_ID_PREFIX)) dismissEvent(result.id.slice(ALERT_ID_PREFIX.length));
     setOpen(false);
-  }, [checklistProgress, handleSelect, sendPromptToModule, homeRows, projectPath]);
+  }, [checklistProgress, handleSelect, sendPromptToModule, homeRows, projectPath, dismissEvent]);
 
   // ── Keyboard navigation ──
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -211,9 +243,11 @@ export function useGlobalSearchPanel() {
     intents,
     homeKinds,
     loading,
+    searchFailed,
+    reindexFailed,
+    retrySearch,
     rebuilding,
     activeIndex, setActiveIndex,
-    lastRebuilt,
     activeFilter, setActiveFilter,
     inputRef,
     resultsRef,

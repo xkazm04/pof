@@ -150,7 +150,7 @@ export function assessStage(critique: CritiqueResult | undefined, stage: MeshSta
     misTiered,
     rerollWorthwhile: rerollResolvable.length > 0,
     finishWorthwhile: finishResolvable.length > 0,
-    caveat: caveatFor(stage, codes, finishResolvable, unaddressed, misTiered),
+    caveat: caveatFor(stage, codes, finishResolvable, misTiered),
   };
 }
 
@@ -158,18 +158,20 @@ function caveatFor(
   stage: MeshStage,
   codes: FindingCode[],
   finishResolvable: FindingCode[],
-  unaddressed: FindingCode[],
   misTiered: boolean,
 ): string | undefined {
   if (!codes.length) return undefined;
+  // Not `unaddressed`: that is empty when the rest is reroll-resolvable, and the sentences need the rest.
+  const remaining = codes.filter((c) => !finishResolvable.includes(c));
   if (misTiered) {
     return `graded PRE-FINISH geometry against post-finish thresholds — every failing criterion (${list(finishResolvable)}) is what the retopo/decimate stage exists to satisfy, so this verdict is about the stage, not the mesh`;
   }
   if (stage === 'raw' && finishResolvable.length) {
-    return `stage: RAW (pre-retopo). ${list(finishResolvable)} is resolved by the retopo/decimate stage; ${list(unaddressed)} is not — finishing this mesh would not clear the gate`;
+    return `stage: RAW (pre-retopo). ${list(finishResolvable)} is resolved by the retopo/decimate stage; ${list(remaining)} is not — finishing this mesh would not clear the gate`;
   }
   if (stage === 'unknown') {
     return `pipeline stage not declared, so this verdict cannot say whether ${list(codes)} is a defect or an un-finished input — declare the stage to get a tiered reading`;
   }
-  return `stage: ${stage.toUpperCase()}. ${list(unaddressed)} is not resolved by the retopo/decimate stage`;
+  if (!remaining.length) return `stage: ${stage.toUpperCase()}. ${list(codes)} still fails after the retopo/decimate stage`;
+  return `stage: ${stage.toUpperCase()}. ${list(remaining)} is not resolved by the retopo/decimate stage`;
 }

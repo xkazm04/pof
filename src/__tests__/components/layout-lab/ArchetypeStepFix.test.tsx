@@ -46,17 +46,6 @@ describe('ArchetypeStep generic fix loop', () => {
     expect(screen.queryByTestId('acceptance-produce-fix')).toBeNull();
   });
 
-  it('a bespoke spec.copy overrides the generic fallback in the banner', () => {
-    const withCopy: StepSpec = {
-      ...failSpec,
-      copy: () => ({ why: 'custom cause', suggestion: 'custom action', fixDirection: 'do the thing' }),
-    };
-    render(<ArchetypeStep t={t} entity={entity} step="Concept Brief" spec={withCopy} />);
-    expect(screen.getByTestId('acceptance-explanation').textContent).toContain('custom cause');
-    expect(screen.getByTestId('acceptance-suggestion').textContent).toContain('custom action');
-    expect(screen.getByTestId('acceptance-produce-fix')).toBeTruthy();
-  });
-
   it('dispatches a NON-EMPTY direction naming the failure, and shows it before dispatch', async () => {
     const seen: (string | undefined)[] = [];
     const spy: StepSpec = {

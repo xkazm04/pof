@@ -71,6 +71,7 @@ export function DiminishingReturnsVisualizer({
           <button
             key={a.name}
             onClick={() => setSelectedDRAttr(idx)}
+            aria-pressed={selectedDRAttr === idx}
             className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border"
             style={{
               backgroundColor: selectedDRAttr === idx ? `${a.color}${OPACITY_15}` : 'transparent',
@@ -90,7 +91,7 @@ export function DiminishingReturnsVisualizer({
           height="h-[200px]"
           showGrid={false}
           yLabels={[fmtMarginal(maxMarginal), fmtMarginal(maxMarginal / 2), '0']}
-          xLabels={['10 pts', '50 pts', '100 pts']}
+          xLabels={['0 pts', '50 pts', '100 pts']}
           overlay={
             <div className="absolute top-2 right-4 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border" style={{ color: attr.color, borderColor: `${attr.color}${OPACITY_20}`, backgroundColor: `${attr.color}${OPACITY_10}` }}>
               Soft Cap: {attr.softCap} pts

@@ -6,6 +6,7 @@ import {
   Target, Map, List,
 } from 'lucide-react';
 import { PlanMatrixMap } from '../PlanMatrixMap';
+import { PlanningGlossary } from '@/components/modules/core-engine/PlanningGlossary';
 import { useImplementationPlan } from '@/hooks/useImplementationPlan';
 import { usePlanDispatch } from '@/hooks/usePlanDispatch';
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
@@ -33,7 +34,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
   const { plan, loading, error, filter, updateFilter, clearFilter, refresh } = useImplementationPlan({
     filter: moduleId ? { moduleId } : undefined,
   });
-  const [page, setPage] = useState(0);
+  const [requestedPage, setPage] = useState(0);
   const [showAllModules, setShowAllModules] = useState(!moduleId);
 
   // The ONE plan dispatch door: planDispatch gates readiness, the feature-fix
@@ -62,14 +63,16 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
     dispatch(item);
   }, [dispatch]);
 
-  // Pagination
+  // Pagination. The page is clamped to the plan as it is NOW: a filter change or
+  // a landed build can shrink the plan under a later page, and an unclamped
+  // slice would show the "no features match" empty state over matching items.
+  const totalPages = plan ? Math.ceil(plan.items.length / PAGE_SIZE) : 0;
+  const page = Math.min(requestedPage, Math.max(0, totalPages - 1));
   const pagedItems = useMemo(() => {
     if (!plan) return [];
     const start = page * PAGE_SIZE;
     return plan.items.slice(start, start + PAGE_SIZE);
   }, [plan, page]);
-
-  const totalPages = plan ? Math.ceil(plan.items.length / PAGE_SIZE) : 0;
 
   // Progress percentage
   const progress = plan && plan.totalFeatures > 0
@@ -93,11 +96,13 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <PlanningGlossary />
           {/* View mode toggle */}
           <div className="flex items-center border border-border rounded-md overflow-hidden mr-1">
             <button
               onClick={() => setViewMode('table')}
               title="Table view"
+              aria-pressed={viewMode === 'table'}
               className={`p-1 transition-colors ${viewMode === 'table' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'}`}
             >
               <List className="w-3.5 h-3.5" />
@@ -105,6 +110,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
             <button
               onClick={() => setViewMode('map')}
               title="Matrix map"
+              aria-pressed={viewMode === 'map'}
               className={`p-1 transition-colors ${viewMode === 'map' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'}`}
             >
               <Map className="w-3.5 h-3.5" />
@@ -113,6 +119,8 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
           <button
             onClick={refresh}
             disabled={loading}
+            aria-label="Refresh plan"
+            title="Refresh plan"
             className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -133,6 +141,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
                 updateFilter({ moduleId });
               }
             }}
+            aria-pressed={!showAllModules}
             className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
               showAllModules
                 ? 'text-text-muted hover:text-text hover:bg-surface-hover border border-transparent'
@@ -140,7 +149,9 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
             }`}
           >
             <Target className="w-3 h-3" />
-            {showAllModules ? 'Filtered to module' : getModuleLabel(moduleId as SubModuleId) + ' only'}
+            {showAllModules
+              ? `Show ${getModuleLabel(moduleId as SubModuleId)} only`
+              : `${getModuleLabel(moduleId as SubModuleId)} only`}
           </button>
           {!showAllModules && (
             <span className="text-2xs text-text-muted">Cross-module deps shown as context</span>
@@ -149,7 +160,7 @@ export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
       )}
 
       {/* Matrix map view */}
-      {viewMode === 'map' && <PlanMatrixMap moduleId={showAllModules ? undefined : moduleId} />}
+      {viewMode === 'map' && <PlanMatrixMap moduleId={showAllModules ? undefined : moduleId} dispatch={dispatch} />}
 
       {/* Table view content below */}
       {viewMode === 'table' && plan && (

@@ -14,6 +14,12 @@ import { HUD_WBP_CLASSES } from './wbp-classes';
 const ACCENT = MODULE_COLORS.core;
 
 /**
+ * A UUserWidget class name: U-prefixed C++ identifier. The class is spliced into
+ * the agent prompt, a Python script and two file paths, so anything else is refused.
+ */
+const WIDGET_CLASS_RE = /^U[A-Za-z0-9_]+$/;
+
+/**
  * WBP-starter (folder-04 §6 / Phase 2b).
  *
  * Lets the operator pick a BindWidget-coupled C++ widget class and dispatch an
@@ -31,12 +37,14 @@ export function WBPStarterPanel({ moduleId }: { moduleId: SubModuleId }) {
     accentColor: ACCENT,
   });
 
+  const cls = targetClass.trim();
+  const invalid = cls !== '' && !WIDGET_CLASS_RE.test(cls);
+
   const handleScaffold = useCallback(() => {
-    const cls = targetClass.trim();
-    if (!cls || isRunning) return;
+    if (!cls || invalid || isRunning) return;
     const name = cls.replace(/^U/, '');
     execute(TaskFactory.wbpStarter(moduleId, cls, getAppOrigin(), `Scaffold WBP_${name}`));
-  }, [targetClass, isRunning, execute, moduleId]);
+  }, [cls, invalid, isRunning, execute, moduleId]);
 
   return (
     <div
@@ -64,7 +72,7 @@ export function WBPStarterPanel({ moduleId }: { moduleId: SubModuleId }) {
           list="wbp-class-suggestions"
           placeholder="UARPGHUDWidget"
           spellCheck={false}
-          className="px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text outline-none"
+          className="focus-ring px-2 py-1.5 rounded-lg font-mono text-sm bg-surface-deep/50 text-text outline-none"
           style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
         />
         <datalist id="wbp-class-suggestions">
@@ -73,6 +81,11 @@ export function WBPStarterPanel({ moduleId }: { moduleId: SubModuleId }) {
           ))}
         </datalist>
       </label>
+      {invalid && (
+        <p role="alert" className="text-xs text-text-muted">
+          Not a C++ class name: use a U-prefixed identifier (letters, digits, underscores), e.g. UARPGHUDWidget.
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-1.5">
         {HUD_WBP_CLASSES.map((c) => (
@@ -80,7 +93,8 @@ export function WBPStarterPanel({ moduleId }: { moduleId: SubModuleId }) {
             key={c}
             type="button"
             onClick={() => setTargetClass(c)}
-            className="px-2 py-0.5 rounded text-xs font-mono cursor-pointer transition-all hover:brightness-110"
+            aria-pressed={targetClass === c}
+            className="focus-ring px-2 py-0.5 rounded text-xs font-mono cursor-pointer transition-all hover:brightness-110"
             style={{
               backgroundColor: withOpacity(ACCENT, targetClass === c ? OPACITY_20 : OPACITY_8),
               color: withOpacity(ACCENT, OPACITY_50),

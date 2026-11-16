@@ -52,6 +52,7 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
   // scrolls up so they can read in peace (classic `tail -f` console behavior).
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   // The server job this console follows; `attached` = found on the server, not
   // started by this console's own request.
   const [job, setJob] = useState<{ jobId: string; kind: CookJobKind } | null>(null);
@@ -67,6 +68,20 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
   // render closure, and so React StrictMode double-invokes can't double-count.
   const logsRef = useRef<CookLogLine[]>([]);
   const countsRef = useRef<CookLogCounts>(ZERO_COUNTS);
+  // The refs advance per event; React state is flushed at most once per frame so
+  // a RunUAT burst of thousands of lines renders the console per frame, not per line.
+  const flushRafRef = useRef<number | null>(null);
+  const flushLogs = useCallback(() => {
+    if (flushRafRef.current != null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(flushRafRef.current);
+    flushRafRef.current = null;
+    setLogs(logsRef.current);
+    setCounts(countsRef.current);
+  }, []);
+  const scheduleFlush = useCallback(() => {
+    if (flushRafRef.current != null) return;
+    if (typeof requestAnimationFrame !== 'function') { flushLogs(); return; }
+    flushRafRef.current = requestAnimationFrame(() => { flushRafRef.current = null; flushLogs(); });
+  }, [flushLogs]);
   // Cursor that cycles "Jump to error" through each error in turn.
   const errorCursorRef = useRef(0);
   // Set when a jump is requested while the active filter hides errors — the jump
@@ -91,10 +106,9 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
       onStart: () => {
         setPhase(null);
         setPercent(0);
-        setLogs([]);
-        setCounts(ZERO_COUNTS);
         logsRef.current = [];
         countsRef.current = ZERO_COUNTS;
+        flushLogs();
         setResult(null);
         setElapsedMs(0);
         setFilter('all');
@@ -110,6 +124,7 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
       },
       onJob: (j) => setJob(j),
       onSettle: (final) => {
+        flushLogs();
         setResult(final);
         onCompleteRef.current?.(final);
       },
@@ -142,13 +157,12 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
           };
           logsRef.current = next;
           countsRef.current = nextCounts;
-          setLogs(next);
-          setCounts(nextCounts);
+          scheduleFlush();
         }
       },
     };
     void driveCookStream(start, signal, handlers);
-  }, []);
+  }, [flushLogs, scheduleFlush]);
 
   // Start (and follow) a cook for a local request. Unmount only DETACHES: the cook
   // is a server job and keeps running; a remounted console reattaches below.
@@ -202,7 +216,10 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
     if (result && startedAtRef.current != null) setElapsedMs(Date.now() - startedAtRef.current);
   }, [result]);
 
-  useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
+  useEffect(() => () => {
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    if (flushRafRef.current != null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(flushRafRef.current);
+  }, []);
 
   const displayedLines = useMemo(() => {
     switch (filter) {
@@ -256,12 +273,18 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
     listRef.current?.scrollToRow({ index: errorRows[pos], align: 'center', behavior: 'smooth' });
   }, [errorRows]);
 
-  const handleCopyAll = useCallback(() => {
+  const handleCopyAll = useCallback(async () => {
     const text = logs.map((l) => `[${formatCookTimestamp(l.t)}] ${l.line}`).join('\n');
-    void navigator.clipboard?.writeText(text);
-    setCopied(true);
+    // 'Copied' only once the clipboard ACCEPTED the text: a missing API (insecure
+    // context) or a refused write is reported as a failure, never as success.
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); ok = true; }
+    } catch { ok = false; }
+    setCopied(ok);
+    setCopyFailed(!ok);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-    copyTimerRef.current = setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+    copyTimerRef.current = setTimeout(() => { setCopied(false); setCopyFailed(false); }, UI_TIMEOUTS.copyFeedback);
   }, [logs]);
 
   return {
@@ -276,6 +299,7 @@ export function useCookProgress({ request, projectPath, onComplete }: CookProgre
     autoScroll,
     setAutoScroll,
     copied,
+    copyFailed,
     listRef,
     displayedLines,
     handleListScroll,

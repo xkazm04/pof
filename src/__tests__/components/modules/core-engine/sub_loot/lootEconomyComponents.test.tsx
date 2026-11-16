@@ -27,4 +27,16 @@ describe('economy components consume the tuned roster', () => {
     act(() => useLootTuningStore.getState().dispatch({ type: 'setGold', rarity: 'Legendary', value: 9000 }));
     expect(container.textContent).not.toBe(before);
   });
+
+  it('DropsPerHour source breakdown follows the tuned roster (Minion share reads 0% once every Minion drops 0)', () => {
+    const { container } = render(<DropsPerHour />);
+    expect(container.textContent).toMatch(/Minion [1-9]\d*%/);
+    const { baseline, dispatch } = useLootTuningStore.getState();
+    act(() => {
+      for (const b of baseline) {
+        if (b.dropChance < 0.32) dispatch({ type: 'setField', id: b.archetypeId, field: 'dropChance', value: 0 });
+      }
+    });
+    expect(container.textContent).toContain('Minion 0%');
+  });
 });

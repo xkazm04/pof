@@ -69,9 +69,36 @@ describe('analyzeCatalog facet fallback', () => {
     expect(Object.keys(out.byAttribute).length).toBeGreaterThan(0);
   });
 
+  it('a degenerate-only catalog (loot-tables seed) gets @lifecycle and still reports the degenerate dimension', () => {
+    const out = analyzeCatalog('loot-tables', codeSeededEntities('loot-tables'));
+    expect(out.degenerate).toContain('archetypeName');
+    expect(out.byAttribute['@lifecycle']).toBeDefined();
+    expect(out.byAttribute).not.toHaveProperty('archetypeName');
+  });
+
   it('no plugin and data without usable keys falls back to facets', () => {
     const out = analyzeCatalog('no-such-catalog', [mk('n1', 'no-such-catalog', {}), mk('n2', 'no-such-catalog', {})]);
     expect(out.byAttribute['@lifecycle']).toEqual({ planned: 2 });
+  });
+});
+
+describe('no-plugin inference never histograms identity or prose', () => {
+  it.each(['story-arcs', 'contracts', 'player-movement', 'character-pipeline'])(
+    '%s (seed carries only description) falls back to facets, not a description histogram',
+    (catalogId) => {
+      const out = analyzeCatalog(catalogId, codeSeededEntities(catalogId));
+      expect(out.byAttribute).not.toHaveProperty('description');
+      expect(Object.keys(out.byAttribute).length).toBeGreaterThan(0);
+      expect(Object.keys(out.byAttribute).every((k) => k.startsWith('@'))).toBe(true);
+    },
+  );
+
+  it('skips id/name/displayName/label/title/description and non-scalar keys', () => {
+    const ents = [1, 2].map((i) => mk(`x${i}`, 'no-such-catalog', {
+      id: `x${i}`, name: `X ${i}`, displayName: `X ${i}`, label: 'l', title: 't', description: 'd',
+      stats: { a: 1 }, tiers: [1, 2], group: 'G', isPrefix: true,
+    }));
+    expect(Object.keys(analyzeCatalog('no-such-catalog', ents).byAttribute).sort()).toEqual(['group', 'isPrefix']);
   });
 });
 

@@ -30,9 +30,6 @@ export interface BatchGateNote {
   reason: string;
 }
 
-/** @deprecated Historical name for {@link BatchGateNote}; kept so existing imports compile. */
-export type BatchFail = BatchGateNote;
-
 /** Catalog-wide roll-up of a batch drain. */
 export interface BatchDrainSummary {
   /** Entities we actually drained (got a runner summary back). */

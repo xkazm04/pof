@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Boxes, ImagePlus, Loader2, ScanSearch } from 'lucide-react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { useSceneDressStore, type SceneDressStatus } from './useSceneDressStore';
+import { useSceneDressStore, SCENE_IMAGE_MAX_BYTES, type SceneDressStatus } from './useSceneDressStore';
 import { DressPlanMap, DressPlanTable } from './DressPlanMap';
 
 /**
@@ -59,6 +59,10 @@ export function SceneDressPanel() {
   const onFile = (file: File | undefined) => {
     if (!file) return;
     setReadError(null);
+    if (file.size > SCENE_IMAGE_MAX_BYTES) {
+      setReadError(`“${file.name}” is too large: the limit is ${SCENE_IMAGE_MAX_BYTES / (1024 * 1024)} MB.`);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       if (!mounted.current) return;
@@ -74,6 +78,9 @@ export function SceneDressPanel() {
   const busy = status === 'decomposing' || status === 'building';
   const placed = plan?.placed.length ?? 0;
   const line = statusLine({ ...store, placed, unplaced: plan?.unplaced.length ?? 0 });
+  // Every run makes a NEW collection, so a second click after a build (or an unconfirmed one,
+  // which may have landed) is a stated choice, not a silent duplicate.
+  const rebuild = status === 'built' || status === 'unconfirmed';
   const canBuild = connected && placed > 0 && !busy && status !== 'failed' && status !== 'empty';
 
   return (
@@ -136,7 +143,7 @@ export function SceneDressPanel() {
               className="flex items-center gap-1 px-3 py-1 rounded bg-accent/10 text-accent text-xs hover:bg-accent/20 disabled:opacity-40"
             >
               {status === 'building' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Boxes className="w-3 h-3" />}
-              Block out in Blender ({placed})
+              {rebuild ? 'Block out another copy in Blender' : 'Block out in Blender'} ({placed})
             </button>
             {!connected && <span className="text-xs text-text-muted">Connect Blender to block out.</span>}
           </div>

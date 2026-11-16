@@ -1,8 +1,8 @@
 'use client';
 import { useSyncExternalStore } from 'react';
 
-/** The lab's three top-level screens. Persisted so a reload reopens the one you left. */
-export type LabView = 'catalogs' | 'canon' | 'matrix';
+/** The lab's top-level screens (`game` = the active game's home). Persisted so a reload reopens the one you left. */
+export type LabView = 'catalogs' | 'canon' | 'matrix' | 'game';
 
 export interface LabPrefs {
   themeId: 'light' | 'dark';
@@ -61,7 +61,7 @@ function parse(raw: string | null): LabPrefs {
 }
 
 function isLabView(v: unknown): v is LabView {
-  return v === 'catalogs' || v === 'canon' || v === 'matrix';
+  return v === 'catalogs' || v === 'canon' || v === 'matrix' || v === 'game';
 }
 
 /** Keep only `catalogId → ISO string` entries — a corrupt map must not reach the digest. */

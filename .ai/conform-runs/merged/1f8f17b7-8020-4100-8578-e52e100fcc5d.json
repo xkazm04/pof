@@ -1,0 +1,88 @@
+{
+ "schema": "conform-run/1",
+ "worker": "1f8f17b7-8020-4100-8578-e52e100fcc5d",
+ "subject": "codebase-scanning",
+ "evaluatedAt": "2026-11-08T05:01:14.777368+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "gdd-compliance",
+   "subject": "codebase-scanning",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:63 The Codebase Archeologist scanner UI shows at most 100 findings, but the count beside the list (line 52) only notes filter narrowing, never this cap, so the visible list misstates the backlog size; it also shows a failed git sensor as empty and calls zero findings a clean codebase.",
+   "techniques": [
+    {
+     "technique": "sensor-pipeline",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/ChurnTab.tsx:16 The backend's git sensor catch returns an empty churn list (codebase-archeologist.ts:323, 'Not a git repo or git not available \u2014 return empty'), and the UI shows that as 'No git history found'. A skipped sensor is spelled the same as a sensor that ran and found nothing, and no skip record travels in the analysis."
+    },
+    {
+     "technique": "finding-lifecycle",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/AntiPatternsTab.tsx:52 The list is cut to 100 rows at line 63, but the count does not disclose that cut. Finding ids are a per-run counter (`ap-${++nextId}` in the lib), and nothing is persisted, verified, rejected or suppressed, so findings are shown straight from detection with no lifecycle."
+    },
+    {
+     "technique": "causes-beside-the-finding-count",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:91 The headline publishes only the raw emission count, labelled 'issues' (work). No cause count or relation is published beside it, and the health score (OverviewTab.tsx:8) is a straight subtraction over raw finding counts."
+    },
+    {
+     "technique": "the-tree-is-not-the-population",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/OverviewTab.tsx:19 totalFiles is the post-filter count (the lib's SKIP_DIRS removes Intermediate/Binaries/Saved/ThirdParty\u2026). No enumerated total and no per-filter excluded count is shown, so coverage is reported on the sensor axis only."
+    },
+    {
+     "technique": "incremental-scanning",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:59 Every run is a full re-scan of the project; there is no incremental mode whose labelling could be dishonest."
+    },
+    {
+     "technique": "ingestion-budget",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/index.tsx:48 The scan reads the user's own local project path, not a foreign target over a metered remote interface."
+    },
+    {
+     "technique": "dead-code-detection",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/CodebaseArcheologistView/constants.ts:23 The rule roster is six UE anti-pattern categories (GENERATED_BODY, circular include, asset paths, NewObject, deprecated API, god class); none is a dead-code or reachability rule."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "codebase-scanning",
+   "context": "audio-generation-tools",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "codebase-scanning",
+   "context": "blueprint-transpiler-game-systems",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-08T05:01:14.777368+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "codebase-scanning"
+   ],
+   "techniques": [
+    "causes-beside-the-finding-count",
+    "dead-code-detection",
+    "finding-lifecycle",
+    "incremental-scanning",
+    "ingestion-budget",
+    "sensor-pipeline",
+    "the-tree-is-not-the-population"
+   ],
+   "deviations": 1,
+   "context": "gdd-compliance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

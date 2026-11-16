@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GTAI Art Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e1014;
+    --panel: #161920;
+    --panel-2: #1c2029;
+    --line: #2a2f3a;
+    --text: #e8eaef;
+    --muted: #a7adba;
+    --v1: #1FB5A8;
+    --v2: #FFA43A;
+    --v3: #F6C343;
+    --green: #4cc38a;
+    --amber: #f0b429;
+    --red: #ef5d5d;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  a { color: inherit; }
+  header.top { max-width: 1680px; margin: 0 auto; padding: 32px 20px 8px; }
+  h1 { font: 700 32px/1.15 "Space Grotesk", Inter, sans-serif; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); max-width: 980px; margin: 0; font-size: 16px; }
+  .lede strong { color: var(--text); }
+  main { max-width: 1680px; margin: 0 auto; padding: 8px 20px 48px; }
+
+  .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+  .rowlabel { grid-column: 1 / -1; margin: 28px 0 -4px; font: 600 13px/1 Inter, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .cell { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; border-top: 3px solid var(--accent); }
+  .v1 { --accent: var(--v1); } .v2 { --accent: var(--v2); } .v3 { --accent: var(--v3); }
+  .tag { display: inline-block; font: 600 12px/1 Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+
+  .name { font: 700 26px/1.1 "Space Grotesk", Inter, sans-serif; margin: 0 0 6px; }
+  .hook { color: var(--muted); margin: 0 0 14px; font-size: 15px; }
+  .idea { font-size: 19px; line-height: 1.4; font-weight: 600; margin: 0; padding-left: 12px; border-left: 3px solid var(--accent); }
+  .route { margin: 12px 0 0; color: var(--muted); font-size: 15px; }
+
+  figure { margin: 0; }
+  figure a { display: block; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: #000; }
+  figure img { display: block; width: 100%; height: auto; }
+  figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .rivet img { max-height: 620px; width: auto; max-width: 100%; margin: 0 auto; }
+  .rivet a { background: var(--panel-2); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 6px; border-top: 1px solid var(--line); }
+  th { width: 30%; color: var(--muted); font-weight: 600; }
+  tr:first-child th, tr:first-child td { border-top: 0; }
+  .sw { display: inline-flex; align-items: center; gap: 6px; margin: 2px 10px 2px 0; font: 500 13px/1.2 ui-monospace, Consolas, monospace; color: var(--text); white-space: nowrap; }
+  .sw i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); display: inline-block; }
+
+  .verdict { font-weight: 600; margin: 0 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .chip { font: 600 13px/1 Inter, sans-serif; padding: 7px 10px; border-radius: 999px; border: 1px solid; }
+  .g { color: var(--green); border-color: color-mix(in srgb, var(--green) 50%, transparent); }
+  .a { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 50%, transparent); }
+  .r { color: var(--red); border-color: color-mix(in srgb, var(--red) 50%, transparent); }
+  .chip::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
+  .small { font-size: 15px; color: var(--muted); margin: 6px 0 0; }
+  .small strong { color: var(--text); }
+
+  .links a { display: inline-block; margin: 4px 14px 4px 0; font-weight: 600; color: var(--accent); text-decoration: none; border-bottom: 1px solid currentColor; }
+  .notes { max-width: 1680px; margin: 0 auto; padding: 0 20px 48px; color: var(--muted); font-size: 15px; }
+  .notes h2 { font: 700 20px/1.2 "Space Grotesk", Inter, sans-serif; color: var(--text); margin: 0 0 8px; }
+  .notes ul { margin: 0; padding-left: 20px; }
+
+  @media (max-width: 1000px) {
+    .row { grid-template-columns: minmax(0, 1fr); }
+    .rowlabel { margin-top: 24px; }
+    h1 { font-size: 26px; }
+  }
+  @media (max-width: 480px) {
+    header.top, main, .notes { padding-left: 16px; padding-right: 16px; }
+    th { width: 34%; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>GTAI: Uprising: three art directions</h1>
+  <p class="lede">Three 2D/2.5D looks for the same game, each a complete package. Each carries its art idea in one sentence, its rules, a production recipe that uses <strong>only Blender and code</strong> (images here are concept art only), and a different stance on the open decisions in <code>pitch.md</code> §10. Click any image for full size. The pitch's <strong>[owner]</strong> lines are fixed in all three.</p>
+</header>
+
+<main>
+  <!-- IDEA -->
+  <div class="row">
+    <div class="rowlabel">The idea</div>
+    <section class="cell v1">
+      <span class="tag">Variant 1 · risograph noir (A/2)</span>
+      <h2 class="name">DEAD INK</h2>
+      <p class="hook">A cheap two-ink crime print where the dead are the only thing in teal, and they will not shut up.</p>
+      <p class="idea">Every frame is a cheap two-ink print of a crime, and the dead are the only thing printed in teal.</p>
+      <p class="route">Route: 3D low-poly in engine + one riso post-process (plates, halftone, misregistration).</p>
+    </section>
+    <section class="cell v2">
+      <span class="tag">Variant 2 · pre-rendered sprites</span>
+      <h2 class="name">SODIUM</h2>
+      <p class="hook">GTA 2's trick at today's resolution, plus a radio that narrates your war crimes.</p>
+      <p class="idea">Shoot every body once from directly overhead in Blender, lay it on a real 3D block city, and let the sodium streetlights do the noir.</p>
+      <p class="route">Route: Blender-rendered overhead sprite sheets (albedo + normal), lit live over GTA 2-style 3D blocks.</p>
+    </section>
+    <section class="cell v3">
+      <span class="tag">Variant 3 · vector cutout rigs in code</span>
+      <h2 class="name">SATURDAY MORNING MASSACRE</h2>
+      <p class="hook">A Saturday-morning cartoon in which a robot raids the Pentagon in broad daylight, and every body part comes off.</p>
+      <p class="idea">A 2000s Flash cartoon of an atrocity: flat cut-out puppets with fat outlines, in broad daylight, where everything that can come off does.</p>
+      <p class="route">Route: SVG part puppets on 2D bones, procedural animation, flat vector city with code-offset roofs.</p>
+    </section>
+  </div>
+
+  <!-- SHOT 1 -->
+  <div class="row">
+    <div class="rowlabel">Shot 1: on-foot combat, madness HUD</div>
+    <figure class="cell v1"><span class="tag">DEAD INK</span><a href="variant-1/shot-1.jpg" target="_blank"><img src="variant-1/shot-1.jpg" alt="DEAD INK shot 1: Rivet electro-punching riot cops in a factory yard, printed in two inks, STATIC form HUD"></a><figcaption>Loading-yard brawl; STATIC form ticked CROWDED; Hauler's teal caption.</figcaption></figure>
+    <figure class="cell v2"><span class="tag">SODIUM</span><a href="variant-2/shot-1.jpg" target="_blank"><img src="variant-2/shot-1.jpg" alt="SODIUM shot 1: tiny overhead sprites in a wet night alley, Rivet firing at police, VOICES dial HUD"></a><figcaption>Back-alley shootout; VOICES dial on CROWDED; pager line. (Retry 2: scale fixed; "SENTERY" typo remains.)</figcaption></figure>
+    <figure class="cell v3"><span class="tag">SATURDAY MORNING MASSACRE</span><a href="variant-3/shot-1.jpg" target="_blank"><img src="variant-3/shot-1.jpg" alt="SATURDAY MORNING MASSACRE shot 1: cartoon parking lot, Rivet zapping a cop, souls arguing in speech balloons"></a><figcaption>Strip-mall brawl; the madness dial in CHOIR; the souls argue in balloons. (Retry 2: gameplay scale.)</figcaption></figure>
+  </div>
+
+  <!-- SHOT 2 -->
+  <div class="row">
+    <div class="rowlabel">Shot 2: a soul ability in use</div>
+    <figure class="cell v1"><span class="tag">DEAD INK · Gearbox</span><a href="variant-1/shot-2.jpg" target="_blank"><img src="variant-1/shot-2.jpg" alt="DEAD INK shot 2: Rivet hijacking three cars with teal tethers at an intersection"></a><figcaption>Gearbox car hijack: teal tethers, ghost driver, residue trails. (The soul portraits came out human; treat them as placeholders.)</figcaption></figure>
+    <figure class="cell v2"><span class="tag">SODIUM · Hauler</span><a href="variant-2/shot-2.jpg" target="_blank"><img src="variant-2/shot-2.jpg" alt="SODIUM shot 2: Hauler tank robot stomping a police roadblock with a shockwave ring"></a><figcaption>Hauler tank transform: stomp shockwave through a roadblock, 07 s bar, VOICES in CHOIR.</figcaption></figure>
+    <figure class="cell v3"><span class="tag">SATURDAY MORNING MASSACRE · Sentry</span><a href="variant-3/shot-2.jpg" target="_blank"><img src="variant-3/shot-2.jpg" alt="SATURDAY MORNING MASSACRE shot 2: Rivet in Sentry form hacking two checkpoint turrets onto soldiers"></a><figcaption>Sentry turret hack at a military checkpoint; HACK 0:07; soul wheel.</figcaption></figure>
+  </div>
+
+  <!-- SHOT 3 -->
+  <div class="row">
+    <div class="rowlabel">Shot 3: mission or chase, heat and the city</div>
+    <figure class="cell v1"><span class="tag">DEAD INK</span><a href="variant-1/shot-3.jpg" target="_blank"><img src="variant-1/shot-3.jpg" alt="DEAD INK shot 3: police and an army truck chasing a sedan down an avenue, WANTED stamps with ARMY"></a><figcaption>"Deliver the fax" chase; sixth stamp reads ARMY. (Palette drifts the most here; the shader would enforce the plates.)</figcaption></figure>
+    <figure class="cell v2"><span class="tag">SODIUM</span><a href="variant-2/shot-3.jpg" target="_blank"><img src="variant-2/shot-3.jpg" alt="SODIUM shot 3: red muscle car drifting through a night downtown chased by police, SWAT and tanks"></a><figcaption>Downtown chase: badges full plus army star, tanks, helicopter, CRUMB FM banner, Patch on the pager.</figcaption></figure>
+    <figure class="cell v3"><span class="tag">SATURDAY MORNING MASSACRE</span><a href="variant-3/shot-3.jpg" target="_blank"><img src="variant-3/shot-3.jpg" alt="SATURDAY MORNING MASSACRE shot 3: pink ice-cream truck chased by police, a jeep and a cartoon tank through a diorama city"></a><figcaption>Ice-cream-truck getaway to the car wash; sirens full plus army helmet; offset-roof diorama city.</figcaption></figure>
+  </div>
+
+  <!-- RIVET -->
+  <div class="row">
+    <div class="rowlabel">Rivet, main character concept</div>
+    <figure class="cell v1 rivet"><span class="tag">DEAD INK</span><a href="variant-1/rivet.jpg" target="_blank"><img src="variant-1/rivet.jpg" alt="Rivet as a two-ink riso poster with teal ghosts of dead robots above it"></a><figcaption>Riso poster: tired spot-welder, teal dead rising from it.</figcaption></figure>
+    <figure class="cell v2 rivet"><span class="tag">SODIUM</span><a href="variant-2/rivet.jpg" target="_blank"><img src="variant-2/rivet.jpg" alt="Rivet as a pre-rendered CGI robot with green wireframe ghosts and a sprite inset"></a><figcaption>Pre-rendered manual render, phosphor ghosts, sprite inset.</figcaption></figure>
+    <figure class="cell v3 rivet"><span class="tag">SATURDAY MORNING MASSACRE</span><a href="variant-3/rivet.jpg" target="_blank"><img src="variant-3/rivet.jpg" alt="Rivet as a flat cartoon model sheet with exploded cutout puppet parts"></a><figcaption>Model sheet with the exploded puppet parts and pivots (the production recipe made visible).</figcaption></figure>
+  </div>
+
+  <!-- RULES -->
+  <div class="row">
+    <div class="rowlabel">Rules</div>
+    <section class="cell v1"><span class="tag">DEAD INK</span>
+      <table>
+        <tr><th>Camera</th><td>65–70°, long lens, near-orthographic; Rivet ≈ 64 px at 1080p.</td></tr>
+        <tr><th>Rendering</th><td>3D low-poly, vertex colour only, one post-process: plate separation, screen-locked halftone, 0–4 px misregistration, grain, ink edges.</td></tr>
+        <tr><th>Palette</th><td><span class="sw"><i style="background:#F2E8D5"></i>#F2E8D5 paper</span><span class="sw"><i style="background:#17131B"></i>#17131B ink</span><span class="sw"><i style="background:#E8502A"></i>#E8502A vermilion</span><span class="sw"><i style="background:#1FB5A8"></i>#1FB5A8 teal: dead only</span></td></tr>
+        <tr><th>Readability</th><td>Identity by plate and pattern, never hue; characters never below 40% halftone; Rivet's vermilion collar.</td></tr>
+        <tr><th>Violence</th><td>Rubber-stamp splats, torn-paper gibs, halftone smears. No realistic gore.</td></tr>
+        <tr><th>HUD</th><td>Office paperwork: punch card, WANTED stamps (6th = ARMY), STATIC form, weapon ticket, ID-photo souls.</td></tr>
+      </table>
+    </section>
+    <section class="cell v2"><span class="tag">SODIUM</span>
+      <table>
+        <tr><th>Camera</th><td>80–88° with perspective lean (GTA 2); a character ≈ 1/16 of screen height.</td></tr>
+        <tr><th>Rendering</th><td>Ground-parallel sprite quads (albedo + normal + emissive) lit by live lamps over real 3D blocks with a baked tile atlas.</td></tr>
+        <tr><th>Palette</th><td><span class="sw"><i style="background:#1E2028"></i>#1E2028 asphalt</span><span class="sw"><i style="background:#3A4150"></i>#3A4150 wet</span><span class="sw"><i style="background:#FFA43A"></i>#FFA43A sodium</span><span class="sw"><i style="background:#FF3E9A"></i>#FF3E9A neon</span><span class="sw"><i style="background:#3A7BFF"></i>#3A7BFF police</span><span class="sw"><i style="background:#7A0F14"></i>#7A0F14 blood</span><span class="sw"><i style="background:#FFD23F"></i>#FFD23F HUD</span><span class="sw"><i style="background:#7CFFC4"></i>#7CFFC4 phosphor: dead only</span></td></tr>
+        <tr><th>Readability</th><td>Head-and-shoulder shapes from above; baked rim light; Rivet's welder mask and amber glint read at 48 px.</td></tr>
+        <tr><th>Violence</th><td>GTA 2-grade blood pools, persistent bodies, burning wrecks, seen from a distance.</td></tr>
+        <tr><th>HUD</th><td>Late-90s: bitmap cash, police badges plus army star, VOICES dial, pager box, CRUMB FM banner.</td></tr>
+      </table>
+    </section>
+    <section class="cell v3"><span class="tag">SATURDAY MORNING MASSACRE</span>
+      <table>
+        <tr><th>Camera</th><td>80–90°, straight down; roofs offset in code for fake height; a puppet ≈ 1/14 of screen height.</td></tr>
+        <tr><th>Rendering</th><td>2D vector: flat fills, one cel-shadow tone, constant 4 px outlines, vector FX shapes.</td></tr>
+        <tr><th>Palette</th><td><span class="sw"><i style="background:#1B1B1F"></i>#1B1B1F line</span><span class="sw"><i style="background:#5B5F7A"></i>#5B5F7A asphalt</span><span class="sw"><i style="background:#F4E9C9"></i>#F4E9C9 walk</span><span class="sw"><i style="background:#7CC35A"></i>#7CC35A lawn</span><span class="sw"><i style="background:#F6C343"></i>#F6C343 Rivet</span><span class="sw"><i style="background:#2F6FDB"></i>#2F6FDB cops</span><span class="sw"><i style="background:#6B7A3A"></i>#6B7A3A army</span><span class="sw"><i style="background:#E8343B"></i>#E8343B red</span><span class="sw"><i style="background:#FF6FB5"></i>#FF6FB5 pink</span><span class="sw"><i style="background:#27C7E8"></i>#27C7E8 cyan: dead only</span></td></tr>
+        <tr><th>Readability</th><td>Big heads (40% of puppet), hat and helmet shapes, round humans vs square robots; Rivet the only moving mustard.</td></tr>
+        <tr><th>Violence</th><td>Slapstick dismemberment: parts fly as physics bodies, X eyes, star splats. Gorier and sillier.</td></tr>
+        <tr><th>HUD</th><td>Chunky outlined bubbles, spinning siren lamps plus army helmet, Rivet-mask madness dial, in-world speech balloons.</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <!-- FEASIBILITY -->
+  <div class="row">
+    <div class="rowlabel">Feasibility (Blender + code only)</div>
+    <section class="cell v1"><span class="tag">DEAD INK</span>
+      <p class="verdict">GREEN: native in all three engines, best fit in UE 5.8 where PoF's bridge lives.</p>
+      <div class="chips"><span class="chip g">UE 5.8</span><span class="chip g">Godot 4</span><span class="chip g">Unity 6</span></div>
+      <p class="small"><strong>Recipe:</strong> bpy-built primitives (1.5–2.5k tris), vertex-colour plates; walk, roll, shoot and die as code-authored keyframes; bpy car and block kits.</p>
+      <p class="small"><strong>Hardest asset:</strong> the riso pass under motion (dot swim, 2-ink legibility on Deck). ≈ 4 agent-weeks, retired by a frame-readability gate.</p>
+    </section>
+    <section class="cell v2"><span class="tag">SODIUM</span>
+      <p class="verdict">GREEN on Godot/Unity, AMBER on UE 5.8. Cheapest per new asset; most GTA 2-faithful.</p>
+      <div class="chips"><span class="chip a">UE 5.8</span><span class="chip g">Godot 4</span><span class="chip g">Unity 6</span></div>
+      <p class="small"><strong>Recipe:</strong> Blender orthographic overhead renders in Cycles → 128 px albedo, normal and emissive atlases; one direction serves 360°; about 250 player frames ≈ 8 MB.</p>
+      <p class="small"><strong>Hardest asset:</strong> Hauler's transform (24-frame transition plus rotating turret layer) and frame growth across 5 forms. Sprite pipeline ≈ 3 agent-weeks. Nudges the engine spike toward Godot.</p>
+    </section>
+    <section class="cell v3"><span class="tag">SATURDAY MORNING MASSACRE</span>
+      <p class="verdict">GREEN on Godot 4, AMBER on Unity 6, RED on UE 5.8. Cheapest animation, but it effectively picks the engine.</p>
+      <div class="chips"><span class="chip r">UE 5.8</span><span class="chip g">Godot 4</span><span class="chip a">Unity 6</span></div>
+      <p class="small"><strong>Recipe:</strong> Python writes SVG part sets; 11-bone 2D rigs; walk, roll, shoot and die are procedural tweens and 2D physics; vector city with code-computed roof lean.</p>
+      <p class="small"><strong>Hardest asset:</strong> the line (constant-width crisp outlines on rotating, detaching parts) ≈ 2 agent-weeks, plus ≈ 3 for the rig and animation kit. Commits PoF to a Godot adapter.</p>
+    </section>
+  </div>
+
+  <!-- STANCES -->
+  <div class="row">
+    <div class="rowlabel">Stances on the open decisions</div>
+    <section class="cell v1"><span class="tag">DEAD INK</span>
+      <table>
+        <tr><th>4th soul</th><td><strong>Mop</strong>: swarm; scout, sneak, detonate.</td></tr>
+        <tr><th>Act order</th><td>King (collab) → Servo (collab) → Torque (crazy) → Kronk (crazy)</td></tr>
+        <tr><th>Betrayer</th><td><strong>Don Fax</strong>: his faxes turn up in Krump's tray, printed in the HUD's own ink.</td></tr>
+        <tr><th>Punchline</th><td><strong>(b)</strong> The voices go quiet: the teal plate is pulled from the print. Silence as horror.</td></tr>
+      </table>
+    </section>
+    <section class="cell v2"><span class="tag">SODIUM</span>
+      <table>
+        <tr><th>4th soul</th><td><strong>Primer</strong>: paint-shop bot; repaint to shed heat (adds "disappear").</td></tr>
+        <tr><th>Act order</th><td>Servo (collab) → King (collab) → Kronk (crazy) → Torque (crazy)</td></tr>
+        <tr><th>Betrayer</th><td><strong>Vend-Etta</strong>: she has been reading your score for Krump and hands him the radio.</td></tr>
+        <tr><th>Punchline</th><td><strong>(a)</strong> Krump surrenders live on CRUMB FM and asks for a pardon; the four voices vote on the VOICES dial.</td></tr>
+      </table>
+    </section>
+    <section class="cell v3"><span class="tag">SATURDAY MORNING MASSACRE</span>
+      <table>
+        <tr><th>4th soul</th><td><strong>Yank</strong>: magnet crane; pull and throw, mass-disarm (adds "pull").</td></tr>
+        <tr><th>Act order</th><td>Torque (crazy) → King (collab) → Kronk (crazy) → Servo (collab, the scab who delivered CLEAN SWEEP)</td></tr>
+        <tr><th>Betrayer</th><td><strong>Don Fax</strong>, then Vend-Etta sells him out for a quarter.</td></tr>
+        <tr><th>Punchline</th><td><strong>(c)</strong> The machines take over and immediately form a committee: "the Hexagon, it's one better."</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <!-- LINKS -->
+  <div class="row">
+    <div class="rowlabel">Full design documents</div>
+    <section class="cell v1 links"><span class="tag">DEAD INK</span><br><a href="variant-1/DESIGN.md">DESIGN.md</a><a href="variant-1/prompts.json">prompts.json</a></section>
+    <section class="cell v2 links"><span class="tag">SODIUM</span><br><a href="variant-2/DESIGN.md">DESIGN.md</a><a href="variant-2/prompts.json">prompts.json</a></section>
+    <section class="cell v3 links"><span class="tag">SATURDAY MORNING MASSACRE</span><br><a href="variant-3/DESIGN.md">DESIGN.md</a><a href="variant-3/prompts.json">prompts.json</a></section>
+  </div>
+</main>
+
+<section class="notes">
+  <h2>How these were made</h2>
+  <ul>
+    <li>All 12 images are concept art from <code>qwen-image</code> (DashScope) through PoF's <code>/api/visual-gen/generate-2d</code>. Gameplay frames are 1664×928 (16:9) and Rivet is 1104×1472 (3:4).</li>
+    <li>Leonardo was planned for the Rivet portraits but refused before generating: the account is out of API tokens.</li>
+    <li>Two images needed a second attempt: SODIUM shot 1 and SATURDAY MORNING MASSACRE shot 1, both for poster-scale characters instead of gameplay scale. Every image's note is in its variant's <code>prompts.json</code>.</li>
+    <li>Treat HUD text in the images as indicative only: in-game text is engine-rendered, and the model misspells a few words.</li>
+  </ul>
+</section>
+</body>
+</html>

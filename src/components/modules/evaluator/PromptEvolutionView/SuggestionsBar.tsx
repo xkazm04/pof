@@ -13,6 +13,9 @@ import { usePromptEvolutionStore } from '@/stores/promptEvolutionStore';
 
 // ── Suggestions Bar ─────────────────────────────────────────────────────────
 
+/** Mirrors engine.ts ADOPT_CONFIDENCE_FLOOR (engine is server-only): below it the stored value is not a confidence. */
+const ADOPT_CONFIDENCE_FLOOR = 0.8;
+
 type SuggestionType = EvolutionSuggestion['type'];
 
 const SUGGESTION_CONFIG: Record<
@@ -82,6 +85,8 @@ function SuggestionCard({
   const cfg = SUGGESTION_CONFIG[suggestion.type];
   const Icon = cfg.icon;
   const confidencePct = Math.round(suggestion.confidence * 100);
+  // An adopt-winner below the weakest band carries a volume score, not a confidence.
+  const showConfidence = suggestion.type !== 'adopt-winner' || suggestion.confidence >= ADOPT_CONFIDENCE_FLOOR;
 
   // Per-type action: returns true when nothing to do (button stays disabled).
   const canAct = (() => {
@@ -155,14 +160,16 @@ function SuggestionCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <span className="text-xs font-semibold text-text">{cfg.label}</span>
-          <span
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium"
-            style={{ color: cfg.color, backgroundColor: `${cfg.color}15` }}
-            title={`Confidence: ${confidencePct}%`}
-          >
-            <Target className="w-2.5 h-2.5" />
-            {confidencePct}%
-          </span>
+          {showConfidence && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium"
+              style={{ color: cfg.color, backgroundColor: `${cfg.color}15` }}
+              title={`Confidence: ${confidencePct}%`}
+            >
+              <Target className="w-2.5 h-2.5" />
+              {confidencePct}%
+            </span>
+          )}
           {suggestion.checklistItemId && (
             <span className="text-2xs text-text-muted truncate">{suggestion.checklistItemId}</span>
           )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useId } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   OPACITY_20, OPACITY_30, OPACITY_37,
@@ -27,6 +27,9 @@ export interface TabButtonGroupProps {
 
 export function TabButtonGroup({ items, selected, onSelect, accent, ariaLabel, className }: TabButtonGroupProps) {
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  // A selection outside `items` (stale or null) falls back to the first tab, so the
+  // strip always keeps exactly one tab stop (same rule as SubTabNavigation).
+  const hasSelected = items.some((it) => it.value === selected);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
     let nextIndex: number | null = null;
@@ -53,7 +56,7 @@ export function TabButtonGroup({ items, selected, onSelect, accent, ariaLabel, c
             ref={el => { buttonsRef.current[i] = el; }}
             role="tab"
             aria-selected={isSelected}
-            tabIndex={isSelected || (selected === null && i === 0) ? 0 : -1}
+            tabIndex={isSelected || (!hasSelected && i === 0) ? 0 : -1}
             onClick={() => onSelect(item.value)}
             onKeyDown={(e) => handleKeyDown(e, i)}
             className="text-2xs font-mono px-2 py-0.5 rounded border transition-all hover:opacity-80"
@@ -92,6 +95,7 @@ export interface SubTabNavigationProps {
 
 export function SubTabNavigation({ tabs, activeTabId, onChange, accent, ariaLabel = 'Sub-tab navigation' }: SubTabNavigationProps) {
   const prefersReduced = useReducedMotion();
+  const pillId = `activeSubTabBg-${useId()}`;
   const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const hasActive = tabs.some(t => t.id === activeTabId);
 
@@ -124,13 +128,13 @@ export function SubTabNavigation({ tabs, activeTabId, onChange, accent, ariaLabe
             onKeyDown={(e) => handleKeyDown(e, i)}
             className={`
               relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold
-              transition-all duration-300 focus:outline-none whitespace-nowrap
+              transition-all duration-300 focus:outline-none focus-ring whitespace-nowrap
               ${isActive ? 'text-white' : 'text-text-muted hover:text-text hover:bg-surface/50'}
             `}
           >
             {isActive && (
               <motion.div
-                layoutId="activeSubTabBg"
+                layoutId={pillId}
                 className="absolute inset-0 rounded-lg opacity-20"
                 style={{ backgroundColor: accent }}
                 transition={prefersReduced ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 25 }}

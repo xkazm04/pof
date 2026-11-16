@@ -1,0 +1,197 @@
+{
+ "schema": "conform-run/1",
+ "worker": "f2956b12-6e70-48d9-8e32-64a7ca40b4b2",
+ "subject": "test-harness",
+ "evaluatedAt": "2026-11-09T22:05:53.619142+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-database",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/api/pipeline-artifacts-drain.test.ts:15 The drain route's lock test mocks `@/lib/test-gate-runner` and swaps in a hand-written copy of `parseDrainFilter`. The real function in `src/lib/test-gate-runner/drain.ts:51` has since added `entityIds` parsing and normalises `tier` through `parseTier`. The copy does neither, so the scope keys the route derives under test are not the ones production derives, and the test stays green anyway.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/api/pipeline-artifacts-drain.test.ts:16 A restated copy of production code instead of `importOriginal`. It has already drifted: no `entityIds` key and no `parseTier` normalisation."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/pipeline-artifacts-delete-purges-all-tables.test.ts:15 The DB-touching test owns a pid-keyed SQLite file and takes nothing from the operator's `~/.pof/pof.db`."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/pipeline-artifacts-delete-purges-all-tables.test.ts:18 The purge claim is asserted through the shipped route handler, not through a composition the test assembled itself."
+    },
+    {
+     "technique": "unreached-decisions-pin-nothing",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/api/pipeline-artifacts-delete-purges-all-tables.test.ts:52 Pins the hazard named in the file's own header (attempted count reported as removed count) with an input where the two numbers differ."
+    }
+   ]
+  },
+  {
+   "context": "game-design-studio-api",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:111 Before every test the route suite truncates a hand-maintained list of tables (`feature_matrix`, `review_snapshots`) inside one shared per-file DB, instead of throwing away a fresh copy. Any table these routes later start writing to is left out of the list and leaks between tests, which is exactly the failure fixture-economics names.",
+   "techniques": [
+    {
+     "technique": "fixture-economics",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:111 Per-test cleanup by a private table list inside a shared mutable DB, not build-once / copy-per-test / discard-whole."
+    },
+    {
+     "technique": "negative-control-tests",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:9 The file records that its assertions were seen failing on the known-bad build, and lists the defects."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:39 The project-scope claims are driven through the shipped feature-matrix route handlers."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/lib/feature-matrix-project-scope.test.ts:36 The file opts into its own SQLite file, separate from the operator DB and from other files."
+    }
+   ]
+  },
+  {
+   "context": "lab-shell-and-navigation",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/layout-lab/LayoutLab.navigation.test.tsx:81 A full LayoutLab/Matrix jsdom render takes about 12 s even alone, yet it sits in the commit-tier unit suite. The fix was to inherit a stretched 60 s global budget rather than move the test to a heavier lane or make it faster, which is the move suite-partitioning forbids.",
+   "techniques": [
+    {
+     "technique": "suite-partitioning",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/layout-lab/LayoutLab.navigation.test.tsx:81 The tier budget was stretched to absorb a slow test instead of partitioning the suite."
+    },
+    {
+     "technique": "live-app-harness",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/LayoutLab.tsx:90 The shell publishes a test-identifier contract that the Playwright lane drives against the real dev server."
+    },
+    {
+     "technique": "platform-quirk-absorption",
+     "verdict": "conformant",
+     "evidence": "e2e/global-setup.ts:42 A foreign server on the port, or a lab that never shows its ready marker, becomes one named diagnosis instead of N silent timeouts."
+    },
+    {
+     "technique": "isolation-lanes",
+     "verdict": "conformant",
+     "evidence": "playwright.config.ts:57 The live lane owns its server process and a throwaway DB. Reusing an existing server is opt-in only, and the lane is serial (workers: 1)."
+    },
+    {
+     "technique": "derived-selection-must-be-measured",
+     "verdict": "conformant",
+     "evidence": "e2e/helpers/walk-status.ts:46 Walk-success is recorded only when the run covered every expected pipeline, so a subset run cannot read as a full green walk."
+    }
+   ]
+  },
+  {
+   "context": "crash-analysis",
+   "subject": "test-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 The import test replaces the store's `importCrashLog` with a restated version. The restatement skips the real action's merge-by-id, `detectPatterns`/`computeStats` recompute and `isLoading` handling, while the file claims 'only the HTTP hop is bypassed'. So CrashAnalyzerView is tested against a store path no user runs.",
+   "techniques": [
+    {
+     "technique": "a-test-helper-is-a-fork-of-the-driver",
+     "verdict": "deviation",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:47 A hand-forked store action rather than stubbing fetch and letting the real action run. It forks on what is loaded and computed (patterns, stats, merge)."
+    },
+    {
+     "technique": "proved-off-the-path",
+     "verdict": "conformant",
+     "evidence": "src/__tests__/components/CrashAnalyzerImport.no-diagnosis.test.tsx:70 The engine fact (no diagnosis for an unfamiliar crash) is asserted through the shipped analysis-engine functions."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "test-harness",
+   "context": "code-quality-evaluation",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-09T22:05:53.619142+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "isolation-lanes",
+    "proved-off-the-path",
+    "unreached-decisions-pin-nothing"
+   ],
+   "deviations": 1,
+   "context": "catalog-database",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:05:53.619142+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "fixture-economics",
+    "isolation-lanes",
+    "negative-control-tests",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "game-design-studio-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:05:53.619142+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "derived-selection-must-be-measured",
+    "isolation-lanes",
+    "live-app-harness",
+    "platform-quirk-absorption",
+    "suite-partitioning"
+   ],
+   "deviations": 1,
+   "context": "lab-shell-and-navigation",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T22:05:53.619142+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "test-harness"
+   ],
+   "techniques": [
+    "a-test-helper-is-a-fork-of-the-driver",
+    "proved-off-the-path"
+   ],
+   "deviations": 1,
+   "context": "crash-analysis",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

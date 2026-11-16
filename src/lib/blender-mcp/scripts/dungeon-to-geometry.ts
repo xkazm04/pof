@@ -1,3 +1,6 @@
+import { pyReceipt } from '@/lib/blender-mcp/receipt';
+import { pyNum } from '@/lib/blender-mcp/escape';
+
 export type CellType = 'empty' | 'floor' | 'wall' | 'door' | 'corridor';
 
 /** Numeric encoding of {@link CellType} the generated Python switches on. */
@@ -81,8 +84,8 @@ export function dungeonToGeometryScript(params: {
 
 grid = [${flatGrid}]
 rows, cols = ${rows}, ${cols}
-cell_size = ${params.cellSize}
-wall_height = ${params.wallHeight}
+cell_size = ${pyNum(params.cellSize)}
+wall_height = ${pyNum(params.wallHeight)}
 
 collection = bpy.data.collections.new("Dungeon")
 bpy.context.scene.collection.children.link(collection)
@@ -108,5 +111,6 @@ for r in range(rows):
             collection.objects.link(obj)
             bpy.context.scene.collection.objects.unlink(obj)
 
-print(f"Created dungeon: {rows}x{cols} grid")`;
+print(f"Created dungeon: {rows}x{cols} grid")
+${pyReceipt('dungeon-geometry', { objects: 'len(collection.objects)' })}`;
 }

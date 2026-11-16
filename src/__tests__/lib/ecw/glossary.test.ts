@@ -30,4 +30,11 @@ describe('glossary', () => {
   it('lookupGlossary returns undefined for unknown terms', () => {
     expect(lookupGlossary('totally-not-a-term')).toBeUndefined();
   });
+
+  // Same defect lookupCrashTerm had (crash-glossary-prototype-keys.test.ts): a plain
+  // object literal answers inherited Object.prototype members for an unguarded key.
+  it.each(['toString', 'constructor', '__proto__', 'hasOwnProperty', 'valueOf'])(
+    'lookupGlossary(%s) is not a term',
+    (key) => { expect(lookupGlossary(key)).toBeUndefined(); },
+  );
 });

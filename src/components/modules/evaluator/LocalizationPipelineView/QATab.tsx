@@ -23,6 +23,8 @@ export function QATab({
   const criticalCount = findings.filter((f) => f.severity === 'critical').length;
   const warningCount = findings.filter((f) => f.severity === 'warning').length;
   const infoCount = findings.filter((f) => f.severity === 'info').length;
+  // A target locale with no QA status (no translations checked) is not clear to ship.
+  const readyCount = targetLocales.filter((code) => byLocale[code]?.readyToShip).length;
 
   if (!hasTranslations) {
     return (
@@ -67,7 +69,11 @@ export function QATab({
           <div className="text-center py-10">
             <CheckCircle2 className="w-8 h-8 mx-auto mb-2" style={{ color: ACCENT_EMERALD }} />
             <p className="text-sm text-text">All translations passed QA</p>
-            <p className="text-2xs text-text-muted mt-1">Every locale is clear to ship.</p>
+            <p className="text-2xs text-text-muted mt-1">
+              {readyCount === targetLocales.length
+                ? 'Every locale is clear to ship.'
+                : `${readyCount} of ${targetLocales.length} locales clear to ship — the rest have no translations to check.`}
+            </p>
           </div>
         </SurfaceCard>
       ) : (

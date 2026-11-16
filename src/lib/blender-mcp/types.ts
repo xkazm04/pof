@@ -24,8 +24,8 @@ export interface BlenderConnection {
 // ever wrote it — the only values in the tree were test fixtures. Neither the
 // health check (`get_scene_info`) nor any other command on this bridge carries a
 // Blender version, so the field could only ever have been a fabrication. The
-// separate `useBlenderStore.blenderVersion` is unrelated, and today nothing writes
-// it (`setBlenderPath` has no caller). The truthful source for it is
+// Script-History store no longer carries a Blender path or version at all (those members
+// had no writer and were removed). The truthful source for the version is
 // `GET /api/visual-gen/blender/detect`, which resolves Blender through the same
 // `locateBlender` the headless runners spawn and reads `blender --version`.
 
@@ -109,7 +109,9 @@ export interface ImportedObject {
 
 // ─── Generation ─────────────────────────────────────────────────────────────
 
-export type GenerationProvider = 'hyper3d' | 'hunyuan3d';
+/** The one list of providers the bridge can dispatch to; the type and the route guard derive from it. */
+export const GENERATION_PROVIDERS = ['hyper3d', 'hunyuan3d'] as const;
+export type GenerationProvider = (typeof GENERATION_PROVIDERS)[number];
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 

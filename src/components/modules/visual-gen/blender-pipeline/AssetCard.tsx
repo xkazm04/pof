@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Loader2, Download, Check, Box, ImageOff } from 'lucide-react';
 import type { AssetResult, AssetSource } from '@/lib/blender-mcp/types';
 import { assetKey } from '@/lib/blender-mcp/assetBrowser';
+import { SUCCESS_TEXT } from '@/lib/blender-mcp/status-tokens';
 
 /** Per-source badge label + Tailwind palette classes (no raw hex). */
 const SOURCE_BADGE: Record<AssetSource, { label: string; cls: string }> = {
@@ -98,7 +99,7 @@ export function AssetCard({
           }
           className={`focus-ring inline-flex items-center justify-center gap-1.5 h-7 rounded-md text-2xs font-semibold transition-colors disabled:cursor-not-allowed ${
             isImported
-              ? 'bg-status-green-subtle text-green-400'
+              ? `bg-status-green-subtle ${SUCCESS_TEXT}`
               : 'bg-[var(--visual-gen)] text-white hover:brightness-110 disabled:opacity-50'
           }`}
         >

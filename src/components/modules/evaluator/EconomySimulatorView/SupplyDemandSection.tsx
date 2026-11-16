@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import type { SupplyDemandPoint, ItemCategory } from '@/types/economy-simulator';
+import { ITEM_CATEGORIES, type SupplyDemandPoint, type ItemCategory } from '@/types/economy-simulator';
 import { CATEGORY_COLORS } from './constants';
 import { formatGold } from './helpers';
 
@@ -12,7 +12,7 @@ import { formatGold } from './helpers';
 export function SupplyDemandSection({ data, maxLevel }: { data: SupplyDemandPoint[]; maxLevel: number }) {
   const [selectedCat, setSelectedCat] = useState<ItemCategory>('weapon');
 
-  const categories: ItemCategory[] = ['weapon', 'armor', 'consumable', 'material', 'gem'];
+  const categories = ITEM_CATEGORIES;
   const filtered = useMemo(() =>
     data.filter((d) => d.category === selectedCat),
     [data, selectedCat],
@@ -35,6 +35,7 @@ export function SupplyDemandSection({ data, maxLevel }: { data: SupplyDemandPoin
           <button
             key={cat}
             onClick={() => setSelectedCat(cat)}
+            aria-pressed={selectedCat === cat}
             className={`px-2.5 py-1 rounded-lg text-2xs font-medium border transition-colors ${
               selectedCat === cat
                 ? 'border-cyan-500/30 text-cyan-400 bg-cyan-500/10'

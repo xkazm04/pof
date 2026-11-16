@@ -5,12 +5,14 @@
 
 import { getDb } from './db';
 import { ensureLevelDesignTable } from './level-design-db';
-import { SUB_MODULE_MAP, CATEGORIES, getCategoryForSubModule } from './module-registry';
+import { SUB_MODULE_MAP, CATEGORIES, getSubModulesForCategory } from './module-registry';
 import { countChecklist, countAllChecklists } from './checklist-progress';
+import { isFeatureDone } from '@/lib/feature-done';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
 import { formatBytes, formatDuration } from '@/lib/format';
 import { normalizeProjectId } from '@/lib/project-id';
+import { shadowedScopeSql } from '@/lib/feature-matrix-db';
 
 // ─── GDD Section Types ──────────────────────────────────────────────────────
 
@@ -110,6 +112,7 @@ interface SnapshotRow {
   reviewed_at: string;
   total: number;
   implemented: number;
+  improved: number;
   partial: number;
   avg_quality: number | null;
 }
@@ -120,8 +123,9 @@ interface SnapshotRow {
  * Scope fragment for the three `feature_matrix` / `review_snapshots` reads below.
  *
  * A named project sees its own rows plus the unattributed legacy ones — the SAME
- * rule `feature-matrix-db.projectScopeSql` applies everywhere else, so the GDD and
- * the matrix cannot disagree about which rows exist.
+ * rule `projectScopeSql` applies everywhere else. The two `feature_matrix` reads go
+ * one step further, through `feature-matrix-db.shadowedScopeSql` (a legacy twin of an
+ * owned feature is hidden), so the GDD and the matrix cannot disagree about which rows exist.
  *
  * NO project given ⇒ the reads stay GLOBAL, deliberately: this is the historical
  * behaviour and the only one that still produces a document. Applying the scoped
@@ -151,21 +155,28 @@ export function synthesizeGDD(
   const now = new Date().toISOString();
   const scope = gddScope(projectId);
   const docScope: GDDScope = { projectId: normalizeProjectId(projectId), scoped: scope.params.length > 0 };
+  // The two feature_matrix reads use the matrix's OWN read rule, which shadows a legacy
+  // ('') twin when the project owns the same (module, feature) — raw `own OR ''` listed
+  // such a feature twice, in two statuses. Unscoped stays global (see gddScope).
+  const shadowed = shadowedScopeSql(docScope.projectId);
+  const featureScope = docScope.scoped ? { sql: `WHERE ${shadowed.sql}`, params: shadowed.params } : scope;
 
   // 1. Feature Matrix
   const featureSummary = db.prepare(
-    `SELECT module_id, status, COUNT(*) as cnt FROM feature_matrix ${scope.sql} GROUP BY module_id, status`
-  ).all(...scope.params) as FeatureSummaryRow[];
+    `SELECT module_id, status, COUNT(*) as cnt FROM feature_matrix fm ${featureScope.sql} GROUP BY module_id, status`
+  ).all(...featureScope.params) as FeatureSummaryRow[];
 
   const featureDetails = db.prepare(
-    `SELECT module_id, feature_name, status, description, quality_score FROM feature_matrix ${scope.sql} ORDER BY module_id, feature_name`
-  ).all(...scope.params) as FeatureDetailRow[];
+    `SELECT module_id, feature_name, status, description, quality_score FROM feature_matrix fm ${featureScope.sql} ORDER BY module_id, feature_name`
+  ).all(...featureScope.params) as FeatureDetailRow[];
 
   let totalFeatures = 0;
   let implementedFeatures = 0;
   for (const row of featureSummary) {
     totalFeatures += row.cnt;
-    if (row.status === 'implemented') implementedFeatures += row.cnt;
+    // `improved` is a done status — the compliance engine credits it as implemented
+    // (DONE_STATUSES), so the GDD headline must too or the two disagree on one row.
+    if (isFeatureDone(row.status)) implementedFeatures += row.cnt;
   }
 
   // 2. Checklist progress — registry-based tally (single source of truth,
@@ -204,7 +215,7 @@ export function synthesizeGDD(
   // module" is the latest point this project can see — not another project's newer
   // one, which would put a trend line the reader never produced into their GDD.
   const snapshots = db.prepare(
-    `SELECT module_id, reviewed_at, total, implemented, partial, avg_quality
+    `SELECT module_id, reviewed_at, total, implemented, COALESCE(improved, 0) as improved, partial, avg_quality
      FROM review_snapshots
      WHERE id IN (SELECT MAX(id) FROM review_snapshots ${scope.sql} GROUP BY module_id)
        ${scope.sql ? scope.sql.replace(/^WHERE/, 'AND') : ''}
@@ -339,12 +350,13 @@ function buildCoreSystemsSection(
   for (const cat of Object.values(CATEGORIES)) {
     if (cat.id === 'evaluator' || cat.id === 'project-setup' || cat.id === 'game-director') continue;
 
-    const moduleIds = cat.subModules;
+    // Resolved through the registry, not `cat.subModules`: Core Engine's list is []
+    // by design (membership is CORE_ENGINE_IDS), so reading it directly dropped every
+    // arpg-* module from the document.
     const catFeatures: string[] = [];
 
-    for (const modId of moduleIds) {
-      const mod = SUB_MODULE_MAP[modId];
-      if (!mod) continue;
+    for (const mod of getSubModulesForCategory(cat.id)) {
+      const modId = mod.id;
 
       const modFeatures = byModule.get(modId) ?? [];
       const { done, total } = countChecklist(mod, checklistProgress[modId]);
@@ -420,7 +432,7 @@ function buildRoadmapSection(
       const mod = SUB_MODULE_MAP[s.module_id as SubModuleId];
       const label = mod?.label ?? s.module_id;
       mermaidLines.push(`        "${label.slice(0, 12)}",`);
-      implData.push(s.total > 0 ? Math.round((s.implemented / s.total) * 100) : 0);
+      implData.push(s.total > 0 ? Math.round(((s.implemented + s.improved) / s.total) * 100) : 0);
     }
     mermaidLines.push('    ]');
     mermaidLines.push(`    y-axis "Implementation %" 0 --> 100`);
@@ -652,7 +664,8 @@ function buildSystemArchitectureDiagram(): string {
 
 function statusEmoji(status: FeatureStatus): string {
   switch (status) {
-    case 'implemented': return '✅';
+    case 'implemented':
+    case 'improved': return '✅';
     case 'partial': return '🟡';
     case 'missing': return '❌';
     default: return '❓';

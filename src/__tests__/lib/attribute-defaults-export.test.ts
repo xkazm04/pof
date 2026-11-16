@@ -24,4 +24,11 @@ describe('attribute-defaults Python emitter', () => {
     expect(py).toContain('120');
     expect(py).toContain('armor'); // set_editor_property uses snake_case
   });
+
+  it('never emits a non-finite literal (NaN / Infinity are not Python names)', () => {
+    const rows: AttributeRow[] = [{ rowName: 'Player', values: { Health: Infinity, Mana: NaN, Armor: -Infinity, Strength: 12 } }];
+    const py = buildAttributeDefaultsPython(rows);
+    expect(py).not.toMatch(/(NaN|Infinity)/);
+    expect(py).toContain('set_editor_property("strength", 12)');
+  });
 });

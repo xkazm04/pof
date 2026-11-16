@@ -1,0 +1,36 @@
+{
+  "id": "gunplay-1",
+  "lane": "gunplay",
+  "question": "How lethal are guns against humans? The weapon table counts damage in hp with a human at 100. The quest doctrine says humans die to one hit. What should separate the six core weapons: lethality against humans, or range, rate and area (with armoured cops and robots as the sponge)? See the TTK table: still human, strafing human, robot, and enemy fire against a strafing Rivet, at 5/10/20/35 m.",
+  "options": [
+    {
+      "key": "A",
+      "label": "Doctrine plus sponges: a pistol or nail hits once and the human drops; a machine-pistol human takes 2 hits; armoured cops (250) and robots (600) are where the weapons differ",
+      "tradeoff": "Fast, lethal firefights against humans. Weapon identity shows against armour and robots, and through range and area.",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/gunplay/ttk.md",
+        "C:/Users/kazda/kiro/gtai-masters/eve/gunplay/range-core6-32ppm.mp4"
+      ]
+    },
+    {
+      "key": "B",
+      "label": "Tougher humans (200 hp): a pistol takes 2 hits, the machine pistol 4; the rocket and flamer still kill in one go",
+      "tradeoff": "Longer exchanges, so the strafe and dodge matter more. This breaks the quest-1 one-hit doctrine, and combat.json would follow.",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/gunplay/ttk.md",
+        "C:/Users/kazda/kiro/gtai-masters/eve/gunplay/range-core6-32ppm.mp4"
+      ]
+    },
+    {
+      "key": "C",
+      "label": "Pure doctrine: every direct hit from every weapon drops a human; only robots and bosses soak",
+      "tradeoff": "Simplest. Against humans, the weapons differ only in hit rate and range.",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/gunplay/ttk.md",
+        "C:/Users/kazda/kiro/gtai-masters/eve/gunplay/range-core6-32ppm.mp4"
+      ]
+    }
+  ],
+  "default": "A",
+  "asked": "21:15"
+}

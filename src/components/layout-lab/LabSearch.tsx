@@ -6,7 +6,7 @@
  * Reaching a known entity used to be expand-chapter → click catalog → scan the entity
  * rows (the tree opens exactly ONE chapter and only lists the selected catalog's
  * entities), and a step could not be reached at all without first opening its entity.
- * This is the direct route across all catalogs, all seeded entities, and every step of
+ * This is the direct route across all catalogs, every listed entity (seeds + persisted rows), and every step of
  * every registered pipeline.
  *
  * It drives the EXISTING navigation callbacks lifted in `LayoutLab` (`onSelectCatalog` /
@@ -35,6 +35,7 @@ import { MODULE_DESTINATIONS } from '@/lib/shell/shellRoute';
 import { resolveCatalogSteps } from './catalogManifest';
 import { resolveStepJump, toLabEntity } from './entityPipeline';
 import { SearchCombobox, type SearchHit } from './ui/SearchCombobox';
+import { labEntitiesOf, useGameCatalogScope } from './useLabCatalogData';
 
 /** What selecting a hit does. */
 export type LabSearchTarget =
@@ -65,6 +66,11 @@ const NO_ROWS: IndexRow[] = [];
 
 export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onNavigate }: LabSearchProps) {
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  // Persisted rows (ingests, other sessions' one-shots, drafts) are listed by the tree, so they
+  // are searchable too — through the SAME set (`labEntitiesOf`), never the seeds alone.
+  const draftEntitiesByCatalog = useCatalogStore((s) => s.draftEntitiesByCatalog);
+  // Only the ACTIVE game's catalogs (off-manifest ones too under "show all pipelines") and entities.
+  const { gameId, scope } = useGameCatalogScope();
 
   // The search UI is mounted for the whole session but open for seconds of it, and its index
   // spans every catalog, every seeded entity and every step of every registered pipeline —
@@ -91,13 +97,15 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
         },
       });
     }
+    const visible = new Set(scope.visible);
     for (const section of CATALOG_SECTIONS) {
+      if (!visible.has(section.catalogId)) continue;
       const { catalogId, label } = section;
       rows.push({
         hay: `${label} ${catalogId}`.toLowerCase(),
         hit: { key: `c:${catalogId}`, label, detail: catalogId, badge: 'catalog', payload: { kind: 'catalog', catalogId } },
       });
-      for (const e of Object.values(entitiesByCatalog[catalogId] ?? {})) {
+      for (const e of labEntitiesOf(entitiesByCatalog[catalogId], draftEntitiesByCatalog[catalogId], gameId)) {
         rows.push({
           hay: `${e.name} ${e.id}`.toLowerCase(),
           hit: {
@@ -123,7 +131,7 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
       });
     }
     return rows;
-  }, [entitiesByCatalog, everOpened]);
+  }, [entitiesByCatalog, draftEntitiesByCatalog, everOpened, gameId, scope]);
 
   const search = useCallback(
     (needle: string) => index.filter((r) => r.hay.includes(needle)).map((r) => r.hit),
@@ -146,14 +154,14 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
     } else if (t.kind === 'entity') {
       onNavigate(t.catalogId, t.entityId, 0);
     } else {
-      const entities = Object.values(entitiesByCatalog[t.catalogId] ?? {}).map(toLabEntity);
+      const entities = labEntitiesOf(entitiesByCatalog[t.catalogId], draftEntitiesByCatalog[t.catalogId], gameId).map(toLabEntity);
       const jump = resolveStepJump(t.catalogId, t.step, entities, currentEntityId);
       // No entity whose own pipeline has the step → nothing to open it ON; land on the catalog.
       if (jump) onNavigate(t.catalogId, jump.entityId, jump.stepIndex);
       else onSelectCatalog(t.catalogId);
     }
     onClose();
-  }, [entitiesByCatalog, currentEntityId, onSelectCatalog, onNavigate, onClose]);
+  }, [entitiesByCatalog, draftEntitiesByCatalog, currentEntityId, onSelectCatalog, onNavigate, onClose, gameId]);
 
   return (
     <Modal open={open} onClose={onClose} title="Search the lab" className="max-w-xl" initialFocusRef={inputRef}>
@@ -180,9 +188,17 @@ export function LabSearch({ open, onClose, currentEntityId, onSelectCatalog, onN
  */
 export function useLabSearchShortcut(): [boolean, (v: boolean) => void] {
   const [open, setOpen] = useState(false);
+  const openRef = useRef(open);
+  useEffect(() => { openRef.current = open; }, [open]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
+      // One modal at a time: while another aria-modal dialog (the narrow-shell drawer, a
+      // ConfirmDialog) is up, opening search would stack a second focus trap over it.
+      if (!openRef.current && document.querySelector('[aria-modal="true"]')) {
+        if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) e.preventDefault();
+        return;
+      }
       const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
       if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();

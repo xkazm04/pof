@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   activeCookJob, getCookJob, cancelCookJob, cookJobEventStream, COOK_SSE_HEADERS,
 } from '@/lib/packaging/cook-jobs';
@@ -37,6 +38,9 @@ export const GET = withRoute(async (req: NextRequest) => {
 }, 'Failed to read cook job');
 
 export const DELETE = withRoute(async (req: NextRequest) => {
+  // Kills a running UAT process tree, so it is operator-guarded like `execute`.
+  const denied = requireOperator(req);
+  if (denied) return denied;
   const jobId = new URL(req.url).searchParams.get('jobId')?.trim();
   if (!jobId) return apiError('jobId is required', 400);
   const cancelled = cancelCookJob(jobId);

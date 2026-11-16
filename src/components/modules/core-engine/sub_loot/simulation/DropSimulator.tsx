@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Dices, Users } from 'lucide-react';
 import { ACCENT_CYAN, OPACITY_8, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, withOpacity, OPACITY_12 } from '@/lib/chart-colors';
 import { TabButtonGroup } from '../../unique-tabs/_shared';
-import { RARITY_TIERS, DEFAULT_ENEMY_LOOT_BINDINGS } from '../_shared/data';
+import { RARITY_TIERS } from '../_shared/data';
 import type { EnemyLootBinding } from '../_shared/data';
 import { useLootTuningStore } from '../_shared/lootTuningStore';
 import { runBatch, deviationFor } from './lootSimEngine';
@@ -24,19 +24,28 @@ function deriveTier(dropChance: number): string {
   return 'Minion';
 }
 
-const SELECTABLE_BINDINGS: SelectableBinding[] = DEFAULT_ENEMY_LOOT_BINDINGS.map(b => ({
-  ...b,
-  id: b.archetypeId,
-  tier: deriveTier(b.dropChance),
-}));
+/** Picker rows from the TUNED roster, so the % shown is the % the roll will use. */
+function toSelectable(bindings: readonly EnemyLootBinding[]): SelectableBinding[] {
+  return bindings.map(b => ({ ...b, id: b.archetypeId, tier: deriveTier(b.dropChance) }));
+}
 
 /** The global rarity table as a binding: every kill drops, tiers by RARITY_TIERS weight. */
 const GLOBAL_BINDING = { dropChance: 1, rarityWeights: RARITY_TIERS.map(t => t.weight) };
 
+interface RollRun {
+  n: number;
+  counts: number[];
+  binding: Pick<EnemyLootBinding, 'dropChance' | 'rarityWeights'>;
+  perEnemy: boolean;
+  /** The enemy the roll was computed for (the picker may have moved since). */
+  archetypeName: string | null;
+}
+
 export function DropSimulator() {
   const tunedBindings = useLootTuningStore((s) => s.bindings);
-  const [rollCount, setRollCount] = useState<number | null>(null);
-  const [rollResults, setRollResults] = useState<Record<string, number>>({});
+  const selectable = useMemo(() => toSelectable(tunedBindings), [tunedBindings]);
+  /** The last roll WITH the binding it ran against: deviations judge the counts on screen, not the live picker. */
+  const [roll, setRoll] = useState<RollRun | null>(null);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedEnemyId, setSelectedEnemyId] = useState<string | null>(null);
 
@@ -48,19 +57,16 @@ export function DropSimulator() {
   const activeBinding = selectedBinding ?? GLOBAL_BINDING;
 
   const rollDrops = useCallback((n: number) => {
-    setRollCount(n);
-    const tally: Record<string, number> = {};
-    for (const t of RARITY_TIERS) tally[t.name] = 0;
+    const binding = { dropChance: activeBinding.dropChance, rarityWeights: [...activeBinding.rarityWeights] };
+    const raw = runBatch(binding, n, (Date.now() ^ (n * 0x9e3779b1)) >>> 0);
+    setRoll({ n, counts: RARITY_TIERS.map((_, i) => raw[i] ?? 0), binding, perEnemy: selectedBinding != null, archetypeName: selectedBinding?.archetypeName ?? null });
+  }, [activeBinding, selectedBinding]);
 
-    const counts = runBatch(activeBinding, n, (Date.now() ^ (n * 0x9e3779b1)) >>> 0);
-    RARITY_TIERS.forEach((t, i) => { tally[t.name] = counts[i] ?? 0; });
-    setRollResults(tally);
-  }, [activeBinding]);
+  const rollCount = roll?.n ?? null;
 
   const getDeviation = (tierIdx: number) => {
-    if (rollCount === null) return null;
-    const counts = RARITY_TIERS.map(t => rollResults[t.name] ?? 0);
-    const d = deviationFor(activeBinding, tierIdx, rollCount, counts);
+    if (!roll) return null;
+    const d = deviationFor(roll.binding, tierIdx, roll.n, roll.counts);
     const color = d.severity === 'error' ? STATUS_ERROR : d.severity === 'warn' ? STATUS_WARNING : STATUS_SUCCESS;
     return { label: d.label, color };
   };
@@ -85,7 +91,7 @@ export function DropSimulator() {
     </div>
   ), []);
 
-  const totalDropped = Object.values(rollResults).reduce((s, v) => s + v, 0);
+  const totalDropped = roll ? roll.counts.reduce((s, v) => s + v, 0) : 0;
 
   return (
     <BlueprintPanel className="p-3">
@@ -137,7 +143,7 @@ export function DropSimulator() {
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color }} />
                   <span className="text-xs text-text">{tier.name}</span>
                   <span className="text-xs font-mono font-semibold" style={{ color: tier.color }}>
-                    {rollResults[tier.name] ?? 0}
+                    {roll?.counts[tierIdx] ?? 0}
                   </span>
                   {dev && (
                     <span className="text-2xs font-mono" style={{ color: dev.color }}>
@@ -149,8 +155,9 @@ export function DropSimulator() {
             })}
           </div>
           <div className="flex items-center gap-2 text-2xs text-text-muted">
-            <span>/ {rollCount} kills</span>
-            {selectedBinding && <span>&middot; {totalDropped} drops ({((totalDropped / rollCount) * 100).toFixed(1)}% drop rate)</span>}
+            <span>Rolled for {roll?.archetypeName ?? 'all enemies'}</span>
+            <span>&middot; {rollCount} kills</span>
+            {roll?.perEnemy && <span>&middot; {totalDropped} drops ({((totalDropped / rollCount) * 100).toFixed(1)}% drop rate)</span>}
           </div>
         </div>
       ) : (
@@ -159,7 +166,7 @@ export function DropSimulator() {
 
       {/* Enemy Picker Selector */}
       <ScalableSelector<SelectableBinding>
-        items={SELECTABLE_BINDINGS}
+        items={selectable}
         groupBy="tier"
         renderItem={renderEnemyItem}
         onSelect={(items) => setSelectedEnemyId(items.length > 0 ? items[0].id : null)}

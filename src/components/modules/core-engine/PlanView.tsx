@@ -3,12 +3,18 @@
 import { useState } from 'react';
 import { ClipboardList, Dna } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { TabBar, type TabItem } from '@/components/ui/TabBar';
 import { ImplementationPlan } from './ImplementationPlan';
 import { TelemetryEvolution } from './TelemetryEvolution';
 
 const ACCENT = MODULE_COLORS.core;
 
 type PlanTab = 'plan' | 'evolution';
+
+const TABS: ReadonlyArray<TabItem<PlanTab>> = [
+  { id: 'plan', label: 'Plan', icon: ClipboardList },
+  { id: 'evolution', label: 'Evolution', icon: Dna },
+];
 
 /**
  * PlanView - Dedicated view for the Core Engine Implementation Plan + Evolution
@@ -32,20 +38,15 @@ export function PlanView() {
         </p>
 
         {/* Tab bar */}
-        <div className="flex items-center gap-1 mt-3 border-b border-border -mb-[1px]">
-          <TabButton
-            label="Plan"
-            icon={ClipboardList}
-            active={activeTab === 'plan'}
-            onClick={() => setActiveTab('plan')}
-          />
-          <TabButton
-            label="Evolution"
-            icon={Dna}
-            active={activeTab === 'evolution'}
-            onClick={() => setActiveTab('evolution')}
-          />
-        </div>
+        <TabBar
+          tabs={TABS}
+          activeId={activeTab}
+          onChange={setActiveTab}
+          layoutId="plan-view-tab"
+          accent={ACCENT}
+          ariaLabel="Plan view"
+          className="mt-3 -mb-[1px]"
+        />
       </div>
 
       {/* Main content */}
@@ -54,30 +55,5 @@ export function PlanView() {
         {activeTab === 'evolution' && <TelemetryEvolution />}
       </div>
     </div>
-  );
-}
-
-function TabButton({ label, icon: Icon, active, onClick }: {
-  label: string;
-  icon: typeof ClipboardList;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors relative ${
-        active ? 'text-text' : 'text-text-muted hover:text-text'
-      }`}
-    >
-      <Icon className="w-3 h-3" />
-      {label}
-      {active && (
-        <span
-          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-          style={{ backgroundColor: ACCENT }}
-        />
-      )}
-    </button>
   );
 }

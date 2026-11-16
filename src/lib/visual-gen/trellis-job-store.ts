@@ -1,6 +1,6 @@
 /**
- * In-memory job store for TRELLIS.2 generation runs — the textured, MIT-licensed local
- * path. Inference is the slowest of the local providers (4B params + a PBR bake, and the
+ * In-memory job store for TRELLIS.2 generation runs — the textured local path (its code
+ * and weights are MIT, its licence chain is not: see `trellis-runner.ts`). Inference is the slowest of the local providers (4B params + a PBR bake, and the
  * first run downloads ~16GB), so the API is job-based like the others: POST /generate
  * starts a job + returns an id; GET /generate/status polls it. Module-global (survives
  * Next dev HMR). Ephemeral — the durable artifact is the .glb.
@@ -8,7 +8,8 @@
  * Mirrors the Hunyuan job store, with ONE deliberate divergence — see `trellisGateDeps`.
  */
 import { runTrellis, type TrellisSpec, type TrellisResult } from './trellis-runner';
-import { critiqueMesh, summarizeGate, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
+import { critiqueMesh, type CritiqueDeps, type CritiqueResult } from './mesh-critique';
+import { settleLocalJob } from './local-job-settle';
 import { polycountFor, resolveAssetClass } from './polycount-presets';
 import { gateRequestFor, type GateRequest } from './gate-request';
 
@@ -83,6 +84,17 @@ const g = globalThis as unknown as { pofTrellisJobs?: Map<string, TrellisJob> };
 const jobs = g.pofTrellisJobs ?? new Map<string, TrellisJob>();
 if (!g.pofTrellisJobs) g.pofTrellisJobs = jobs;
 
+/** Finished jobs kept for status polls; the oldest settled job is dropped past this. */
+const MAX_RETAINED_JOBS = 200;
+
+/** Drop the oldest SETTLED jobs until the store is back inside the cap. Running jobs are never evicted. */
+function evictSettledJobs(): void {
+  for (const [id, j] of jobs) {
+    if (jobs.size <= MAX_RETAINED_JOBS) break;
+    if (j.status !== 'running') jobs.delete(id);
+  }
+}
+
 type Runner = (spec: TrellisSpec) => Promise<TrellisResult>;
 type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
 
@@ -90,7 +102,13 @@ type Critic = (glbPath: string, deps?: CritiqueDeps) => Promise<CritiqueResult>;
  * face limit is sent to the generator as its native decimation target, and the delivery
  * is then graded against that same limit. `runner`/`critic` are injectable for tests;
  * default to the real `runTrellis` / `critiqueMesh`. */
-export function startTrellisJob(spec: TrellisJobSpec, runner: Runner = runTrellis, critic: Critic = critiqueMesh): string {
+export function startTrellisJob(
+  spec: TrellisJobSpec,
+  runner: Runner = runTrellis,
+  critic: Critic = critiqueMesh,
+  /** Runs once the job has settled (done or error) — the caller's hook to drop its temp input. */
+  onSettled?: () => void,
+): string {
   const id = `t2-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const faceLimit = trellisFaceLimit(spec);
   const gate = trellisGateDeps(spec.assetClass, spec.targetExtentM, faceLimit);
@@ -98,26 +116,8 @@ export function startTrellisJob(spec: TrellisJobSpec, runner: Runner = runTrelli
     id, status: 'running', spec, gradedAs: gate.gradedAs, requestedFaceLimit: faceLimit, startedAt: Date.now(),
   };
   jobs.set(id, job);
-  runner({ ...spec, decimationTarget: faceLimit })
-    .then(async (result) => {
-      job.result = result;
-      if (result.ok && result.meshPath) {
-        try { job.critique = await critic(result.meshPath, gate.deps); } catch { /* critique is best-effort */ }
-      }
-      // A produced mesh always reports HOW it was gated — including "nothing gated it".
-      if (result.ok) {
-        const summary = summarizeGate(job.critique, 'raw');
-        job.accepted = summary.accepted;
-        job.ungated = summary.ungated;
-        job.gateReason = summary.note ? `${summary.reason} — note: ${summary.note}` : summary.reason;
-      }
-      job.status = result.ok ? 'done' : 'error';
-      if (!result.ok) job.error = result.error;
-    })
-    .catch((e: unknown) => {
-      job.error = e instanceof Error ? e.message : String(e);
-      job.status = 'error';
-    });
+  evictSettledJobs();
+  settleLocalJob(job, () => runner({ ...spec, decimationTarget: faceLimit }), critic, gate.deps, onSettled);
   return id;
 }
 

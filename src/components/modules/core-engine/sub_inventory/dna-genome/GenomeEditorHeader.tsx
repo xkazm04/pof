@@ -12,9 +12,14 @@ interface Props {
   onToggleExport: () => void;
   onToggleImport: () => void;
   onAdd: () => void;
+  /** Disclosure state of the two panels, announced as aria-expanded. */
+  exportOpen?: boolean;
+  importOpen?: boolean;
 }
 
-export function GenomeEditorHeader({ genomesCount, onToggleExport, onToggleImport, onAdd }: Props) {
+export function GenomeEditorHeader({
+  genomesCount, onToggleExport, onToggleImport, onAdd, exportOpen = false, importOpen = false,
+}: Props) {
   return (
     <UniqueTabHeader
       icon={Dna}
@@ -24,6 +29,8 @@ export function GenomeEditorHeader({ genomesCount, onToggleExport, onToggleImpor
       action={
         <>
           <button
+            type="button"
+            aria-expanded={exportOpen}
             onClick={onToggleExport}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
             style={{ backgroundColor: withOpacity(ACCENT_VIOLET, OPACITY_8), color: ACCENT_VIOLET, border: `1px solid ${withOpacity(ACCENT_VIOLET, OPACITY_20)}` }}
@@ -31,6 +38,8 @@ export function GenomeEditorHeader({ genomesCount, onToggleExport, onToggleImpor
             <Barcode className="w-3 h-3" /> Build Code
           </button>
           <button
+            type="button"
+            aria-expanded={importOpen}
             onClick={onToggleImport}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
             style={{ backgroundColor: withOpacity(ACCENT_CYAN, OPACITY_8), color: ACCENT_CYAN, border: `1px solid ${withOpacity(ACCENT_CYAN, OPACITY_20)}` }}

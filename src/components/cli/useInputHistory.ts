@@ -22,8 +22,8 @@ export function useInputHistory() {
       if (direction === 'up') {
         newIndex = historyIndex === -1 ? inputHistory.length - 1 : Math.max(0, historyIndex - 1);
       } else {
-        newIndex = historyIndex === -1 ? -1 : Math.min(inputHistory.length - 1, historyIndex + 1);
-        if (newIndex === inputHistory.length) newIndex = -1;
+        // Past the newest entry → back to the empty prompt (-1).
+        newIndex = historyIndex === -1 || historyIndex + 1 >= inputHistory.length ? -1 : historyIndex + 1;
       }
       setHistoryIndex(newIndex);
       const val = newIndex >= 0 ? inputHistory[newIndex] : '';

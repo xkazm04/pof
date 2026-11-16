@@ -264,3 +264,125 @@ describe('blenderMCPStore — the mount probe and the no-stale-Connected rule', 
     useBlenderMCPStore.getState().stopHealthCheck();
   });
 });
+
+/**
+ * `disconnect` used to ignore its own result: a refused request (operator guard 403, a
+ * route 500) still flipped the pill to "Disconnected" and cleared `lastError`, while the
+ * server kept the socket open and kept accepting `execute`. The client claimed a state the
+ * server never reached, and said nothing about why.
+ */
+describe('blenderMCPStore — a refused disconnect is not a disconnect', () => {
+  it('keeps the live connection and surfaces the refusal reason', async () => {
+    useBlenderMCPStore.setState({
+      connection: { host: 'localhost', port: 9876, connected: true },
+    });
+    mockFetch(failConnection('Operator token required'));
+
+    await useBlenderMCPStore.getState().disconnect();
+
+    const s = useBlenderMCPStore.getState();
+    expect(s.connection.connected).toBe(true);
+    expect(s.lastError).toContain('Operator token required');
+    useBlenderMCPStore.getState().stopHealthCheck();
+  });
+
+  it('adopts the server-reported connection on a successful disconnect', async () => {
+    useBlenderMCPStore.setState({
+      connection: { host: 'localhost', port: 9876, connected: true },
+      lastError: 'old',
+    });
+    mockFetch(okConnection(false));
+
+    await useBlenderMCPStore.getState().disconnect();
+
+    const s = useBlenderMCPStore.getState();
+    expect(s.connection.connected).toBe(false);
+    expect(s.lastError).toBeNull();
+  });
+});
+
+/**
+ * Generation fence. A liveness probe (or a connect) still in flight when the user clicks
+ * Disconnect used to land AFTER the disconnect: it wrote `connected: true` back over the
+ * fresh "Disconnected" and re-armed the probe interval, so the pill lied for a full
+ * health-check period. A response that belongs to an earlier generation is dropped now.
+ */
+describe('blenderMCPStore — a late response never overwrites a disconnect', () => {
+  function deferredThenOk() {
+    let release: (v: FetchResult) => void = () => {};
+    const pending = new Promise<FetchResult>((r) => {
+      release = r;
+    });
+    let call = 0;
+    mockFetch(() => {
+      call += 1;
+      return call === 1 ? pending : okConnection(false)();
+    });
+    return (connected: boolean) =>
+      release({
+        json: async () => ({
+          success: true,
+          data: { connection: { host: 'localhost', port: 9876, connected } },
+        }),
+      });
+  }
+
+  it('drops an in-flight status probe that resolves after disconnect', async () => {
+    useBlenderMCPStore.setState({
+      connection: { host: 'localhost', port: 9876, connected: true },
+    });
+    const resolveProbe = deferredThenOk();
+
+    const probe = useBlenderMCPStore.getState().refreshStatus();
+    await useBlenderMCPStore.getState().disconnect();
+    resolveProbe(true);
+    await probe;
+
+    expect(useBlenderMCPStore.getState().connection.connected).toBe(false);
+  });
+
+  it('drops an in-flight connect that resolves after disconnect', async () => {
+    const resolveConnect = deferredThenOk();
+
+    const connecting = useBlenderMCPStore.getState().connect();
+    await useBlenderMCPStore.getState().disconnect();
+    resolveConnect(true);
+    await connecting;
+
+    const s = useBlenderMCPStore.getState();
+    expect(s.connection.connected).toBe(false);
+    expect(s.isConnecting).toBe(false);
+  });
+});
+
+describe('blenderMCPStore - a connect target the route always refuses', () => {
+  const REFUSAL = 'host must be a loopback address (localhost, 127.0.0.1 or ::1)';
+
+  it('makes at most one request and never retries a non-loopback host under autoConnect', async () => {
+    vi.useFakeTimers();
+    mockFetch(failConnection(REFUSAL));
+    useBlenderMCPStore.setState({ autoConnect: true, host: '192.168.1.5' });
+
+    await useBlenderMCPStore.getState().connect();
+    for (let i = 0; i < BLENDER_RETRY_MAX_ATTEMPTS + 1; i++) {
+      await vi.advanceTimersByTimeAsync(UI_TIMEOUTS.blenderReconnectMax);
+    }
+
+    expect((global.fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBeLessThanOrEqual(1);
+    const s = useBlenderMCPStore.getState();
+    expect(s.autoRetrying).toBe(false);
+    expect(s.lastError).toBe(REFUSAL);
+  });
+
+  it('refuses a NaN port without a request and without a retry', async () => {
+    vi.useFakeTimers();
+    mockFetch(failConnection('unused'));
+    useBlenderMCPStore.setState({ autoConnect: true });
+
+    await useBlenderMCPStore.getState().connect('localhost', Number('abc'));
+    await vi.advanceTimersByTimeAsync(UI_TIMEOUTS.blenderReconnectMax * 2);
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(useBlenderMCPStore.getState().lastError).toMatch(/port must be an integer/);
+  });
+});

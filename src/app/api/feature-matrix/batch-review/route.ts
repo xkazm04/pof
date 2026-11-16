@@ -5,6 +5,8 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { TaskFactory, buildTaskPrompt, resolveCallback } from '@/lib/cli-task';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { DEFAULT_UE_VERSION } from '@/lib/engine-facts';
 import { getOriginFromRequest, UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import type { BatchReviewAbortRequest, BatchReviewStartRequest, BatchReviewState } from '@/types/batch-review';
@@ -115,10 +117,20 @@ export async function GET() {
 
 /**
  * POST — Start a new batch review (or abort current one)
+ *
+ * Operator-guarded: a start spawns the Claude CLI (MCP enabled) in the body's
+ * `projectPath`, once per module — a process launch like experiment/run and the
+ * pipeline drains, so a cross-site request must not be able to trigger it.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const raw = (await request.json()) as BatchReviewStartRequest | BatchReviewAbortRequest;
+    const raw = (await request.json().catch(() => undefined)) as BatchReviewStartRequest | BatchReviewAbortRequest | null | undefined;
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
 
     // Abort active batch
     if ('action' in raw && raw.action === 'abort') {
@@ -138,7 +150,9 @@ export async function POST(request: NextRequest) {
     const body = raw as BatchReviewStartRequest;
     const projectPath = body.projectPath;
     const projectName = body.projectName || '';
-    const ueVersion = body.ueVersion || '5.5';
+    // The shared engine default (engine-facts), the same one the prompt path falls back to -
+    // never a literal that can drift from the project's engine version.
+    const ueVersion = body.ueVersion || DEFAULT_UE_VERSION;
 
     if (!projectPath) {
       return apiError('Project path not configured', 400);
@@ -192,9 +206,11 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * DELETE — Clear completed batch state
+ * DELETE — Clear completed batch state (operator-guarded like POST)
  */
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   if (activeBatch && activeBatch.status === 'running') {
     return apiError('Cannot clear while batch is running', 400);
   }

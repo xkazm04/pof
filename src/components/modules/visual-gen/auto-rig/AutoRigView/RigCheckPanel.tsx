@@ -54,6 +54,13 @@ export function RigCheckPanel({ onSelectPreset, onChecked }: {
     return () => { live = false; };
   }, []);
 
+  /** A verdict belongs to the GLB and morphology it was computed for. */
+  const clearVerdict = () => {
+    setResult(null);
+    setError(null);
+    onChecked?.(null);
+  };
+
   const handleCheck = async () => {
     const asset = assets.find((a) => keyOf(a) === picked);
     if (!asset) return;
@@ -86,7 +93,8 @@ export function RigCheckPanel({ onSelectPreset, onChecked }: {
           <select
             data-testid="rig-check-asset"
             value={picked}
-            onChange={(e) => setPicked(e.target.value)}
+            disabled={checking}
+            onChange={(e) => { setPicked(e.target.value); clearVerdict(); }}
             className={`rounded border border-border bg-transparent px-2 py-1 text-xs text-text ${VISUAL_GEN_FOCUS_RING}`}
           >
             {assets.length === 0 && <option value="">No generated GLB found</option>}
@@ -100,7 +108,8 @@ export function RigCheckPanel({ onSelectPreset, onChecked }: {
           <select
             data-testid="rig-check-morphology"
             value={morphology}
-            onChange={(e) => setMorphology(e.target.value as Morphology)}
+            disabled={checking}
+            onChange={(e) => { setMorphology(e.target.value as Morphology); clearVerdict(); }}
             className={`rounded border border-border bg-transparent px-2 py-1 text-xs text-text ${VISUAL_GEN_FOCUS_RING}`}
           >
             {RIG_CHECK_MORPHOLOGIES.map((m) => <option key={m} value={m}>{m}</option>)}

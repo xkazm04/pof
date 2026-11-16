@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { SquadMember } from '@/types/squad-tactics';
-import { ROLE_COLORS, SVG_CENTER } from './constants';
+import { ROLE_COLORS, SVG_CENTER, SVG_SIZE } from './constants';
 import { flankColor } from './helpers';
 
 /* ── Memoized member leaves ───────────────────────────────────────────────────
@@ -9,6 +9,12 @@ import { flankColor } from './helpers';
    newly-active member re-render; every other member, the static SVG subtree and
    the side panels are skipped. "Active" is hover OR keyboard focus of the
    matching row, so the same detail callout is reachable without a pointer. */
+
+/** Callout geometry: 11px monospace advances ~0.6em per glyph; 4px inner padding. */
+const CALLOUT_CHAR_PX = 0.6 * 11;
+const CALLOUT_PAD = 4;
+const CALLOUT_HEIGHT = 36;
+const CALLOUT_GAP = 12;
 
 export const SquadMemberGlyph = memo(function SquadMemberGlyph({
   member, scale, isActive, onEnter, onLeave,
@@ -24,6 +30,21 @@ export const SquadMemberGlyph = memo(function SquadMemberGlyph({
   const color = ROLE_COLORS[member.role];
   const baseR = 7;
   const r = isActive ? baseR + 3 : baseR;
+
+  // The callout is sized from its own lines (a fixed 90px box clipped the
+  // ~20-char flank/distance line) and flips left / clamps vertically so a
+  // member near the canvas edge keeps its callout on the canvas.
+  const calloutLines = [
+    member.label,
+    `Flank: ${member.flankAngle.toFixed(0)}° | ${member.distance.toFixed(0)} UU`,
+    `Score: ${(member.score * 100).toFixed(0)}%`,
+  ];
+  const calloutW = Math.ceil(Math.max(...calloutLines.map((l) => l.length)) * CALLOUT_CHAR_PX) + CALLOUT_PAD * 2;
+  const rightX = sx + CALLOUT_GAP;
+  const calloutX = rightX + calloutW <= SVG_SIZE
+    ? rightX
+    : Math.max(0, sx - CALLOUT_GAP - calloutW);
+  const calloutY = Math.min(Math.max(sy - 20, 0), SVG_SIZE - CALLOUT_HEIGHT);
 
   return (
     <g
@@ -76,28 +97,28 @@ export const SquadMemberGlyph = memo(function SquadMemberGlyph({
       {isActive && (
         <g>
           <rect
-            x={sx + 12} y={sy - 20}
-            width={90} height={36}
+            x={calloutX} y={calloutY}
+            width={calloutW} height={CALLOUT_HEIGHT}
             rx={4}
             fill="var(--surface-deep)"
             stroke={color}
             strokeWidth={0.5}
             opacity={0.95}
           />
-          <text x={sx + 16} y={sy - 8}
+          <text x={calloutX + CALLOUT_PAD} y={calloutY + 12}
             className="text-[11px] font-mono font-bold" fill={color}
           >
-            {member.label}
+            {calloutLines[0]}
           </text>
-          <text x={sx + 16} y={sy + 2}
+          <text x={calloutX + CALLOUT_PAD} y={calloutY + 22}
             className="text-[11px] font-mono fill-[var(--text-muted)]"
           >
-            Flank: {member.flankAngle.toFixed(0)}° | {member.distance.toFixed(0)} UU
+            {calloutLines[1]}
           </text>
-          <text x={sx + 16} y={sy + 12}
+          <text x={calloutX + CALLOUT_PAD} y={calloutY + 32}
             className="text-[11px] font-mono fill-[var(--text-muted)]"
           >
-            Score: {(member.score * 100).toFixed(0)}%
+            {calloutLines[2]}
           </text>
         </g>
       )}

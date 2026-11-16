@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, screen, fireEvent, within } from '@testing-library/react';
 import { PaceTargetsPanel } from '@/components/modules/core-engine/sub_progression/curves/PaceTargetsPanel';
@@ -16,9 +17,15 @@ function renderPanel(previewing = false) {
   const onPreview = vi.fn<(p: CurveParams) => void>();
   const onApply = vi.fn();
   const onRevert = vi.fn();
-  const utils = render(
-    <PaceTargetsPanel live={LIVE} previewing={previewing} onPreview={onPreview} onApply={onApply} onRevert={onRevert} />,
-  );
+  // Like index.tsx, a preview moves the live curve onto the fit.
+  function Harness() {
+    const [live, setLive] = useState<CurveParams>(LIVE);
+    return (
+      <PaceTargetsPanel live={live} previewing={previewing} onApply={onApply} onRevert={onRevert}
+        onPreview={(p) => { onPreview(p); setLive(p); }} />
+    );
+  }
+  const utils = render(<Harness />);
   return { ...utils, onPreview, onApply, onRevert };
 }
 
@@ -100,5 +107,23 @@ describe('MainChartArea — Current / Fitted labels while a fit is previewed', (
     rerender(<MainChartArea {...props} previewing={false} />);
     expect(screen.getByText('Snapshot')).toBeTruthy();
     expect(screen.getByText('Live')).toBeTruthy();
+  });
+});
+
+describe('PaceTargetsPanel — the fit card describes the curve on the sliders', () => {
+  const noop = () => undefined;
+  const panel = (live: CurveParams) => (
+    <PaceTargetsPanel live={live} previewing={false} onPreview={noop} onApply={noop} onRevert={noop} />
+  );
+
+  it('withdraws the fit figures once the live curve is no longer the fitted one', () => {
+    const { rerender } = render(panel(LIVE));
+    setRow(1, '10', '1');
+    setRow(2, '50', '20');
+    fireEvent.click(screen.getByRole('button', { name: /^Fit$/ }));
+    rerender(panel({ baseXp: 130, curveExp: 1.9 }));
+    expect(screen.getByTestId('pace-fit-result')).toBeTruthy();
+    rerender(panel({ baseXp: 140, curveExp: 1.9 }));
+    expect(screen.queryByTestId('pace-fit-result')).toBeNull();
   });
 });

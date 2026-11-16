@@ -54,7 +54,7 @@ export function StudioToolbar({
       <Sep />
       <div role="group" aria-label="Render mode" style={groupStyle}>
         {MODES.map((m) => (
-          <Button key={m.value} active={renderMode === m.value} onClick={() => onRenderModeChange(m.value)}>{m.label}</Button>
+          <Button key={m.value} current={renderMode === m.value} onClick={() => onRenderModeChange(m.value)}>{m.label}</Button>
         ))}
       </div>
       <Sep />

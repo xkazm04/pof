@@ -1,4 +1,3 @@
 export {
-  CornerBrackets, ScanlineOverlay, BlueprintPanel,
-  SectionHeader, GlowStat, NeonBar,
+  BlueprintPanel, SectionHeader, GlowStat, NeonBar,
 } from '../../../unique-tabs/_design';

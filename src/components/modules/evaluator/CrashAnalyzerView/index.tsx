@@ -189,7 +189,7 @@ export function CrashAnalyzerView() {
             <Bug className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-40" />
             <p className="text-sm text-text-muted mb-1">No crash data loaded</p>
             <p className="text-2xs text-text-muted">
-              Click &quot;Analyze Crashes&quot; to load sample crash data, or import a crash log.
+              Click &quot;Analyze Crashes&quot; to load the built-in sample crashes and this project&rsquo;s crash history. Importing a log opens once crash data has loaded.
             </p>
           </div>
         </SurfaceCard>
@@ -229,6 +229,7 @@ export function CrashAnalyzerView() {
                 <input
                   type="text"
                   placeholder="Search crashes..."
+                  aria-label="Search crashes by message, function or module"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-status-red-strong"
@@ -253,6 +254,14 @@ export function CrashAnalyzerView() {
                   : `${importedCount} imported from this project (kept: the ${CRASH_HISTORY_LIMITS.signatures} most recent crash signatures)`}
               </MicroLabel>
             </div>
+
+            {/* A filter that matches nothing SAYS so (outside the listbox, which
+                may only hold options) rather than leaving a silent empty list. */}
+            {filteredReports.length === 0 && (
+              <p role="status" className="py-6 text-center text-xs text-text-muted" data-testid="crash-no-match">
+                No crashes match the current search or severity filter.
+              </p>
+            )}
 
             {/* Real listbox: each CrashListItem is a focusable role=option that
                 reports aria-selected, so the triage list is keyboard/SR operable. */}

@@ -28,20 +28,6 @@ export function Canvas({ pm }: { pm: PlanMatrixState }) {
           backgroundPosition: `${transform.panX}px ${transform.panY}px`,
           willChange: 'transform', // Performance hint
         }}
-        onWheel={(e) => {
-          e.preventDefault();
-          const el = containerRef.current;
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          const cx = e.clientX - rect.left;
-          const cy = e.clientY - rect.top;
-          setTransform((prev) => {
-            const factor = e.deltaY > 0 ? 0.9 : 1.1;
-            const nz = Math.min(3.0, Math.max(0.2, prev.zoom * factor));
-            const r = nz / prev.zoom;
-            return { zoom: nz, panX: cx - (cx - prev.panX) * r, panY: cy - (cy - prev.panY) * r };
-          });
-        }}
         onPointerDown={(e) => {
           isPanningRef.current = true;
           setIsPanningState(true);

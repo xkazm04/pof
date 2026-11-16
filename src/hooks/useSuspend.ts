@@ -32,12 +32,15 @@ export function useIsSuspended(): boolean {
  * any changes that happened while suspended.
  *
  * Usage:
- *   const progress = useSuspendableSelector(useModuleStore, (s) => s.checklistProgress);
+ *   const snapshot = useSuspendableSelector(useUE5BridgeStore, (s) => s.liveSnapshot);
  *
- * Under the hood this works by ignoring store subscription notifications while
- * suspended and returning the last-known snapshot. On resume, the next render
- * picks up the current store state because React will re-render the component
- * (the parent's display toggle triggers a re-render).
+ * Use it for a slice written many times a second or on a poll and read only to
+ * display. Do not use it for a value a handler sends somewhere (host, port, an id):
+ * a frozen read must never reach a write path. Selected actions stay callable, but
+ * they gain nothing from it. See docs/architecture/runtime-patterns.md.
+ *
+ * While suspended, a selector closing over a changed prop still answers from the
+ * frozen value; it re-reads on resume.
  */
 export function useSuspendableSelector<S, T>(
   useStore: {
@@ -47,16 +50,8 @@ export function useSuspendableSelector<S, T>(
   selector: (state: S) => T,
 ): T {
   const suspended = useContext(SuspendContext);
-  const frozenRef = useRef<T | undefined>(undefined);
-  const selectorRef = useRef(selector);
-  useEffect(() => { selectorRef.current = selector; }, [selector]);
-
-  // When becoming active, clear the frozen value so the next getSnapshot reads fresh state
-  useEffect(() => {
-    if (!suspended) {
-      frozenRef.current = undefined;
-    }
-  }, [suspended]);
+  // Boxed: a selected `undefined` is a value to freeze, not the absence of one.
+  const frozenRef = useRef<{ value: T } | null>(null);
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
@@ -70,13 +65,13 @@ export function useSuspendableSelector<S, T>(
   );
 
   const getSnapshot = useCallback(() => {
-    if (suspended && frozenRef.current !== undefined) {
-      return frozenRef.current;
+    if (suspended && frozenRef.current) {
+      return frozenRef.current.value;
     }
-    const value = selectorRef.current(useStore.getState());
-    frozenRef.current = value;
+    const value = selector(useStore.getState());
+    frozenRef.current = { value };
     return value;
-  }, [useStore, suspended]);
+  }, [useStore, suspended, selector]);
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
@@ -97,7 +92,6 @@ export function useSuspendableEffect(
 ): void {
   const suspended = useContext(SuspendContext);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (suspended) return;
     return effect();

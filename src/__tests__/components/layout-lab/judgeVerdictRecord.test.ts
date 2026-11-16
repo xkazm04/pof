@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   STORED_FINDINGS_CAP, judgeDirection, matchVerdict, parseFindings, pointsShort, retiredByReproduce, weakestFirst,
 } from '@/components/layout-lab/steps/ux/judgeVerdictRecord';
@@ -70,5 +72,14 @@ describe('uxVariantsIn — the opt-in reader', () => {
     expect(uxVariantsIn('?legacy=0&c=items&ux=judge-verdict')).toEqual(['judge-verdict']);
     expect(uxVariantsIn('?ux=a,b&ux=c')).toEqual(['a', 'b', 'c']);
     expect(uxVariantsIn('?legacy=0&c=items')).toEqual([]);
+  });
+});
+
+describe('storage cap has one source', () => {
+  it('scripts/judge-run.ts cuts the stored findings with STORED_FINDINGS_CAP, not a re-typed literal', () => {
+    const src = readFileSync(join(process.cwd(), 'scripts', 'judge-run.ts'), 'utf-8');
+    expect(src.match(/\.slice\(0,\s*1500\)/g) ?? []).toHaveLength(0);
+    expect(src).toContain('.slice(0, STORED_FINDINGS_CAP)');
+    expect(src).toContain("judgeVerdictRecord'");
   });
 });

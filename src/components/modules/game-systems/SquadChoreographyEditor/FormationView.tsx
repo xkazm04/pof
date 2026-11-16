@@ -46,20 +46,27 @@ export function FormationView({
   // Keyboard focus is tracked separately from hover: it both highlights the
   // matching glyph and owns the list's single tab stop (roving tabindex).
   const [focusedMember, setFocusedMember] = useState<string | null>(null);
+  // The pinned (selected) member: the listbox's real single-select state.
+  const [pinnedMember, setPinnedMember] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Generated (not hardcoded) so two mounted editors can't collide on the id —
   // same approach as PipelineView's region heading.
   const membersHeadingId = useId();
+  // The forward-arrow marker is referenced by `url(#…)`; a fixed id would make a
+  // second mounted editor's arrow resolve to the first one's marker. React's id
+  // punctuation is stripped so the `url()` reference stays a plain identifier.
+  const arrowMarkerId = `squad-fwd-arrow-${useId().replace(/[^\w-]/g, '')}`;
   // Stable identity so the memoized leaves don't re-render just because the
   // setter prop changed each render.
   const handleEnter = useCallback((id: string) => setHoveredMember(id), []);
   const handleLeave = useCallback(() => setHoveredMember(null), []);
   const handleFocus = useCallback((id: string) => setFocusedMember(id), []);
   const handleBlur = useCallback(() => setFocusedMember(null), []);
+  const handleSelect = useCallback((id: string) => setPinnedMember(id), []);
 
   // Pointer wins over focus when both are live, so moving the mouse always
   // highlights what it is pointing at.
-  const activeMember = hoveredMember ?? focusedMember;
+  const activeMember = hoveredMember ?? focusedMember ?? pinnedMember;
   // Exactly one row is tabbable — the focused one while focus is inside the
   // list, otherwise the first. So Tab reaches the list in one stop instead of
   // stepping through every member, and ↑/↓ move within it.
@@ -185,11 +192,11 @@ export function FormationView({
             stroke={ACCENT_CYAN}
             strokeWidth={2}
             opacity={0.8}
-            markerEnd="url(#squad-fwd-arrow)"
+            markerEnd={`url(#${arrowMarkerId})`}
           />
           <defs>
             <marker
-              id="squad-fwd-arrow"
+              id={arrowMarkerId}
               markerWidth="8" markerHeight="6"
               refX="8" refY="3"
               orient="auto"
@@ -307,11 +314,13 @@ export function FormationView({
                 key={member.id}
                 member={member}
                 isActive={activeMember === member.id}
+                isSelected={pinnedMember === member.id}
                 tabIndex={tabStopId === member.id ? 0 : -1}
                 onEnter={handleEnter}
                 onLeave={handleLeave}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
+                onSelect={handleSelect}
               />
             ))}
           </div>

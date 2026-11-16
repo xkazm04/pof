@@ -28,8 +28,8 @@ import {
   verdictProvenance,
   judgedContentOf,
   judgedContentFromHash,
-  unverifiedReason,
-  CONDEMNING_PROVENANCE,
+  pickCondemningFail,
+  provenanceNote,
   type JudgedContent,
 } from '@/lib/catalog/acceptance/judgeBridge';
 import type { JudgeAttribution, VerdictProvenance } from '@/lib/catalog/acceptance/types';
@@ -129,6 +129,9 @@ export function orphanedFacts(facts: readonly FactAddress[], liveKeys: ReadonlyS
 
 export type HeadlessLookup = (catalogId: string, step: string) => HeadlessFact | undefined;
 
+/** The reason prefix {@link gateHeadless} stamps; readiness reads it to say why a cell is R3. */
+export const NOT_HEADLESS_PREFIX = 'not headless-operable via pof-mcp';
+
 /** Gate a derived cell on headless-operability: a `verified` grade demands the step be
  *  PROVEN headless-operable via pof-mcp (a machine-reproducible gate), so a would-be
  *  `verified` cell whose step has no coverage entry OR is `operable:false` is demoted to
@@ -144,7 +147,7 @@ export function gateHeadless(
   if (cell.grade !== 'verified') return cell;
   const fact = lookup(catalogId, step);
   if (fact && fact.operable) return cell;
-  const prefix = 'not headless-operable via pof-mcp';
+  const prefix = NOT_HEADLESS_PREFIX;
   const reason = cell.reason ? `${prefix}: ${cell.reason}` : prefix;
   return { ...cell, grade: 'trusted', reason };
 }
@@ -447,6 +450,9 @@ export interface StepCell {
   /** False when the accept checker verifies shape only (field-exists / length),
    *  not content — the benevolence the audit exposed. */
   checkerMeaningful?: boolean;
+  /** Set on a blocked cell whose pass came from an engine class that needs a gate: without the
+   *  failure it would have graded `ungated` (R2), not `trusted` (R3). Display only. */
+  passUngated?: true;
   /** Content-quality judgment (LLM panel / VLM), when one has run. */
   judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string; effort?: string; rubricVersion?: number };
   /**
@@ -497,30 +503,6 @@ function contentByEntity(artifacts: ArtifactVerdictRow[]): Map<string, JudgedCon
   const m = new Map<string, JudgedContent>();
   for (const a of artifacts) m.set(a.entityId, judgedContentOfRow(a));
   return m;
-}
-
-/**
- * What a verdict does and does not prove HERE — the same vocabulary `bridgeJudgeVerdict`
- * puts on the per-step Acceptance banner, so an operator reading the map and the drill-down
- * hears one sentence, not two.
- */
-function provenanceNote(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): string {
-  if (p === 'current') return 'Judged the content currently on record.';
-  const kind = v.verdict === 'fail' ? 'FAIL' : 'PASS';
-  if (applied) {
-    return `This verdict cannot be confirmed against the current content — ${unverifiedReason(v)}.`
-      + ' It is still applied, and still needs a re-judge.';
-  }
-  if (p === 'stale') {
-    return `A judge ${kind} is on record but it judged content this step no longer holds`
-      + ' (re-produced since). Not applied — this step is UNJUDGED, not judged-and-passed.';
-  }
-  if (p === 'superseded') {
-    return `A judge ${kind} is on record under a superseded rubric. Not applied — this step`
-      + ' needs a re-judge under the current rubric.';
-  }
-  return `A judge ${kind} is on record but ${unverifiedReason(v)}. Not applied — a binding`
-    + ' nobody can confirm cannot PROVE quality (it can still condemn).';
 }
 
 function attribution(v: JudgeVerdict, p: VerdictProvenance, applied: boolean): JudgeAttribution & { applied: boolean } {
@@ -595,7 +577,7 @@ export function deriveCell(
   // CONDEMNS on `current` (binding confirmed) or `unknown` (nobody can confirm OR refute —
   // a recorded fail is evidence, and dropping it would be the optimistic lie this layer
   // exists to prevent). A `stale` / `superseded` fail does not condemn.
-  const condemningFail = classified.find((c) => c.v.verdict === 'fail' && CONDEMNING_PROVENANCE.has(c.p));
+  const condemningFail = pickCondemningFail(classified);
   // ELEVATION is deliberately stricter than condemnation: only a CONFIRMED binding proves
   // quality, so a verdict whose provenance cannot be determined degrades to not-proven,
   // never to proven. (`current` also implies the current rubric — see verdictProvenance.)
@@ -641,6 +623,7 @@ export function deriveCell(
     judge: fact?.judge,
     auditNote: fact?.note,
     checkerMeaningful: fact?.checkerMeaningful,
+    ...(grade === 'attention' && counts.pass > 0 && !TRUSTED_CLASSES.has(engineClass(engine)) ? { passUngated: true as const } : {}),
     ...(fact && mirrorSupport(fact.deliverable, fact.step) !== 'none'
       ? { browserMirror: mirrorSupport(fact.deliverable, fact.step) }
       : {}),

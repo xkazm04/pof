@@ -9,7 +9,8 @@ import { powerWithinTierTarget } from '../acceptance/invariants';
 import { linksResolve } from '../acceptance/linkCheckers';
 import { gallerySeed } from '@/lib/catalog/acceptance/galleryArtifact';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** UPPER form of the entity slug — the per-vendor localization key prefix (VENDOR_<V>_*),
  *  so two vendors can never write the same LocRes key for their barks. */
 const KEY = (n: string) => slug(n).toUpperCase();
@@ -360,7 +361,7 @@ registerCatalogPipeline({
                 'Within ±20% of target 30 (band 24–36) per canon vendor-laws + proj-balance. ' +
                 'Buyback at 50% is a net gold sink: vendor pays 50% and re-lists at 143% (no re-stock). ' +
                 'Repair fee (0.15g/durability point) is an additional gold sink per §10d. ' +
-                'TODO: replace the analytic buyer-mix with a pof_economy_simulate run when the sim gate lands.',
+                'The margin is this analytic buyer-mix derivation, not a simulated result; the pof_economy_simulate pof-mcp tool can run the full economy sim.',
             },
             // top-level field for withinPercent checker
             marginPct,

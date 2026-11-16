@@ -28,6 +28,9 @@ import { ACCENT, type ConsoleHistoryEntry } from '../_shared/data';
 const NOT_SENT_OUTPUT =
   'Not sent — UE5 Remote Control is not connected. Commands are not queued; connect, then run it again.';
 
+/** History recall walks typed commands only: pending ones and logged UI actions are skipped. */
+const recallable = (history: ConsoleHistoryEntry[]) => history.filter(h => h.status !== 'pending' && !h.system);
+
 /* -- Interactive Console --------------------------------------------------- */
 
 export function ConsoleSection() {
@@ -89,6 +92,7 @@ export function ConsoleSection() {
         timestamp: Date.now(),
         status: 'error' as const,
         output: result.error,
+        system: true,
       }]);
     }
   }, [connect]);
@@ -99,14 +103,14 @@ export function ConsoleSection() {
       executeCommand(cmdInput);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      const executed = cmdHistory.filter(h => h.status !== 'pending');
+      const executed = recallable(cmdHistory);
       if (executed.length === 0) return;
       const nextIdx = cmdHistoryIdx < 0 ? executed.length - 1 : Math.max(0, cmdHistoryIdx - 1);
       setCmdHistoryIdx(nextIdx);
       setCmdInput(executed[nextIdx].command);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      const executed = cmdHistory.filter(h => h.status !== 'pending');
+      const executed = recallable(cmdHistory);
       if (cmdHistoryIdx < 0) return;
       const nextIdx = cmdHistoryIdx + 1;
       if (nextIdx >= executed.length) { setCmdHistoryIdx(-1); setCmdInput(''); }

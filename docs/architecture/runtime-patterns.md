@@ -10,7 +10,7 @@ Cross-cutting infrastructure that every module in the app depends on: the typed 
 |------|---------|
 | `src/lib/event-bus.ts` | Singleton `EventBus` class + exported `eventBus` instance |
 | `src/types/event-bus.ts` | `EventMap` interface (all typed channels), `BusEvent<C>`, handler types |
-| `src/lib/lifecycle.ts` | `Lifecycle<T>` protocol + four factories + `composeLifecycles` |
+| `src/lib/lifecycle.ts` | `Lifecycle<T>` protocol + three factories |
 | `src/hooks/useLifecycle.ts` | `useLifecycle()` / `useGuardedLifecycle()` React hooks |
 | `src/lib/state-emitter.ts` | `createStateEmitter<T>()` — shared subscribe/notify/getState primitive for the bridge singletons |
 | `src/hooks/useSuspend.ts` | `SuspendContext`, `useSuspendableEffect`, `useSuspendableSelector` |
@@ -65,12 +65,11 @@ All three return an `Unsubscribe` function. Pass it to a `Lifecycle` or call it 
 
 ### Replay buffer
 
-The bus keeps the last 200 events in memory (`maxReplaySize = 200`, `src/lib/event-bus.ts:31`). Late subscribers can call:
+The bus keeps the last 200 events in memory (`maxReplaySize = 200`, `src/lib/event-bus.ts:31`). Devtools (`EventBusDevTools`) read it with:
 
 ```ts
 eventBus.getReplayBuffer('cli.task.completed');   // exact channel
 eventBus.getReplayByNamespace('eval');            // namespace prefix
-eventBus.replayTo('cli.task.completed', handler); // push past events to handler
 ```
 
 ### When to use the event bus
@@ -98,11 +97,8 @@ Six resource patterns share this protocol: CLI sessions, file watchers, SSE conn
 | Factory | File:line | Use case |
 |---------|-----------|---------|
 | `createLifecycle(factory, teardown)` | `lifecycle.ts:38` | Single disposable resource with controlled-monopoly: calling `init()` again disposes the previous instance before creating a new one |
-| `createSubscriptionLifecycle(subscribe)` | `lifecycle.ts:71` | A set of unsubscribe functions collected by one `subscribe()` call; `dispose()` calls all unsubs |
-| `createGuardedLifecycle(setup)` | `lifecycle.ts:98` | One-time initialization guard: re-calling `init()` is a no-op while active; must `dispose()` to re-init |
-| `createTimerLifecycle(callback, delayMs)` | `lifecycle.ts:127` | Debounced timer (e.g., auto-save); `init()` starts/restarts, `dispose()` cancels |
-
-`composeLifecycles(...lifecycles)` at `lifecycle.ts:163` groups multiple instances into one: `init()` runs all in order, `dispose()` runs all in reverse.
+| `createGuardedLifecycle(setup)` | `lifecycle.ts:71` | One-time initialization guard: re-calling `init()` is a no-op while active; must `dispose()` to re-init |
+| `createTimerLifecycle(callback, delayMs)` | `lifecycle.ts:100` | Debounced timer (e.g., auto-save); `init()` starts/restarts, `dispose()` cancels |
 
 ### React hooks (`src/hooks/useLifecycle.ts`)
 
@@ -114,7 +110,7 @@ useLifecycle(() => createTimerLifecycle(callback, 500), [callback]);
 useGuardedLifecycle(() => createGuardedLifecycle(setup));
 ```
 
-Both hooks store the `Lifecycle` instance in a `useRef` so `dispose()` is always called on the exact instance that was created, even across strict-mode double invocations.
+Each effect closes over the instance it created, so `dispose()` always reaches that exact instance, even across strict-mode double invocations.
 
 ---
 
@@ -138,7 +134,7 @@ const unsub = emitter.subscribe(handler);  // returns an unsubscribe fn
 
 `notify` iterates subscribers with a per-handler `try/catch` (a throwing subscriber is logged via `logger.warn` under `label` and never blocks siblings) — the same isolation the event bus gives. **Compose, don't inherit**: hold it as a private field and delegate `getState`/`onStateChange`, expose internal reads through a `private get state() { return this.emitter.peek(); }` getter. Used by `pof-bridge/connection-manager.ts`, `ue5-bridge/connection-manager.ts`, and `ue5-bridge/ws-live-state.ts`.
 
-**Live-channel write ledger (`src/lib/ue5-bridge/sync-ledger.ts`).** `ue5LiveState.setProperty` returns a `WriteReceipt { key, sent, seq }` (`send()` reports whether the socket was OPEN; the `set.property` wire frame is unchanged) and records a `SyncWrite` in `LiveEditorState.writes`, keyed `objectPath::propertyName`, with the value then watched on that exact key as its base. Each `property.update` on the key re-classifies it with the three-way compare base / written / read-back into a closed vocabulary: `dropped` (never sent), `unobserved`, `pending` (read-back = base), `confirmed` (read-back = written, convergence is never a conflict), `diverged` (the only one `deriveConflicts` returns, as typed values). `confirmed`/`diverged` are settled - later edits in UE are subsequent history. Ordering is the client's own arrival `seq`, never UE timestamps; the plugin sends no ack, so the ledger claims no more than delivery plus read-back. The emitter clone copies `writes` like `propertyWatches`; `disconnect()` clears both. A panel consumes the ledger rather than scanning its own display log (`BidirectionalStateSyncPanel`: a dropped write logs `warn` and is not counted as sent) - pinned by `sync-ledger.test.ts`, `ws-write-receipt.test.ts` and `bidirectional-sync-ledger.test.tsx`.
+**Live-channel write ledger (`src/lib/ue5-bridge/sync-ledger.ts`).** `ue5LiveState.setProperty` returns a `WriteReceipt { key, sent, seq }` (`send()` reports whether the socket was OPEN; the `set.property` frame carries the write's `seq` as `requestId`) and records a `SyncWrite` in `LiveEditorState.writes`, keyed `objectPath::propertyName`, with the value then watched on that exact key as its base. Each `property.update` on the key re-classifies it with the three-way compare base / written / read-back into a closed vocabulary: `dropped` (never sent), `unobserved`, `pending` (read-back = base), `confirmed` (read-back = written, convergence is never a conflict), `diverged` (the only one `deriveConflicts` returns, as typed values). `confirmed`/`diverged` are settled - later edits in UE are subsequent history. Ordering is the client's own arrival `seq`, never UE timestamps. The plugin answers every write with `set.ack` (`applyAck`): `ok` settles `confirmed`, `ok`+`adjusted` (the editor altered the value in PostEditChange) settles `diverged`, a refusal settles `rejected` with its reason, and an ack for a superseded `seq` is ignored; the ack outranks read-backs because those are ExportText strings. The PIE and viewport controls are reserved keys (`PIECommand`, `/Editor/ViewportClient`) the plugin routes to commands, acked the same way. The emitter clone copies `writes` like `propertyWatches`; `disconnect()` clears both. A panel consumes the ledger rather than scanning its own display log (`BidirectionalStateSyncPanel`: a dropped write logs `warn` and is not counted as sent) - pinned by `sync-ledger.test.ts`, `ws-write-receipt.test.ts` and `bidirectional-sync-ledger.test.tsx`.
 
 ---
 
@@ -182,19 +178,46 @@ useSuspendableEffect(() => {
 }, [poll]);
 ```
 
-When `suspended` becomes `true`, the cleanup function fires. When `suspended` becomes `false`, the effect re-runs (line 106: `[suspended, ...deps]`).
+When `suspended` becomes `true`, the cleanup function fires. When `suspended` becomes `false`, the effect re-runs (line 103: `[suspended, ...deps]`).
 
 ### useSuspendableSelector
 
 Drop-in for Zustand's `useStore(selector)` that freezes while suspended:
 
 ```ts
-const progress = useSuspendableSelector(useModuleStore, (s) => s.checklistProgress);
+const snapshot = useSuspendableSelector(useUE5BridgeStore, (s) => s.liveSnapshot);
 ```
 
-While suspended, the store subscription is replaced with a no-op (no re-renders). On resume, `frozenRef` is cleared and `getSnapshot` reads fresh state from the store. Internally uses `useSyncExternalStore` (line 81) for tear-free reads.
+While suspended, the store subscription is replaced with a no-op (no re-renders) and `getSnapshot` answers from the frozen value, including a selected `undefined`. The render that resumes the module reads the store again. It is built on `useSyncExternalStore` for tear-free reads, and has the same rule as a Zustand selector: return a stable reference or a primitive.
+
+**Use it when all of these hold:**
+
+- the component sits under a `ModuleRenderer` pane (outside one, `SuspendContext` is `false` and the hook adds nothing);
+- the slice is written at a high rate: a WebSocket frame, a poll tick, a stream;
+- the value is only displayed.
+
+Current adopters are the frame slices of `useLiveStateSync` (`liveSnapshot`, `propertyWatches`, `wsFrameRate`) and the forge `jobs` array in `GenerationQueue` and `UeImportPanel`. In `src/__tests__/hooks/suspend-adoption.test.tsx`, 60 updates to a hidden pane went from 60 commits to 0 (61 to 0 for `GenerationQueue`, which also takes a job added while hidden).
+
+**Keep plain `useStore` for:**
+
+- once-per-action slices, and selectors of a primitive that rarely changes: Zustand already skips the re-render when the selected value is unchanged, so freezing saves nothing;
+- anything a handler or effect sends somewhere (host, port, auth token, an id). A frozen read must never reach a write path, which is why `useLiveStateSync` keeps `host` and `wsPort` live;
+- action selectors. A frozen action still works, because actions read current state, but actions never change, so there is nothing to freeze;
+- the code that feeds the store. The socket bridge in `useLiveStateSync` stays subscribed while hidden, or resume would show old data.
+
+While suspended, a selector that closes over a changed prop still returns the frozen value until resume.
 
 ---
+
+## Workflow dispatch: launches derived from DAG state
+
+`TaskDAGOrchestrator` stays pure: it only decides which nodes are ready. `WorkflowDispatcher` (`src/components/modules/evaluator/WorkflowOrchestratorView/WorkflowDispatcher.tsx`) turns them into CLI sessions. It is mounted once in `AppShell` beside `PreflightGuardDialog`, outside the module LRU, so a run outlives the Evaluator pane. Only the legacy shell can start a workflow; if the shell unmounts (a shell switch), the dispatcher cancels the run rather than leave it with nobody to launch its next node.
+
+- **Level-triggered, no queue.** `selectNodesToRun(execution, MAX_CONCURRENT_WORKFLOW_NODES)` (`src/lib/workflow-dispatch.ts`, pure) is re-derived on every render from `activeExecution`: running nodes first (kept while paused, so their completion is still heard), then queued nodes up to the cap. Each selected node holds one `WorkflowNodeRunner`, keyed by execution, node and retry count. The cap is 1: nodes are paid agent runs editing one shared tree.
+- **Launch.** A runner launches only a `queued` node of the live run. It creates the tab, calls `markNodeRunning`, then `useModuleCLI.execute(buildNodeTask(node))`. `execute`'s optional `ExecuteControl` reports a declined spend guard (`onDeclined`) and drops a launch cancelled during the async prepare (`shouldDispatch`).
+- **Outcome.** `onComplete` feeds `markNodeCompleted`, passing only on a clean exit with no unconfirmed result callback. Reports are bound to the execution id, so a cancelled run's late completion cannot complete a same-named node of the next run.
+- **The terminal is pinned.** A terminal only mounts through `ModuleRenderer`'s session LRU, which needs the user to be on the session's module. `workflowPinnedSessionIds` adds running-node tabs (and workflow sessions still running after a cancel) to the mounted set, hidden unless viewed; without it the prompt would have no listener.
+- **Reload.** `activeExecution` is never rehydrated and a live row is demoted to Interrupted, so nothing re-dispatches paid work. Cancel stops scheduling; an already-running session keeps running until it ends or is aborted in its tab.
 
 ## Unsaved canvas state across an LRU eviction (session drafts)
 
@@ -311,7 +334,7 @@ Two stdout contracts, side by side, not merged: the `POF_<P>_*` vocabulary above
 
 **Blender: one locator.** Every headless Blender runner (`runMeshFinish` and its Finish-in-Blender remedy, `runMeshSplit`, `runMeshViews` under the view gate and icon-from-mesh, `runFbxConvert`) and `GET /api/visual-gen/blender/detect` resolve the executable through `locateBlender` (`src/lib/visual-gen/blender-locate.ts`, pure over `env` / `platform` / `exists` / `listDir` / `which` seams): explicit `blenderPath` → `POF_BLENDER` → each `%ProgramFiles%/Blender Foundation/Blender X.Y` from the directory listing, newest first → fixed Steam / unix / mac paths → a PATH scan (no process spawned) → none. It returns `{ path, source: explicit|env|install|path, probed[] }`, and a miss is the one `blenderNotFound(probed)` error (count and list probed, plus `POF_BLENDER`). `resolveBlenderPath(explicit, env, exists, seams?)` is a delegate and `BLENDER_CANDIDATES` is derived (fixed paths only), so no hand-written version list exists; a runner's deps inject the same seams. Detect adds `blender --version` and answers `{ path, version, source, probed }` for exactly the path the runners spawn. `scripts/diablo/render.ts` still pins its own 4.2 path.
 
-**Blender MCP: one receipt envelope.** A 200 from `/api/blender-mcp/execute` only means the addon accepted the code; a script's outcome is its receipt. A generator ends, after any `raise`, with `pyReceipt(kind, fields)` (`src/lib/blender-mcp/receipt.ts`): one `print('POF_RESULT=' + json.dumps({...}))` line whose field values are Python expressions (`pyStr` for a literal). `service.executeCode` normalises the addon reply first (`output`, else the ahujasid addon's `{executed, result}` text, else the stringified reply) and parses receipts once, so `ExecuteOutput` is `{ output, receipts }`. A caller asks `readReceipt(result.data | output | receipts, kind, expect)` and gets `confirmed | unconfirmed | mismatch`; only `confirmed` renders as success. The last receipt of the kind wins, every `expect` field must match exactly, and a receipt quote-escaped inside a stringified reply still parses. Kinds today: `export` `{ path, format }` (`SceneExporter` expects its own path), `blockout` `{ placed }` (`readBlockoutReceipt` keeps its three-state signature and needs a numeric count), and `armature` `{ name, bones: len(amt.bones) }`. Auto-Rig dispatches through `executeViaMCP`, and `describeArmatureOutcome` reports the bones Blender built next to the preset's declared count (the UE5 Mannequin stand-in is 11 of 67). The LOD tab measures and grades through the same envelope: `mesh-stats` `{ meshes: [{ name, tris, verts, polys }] }` (`meshStatsScript`, read-only, triangles from `loop_triangles`; `readMeshStats`, dispatched only on the "Read scene meshes" click) and one `lod` `{ level, name, targetTris, tris, polys }` per level (`generateLodsScript` decimates to triangle targets, ratio = target / measured source in Blender). `src/lib/visual-gen/lod-plan.ts` plans (`planLodChain`: per-level targets from the measured count, LOD0 against the `polycount-presets` class target/ceiling, no count = `unmeasured`) and grades (`gradeLodReceipt`: honoured within face-budget's 10% tolerance, `over` with the ~2x quad trap named, `under`, a level with no receipt = `unmeasured`); `LodPlanTable` shows it and the run is never painted green whole. The bespoke `POF_EXPORT_FINISHED=` / `POF_BLOCKOUT_PLACED=` markers are retired and confirm nothing. The other generators still print prose, and six raw call sites still fall back to a fabricated success string; each can adopt the envelope with one `pyReceipt` line.
+**Blender MCP: one receipt envelope.** A 200 from `/api/blender-mcp/execute` only means the addon accepted the code; a script's outcome is its receipt. A generator ends, after any `raise`, with `pyReceipt(kind, fields)` (`src/lib/blender-mcp/receipt.ts`): one `print('POF_RESULT=' + json.dumps({...}))` line whose field values are Python expressions (`pyStr` for a literal). `service.executeCode` normalises the addon reply first (`output`, else the ahujasid addon's `{executed, result}` text, else the stringified reply) and parses receipts once, so `ExecuteOutput` is `{ output, receipts }`. A caller asks `readReceipt(result.data | output | receipts, kind, expect)` and gets `confirmed | unconfirmed | mismatch`; only `confirmed` renders as success. The last receipt of the kind wins, every `expect` field must match exactly, and a receipt quote-escaped inside a stringified reply still parses. Kinds today: `export` `{ path, format }` (`SceneExporter` expects its own path), `blockout` `{ placed }` (`readBlockoutReceipt` keeps its three-state signature and needs a numeric count), and `armature` `{ name, bones: len(amt.bones) }`. Auto-Rig dispatches through `executeViaMCP`, and `describeArmatureOutcome` reports the bones Blender built next to the preset's declared count (the UE5 Mannequin stand-in is 11 of 67). The LOD tab measures and grades through the same envelope: `mesh-stats` `{ meshes: [{ name, tris, verts, polys }] }` (`meshStatsScript`, read-only, triangles from `loop_triangles`; `readMeshStats`, dispatched only on the "Read scene meshes" click) and one `lod` `{ level, name, targetTris, tris, polys }` per level (`generateLodsScript` decimates to triangle targets, ratio = target / measured source in Blender). `src/lib/visual-gen/lod-plan.ts` plans (`planLodChain`: per-level targets from the measured count, LOD0 against the `polycount-presets` class target/ceiling, no count = `unmeasured`) and grades (`gradeLodReceipt`: honoured within face-budget's 10% tolerance, `over` with the ~2x quad trap named, `under`, a level with no receipt = `unmeasured`); `LodPlanTable` shows it and the run is never painted green whole. The Mesh Optimization tab reads `optimize-mesh` `{ before, after }` (`readOptimizeOutcome`) and shows the vertex counts; output with no receipt is a warning with the raw text behind a disclosure, never "Run succeeded". The bespoke `POF_EXPORT_FINISHED=` / `POF_BLOCKOUT_PLACED=` markers are retired and confirm nothing. The other generators still print prose, and six raw call sites still fall back to a fabricated success string; each can adopt the envelope with one `pyReceipt` line.
 
 **Blender file jobs never use the live session.** A file-to-file transform runs in its own `--background --factory-startup` Blender, never over the MCP bridge (which is the operator's open scene). FBX -> GLB is `runFbxConvert` (`src/lib/visual-gen/fbx-convert.ts` + `scripts/visual-gen/pof_fbx_convert.py`, spawned through `runLocalProcess`): import, bake rotation/scale on unparented meshes, triangulate, export GLB with Draco opt-in (the app's `SceneViewer` has no Draco decoder). It is `converted` only when the `POF_FBXCONV_DONE` receipt names a GLB that is on disk and newer than the run; a marker-less ending carries `processFailureReason`. `POST /api/visual-gen/fbx-convert` takes `{ inputPath, draco? }` (absolute, `.fbx`, exists — else 400/404), writes only `generated/converted/<stem>.glb` (an `ASSET_DIRS` row), and answers `{ converted: true, url, meshes, tris, bytes }` or `{ converted: false, reason }`. `FBXConversionTab` POSTs there and works with the bridge down. The live-session `convert-fbx.ts` (which ran `read_factory_settings` in the operator's Blender) is deleted, and `fbx-convert.test.ts` guards 0 occurrences of `read_factory_settings` under `src/lib/blender-mcp/scripts`.
 
@@ -496,7 +519,7 @@ ESLint warns on any string literal matching `#[0-9a-fA-F]{6,8}` (`eslint.config.
 - **Severity/score tokens**: `SEVERITY_TOKENS.critical/high/medium/low` (bundles `color`, `bg`, `border`); `qualityColor(score)` maps 1–5 quality scores. A 0–100 score has ONE table, `SCORE_BANDS` in chart-colors (≥80 positive/ok, ≥60 medium/warn, ≥50 high/warn, else critical/bad; `scoreBand(s)`). Every score helper derives from it: `scoreBandToken(score)` (4-band severity token), `scoreStatusToken(score)` (status-token, 3-level ok/warn/bad with glyph) and `successRateColor(score)` (its colour). Never restate the cuts inline: `src/__tests__/lib/no-inline-score-ladder.test.ts` holds migrated files at zero and ratchets `src/components` at a pinned BASELINE. A cut may only move so a score reads less flattering, never more (`score-band-authority.test.ts` checks every retired ladder over 0..100)
 - **Calm severity cards**: `severityAccentCard(token)` — for finding/gap/issue rows, prefer a neutral `bg-surface` card with `border-l-[3px] border border-border` + this helper's left-rule style over a full translucent `token.bg` fill (a wall of saturated red flattens hierarchy). Reserve `token.color` for the leading icon and the small badge. Shared by Deep Eval, GDD Compliance, and the Codebase Archeologist.
 - **Module accents**: `MODULE_COLORS.core/content/systems/evaluator` etc.; `TAB_ACCENT` for per-tab colors
-- **Opacity**: `withOpacity(color, OPACITY_20)`, `statusBg(color)`, `statusBorder(color)` — never hand-roll `${hex}33`
+- **Opacity**: `withOpacity(color, OPACITY_20)`, `statusBg(color)`, `statusBorder(color)` — never hand-roll `${hex}33`; the helpers accept any CSS color (a `var()` becomes a `color-mix()`, a raw suffix would be invalid CSS)
 - **Dynamic class bug**: Tailwind JIT cannot process template-literal arbitrary classes (`bg-[${expr}]`). Use `style={{ backgroundColor: color }}` for runtime-dynamic colors. See memory note `reference_dynamic_tailwind_arbitrary_class_bug.md`.
 - **CSS variables**: Use `var(--text-muted)`, `var(--glow-success)` etc. for theme-relative values in non-SVG contexts
 

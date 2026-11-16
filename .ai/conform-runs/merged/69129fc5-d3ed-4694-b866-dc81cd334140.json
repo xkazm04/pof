@@ -1,0 +1,119 @@
+{
+  "schema": "conform-run/1",
+  "worker": "69129fc5-d3ed-4694-b866-dc81cd334140",
+  "subject": "voice-io",
+  "evaluatedAt": "2026-11-07T05:36:24.013247+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "pipeline-acceptance-engine",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "src/lib/catalog/acceptance/judgeBridge.ts:8 This context works out acceptance tiers and merges judge verdicts, and it has no speech capture or synthesis. A case-insensitive search of src/components/layout-lab and src/lib/catalog/acceptance found no getUserMedia, speechSynthesis, SpeechRecognition, transcri or microphone. The only 'voice' and 'speech' hits (contractsCheckers.ts:79, invariants.ts:141) are game-content rules about dialogue VO lines, not the product listening or speaking.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "SpeechRecognition",
+        "transcri",
+        "microphone"
+      ]
+    },
+    {
+      "context": "visual-gen-asset-pipeline",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "scripts/visual-gen/pof_trellis.py:1 These headless scripts turn text into images and images into meshes, then finish the meshes in Blender, with no audio engine. A case-insensitive search of scripts/visual-gen found no getUserMedia, speechSynthesis, SpeechRecognition, transcri or microphone, so the voice engine techniques do not apply.",
+      "techniques": [],
+      "absenceTerms": [
+        "getUserMedia",
+        "speechSynthesis",
+        "SpeechRecognition",
+        "transcri",
+        "microphone"
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "voice-io",
+      "context": "progression-rewards-internals",
+      "reason": "withdrawn after review: reviewer (sonnet): Each anchor is an import line (XpTableGenerator/index.tsx:14, PlanMatrixMap/index.tsx:7, sub_progression/index.tsx:9). It is incidental: it sits in the context but doesn't show that voice I/O is absent, and the absence rests only on a grep over a wider directory."
+    },
+    {
+      "subject": "voice-io",
+      "context": "core-engine-planning-shell",
+      "reason": "withdrawn after review: reviewer (sonnet): Each anchor is an import line (XpTableGenerator/index.tsx:14, PlanMatrixMap/index.tsx:7, sub_progression/index.tsx:9). It is incidental: it sits in the context but doesn't show that voice I/O is absent, and the absence rests only on a grep over a wider directory."
+    },
+    {
+      "subject": "voice-io",
+      "context": "progression-curves-builds",
+      "reason": "withdrawn after review: reviewer (sonnet): Each anchor is an import line (XpTableGenerator/index.tsx:14, PlanMatrixMap/index.tsx:7, sub_progression/index.tsx:9). It is incidental: it sits in the context but doesn't show that voice I/O is absent, and the absence rests only on a grep over a wider directory."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-07T05:36:24.013247+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "pipeline-acceptance-engine",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:36:24.013247+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "progression-rewards-internals",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:36:24.013247+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "core-engine-planning-shell",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:36:24.013247+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "progression-curves-builds",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-07T05:36:24.013247+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "voice-io"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "visual-gen-asset-pipeline",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

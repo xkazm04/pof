@@ -1,4 +1,4 @@
-import { py } from '@/lib/blender-mcp/escape';
+import { py, pyNum } from '@/lib/blender-mcp/escape';
 
 export function waterShaderScript(params: {
   materialName?: string;
@@ -21,11 +21,11 @@ glass.inputs["IOR"].default_value = 1.333
 
 wave1 = nodes.new('ShaderNodeTexWave')
 wave1.wave_type = 'RINGS'
-wave1.inputs["Scale"].default_value = ${params.waveScale ?? 8.0}
+wave1.inputs["Scale"].default_value = ${pyNum(params.waveScale ?? 8.0)}
 
 wave2 = nodes.new('ShaderNodeTexWave')
 wave2.wave_type = 'BANDS'
-wave2.inputs["Scale"].default_value = ${(params.waveScale ?? 8.0) * 1.5}
+wave2.inputs["Scale"].default_value = ${pyNum((params.waveScale ?? 8.0) * 1.5)}
 
 mix = nodes.new('ShaderNodeMixRGB')
 mix.blend_type = 'ADD'

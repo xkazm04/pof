@@ -81,38 +81,26 @@ export function generateWeeklyDigest(referenceDate?: Date, zone: string = report
     .map(([date, data]) => ({ date, ...data }));
 
   // ── Streaks ──
-  // currentStreak only needs the recent tail: scan newest-first and stop at the
-  // first failure, so a 200-row cap is more than enough.
-  const recentTail = db.prepare(`
-    SELECT success FROM session_analytics
-    ORDER BY completed_at DESC
-    LIMIT 200
-  `).all() as { success: number }[];
-
-  let currentStreak = 0;
-  for (const r of recentTail) {
-    if (r.success === 1) currentStreak++;
-    else break;
-  }
-
-  // longestStreak is an all-time high-water mark and must never regress as
-  // history grows, so it is computed over the FULL session history (not the
-  // 200-row tail, which would silently drop an older best streak). Only the
-  // success flags are fetched, in chronological order — SQLite reads via the
-  // completed_at index, JS just scans the column.
+  // Both streaks are measured as of the END of the viewed week: sessions completed
+  // after it never belong to a past week's figures (for the current week the bound is
+  // in the future, so every session counts). Only the success flags are fetched, in
+  // chronological order — SQLite reads via the completed_at index, JS scans the column.
+  // The full history is scanned (no row cap), so a long streak is never truncated and
+  // longestStreak, an all-time high-water mark up to that point, never regresses.
   const allSuccess = db.prepare(`
     SELECT success FROM session_analytics
+    WHERE completed_at < ?
     ORDER BY completed_at ASC
-  `).all() as { success: number }[];
+  `).all(weekEndISO) as { success: number }[];
 
   let longestStreak = 0;
-  let streak = 0;
+  let currentStreak = 0;
   for (const r of allSuccess) {
     if (r.success === 1) {
-      streak++;
-      if (streak > longestStreak) longestStreak = streak;
+      currentStreak++;
+      if (currentStreak > longestStreak) longestStreak = currentStreak;
     } else {
-      streak = 0;
+      currentStreak = 0;
     }
   }
 

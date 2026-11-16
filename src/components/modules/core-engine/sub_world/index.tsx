@@ -149,7 +149,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
             <CountUp value={matchingZones.length} />/{ZONES.length} zones
           </span>
         </div>
-        <input type="range" min={1} max={50} value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))}
+        <input type="range" aria-label="Player level filter" min={1} max={50} value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))}
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{ accentColor: ACCENT }} />
         <div className="relative h-4 text-[10px] font-mono text-text-muted mt-1">
@@ -192,7 +192,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
 
       {activeTab === 'map' && (
         <VisibleSection moduleId={moduleId} sectionId="topology">
-        <CollapsibleGroup title="Map & Topology" accent={ACCENT} sectionCount={3} isOpen={openGroups.has(0)} onToggle={() => toggleGroup(0)}>
+        <CollapsibleGroup title="Map & Topology" accent={ACCENT} sectionCount={6} isOpen={openGroups.has(0)} onToggle={() => toggleGroup(0)}>
           <MapTopologyGroup featureMap={featureMap} defs={defs} matchingIds={matchingIds} />
         </CollapsibleGroup>
         </VisibleSection>

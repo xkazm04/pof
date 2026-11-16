@@ -51,7 +51,7 @@ export { DURATION as MOTION } from './motion';
 /** CLI-specific animation presets — consistent timing for terminal UI. */
 export const CLI_ANIM = {
   /** Fast expand/collapse transitions (120ms). */
-  fast: { duration: 0.12, ease: DURATION.ease } as const,
+  fast: { duration: DURATION.fast, ease: DURATION.ease } as const,
   /** Medium state transitions (200ms). */
   medium: { duration: 0.2, ease: DURATION.ease } as const,
   /** Spring preset for drawer/panel animations. */
@@ -64,6 +64,12 @@ export const UI_TIMEOUTS = {
   copyFeedback: 1500,
   /** Toast / snackbar auto-dismiss duration. */
   toast: 3000,
+  /** How long an inline error banner (e.g. the affix workbench's UE5 inject error) stays before it resets. */
+  injectErrorBanner: 5000,
+  /** Flash on a crafting-station button right after a craft runs. */
+  craftFlash: 400,
+  /** Glow on the synergy panel when a new synergy appears. */
+  synergyGlow: 600,
   /** Microtask buffer to let synchronous store writes settle. */
   raceConditionBuffer: 50,
   /** Delay for terminal component to mount before dispatching events. */
@@ -77,6 +83,10 @@ export const UI_TIMEOUTS = {
   callbackSettleMax: 10000,
   /** Flash duration after a checklist item completes. */
   completionFlash: 2000,
+  /** Dev inspector: how long the "copied" confirmation shows (dev-only tool). */
+  devInspectorCopied: 1800,
+  /** Dev inspector: how long nav mode waits for a pick before switching itself off (dev-only tool). */
+  devInspectorNavIdle: 2000,
   /** Delay between batch-queued checklist items. */
   batchItemDelay: 800,
   /** Watchdog interval: recover stuck batch state. */
@@ -93,8 +103,17 @@ export const UI_TIMEOUTS = {
   moduleAggregateTtl: 5000,
   /** Interval the lab runner chip polls the drain lease status (suspend-gated). */
   runnerLeasePoll: 5000,
+  /** Interval the GTAI Voice room re-reads its queue and the open line while visible (suspend-gated), so
+   *  takes the `/gta --voice` CLI generates appear without a click. */
+  voiceRoomPoll: 5000,
+  /** Interval the /story Orrery polls a background walker job (`GET /api/story/walk/:jobId`,
+   *  suspend-gated). A 10k-node walk finishes in seconds, so the progress bar needs sub-second
+   *  ticks to read as progress rather than a jump. */
+  storyWalkPoll: 750,
   /** Short settle time for DB writes before UI refresh. */
   dbSettle: 300,
+  /** Debounce before the CLI input's anti-pattern prompt check fires (after the user stops typing). */
+  antiPatternCheckDebounce: 600,
   /** Debounce before persisting an edited ability spec to /api/ability-spec. */
   specSaveDebounce: 600,
   /** Debounce before persisting a free-text / numeric field edit (audio scene
@@ -131,6 +150,8 @@ export const UI_TIMEOUTS = {
   autoSubmitDelay: 50,
   /** UE5 Remote Control health check interval. */
   ue5HealthCheck: 30_000,
+  /** Keepalive comment interval on SSE streams, so proxies and browsers do not time them out. */
+  sseKeepalive: 30_000,
   /** Base delay for UE5 reconnection attempts. */
   ue5ReconnectBase: 2_000,
   /** Maximum delay between reconnection attempts. */
@@ -195,6 +216,19 @@ export const UI_TIMEOUTS = {
   /** How long a tab-title outcome ('(Failed)', '(Done)', ...) lingers once the tab is SEEN.
    *  A hidden tab holds the outcome indefinitely; this countdown starts on visibility. */
   tabOutcomeLinger: 4_000,
+  /** Interval the Game home's lanes control room re-reads the lane runners (suspend-gated). The lanes
+   *  commit and journal every few minutes, so a half-minute read is live enough without hammering git. */
+  lanesPoll: 45_000,
+  /** Interval the Decisions room re-reads its asks (suspend-gated): a lane may ask any minute, the owner is waiting. */
+  decisionsPoll: 10_000,
+  /** Interval the Combat lab re-reads the combat tables and arena telemetry (suspend-gated): the arena writes a session file every few minutes. */
+  combatLabPoll: 20_000,
+  /** Interval between PoF Bridge test-result polls (useTestRunner). */
+  testPollInterval: 2_000,
+  /** Longest a single PoF Bridge test is awaited before the runner gives up (useTestRunner). */
+  testPollTimeout: 120_000,
+  /** Debounce before the module checklist/progress auto-save POSTs to SQLite (ProjectModuleBridge). */
+  progressAutoSave: 2_000,
 } as const;
 
 /**
@@ -203,3 +237,9 @@ export const UI_TIMEOUTS = {
  * outside UI_TIMEOUTS.
  */
 export const BUILD_PARSE_CACHE_MAX = 200;
+
+/** Max task-history entries kept per module in moduleStore (most recent win). A memory cap, not a timing value. */
+export const MODULE_HISTORY_CAP = 200;
+
+/** Max scan findings kept per module in moduleStore (most recent win). */
+export const MODULE_SCAN_FINDINGS_CAP = 100;

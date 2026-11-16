@@ -6,6 +6,8 @@ import { useModuleStore } from '@/stores/moduleStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { Milestone } from '@/types/project-health';
 import { toLocalNoon } from '@/lib/roadmap-dates';
+import { tryApiFetch } from '@/lib/api-utils';
+import { readMilestoneDeadlines, invalidateMilestoneDeadlines } from '@/hooks/useMilestoneDeadlines';
 import {
   WEEK_PX, ROW_HEIGHT, HEADER_HEIGHT, LEFT_GUTTER,
 } from './constants';
@@ -16,6 +18,7 @@ export function useCalendarRoadmapView() {
   const milestones = useProjectHealthStore((s) => s.milestones);
   const summary = useProjectHealthStore((s) => s.summary);
   const fetchHealth = useProjectHealthStore((s) => s.fetchHealth);
+  const healthError = useProjectHealthStore((s) => s.error);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
   const completionLedger = useModuleStore((s) => s.checklistCompletedAt);
   const scanHistory = useEvaluatorStore((s) => s.scanHistory);
@@ -25,6 +28,10 @@ export function useCalendarRoadmapView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDate, setEditDate] = useState('');
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // What the server last confirmed: the only value a refused write may restore.
+  const settledRef = useRef<DeadlineMap>({});
   const dragRef = useRef<DragState | null>(null);
   const dragAbortRef = useRef<AbortController | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -42,10 +49,16 @@ export function useCalendarRoadmapView() {
 
   // Fetch deadlines from API
   useEffect(() => {
-    fetch('/api/milestone-deadlines')
-      .then((r) => r.json())
-      .then((j) => { if (j.success) setDeadlines(j.data); })
-      .catch(() => {});
+    void readMilestoneDeadlines().then((result) => {
+      if (result.ok) {
+        const local: DeadlineMap = {};
+        for (const [id, row] of Object.entries(result.data)) local[id] = { targetDate: row.targetDate, label: row.label ?? '' };
+        settledRef.current = local;
+        setDeadlines(local);
+      } else {
+        setLoadError(`Deadlines could not be loaded: ${result.error}`);
+      }
+    });
   }, []);
 
   // Save a deadline
@@ -58,11 +71,31 @@ export function useCalendarRoadmapView() {
       }
       return { ...prev, [milestoneId]: { targetDate, label: '' } };
     });
-    await fetch('/api/milestone-deadlines', {
+    setSaveError(null);
+    const result = await tryApiFetch('/api/milestone-deadlines', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ milestoneId, targetDate }),
-    }).catch(() => {});
+    });
+    if (result.ok) {
+      const settled = { ...settledRef.current };
+      if (targetDate) settled[milestoneId] = { targetDate, label: '' };
+      else delete settled[milestoneId];
+      settledRef.current = settled;
+      // The NBA cards hold their own read of the deadlines: tell them this one changed.
+      invalidateMilestoneDeadlines();
+      return;
+    }
+    // Revert only if this write's value is still on screen: a newer edit owns the row now.
+    setDeadlines((current) => {
+      if ((current[milestoneId]?.targetDate ?? null) !== targetDate) return current;
+      const next = { ...current };
+      const prior = settledRef.current[milestoneId];
+      if (prior) next[milestoneId] = prior;
+      else delete next[milestoneId];
+      return next;
+    });
+    setSaveError(`Deadline not saved: ${result.error}`);
   }, []);
 
   // Timeline range computation
@@ -154,7 +187,9 @@ export function useCalendarRoadmapView() {
       const drag = dragRef.current;
       if (!drag || !svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
-      const svgX = me.clientX - rect.left + svgRef.current.parentElement!.scrollLeft;
+      // The svg's rect already moves with its scroller, so clientX - rect.left is
+      // the svg coordinate; adding scrollLeft again counted the scroll twice.
+      const svgX = me.clientX - rect.left;
       const newDate = toLocalNoon(xToDate(svgX)).toISOString();
       drag.currentDate = newDate;
       setDeadlines((prev) => ({
@@ -167,7 +202,8 @@ export function useCalendarRoadmapView() {
       const drag = dragRef.current;
       if (drag) {
         // Persist the dragged-to date, not the stale value captured at start.
-        saveDeadline(drag.milestoneId, drag.currentDate);
+        // A press that never moved the marker changed nothing, so it writes nothing.
+        if (drag.currentDate !== drag.originalDate) saveDeadline(drag.milestoneId, drag.currentDate);
         dragRef.current = null;
       }
       controller.abort(); // removes both listeners via the shared signal
@@ -207,5 +243,6 @@ export function useCalendarRoadmapView() {
     saveDeadline,
     handleDragStart,
     getVariance,
+    alerts: [healthError ? `Milestones could not be computed: ${healthError}` : null, loadError, saveError].filter((m): m is string => m !== null),
   };
 }

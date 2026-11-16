@@ -1,0 +1,34 @@
+{
+  "id": "ghost-powers-2",
+  "lane": "ghost-powers",
+  "question": "Hauler ghost-tank look. Built so far: Rivet's own cutout parts scaled 2.6x (matches the 0.9 m rivet_ghost body). A plain scale-up keeps his long arms, which reach past the cops. Which direction for the tank silhouette (all keep teal = souls)?",
+  "options": [
+    {
+      "key": "A",
+      "label": "Scaled Rivet + teal ghost tint (as built, plus tint)",
+      "tradeoff": "cheapest, clearly 'Rivet grown'; inherits the long-arm read you disliked",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/ghost-powers/frames/form-hauler/king-32ppm.png",
+        "C:/Users/kazda/kiro/gtai-masters/eve/ghost-powers/frames/form-hauler/king-64ppm.png"
+      ]
+    },
+    {
+      "key": "B",
+      "label": "Bulked: wider torso, short thick arms (fore/upper lengths ~0.6x), teal tint, same parts",
+      "tradeoff": "a squat press-bot tank silhouette from existing parts and data only; frames next iteration",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/ghost-powers/frames/form-base/king-32ppm.png"
+      ]
+    },
+    {
+      "key": "C",
+      "label": "New tank art (armour plates, press head) via image_gen, on the same rig",
+      "tradeoff": "best read and canon (heavy press bot); costs an art pass and an ask before generating",
+      "frames": [
+        "C:/Users/kazda/kiro/gtai-masters/eve/ghost-powers/frames/form-base/king-32ppm.png"
+      ]
+    }
+  ],
+  "default": "B",
+  "asked": "21:24"
+}

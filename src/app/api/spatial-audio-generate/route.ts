@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { getAllDocs, getDoc } from '@/lib/level-design-db';
 import { getAudioScene, updateAudioScene, createAudioScene } from '@/lib/audio-scene-db';
 import { generateSpatialAudio } from '@/lib/spatial-audio-generator';
@@ -15,8 +15,12 @@ const EMPTY_SCENE: SceneDraft = { zones: [], emitters: [] };
  * room is kept unless its id is listed in `overwrite`.
  */
 export async function POST(req: NextRequest) {
+  // A malformed or non-object body is the caller's fault: 400, not the catch-all 500 below.
+  const parsedBody = await readJsonObject(req);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data;
+
   try {
-    const body = await req.json();
     const { action } = body;
 
     switch (action) {

@@ -8,7 +8,7 @@ import type {
   JobStatusResult,
   ImportedObject,
 } from '@/lib/blender-mcp/types';
-import type { ForgeCritique, ForgeFinishState, ForgeGateProjection, ForgeStatusResponse } from './forgeJobStatus';
+import type { ForgeCritique, ForgeFinishState, ForgeGateProjection, ForgeStatusResponse } from '@/lib/visual-gen/forgeJobStatus';
 import type { DeliveryRemedy } from '@/lib/visual-gen/delivery-remedy';
 import type { StyleDnaProfile } from '@/lib/visual-gen/style-dna-db';
 import { getOfficialProvider, getProviderById, providerExecution } from '@/lib/visual-gen/providers';

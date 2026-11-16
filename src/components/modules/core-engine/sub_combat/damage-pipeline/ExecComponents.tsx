@@ -5,13 +5,22 @@ import { OVERLAY_WHITE, withOpacity, OPACITY_2 } from '@/lib/chart-colors';
 
 /* ── CalcInput ─ Numeric input for the damage calculator ──────────────────── */
 
+/** `min`/`max` on a number input only bound the spinner; a typed value ignores them,
+ *  and a negative Armor makes the armour curve divide by zero. Clamp here. */
+function clampInput(raw: string, min?: number, max?: number): number {
+  const v = parseFloat(raw) || 0;
+  if (min !== undefined && v < min) return min;
+  if (max !== undefined && v > max) return max;
+  return v;
+}
+
 export function CalcInput({ value, onChange, step = 1, min, max, label }: {
   value: number; onChange: (v: number) => void; step?: number;
   min?: number; max?: number; label: string;
 }) {
   return (
     <input type="number" value={value}
-      onChange={e => onChange(parseFloat(e.target.value) || 0)}
+      onChange={e => onChange(clampInput(e.target.value, min, max))}
       step={step} min={min} max={max} aria-label={label}
       className="w-16 bg-surface-deep border border-border/40 rounded px-1.5 py-0.5 text-xs font-mono text-center text-text focus:outline-none focus:border-blue-500/50" />
   );
@@ -41,9 +50,11 @@ export function ExecPropRow({ name, code, codeExpanded, onToggleCode, even, chil
       <div className="flex items-center justify-between px-3 py-1 min-h-[28px]">
         <div className="flex items-center gap-1.5">
           {code && onToggleCode && (
-            <button onClick={onToggleCode}
-              className="text-text-muted hover:text-text text-xs transition-colors leading-none">
-              {codeExpanded ? '\u25BE' : '\u25B8'}
+            <button type="button" onClick={onToggleCode}
+              aria-expanded={Boolean(codeExpanded)}
+              aria-label={`Show C++ for ${name}`}
+              className="focus-ring rounded text-text-muted hover:text-text text-xs transition-colors leading-none">
+              <span aria-hidden="true">{codeExpanded ? '\u25BE' : '\u25B8'}</span>
             </button>
           )}
           <span className="text-xs font-mono text-text-muted">{name}</span>

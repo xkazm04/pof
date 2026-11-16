@@ -3,6 +3,7 @@
 import {
   ImagePlus, Wand2, Upload, X, RefreshCw, SplitSquareHorizontal, AlertCircle,
 } from 'lucide-react';
+import { useId } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { MODULE_COLORS } from '@/lib/constants';
 import { EXAMPLE_REFERENCES } from './constants';
@@ -34,14 +35,8 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
     compareMode,
     setCompareMode,
     fileInputRef,
-    overrideRoughness,
-    setOverrideRoughness,
-    overrideMetallic,
-    setOverrideMetallic,
-    overrideEmissive,
-    setOverrideEmissive,
-    overrideSurface,
-    setOverrideSurface,
+    overrides,
+    setOverride,
     effectiveAnalysis,
     handleFileSelect,
     handleDrop,
@@ -50,6 +45,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
     handleGenerate,
     handleExampleClick,
   } = useMaterialStyleTransfer(onGenerate);
+  const descriptionId = useId();
 
   return (
     <div className="w-full space-y-4">
@@ -60,14 +56,16 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           <div>
             <h3 className="text-xs font-semibold text-text">Style Transfer</h3>
             <p className="text-2xs text-text-muted">
-              Upload a reference screenshot to generate matching UE5 materials
+              Describe a look to infer UE5 material properties — an attached screenshot is kept for side-by-side reference, not analyzed
             </p>
           </div>
         </div>
         {analysis && (
           <button
+            type="button"
             onClick={() => setCompareMode(!compareMode)}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium border transition-colors ${
+            aria-pressed={compareMode}
+            className={`focus-ring flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium border transition-colors ${
               compareMode
                 ? 'bg-cyan-500/10 border-cyan-500/25 text-cyan-400'
                 : 'bg-surface border-border text-text-muted hover:text-text'
@@ -117,7 +115,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
             {/* Analysis preview (compare mode) */}
             {compareMode && analysis && (
               <div className="bg-surface-deep flex flex-col items-center justify-center p-4 min-h-[12rem]">
-                <div className="text-2xs text-text-muted mb-2 font-medium">Analyzed Properties</div>
+                <div className="text-2xs text-text-muted mb-2 font-medium">Inferred from your description</div>
                 <AnalysisMiniPreview analysis={effectiveAnalysis!} />
               </div>
             )}
@@ -130,7 +128,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           >
             <Upload className="w-8 h-8 opacity-40" aria-hidden="true" />
             <span className="text-xs font-medium">Drop a screenshot or click to upload</span>
-            <span className="text-2xs text-text-muted/60">PNG, JPG up to 10MB</span>
+            <span className="text-2xs text-text-muted">PNG, JPG up to 10MB</span>
           </button>
         )}
         <input
@@ -163,10 +161,11 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
 
       {/* Reference Description */}
       <div>
-        <label className="text-2xs font-medium text-text-muted block mb-1">
+        <label htmlFor={descriptionId} className="text-2xs font-medium text-text-muted block mb-1">
           Describe the look you want (optional with image, required without)
         </label>
         <textarea
+          id={descriptionId}
           value={referenceDescription}
           onChange={(e) => setReferenceDescription(e.target.value)}
           placeholder="e.g., Stylized fire with scrolling noise, bright orange-to-red color ramp, flickering emissive edges..."
@@ -208,7 +207,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           {isAnalyzing ? (
             <>
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              Analyzing visual properties...
+              Reading your description...
             </>
           ) : (
             <>
@@ -246,14 +245,8 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
             effectiveAnalysis={effectiveAnalysis!}
             adjustmentsOpen={adjustmentsOpen}
             setAdjustmentsOpen={setAdjustmentsOpen}
-            overrideRoughness={overrideRoughness}
-            setOverrideRoughness={setOverrideRoughness}
-            overrideMetallic={overrideMetallic}
-            setOverrideMetallic={setOverrideMetallic}
-            overrideEmissive={overrideEmissive}
-            setOverrideEmissive={setOverrideEmissive}
-            overrideSurface={overrideSurface}
-            setOverrideSurface={setOverrideSurface}
+            overrides={overrides}
+            setOverride={setOverride}
             handleAnalyze={handleAnalyze}
             isAnalyzing={isAnalyzing}
             handleGenerate={handleGenerate}

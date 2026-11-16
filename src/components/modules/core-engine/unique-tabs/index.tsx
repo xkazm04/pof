@@ -104,32 +104,3 @@ const UNIQUE_TAB_MAP: Partial<Record<SubModuleId, ExtraTab>> = {
 export function getUniqueTab(moduleId: SubModuleId): ExtraTab | null {
   return UNIQUE_TAB_MAP[moduleId] ?? null;
 }
-
-import { motion } from 'framer-motion';
-
-function ComingSoon({ name }: { name: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center py-20 gap-4"
-    >
-      <div className="relative">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-0 rounded-xl border border-dashed border-border/60"
-        />
-        <div className="w-14 h-14 rounded-xl bg-surface-deep/50 backdrop-blur-sm border border-border/40 flex items-center justify-center relative z-10 shadow-inner">
-          <Wrench className="w-6 h-6 text-text-muted opacity-70" />
-        </div>
-      </div>
-      <div className="text-center space-y-1">
-        <p className="text-base font-bold text-text tracking-wide">{name}</p>
-        <p className="text-xs text-text-muted max-w-[200px] leading-relaxed">
-          This advanced visualization is currently under construction.
-        </p>
-      </div>
-    </motion.div>
-  );
-}

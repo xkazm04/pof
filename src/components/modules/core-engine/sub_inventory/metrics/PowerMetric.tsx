@@ -1,20 +1,27 @@
 'use client';
 
-import { DUMMY_ITEMS, ACCENT } from '../_shared/data';
+import { useMemo } from 'react';
+import { ACCENT } from '../_shared/data';
+import { useInventoryItems } from '../_shared/useInventoryItems';
 import { withOpacity, OPACITY_15, OPACITY_50 } from '@/lib/chart-colors';
 
-const primaryStats = DUMMY_ITEMS
-  .map(item => item.stats[0]?.numericValue)
-  .filter((v): v is number => v != null && v > 0);
-
-const minPower = primaryStats.length > 0 ? Math.min(...primaryStats) : 0;
-const maxPower = primaryStats.length > 0 ? Math.max(...primaryStats) : 0;
-const globalMax = Math.max(...DUMMY_ITEMS.flatMap(i => i.stats.map(s => s.maxValue ?? 0)), 1);
-
-const leftPct = (minPower / globalMax) * 100;
-const widthPct = ((maxPower - minPower) / globalMax) * 100;
-
 export function PowerMetric() {
+  // The catalog store is the system of record for which items exist (not the static seed list).
+  const items = useInventoryItems();
+  const { minPower, maxPower, globalMax, leftPct, widthPct } = useMemo(() => {
+    const primaryStats = items
+      .map(item => item.stats[0]?.numericValue)
+      .filter((v): v is number => v != null && v > 0);
+    const min = primaryStats.length > 0 ? Math.min(...primaryStats) : 0;
+    const max = primaryStats.length > 0 ? Math.max(...primaryStats) : 0;
+    const gMax = Math.max(...items.flatMap(i => i.stats.map(s => s.maxValue ?? 0)), 1);
+    return {
+      minPower: min, maxPower: max, globalMax: gMax,
+      leftPct: (min / gMax) * 100,
+      widthPct: ((max - min) / gMax) * 100,
+    };
+  }, [items]);
+
   return (
     <div className="space-y-1">
       <div className="text-[10px] font-mono leading-tight">

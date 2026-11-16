@@ -4,6 +4,7 @@ import { canonProfileOf } from '@/lib/catalog/canon/profiles';
 import { useLabPipelineStore, type LabStepArtifact } from './labPipelineStore';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { resolveAccept } from './labAcceptance';
+import { contentOf } from './stepRecord';
 import {
   resolveStepAcceptance,
   serverVerdictOverlay as applyServerVerdict,
@@ -49,7 +50,9 @@ export function buildLabCheckerContext(
   canonProfile?: string,
 ): CheckerContext {
   const siblings: Record<string, Record<string, unknown>> = {};
-  for (const [step, art] of Object.entries(entitySteps ?? {})) siblings[step] = art.data;
+  // Only CONTENT is a sibling (`stepRecord`): a failure marker's empty `data` is no produce, and the
+  // server context (`headless.ts`) never sees one, so listing it would grade `{}` as produced.
+  for (const [step, art] of Object.entries(entitySteps ?? {})) if (contentOf(art)) siblings[step] = art.data;
   const base: CheckerContext = {
     catalog: catalogId,
     siblings,
@@ -57,7 +60,7 @@ export function buildLabCheckerContext(
     ...(canonProfile ? { canonProfile } : {}),
   };
   if (!resolve) return base;
-  return { ...base, siblingVerdict: (step) => siblingVerdictOf(catalogId, step, entitySteps?.[step], base, resolve) };
+  return { ...base, siblingVerdict: (step) => siblingVerdictOf(catalogId, step, contentOf(entitySteps?.[step]), base, resolve) };
 }
 
 /**
@@ -91,9 +94,6 @@ function siblingVerdictOf(
   return { status: merged.status, source };
 }
 
-/** The same context, read from the live store snapshots — for callers outside render.
- *  `verdicts` is optional: pass the catalog's judge verdicts (they are fetched, so only a
- *  React caller has them) to make `siblingVerdict` judge-aware as well as drain-aware. */
 /**
  * The canon profile of an entity as the lab knows it. Ingested entities live in the hydrated
  * draft cache (`draftEntitiesByCatalog`) with their provenance; code seeds are PoF's.
@@ -105,6 +105,9 @@ export function canonProfileInStore(catalogId: string, entityId: string): string
   return canonProfileOf(e);
 }
 
+/** The same context, read from the live store snapshots — for callers outside render.
+ *  `verdicts` is optional: pass the catalog's judge verdicts (they are fetched, so only a
+ *  React caller has them) to make `siblingVerdict` judge-aware as well as drain-aware. */
 export function labCheckerContext(catalogId: string, entityId: string, verdicts?: JudgeVerdict[]): CheckerContext {
   return buildLabCheckerContext(
     catalogId,

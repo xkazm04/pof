@@ -10,7 +10,7 @@ import {
 } from '@/lib/chart-colors';
 import type { PofTestResult, PofSnapshotDiffReport } from '@/types/pof-bridge';
 import type { SuiteRunResult } from './types';
-import { testStatusColor, testStatusIcon } from './helpers';
+import { snapshotStatusColor, testStatusColor, testStatusIcon } from './helpers';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Results Tab
@@ -22,8 +22,11 @@ interface ResultsTabProps {
   onClear: () => void;
 }
 
+/** A run's identity: new runs land at the top, so a position would point at a different run. */
+const runKey = (run: SuiteRunResult) => `${run.suiteId}:${run.startedAt}`;
+
 export function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
-  const [expandedRunIdx, setExpandedRunIdx] = useState<number | null>(history.length > 0 ? 0 : null);
+  const [expandedRunKey, setExpandedRunKey] = useState<string | null>(history.length > 0 ? runKey(history[0]) : null);
 
   if (history.length === 0 && !isRunning) {
     return (
@@ -56,25 +59,26 @@ export function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
         </button>
       </div>
 
-      {history.map((run, idx) => {
-        const isOpen = expandedRunIdx === idx;
+      {history.map((run) => {
+        const key = runKey(run);
+        const isOpen = expandedRunKey === key;
         const StatusIcon = run.status === 'passed' ? CheckCircle2 : run.status === 'failed' ? XCircle : AlertTriangle;
         const statusColor = run.status === 'passed' ? STATUS_SUCCESS : run.status === 'failed' ? STATUS_ERROR : STATUS_WARNING;
         const duration = run.finishedAt - run.startedAt;
         const passedCount = run.testResults.filter((r) => r.status === 'passed').length;
-        const totalCount = run.testResults.length;
 
         return (
-          <div key={idx} className="rounded border overflow-hidden" style={{ borderColor: `${statusColor}30` }}>
+          <div key={key} className="rounded border overflow-hidden" style={{ borderColor: `${statusColor}30` }}>
             <button
               className="flex items-center gap-2 w-full text-left px-3 py-2 hover:bg-surface-2 transition-colors"
-              onClick={() => setExpandedRunIdx(isOpen ? null : idx)}
+              onClick={() => setExpandedRunKey(isOpen ? null : key)}
+              aria-expanded={isOpen}
             >
               {isOpen ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
               <StatusIcon className="w-3.5 h-3.5" style={{ color: statusColor }} />
               <span className="text-xs font-medium text-text flex-1">{run.suiteName}</span>
               <span className="text-xs font-mono" style={{ color: statusColor }}>
-                {passedCount}/{totalCount} passed
+                {passedCount}/{run.expectedCount} passed
               </span>
               <span className="text-xs text-text-muted">{(duration / 1000).toFixed(1)}s</span>
             </button>
@@ -110,6 +114,7 @@ function TestResultCard({ result }: { result: PofTestResult }) {
       <button
         className="flex items-center gap-2 w-full text-left px-2.5 py-1.5"
         onClick={() => setExpanded((p) => !p)}
+        aria-expanded={expanded}
       >
         {React.createElement(iconType, {
           className: `w-3.5 h-3.5 shrink-0 ${result.status === 'running' ? 'animate-spin' : ''}`,
@@ -138,9 +143,9 @@ function TestResultCard({ result }: { result: PofTestResult }) {
                 <XCircle className="w-2.5 h-2.5 shrink-0" style={{ color: STATUS_ERROR }} />
               )}
               <span className="text-text-muted truncate">{a.description}</span>
-              {a.status === 'failed' && a.failureReason && (
-                <span className="ml-auto shrink-0" style={{ color: STATUS_ERROR }}>
-                  {a.actual} (expected {a.expected})
+              {a.status === 'failed' && (
+                <span className="ml-auto min-w-0 truncate" style={{ color: STATUS_ERROR }} title={a.failureReason}>
+                  {a.actual} (expected {a.expected}){a.failureReason ? ` - ${a.failureReason}` : ''}
                 </span>
               )}
             </div>
@@ -177,6 +182,7 @@ function TestResultCard({ result }: { result: PofTestResult }) {
 
 function SnapshotSummaryRow({ report }: { report: PofSnapshotDiffReport }) {
   const color = report.overallStatus === 'passed' ? STATUS_SUCCESS : STATUS_ERROR;
+  const notPassed = report.results.filter((r) => r.status !== 'passed');
   return (
     <div className="rounded px-2.5 py-1.5" style={{ background: `${color}${OPACITY_8}` }}>
       <div className="flex items-center gap-2 text-xs">
@@ -186,15 +192,15 @@ function SnapshotSummaryRow({ report }: { report: PofSnapshotDiffReport }) {
           {report.summary.passed}/{report.summary.totalPresets} passed
         </span>
       </div>
-      {report.results.filter((r) => r.status === 'failed').length > 0 && (
+      {notPassed.length > 0 && (
         <div className="mt-1 space-y-0.5">
-          {report.results
-            .filter((r) => r.status === 'failed')
-            .map((r) => (
-              <div key={r.presetId} className="text-xs pl-5" style={{ color: STATUS_ERROR }}>
-                {r.presetName}: {r.diffPercentage.toFixed(2)}% diff ({r.diffPixelCount} px)
-              </div>
-            ))}
+          {notPassed.map((r) => (
+            <div key={r.presetId} className="text-xs pl-5" style={{ color: snapshotStatusColor(r.status) }}>
+              {r.presetName}: {r.status === 'failed'
+                ? `${r.diffPercentage.toFixed(2)}% diff (${r.diffPixelCount} px)`
+                : r.status === 'no-baseline' ? 'no baseline' : 'resolution mismatch'}
+            </div>
+          ))}
         </div>
       )}
     </div>

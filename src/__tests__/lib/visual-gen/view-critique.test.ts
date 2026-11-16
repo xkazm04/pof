@@ -80,6 +80,13 @@ describe('parseViewCritiqueReply', () => {
     expect(r.severity).toBe(0);
   });
 
+  it('reads a punctuated none sentinel as no defects', () => {
+    for (const body of ['None.', 'none!', 'NONE.']) {
+      const r = parseViewCritiqueReply(`DEFECTS=${body}; SEVERITY=0`);
+      expect(r).toEqual({ ok: true, defects: [], severity: 0 });
+    }
+  });
+
   it('survives the model wrapping its answer in prose', () => {
     const r = parseViewCritiqueReply('Looking at this view I can see issues.\nDEFECTS=hole in the mesh; SEVERITY=2\nHope that helps!');
     expect(r.ok).toBe(true);
@@ -94,7 +101,8 @@ describe('parseViewCritiqueReply', () => {
 
   it('clamps a severity the model pushed out of range', () => {
     expect(parseViewCritiqueReply('DEFECTS=x; SEVERITY=9').severity).toBe(SEVERITY_MAX);
-    expect(parseViewCritiqueReply('DEFECTS=x; SEVERITY=-4').severity).toBe(0);
+    // A negative severity is off the scale, not a clean view: refusing it keeps it out of the score.
+    expect(parseViewCritiqueReply('DEFECTS=x; SEVERITY=-4').ok).toBe(false);
   });
 
   it('rejects a non-numeric severity rather than defaulting it to clean', () => {

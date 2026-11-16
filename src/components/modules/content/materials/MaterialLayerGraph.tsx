@@ -164,10 +164,13 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
 
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={isRunning && !isActive}
+      // A locked node swallows the click; say so instead of announcing an action.
+      aria-disabled={isLocked || undefined}
       className={`
-        relative w-full rounded-xl text-left transition-all duration-300 group overflow-hidden
+        focus-ring relative w-full rounded-xl text-left transition-all duration-300 group overflow-hidden
         ${isCompleted
           ? 'bg-[#03030a] border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.1),inset_0_0_10px_rgba(16,185,129,0.05)]'
           : isLocked

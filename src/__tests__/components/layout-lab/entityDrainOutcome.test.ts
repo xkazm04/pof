@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { entityDrainOutcome } from '@/components/layout-lab/entityDrainOutcome';
 import type { DrainSummary } from '@/lib/test-gate-runner/types';
+const EV = { kind: 'scenario' as const, at: '2026-01-01T00:00:00.000Z' };
 
 const steps = ['Concept', 'Test Gate'];
 const summary = (over: Partial<DrainSummary> = {}): DrainSummary => ({
@@ -12,7 +13,7 @@ describe('entityDrainOutcome — the per-entity coach drain reports what happene
   it('ok: a failed gate carries its own reason and the jump index in THIS entity\'s step list', () => {
     const out = entityDrainOutcome(steps, {
       kind: 'ok',
-      summary: summary({ ran: 1, failed: 1, results: [{ job: job('Test Gate'), verdict: { status: 'fail', detail: 'X' } }] }),
+      summary: summary({ ran: 1, failed: 1, results: [{ job: job('Test Gate'), verdict: { status: 'fail', detail: 'X', evidence: EV } }] }),
     });
     expect(out).toMatchObject({ state: 'ran', failed: 1, fails: [{ step: 'Test Gate', index: 1, reason: 'X' }] });
   });
@@ -44,7 +45,7 @@ describe('entityDrainOutcome — the per-entity coach drain reports what happene
   it('ok with screenshots: the frames are carried verbatim for DrainFrameLinks', () => {
     const out = entityDrainOutcome(steps, {
       kind: 'ok',
-      summary: summary({ ran: 1, passed: 1, screenshots: ['gate-a.png'], results: [{ job: job('Test Gate'), verdict: { status: 'pass', detail: 'ok' } }] }),
+      summary: summary({ ran: 1, passed: 1, screenshots: ['gate-a.png'], results: [{ job: job('Test Gate'), verdict: { status: 'pass', detail: 'ok', evidence: EV } }] }),
     });
     expect(out.frames).toEqual(['gate-a.png']);
   });

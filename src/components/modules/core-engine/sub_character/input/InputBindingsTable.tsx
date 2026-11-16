@@ -57,7 +57,7 @@ export function InputBindingsTable({ moduleId, featureMap }: InputBindingsTableP
   // the capture when this pane is hidden — a half-finished rebind in a hidden
   // pane never swallows the next keystroke app-wide.
   useCaptureNext(rebindingAction !== null, (e) => {
-    if (rebindingAction !== null && e.key !== 'Escape') setBindingOverride(rebindingAction, normalizeKeyEvent(e.key));
+    if (rebindingAction !== null && e.key !== 'Escape') setBindingOverride(rebindingAction, normalizeKeyEvent(e.key, e.code));
     setRebindingAction(null);
   });
 

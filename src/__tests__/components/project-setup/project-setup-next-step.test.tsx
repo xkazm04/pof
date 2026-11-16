@@ -18,6 +18,7 @@ const { sendPromptMock, scanResult } = vi.hoisted(() => ({
       hasProject: false,
       okCount: 0,
       missingToolCount: 0,
+      projectReadError: null as string | null,
     },
   },
 }));
@@ -55,6 +56,7 @@ beforeEach(() => {
     hasProject: false,
     okCount: 0,
     missingToolCount: 0,
+    projectReadError: null,
   });
   useProjectStore.setState({ projectPath: 'C:/proj/PoF', projectName: 'PoF', ueVersion: '5.7.3' });
 });
@@ -119,6 +121,101 @@ describe('ProjectSetupModule next-step banner', () => {
     render(<ProjectSetupModule />);
     const buildBtn = screen.getByTestId('pof-setup-wizard-build-verify-btn');
     expect(buildBtn.closest('.opacity-50')).not.toBeNull();
+  });
+
+  it('offers no Create Project when the project folder could not be read', () => {
+    setScan({ missingToolCount: 0, hasProject: false, projectReadError: 'Cannot read directory (EPERM)' });
+    render(<ProjectSetupModule />);
+    expect(screen.queryByTestId('pof-setup-next-step-banner')).toBeNull();
+    expect(screen.queryByTestId('pof-setup-wizard-create-project-btn')).toBeNull();
+    expect(screen.getByTestId('pof-setup-project-read-error').textContent).toContain('EPERM');
+  });
+
+  it('claims nothing before the first scan result arrives', () => {
+    setScan({ scanning: true, scanState: 'scanning', checklist: [], hasProject: false });
+    render(<ProjectSetupModule />);
+    expect(screen.queryByTestId('pof-setup-next-step-banner')).toBeNull();
+    expect(screen.queryByTestId('pof-setup-wizard-create-project-btn')).toBeNull();
+  });
+
+  it('disables Create Project while a re-scan may still contradict the stale checklist', () => {
+    setScan({
+      scanning: true,
+      scanState: 'scanning',
+      hasProject: false,
+      checklist: [{ id: 'uproject', label: 'UE Project', ok: false, detail: 'No .uproject found' }],
+    });
+    render(<ProjectSetupModule />);
+    expect((screen.getByTestId('pof-setup-next-step-cta') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('pof-setup-wizard-create-project-btn') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('leaves reference panels at full strength in the steady state', () => {
+    setScan({
+      missingToolCount: 0,
+      hasProject: true,
+      projectFiles: ['C:/proj/PoF/PoF.uproject'],
+      checklist: [{ id: 'uproject', label: 'UE Project', ok: true, detail: 'PoF.uproject' }],
+    });
+    render(<ProjectSetupModule />);
+    expect(screen.getByText('Project Files').closest('.opacity-50')).toBeNull();
+  });
+
+  it('still dims reference panels while a setup step is pending', () => {
+    setScan({
+      missingToolCount: 1,
+      hasProject: true,
+      projectFiles: ['C:/proj/PoF/PoF.uproject'],
+      checklist: [{ id: 'uproject', label: 'UE Project', ok: true, detail: 'PoF.uproject' }],
+    });
+    render(<ProjectSetupModule />);
+    expect(screen.getByText('Project Files').closest('.opacity-50')).not.toBeNull();
+  });
+
+  it('says why when the install plan could not be fetched', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ success: false, error: 'winget probe failed' }),
+      text: () => Promise.resolve(''),
+    }) as unknown as typeof fetch;
+    setScan({ missingToolCount: 2, hasProject: false });
+    render(<ProjectSetupModule />);
+
+    fireEvent.click(screen.getByTestId('pof-setup-next-step-cta'));
+    await waitFor(() => expect(screen.getByTestId('pof-setup-install-error').textContent).toContain('winget probe failed'));
+    expect(sendPromptMock).not.toHaveBeenCalled();
+  });
+
+  it('re-scans when the server finds nothing left to install', async () => {
+    mockFetch({ body: { success: true, data: { allInstalled: true, prompt: '' } } });
+    const scan = vi.fn();
+    setScan({ missingToolCount: 2, hasProject: false, scan });
+    render(<ProjectSetupModule />);
+
+    fireEvent.click(screen.getByTestId('pof-setup-next-step-cta'));
+    await waitFor(() => expect(scan).toHaveBeenCalledTimes(1));
+    expect(sendPromptMock).not.toHaveBeenCalled();
+  });
+
+  it('dispatches one install run for a double click while the plan is being fetched', async () => {
+    let release: (v: unknown) => void = () => {};
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise((r) => { release = r; })) as unknown as typeof fetch;
+    setScan({ missingToolCount: 2, hasProject: false });
+    render(<ProjectSetupModule />);
+
+    const cta = screen.getByTestId('pof-setup-next-step-cta');
+    fireEvent.click(cta);
+    fireEvent.click(cta);
+    release({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, data: { allInstalled: false, prompt: 'install' } }),
+      text: () => Promise.resolve(''),
+    });
+    await waitFor(() => expect(sendPromptMock).toHaveBeenCalled());
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(sendPromptMock).toHaveBeenCalledTimes(1);
   });
 
   it('triggers a tooling fetch when the Install Tools CTA is clicked', async () => {

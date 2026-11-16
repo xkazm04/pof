@@ -1,0 +1,97 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3775b0ad-bf8f-4a20-ae08-cfd925444fa2",
+ "subject": "eval-harness",
+ "evaluatedAt": "2026-11-04T00:25:49.908103+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "game-design-studio-api",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 The batch feature review, an LLM judging each module's implementation whose quality_score and status feed the review-snapshot trend, is spawned with no model/effort option, so the judge is whatever the CLI session default is and trend points shift when that default changes; the model policy maps feature-review to judge-content but this spawn bypasses it.",
+   "techniques": [
+    {
+     "technique": "judge-stability",
+     "verdict": "deviation",
+     "evidence": "src/app/api/feature-matrix/batch-review/route.ts:56 StartExecutionOptions has model/effort fields; only enableMcp and attribution are passed, so the review judge is unpinned."
+    },
+    {
+     "technique": "comparison-modes",
+     "verdict": "deviation",
+     "evidence": "src/app/api/feature-matrix/history/route.ts:7 Absolute-score trend served from review_snapshots, whose schema (src/lib/db.ts:141) carries counts and avg_quality but no judge model, prompt or rubric version, so an instrument change is not a marked discontinuity."
+    },
+    {
+     "technique": "eval-economics",
+     "verdict": "conformant",
+     "evidence": "src/app/api/feature-matrix/batch-review/route.ts:134 One batch at a time, modules run serially and can be scoped to the stale set, which caps fan-out; no mock mode was seen here."
+    }
+   ]
+  },
+  {
+   "context": "module-cli-orchestration-hooks",
+   "subject": "eval-harness",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/hooks/useModuleCLI.ts:183 Module feature reviews (a model judging implementation, whose deltas the hooks surface from review snapshots) are pinned only by task class, and the policy's model type admits only family aliases (haiku/sonnet/opus/fable), so the judge can silently upgrade under a stable trend line.",
+   "techniques": [
+    {
+     "technique": "judge-stability",
+     "verdict": "deviation",
+     "evidence": "src/hooks/useModuleCLI.ts:183 feature-review resolves to judge-content = 'opus' (src/lib/model-policy.ts:60), an alias rather than a versioned model; the technique requires never an alias that silently upgrades."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "eval-harness",
+   "context": "step-shared-primitives",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "eval-harness",
+   "context": "catalog-browser-ui",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-04T00:25:49.908103+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "comparison-modes",
+    "eval-economics",
+    "judge-stability"
+   ],
+   "deviations": 1,
+   "context": "game-design-studio-api",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-04T00:25:49.908103+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "eval-harness"
+   ],
+   "techniques": [
+    "judge-stability"
+   ],
+   "deviations": 1,
+   "context": "module-cli-orchestration-hooks",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

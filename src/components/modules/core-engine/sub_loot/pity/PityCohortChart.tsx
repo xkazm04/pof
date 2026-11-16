@@ -19,7 +19,10 @@ export function PityCohortChart({ rate, threshold, color }: PityCohortChartProps
 
   const view = useMemo(() => {
     if (!result) return null;
+    // The overlay must describe the cohort on screen: use the inputs it was SIMULATED
+    // with, not the live props (they lead the result by the debounce while pending).
     const { pity } = result;
+    const { rate, threshold } = pity;
     const max = Math.max(1, pity.kills[pity.kills.length - 1] ?? 1);
     const binW = Math.max(1, Math.ceil(max / BINS));
     const nBins = Math.ceil(max / binW);
@@ -35,19 +38,21 @@ export function PityCohortChart({ rate, threshold, color }: PityCohortChartProps
       return m * pity.kills.length;
     });
     const peak = Math.max(1, ...counts, ...analytic);
-    return { max, nBins, counts, analytic, peak };
-  }, [result, rate, threshold]);
+    // ONE x domain for bars, markers and ticks: the bars cover nBins*binW kills, not max.
+    return { max, domain: nBins * binW, nBins, counts, analytic, peak };
+  }, [result]);
 
   if (!result || !view) {
     return <div className="mt-2 text-2xs font-mono text-text-muted">Simulating 5,000 players...</div>;
   }
 
-  const x = (kill: number) => LEFT + (kill / view.max) * (RIGHT - LEFT);
+  const x = (kill: number) => LEFT + (kill / view.domain) * (RIGHT - LEFT);
   const y = (c: number) => BASE - (c / view.peak) * (BASE - TOP);
   const bw = (RIGHT - LEFT) / view.nBins;
   const [p50, p95, p99] = result.percentiles;
   const { benefit, drift, noPity } = result;
   const [noP99] = cohortPercentiles(noPity.kills, [99]);
+  const simThreshold = result.pity.threshold;
 
   return (
     <div className="mt-2 relative bg-surface-deep/30 rounded-lg p-2" style={{ opacity: pending ? 0.6 : 1 }}>
@@ -74,7 +79,7 @@ export function PityCohortChart({ rate, threshold, color }: PityCohortChartProps
           </g>
         ))}
         {[0, 0.5, 1].map((f) => (
-          <text key={f} x={x(view.max * f)} y={H - 6} textAnchor="middle" className="text-xs font-mono" fill="var(--text-muted)">{Math.round(view.max * f)}</text>
+          <text key={f} x={x(view.domain * f)} y={H - 6} textAnchor="middle" className="text-xs font-mono" fill="var(--text-muted)">{Math.round(view.domain * f)}</text>
         ))}
       </svg>
       <div className="flex flex-wrap gap-3 mt-1 text-2xs font-mono text-text-muted">
@@ -84,11 +89,11 @@ export function PityCohortChart({ rate, threshold, color }: PityCohortChartProps
           {`P95 sim ${drift.observedP95 ?? '-'} vs analytic ${drift.analyticP95}${drift.ok ? '' : ' (drift)'}`}
         </span>
       </div>
-      {threshold !== null && (
+      {simThreshold !== null && (
         <div className="mt-1 text-2xs font-mono text-text-muted">
           {benefit.playersHelpedPct < 1
-            ? `Pity @ ${threshold} is above the no-pity P99 (${noP99}): under 1% of players ever reach it.`
-            : `Pity @ ${threshold} helps ${benefit.playersHelpedPct.toFixed(1)}% of players; P99 ${benefit.p99Saved} kills shorter, worst case ${benefit.worstCaseSaved} shorter.`}
+            ? `Pity @ ${simThreshold} is above the no-pity P99 (${noP99}): under 1% of players ever reach it.`
+            : `Pity @ ${simThreshold} helps ${benefit.playersHelpedPct.toFixed(1)}% of players; P99 ${benefit.p99Saved} kills shorter, worst case ${benefit.worstCaseSaved} shorter.`}
         </div>
       )}
       {result.pity.capped && (

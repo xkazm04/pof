@@ -83,13 +83,17 @@ function computeModuleHealth(
 function generateQualityHistory(scanHistory: EvaluatorReport[]): QualityPoint[] {
   // No recorded scan → no quality series. The trend is then 'unknown' (fewer
   // than two points), never a simulated "improving".
-  return scanHistory.map((scan, i) => ({
+  // A scan whose timestamp is not a finite instant is skipped, not thrown on:
+  // one malformed persisted record must not fail the whole health summary.
+  return scanHistory
+    .filter((scan) => Number.isFinite(new Date(scan.timestamp).getTime()))
+    .map((scan, i) => ({
     timestamp: new Date(scan.timestamp).toISOString(),
     label: `Scan ${i + 1}`,
     overallScore: scan.overallScore,
     criticalIssues: scan.recommendations.filter((r) => r.priority === 'critical').length,
     highIssues: scan.recommendations.filter((r) => r.priority === 'high').length,
-  }));
+    }));
 }
 
 /* ---- Milestone predictions --------------------------------------- */

@@ -20,6 +20,8 @@ export interface ToolchainRow {
   requirement: string;
   installUrl: string;
   installLabel: string;
+  /** Required runtime major version, for rows that pin one (.NET). */
+  version?: string;
   /** VS installer components that provide this row (installed via vs_installer modify). */
   vsComponents?: string[];
 }
@@ -27,14 +29,15 @@ export interface ToolchainRow {
 export interface DetectedTool { id: string; name: string; ok: boolean; detail: string; path?: string }
 export interface DetectedEngine { version: string; path: string }
 /** The checklist shape this module reads (structurally the useProjectScan ChecklistItem). */
-export interface RequirementItem { id: string; ok: boolean; subDetail?: string }
+export interface RequirementItem { id: string; ok: boolean; subDetail?: string; unknown?: boolean }
 
 const VS_WORKLOAD = 'Microsoft.VisualStudio.Workload.NativeDesktopDevelopment';
 const VS_VC_TOOLS = 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64';
 const VS_WIN_SDK = 'Microsoft.VisualStudio.Component.Windows11SDK.22621';
 
 const VS_INSTALL = `winget install Microsoft.VisualStudio.2022.Community --silent --override "--add ${VS_WORKLOAD} --add ${VS_VC_TOOLS} --add ${VS_WIN_SDK} --includeRecommended"`;
-const DOTNET_INSTALL = 'winget install Microsoft.DotNet.Runtime.8 --silent';
+const DOTNET_MAJOR = '8';
+const DOTNET_INSTALL = `winget install Microsoft.DotNet.Runtime.${DOTNET_MAJOR} --silent`;
 const LAUNCHER_INSTALL = 'winget install EpicGames.EpicGamesLauncher --silent';
 
 export const TOOLCHAIN: readonly ToolchainRow[] = [
@@ -48,8 +51,9 @@ export const TOOLCHAIN: readonly ToolchainRow[] = [
   { id: 'wsdk', checklistId: 'tool-wsdk', name: 'Windows SDK', requirement: 'Windows SDK',
     installUrl: 'https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/', installLabel: 'Get Windows SDK',
     vsComponents: [VS_WIN_SDK] },
-  { id: 'dotnet', checklistId: 'tool-dotnet', name: '.NET 8.0', requirement: '.NET 8.0 Runtime',
-    installUrl: 'https://dotnet.microsoft.com/en-us/download/dotnet/8.0', installLabel: 'Get .NET 8.0 Runtime' },
+  { id: 'dotnet', checklistId: 'tool-dotnet', name: `.NET ${DOTNET_MAJOR}.0`, requirement: `.NET ${DOTNET_MAJOR}.0 Runtime`,
+    installUrl: `https://dotnet.microsoft.com/en-us/download/dotnet/${DOTNET_MAJOR}.0`, installLabel: `Get .NET ${DOTNET_MAJOR}.0 Runtime`,
+    version: DOTNET_MAJOR },
 ];
 
 const BY_ID = new Map<string, ToolchainRow>(TOOLCHAIN.map((r) => [r.id, r]));
@@ -79,9 +83,9 @@ export function installCommand(id: ToolId, vsPath?: string): string {
   return LAUNCHER_INSTALL;
 }
 
-/** Checklist ids of the requirements that are present and failing, in checklist order. */
+/** Checklist ids of the requirements that are present and failing, in checklist order. An unknown row (probe failed) is not missing. */
 export function missingRequirements(checklist: readonly RequirementItem[]): string[] {
-  return checklist.filter((c) => !c.ok && BY_CHECKLIST_ID.has(c.id)).map((c) => c.id);
+  return checklist.filter((c) => !c.ok && !c.unknown && BY_CHECKLIST_ID.has(c.id)).map((c) => c.id);
 }
 
 // ── Bootstrap plan (the "Fix N Missing" CLI task) ──

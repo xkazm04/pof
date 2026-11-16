@@ -6,7 +6,7 @@ import {
 import { apiSuccess, apiError, withRoute } from '@/lib/api-utils';
 import { FEATURE_STATUSES, FEATURE_SOURCES } from '@/types/feature-matrix';
 import type { FeatureSource, FeatureStatus } from '@/types/feature-matrix';
-import type { SubModuleId } from '@/types/modules';
+import { SUB_MODULE_IDS, type SubModuleId } from '@/types/modules';
 
 /** Resolve the provenance a POST claims. An unrecognized (or absent) `source` must
  *  never be able to claim a stronger path than it can prove, so it falls back to the
@@ -28,6 +28,12 @@ function resolvePostSource(raw: unknown, seedOnly: boolean): FeatureSource {
  */
 function resolveProjectId(source: { get(key: string): string | null }): string {
   return normalizeProjectId(source.get('projectId') ?? source.get('projectPath'));
+}
+
+/** `moduleId` is a closed enum — the same guard `/import` applies (be772ed6). An id
+ *  outside SUB_MODULE_IDS wrote rows under a module nothing in the app reads. */
+function isKnownModuleId(raw: unknown): raw is SubModuleId {
+  return typeof raw === 'string' && (SUB_MODULE_IDS as readonly string[]).includes(raw);
 }
 
 function bodyProjectId(body: Record<string, unknown>): string {
@@ -52,11 +58,18 @@ export const GET = withRoute(async (request: NextRequest) => {
 }, 'Failed to read features');
 
 export const POST = withRoute(async (request: NextRequest) => {
-  const body = await request.json();
+  const body = await request.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
   const { moduleId, features } = body;
 
   if (!moduleId || !Array.isArray(features)) {
     return apiError('moduleId and features array required', 400);
+  }
+  if (!isKnownModuleId(moduleId)) {
+    return apiError(`Unknown moduleId: ${String(moduleId)}`, 400);
   }
 
   // upsertFeatures is a FULL upsert — undefined required columns crash in the
@@ -67,13 +80,31 @@ export const POST = withRoute(async (request: NextRequest) => {
       typeof f?.featureName !== 'string' || !f.featureName ||
       typeof f.category !== 'string' ||
       typeof f.description !== 'string' ||
+      // Elements too, matching the import route's z.array(z.string()): a non-string
+      // element used to be stored and then silently dropped on read.
       !Array.isArray(f.filePaths) ||
+      !f.filePaths.every((p: unknown) => typeof p === 'string') ||
       typeof f.reviewNotes !== 'string'
     ) {
       return apiError(
         `features[] rows must be complete upsert rows (featureName, category, description, filePaths[], reviewNotes); got a partial row for "${f?.featureName ?? '?'}" — use PATCH for status-only updates`,
         400,
       );
+    }
+    // A closed enum, as on PATCH. The DB layer would coerce an unrecognized status to
+    // 'unknown', so a typo silently overwrote a real verdict with "never evaluated".
+    if (!(FEATURE_STATUSES as readonly unknown[]).includes(f.status)) {
+      return apiError(`Invalid status for "${f.featureName}": ${String(f.status)}`, 400);
+    }
+    // Optional fields: absent/null is fine, a present value must have the stored type. An
+    // object nextSteps/lastReviewedAt reached the SQLite bind as a 500, and a non-numeric
+    // qualityScore was silently stored as null.
+    const wrongOptional =
+      (f.qualityScore != null && (typeof f.qualityScore !== 'number' || Number.isNaN(f.qualityScore)) && 'qualityScore') ||
+      (f.nextSteps != null && typeof f.nextSteps !== 'string' && 'nextSteps') ||
+      (f.lastReviewedAt != null && typeof f.lastReviewedAt !== 'string' && 'lastReviewedAt');
+    if (wrongOptional) {
+      return apiError(`Invalid ${wrongOptional} for "${f.featureName}": expected ${wrongOptional === 'qualityScore' ? 'a number' : 'a string'}`, 400);
     }
   }
 
@@ -108,7 +139,11 @@ export const POST = withRoute(async (request: NextRequest) => {
  * instead of a silent `{ updated: true }` over an UPDATE that touched nothing.
  */
 export const PATCH = withRoute(async (request: NextRequest) => {
-  const body = await request.json();
+  const body = await request.json().catch(() => undefined);
+  // A body that is not a JSON object is the caller's error (400), not a server fault.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
+  }
   const { moduleId, featureName, status } = body as {
     moduleId?: string;
     featureName?: string;
@@ -117,6 +152,10 @@ export const PATCH = withRoute(async (request: NextRequest) => {
 
   if (!moduleId || !featureName || !status) {
     return apiError('moduleId, featureName, and status are required', 400);
+  }
+
+  if (!isKnownModuleId(moduleId)) {
+    return apiError(`Unknown moduleId: ${moduleId}`, 400);
   }
 
   if (!FEATURE_STATUSES.includes(status)) {

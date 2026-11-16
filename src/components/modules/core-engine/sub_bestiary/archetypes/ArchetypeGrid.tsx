@@ -77,6 +77,9 @@ export function ArchetypeGrid({
                   onClick={(e) => { e.stopPropagation(); toggleCompare(archetype.id); }}
                   className="absolute top-1 right-1 z-30 w-5 h-5 rounded-full border text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
                   title={compareIds.includes(archetype.id) ? 'Remove from comparison' : 'Add to comparison'}
+                  aria-label={compareIds.includes(archetype.id)
+                    ? `Remove ${archetype.label} from comparison` : `Add ${archetype.label} to comparison`}
+                  aria-pressed={compareIds.includes(archetype.id)}
                   style={compareIds.includes(archetype.id)
                     ? { backgroundColor: withOpacity(archetype.color, OPACITY_25), borderColor: withOpacity(archetype.color, OPACITY_37), color: archetype.color }
                     : { backgroundColor: 'var(--surface-deep)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
@@ -94,14 +97,14 @@ export function ArchetypeGrid({
       {/* Pagination controls (flat mode only) */}
       {groupBy === 'none' && totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 mt-4">
-          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} aria-label="Previous page"
             className="p-1.5 rounded border border-border/30 bg-surface disabled:opacity-30 hover:bg-surface-hover transition-colors cursor-pointer disabled:cursor-default">
             <ChevronLeft className="w-4 h-4 text-text-muted" />
           </button>
           <span className="text-xs font-mono text-text-muted">
             Page {page + 1} / {totalPages} &middot; {filteredArchetypes.length} enemies
           </span>
-          <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+          <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} aria-label="Next page"
             className="p-1.5 rounded border border-border/30 bg-surface disabled:opacity-30 hover:bg-surface-hover transition-colors cursor-pointer disabled:cursor-default">
             <ChevronRight className="w-4 h-4 text-text-muted" />
           </button>

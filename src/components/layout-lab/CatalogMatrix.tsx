@@ -6,6 +6,7 @@ import { useReducedMotion } from 'framer-motion';
 import { useCachedArtifacts, retryArtifacts } from './labArtifactCache';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useLabPipelineStore } from './labPipelineStore';
+import { useCatalogStore } from '@/stores/catalogStore';
 import { useLabDetail } from './useLabCatalogData';
 import { resolveCatalogSteps } from './catalogManifest';
 import { buildMatrixRows } from './matrixRows';
@@ -88,10 +89,12 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
 
   // Same judge bridge the rail and the step banner apply — one cached fetch per catalog.
   const verdicts = useCatalogJudgeVerdicts(catalogId);
+  // The live entity index the rail's CheckerContext reads, so link-aware cells grade like the rail.
+  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
 
   const rows = useMemo(
-    () => buildMatrixRows(catalogId, detail?.entities ?? [], byEntity, localByEntity, steps, verdicts),
-    [catalogId, detail?.entities, byEntity, localByEntity, steps, verdicts],
+    () => buildMatrixRows(catalogId, detail?.entities ?? [], byEntity, localByEntity, steps, verdicts, entitiesByCatalog),
+    [catalogId, detail?.entities, byEntity, localByEntity, steps, verdicts, entitiesByCatalog],
   );
 
   // Triage: the board is ranked by the coach ladder then entity id (never storage order) and a
@@ -138,7 +141,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
   const th = useMemo<React.CSSProperties>(() => ({
     position: 'sticky', top: 0, zIndex: 2, background: t.bg,
     padding: '8px 6px', borderBottom: `2px solid ${t.line}`, color: t.muted,
-    fontSize: 12, fontWeight: 600, textAlign: 'center',
+    fontSize: 'var(--lab-fs-xs)', fontWeight: 600, textAlign: 'center',
   }), [t]);
   const stickyLeft = useMemo<React.CSSProperties>(() => ({
     position: 'sticky', left: 0, zIndex: 1, background: t.bg, textAlign: 'left',
@@ -159,12 +162,12 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
       {/* ── Header strip: catalog picker + catalog-wide summary ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '16px 28px', borderBottom: `1px solid ${t.line}` }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label htmlFor="matrix-catalog" className={t.fontMono} style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.muted }}>Catalog</label>
+          <label htmlFor="matrix-catalog" className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', letterSpacing: '0.12em', textTransform: 'uppercase', color: t.muted }}>Catalog</label>
           <select id="matrix-catalog" value={catalogId} onChange={(e) => onSelectCatalog(e.target.value)} className={t.fontMono}
             style={{ fontSize: 15, padding: '6px 10px', background: t.panel, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, cursor: 'pointer' }}>
             {groups.map((g) => (
               <optgroup key={g.category} label={g.category}>
-                {g.catalogs.map((c) => <option key={c.catalogId} value={c.catalogId}>{c.label} ({c.total})</option>)}
+                {g.catalogs.map((c) => <option key={c.catalogId} value={c.catalogId}>{c.label} ({c.total}){c.notInGame ? ` — not in ${c.notInGame}` : ''}</option>)}
               </optgroup>
             ))}
           </select>
@@ -191,7 +194,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
       {/* ── Numbered legend so the column numbers decode to step names ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 28px', borderBottom: `1px solid ${t.line}` }}>
         {steps.map((s, i) => (
-          <span key={s} className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
+          <span key={s} className={t.fontMono} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted }}>
             <span style={{ color: t.ink, fontWeight: 600 }}>{pad2(i + 1)}</span> {s}{i < steps.length - 1 ? ' ·' : ''}
           </span>
         ))}
@@ -208,7 +211,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
               message={`Couldn't load this catalog's status: ${error}`}
               onRetry={() => retryArtifacts(catalogId)}
             />
-            <p style={{ fontSize: 13, color: t.muted, margin: '10px 0 0' }}>
+            <p style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, margin: '10px 0 0' }}>
               Statuses are unknown until this loads — steps may already be produced on the server.
             </p>
           </div>
@@ -217,7 +220,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
         ) : rows.length === 0 ? (
           <p style={{ fontSize: 15, color: t.muted, padding: '24px 0' }}>No entities in this catalog yet.</p>
         ) : (
-          <table className={t.fontMono} style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: 13 }}>
+          <table className={t.fontMono} style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: 'var(--lab-fs-xs)' }}>
             <thead>
               <tr>
                 <th style={{ ...th, ...stickyLeft, zIndex: 3 }}>Entity · progress</th>
@@ -244,7 +247,7 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
                     <button onClick={() => onOpenStep(catalogId, r.id, 0)} className={t.fontBody}
                       style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 'none', color: t.text }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: t.inkDeep, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
-                      <span data-testid={`matrix-progress-${r.id}`} style={{ fontSize: 12, color: t.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span data-testid={`matrix-progress-${r.id}`} style={{ fontSize: 'var(--lab-fs-xs)', color: t.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ color: r.rollup.configComplete ? t.ok : t.muted }}>{r.rollup.done}/{r.rollup.total} done</span>
                         {r.rollup.configComplete && <span style={{ color: t.ok }} title="Every step pass / L3-L4 deferred">✓ complete</span>}
                         {r.blockers.length > 0 && (
@@ -266,6 +269,9 @@ export function CatalogMatrix({ t, groups, catalogId, onSelectCatalog, onOpenSte
                       return (
                         <td key={s} style={stepTd}>
                           <span data-cell={`${r.id}::${s}`} data-status="not-applicable"
+                            // A generic <span> may not carry aria-label (AT ignores it); role=img
+                            // makes the "·" an announced, named glyph like the button cells.
+                            role="img"
                             aria-label={`${r.name} · ${s}: not part of this entity's pipeline`}
                             title={`${r.name} · ${s}: not part of this entity's pipeline (canon profile)`}
                             style={{ color: t.muted }}>·</span>

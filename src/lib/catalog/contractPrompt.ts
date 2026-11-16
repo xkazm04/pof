@@ -1,5 +1,6 @@
 import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import { isContentInvariant } from '@/lib/catalog/acceptance/contentInvariant';
+import { entitySlug } from '@/lib/catalog/entitySlug';
 import { MIN_PROSE } from '@/lib/catalog/acceptance/wiringCheckers';
 import { gradedFieldClosure, requiredFieldLine, requiredFieldsOf } from '@/lib/catalog/acceptance/requiredFields';
 import type { WiringRequirement } from '@/lib/knowledge/wiring-requirements';
@@ -109,7 +110,7 @@ const claim = (v: unknown): string | undefined =>
 
 /** Fill a declaration's `{slug}` / `{name}` tokens for the entity in hand. */
 function fill(text: string, entity: LabEntity): string {
-  return text.split('{slug}').join(entity.name.replace(/[^a-z0-9]+/gi, '')).split('{name}').join(entity.name);
+  return text.split('{slug}').join(entitySlug(entity.name)).split('{name}').join(entity.name);
 }
 
 /**

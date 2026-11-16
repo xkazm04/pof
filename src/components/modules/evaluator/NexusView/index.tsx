@@ -5,12 +5,13 @@ import {
   Loader2, ZoomIn, ZoomOut, Maximize2,
   Network, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
-import { STATUS_BLOCKER, MODULE_COLORS } from '@/lib/chart-colors';
+import { STATUS_BLOCKER, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
 import type { SourceStatus } from '@/lib/evaluator/nexus-signals';
 import { LAYERS } from './constants';
 import type { LayerConfig } from './constants';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { useNexusView } from './useNexusView';
-import { NexusGraph } from './NexusGraph';
+import { NexusGraph, PATTERN_HEAT_BANDS } from './NexusGraph';
 import { NodeDeepDivePanel } from './NodeDeepDivePanel';
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -18,6 +19,8 @@ import { NodeDeepDivePanel } from './NodeDeepDivePanel';
 export function NexusView() {
   const {
     isLoading,
+    statusError,
+    retryStatuses,
     selectedModule,
     setSelectedModule,
     setHoveredModule,
@@ -41,8 +44,25 @@ export function NexusView() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
+      <div className="flex items-center justify-center gap-2 py-16" role="status" aria-live="polite">
         <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
+        <span className="text-xs text-text-muted">Loading feature statuses…</span>
+      </div>
+    );
+  }
+
+  // Same rule as DependencyGraph / FeatureConstellation: a failed status read is not
+  // drawn — every node would read "0/N", i.e. "nothing implemented", not "nothing loaded".
+  if (statusError) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Network className="w-4 h-4" style={{ color: ACCENT_VIOLET }} />
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+            Nexus Intelligence Map
+          </span>
+        </div>
+        <InlineErrorRetry message={`Could not load feature statuses: ${statusError}`} onRetry={retryStatuses} />
       </div>
     );
   }
@@ -52,7 +72,7 @@ export function NexusView() {
       {/* Header + Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Network className="w-4 h-4 text-[#a78bfa]" />
+          <Network className="w-4 h-4" style={{ color: ACCENT_VIOLET }} />
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Nexus Intelligence Map
           </span>
@@ -77,14 +97,28 @@ export function NexusView() {
 
           {/* Zoom */}
           <div className="flex items-center gap-0.5 ml-2">
-            <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors">
+            <button
+              onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}
+              disabled={zoom <= 0.5}
+              aria-label="Zoom out"
+              className="focus-ring p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            >
               <ZoomOut className="w-3 h-3" />
             </button>
-            <span className="text-2xs text-text-muted w-8 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom((z) => Math.min(1.5, z + 0.1))} className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors">
+            <span className="text-2xs text-text-muted w-8 text-center" role="status" aria-live="polite">{Math.round(zoom * 100)}%</span>
+            <button
+              onClick={() => setZoom((z) => Math.min(1.5, z + 0.1))}
+              disabled={zoom >= 1.5}
+              aria-label="Zoom in"
+              className="focus-ring p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+            >
               <ZoomIn className="w-3 h-3" />
             </button>
-            <button onClick={() => setZoom(1)} className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors">
+            <button
+              onClick={() => setZoom(1)}
+              aria-label="Reset zoom to 100%"
+              className="focus-ring p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
+            >
               <Maximize2 className="w-3 h-3" />
             </button>
           </div>
@@ -114,8 +148,12 @@ export function NexusView() {
           <span className="w-5 border-t border-dashed" style={{ borderColor: STATUS_BLOCKER }} /> Blocker
         </span>
         {activeLayers.has('patterns') && (
-          <span className="flex items-center gap-1.5">
-            <span className="w-1.5 h-4 rounded-sm bg-[#4ade80]" /> Pattern success
+          <span className="flex items-center gap-3">
+            {PATTERN_HEAT_BANDS.map((b) => (
+              <span key={b.min} className="flex items-center gap-1.5">
+                <span data-pattern-legend-swatch="" className="w-1.5 h-4 rounded-sm" style={{ backgroundColor: b.color }} /> Pattern success {b.label}
+              </span>
+            ))}
           </span>
         )}
         {activeLayers.has('builds') && (
@@ -128,7 +166,7 @@ export function NexusView() {
         )}
         {activeLayers.has('genre') && (
           <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded border border-[#a78bfa] opacity-60" style={{ boxShadow: '0 0 4px #a78bfa' }} /> Genre feature
+            <span className="w-3 h-3 rounded border opacity-60" style={{ borderColor: ACCENT_VIOLET, boxShadow: `0 0 4px ${ACCENT_VIOLET}` }} /> Genre feature
           </span>
         )}
       </div>
@@ -170,7 +208,7 @@ function LayerToggle({
           {layer.label}
           <span style={{ color: STATUS_BLOCKER }}>unavailable</span>
         </button>
-        <button onClick={onRetry} aria-label={`Retry ${layer.label}`} className="flex items-center gap-0.5 hover:text-text transition-colors">
+        <button onClick={onRetry} aria-label={`Retry ${layer.label}`} className="focus-ring flex items-center gap-0.5 hover:text-text transition-colors">
           <RefreshCw className="w-2.5 h-2.5" /> Retry
         </button>
       </span>
@@ -181,7 +219,7 @@ function LayerToggle({
       onClick={onToggle}
       aria-pressed={active}
       aria-busy={state === 'loading'}
-      className={`flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
+      className={`focus-ring flex items-center gap-1 px-2 py-1 rounded-md text-2xs font-medium border transition-colors ${
         active
           ? 'border-border-bright bg-surface text-text'
           : 'border-border bg-surface-deep text-text-muted hover:text-text'

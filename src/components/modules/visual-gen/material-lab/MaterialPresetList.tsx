@@ -150,8 +150,9 @@ export function MaterialPresetList() {
             </button>
             <button
               onClick={() => doDelete(preset.id)}
+              disabled={busy}
               aria-label={`Delete preset ${preset.name}`}
-              className="focus-ring p-1 rounded text-text-muted hover:text-text transition-colors"
+              className="focus-ring p-1 rounded text-text-muted hover:text-text transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3 h-3" />
             </button>

@@ -13,7 +13,10 @@ import { join } from 'node:path';
  */
 
 const runMeshSplit = vi.fn();
-vi.mock('@/lib/visual-gen/mesh-split', () => ({ runMeshSplit: (...a: unknown[]) => runMeshSplit(...a) }));
+vi.mock('@/lib/visual-gen/mesh-split', async (original) => ({
+  ...(await original<typeof import('@/lib/visual-gen/mesh-split')>()),
+  runMeshSplit: (...a: unknown[]) => runMeshSplit(...a),
+}));
 // No fs mock: the route's existence check is part of what is under test, so it runs
 // against a real (empty) file. `generated/` is gitignored, so the file is created in a
 // throwaway temp dir that `process.cwd()` is pointed at for each test.

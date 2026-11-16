@@ -155,3 +155,73 @@ describe('<StepHistoryPanel /> — compare before restore', () => {
     expect(posts(f)).toEqual([{ revisionId: 1 }]);
   });
 });
+
+describe('<StepHistoryPanel /> compare retry', () => {
+  it('Retry after a failed compare re-runs the dry run instead of closing the row', async () => {
+    let posts = 0;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: async () => {
+        if (init?.method !== 'POST') return { success: true, data: [rev(1)] };
+        posts += 1;
+        return posts === 1
+          ? { success: false, error: 'dry run down' }
+          : { success: true, data: { regraded: true, wouldStatus: 'pass', archivedStatus: 'pass' } };
+      },
+    })) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-compare'));
+    fireEvent.click(await screen.findByRole('button', { name: /retry/i }));
+    await screen.findByTestId('step-history-compare-panel');
+    expect(posts).toBe(2);
+  });
+});
+
+describe('<StepHistoryPanel /> restore failure', () => {
+  it('names a failed restore as a restore, and its Retry re-runs the restore', async () => {
+    let posts = 0;
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: async () => {
+        if (init?.method !== 'POST') return { success: true, data: [rev(1)] };
+        posts += 1;
+        return posts === 1
+          ? { success: false, error: 'disk full' }
+          : { success: true, data: { artifact: { status: 'pass' }, regraded: false, archivedStatus: 'pass' } };
+      },
+    })) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-restore'));
+    const banner = await screen.findByText(/disk full/);
+    expect(banner.textContent).toMatch(/restore the version/i);
+    expect(banner.textContent).not.toMatch(/load previous versions/i);
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    await screen.findByTestId('step-history-notice');
+    expect(posts).toBe(2);
+  });
+});
+
+describe('<StepHistoryPanel /> in-flight and outcome states', () => {
+  it('says it is loading, and keeps a live region mounted before any restore', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    expect(screen.getByText(/loading previous versions/i)).toBeTruthy();
+    expect(screen.getByTestId('step-history-live').getAttribute('role')).toBe('status');
+  });
+
+  it('says a compare is in flight while the dry run is out', async () => {
+    let held = false;
+    vi.stubGlobal('fetch', vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') { held = true; return new Promise(() => {}); }
+      return Promise.resolve({ ok: true, json: async () => ({ success: true, data: [rev(1)] }) });
+    }) as unknown as typeof fetch);
+    renderPanel();
+    fireEvent.click(screen.getByTestId('step-history-toggle'));
+    fireEvent.click(await screen.findByTestId('step-history-compare'));
+    expect(held).toBe(true);
+    expect(await screen.findByText(/comparing with the current output/i)).toBeTruthy();
+  });
+});

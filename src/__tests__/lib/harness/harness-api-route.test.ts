@@ -38,7 +38,7 @@ import { SCENARIOS } from '@/lib/harness/scenarios';
 type Cfg = import('@/lib/harness').HarnessConfig;
 
 function startReq(body: Record<string, unknown>): NextRequest {
-  return { json: async () => ({ action: 'start', ...body }) } as unknown as NextRequest;
+  return { json: async () => ({ action: 'start', ...body }), headers: new Headers() } as unknown as NextRequest;
 }
 
 const REQUIRED = { projectPath: 'C:/proj', projectName: 'Proj', ueVersion: '5.8' };

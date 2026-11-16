@@ -58,10 +58,10 @@ describe('CatalogTree — derived lifecycle dots', () => {
   it('a shape-only config-complete entity is NOT announced as passed', () => {
     renderTree(derived);
     // `verified` is the only lifecycle that collapses onto the pass axis…
-    expect(screen.getByRole('button', { name: /Gate Drained: passed/i })).toBeTruthy();
+    expect(screen.getByRole('treeitem', { name: /Gate Drained: passed/i })).toBeTruthy();
     // …a `wired` (shape-only) entity announces as pending, never passed.
-    expect(screen.getByRole('button', { name: /Shape Only: pending/i })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Shape Only: passed/i })).toBeNull();
+    expect(screen.getByRole('treeitem', { name: /Shape Only: pending/i })).toBeTruthy();
+    expect(screen.queryByRole('treeitem', { name: /Shape Only: passed/i })).toBeNull();
   });
 
   it('the dot tooltip names the evidence, and says when runtime is unproven', () => {

@@ -21,7 +21,7 @@ function seed(a: Partial<PipelineArtifact> & { catalogId: string; entityId: stri
   store.set(key(a.catalogId, a.entityId, a.step), { data: {}, ueAssets: [], status: 'deferred', ...a } as PipelineArtifact);
 }
 function exec(status: GateVerdict['status'], detail = 'd', evidence?: GateVerdict['evidence']): GateExecutor {
-  return { id: 'fake', tier: 'L3', available: async () => true, run: async () => ({ status, detail, ...(evidence ? { evidence } : {}) }) };
+  return { id: 'fake', tier: 'L3', available: async () => true, run: async () => ({ status, detail, ...(evidence ? { evidence } : {}) }) as GateVerdict };
 }
 
 let received: Array<EventMap['gate.verdict.changed']>;

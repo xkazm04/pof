@@ -77,8 +77,9 @@ export function RadarComparison({ radarOverlays, onToggleOverlay, activeOverlays
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-muted pointer-events-none" />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
+              aria-label="Filter radar overlay enemies"
               placeholder="Filter enemies..."
-              className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle outline-none focus:border-[var(--accent)]"
+              className="w-full pl-7 pr-2 py-1 rounded border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle focus-ring-inset"
             />
           </div>
 
@@ -97,7 +98,7 @@ export function RadarComparison({ radarOverlays, onToggleOverlay, activeOverlays
                 <span className="text-text-muted group-hover:text-text transition-colors font-medium truncate">
                   {a.label}
                 </span>
-                <span className="text-text-subtle text-[10px] font-mono ml-auto flex-shrink-0">
+                <span className="text-text-subtle text-2xs font-mono ml-auto flex-shrink-0">
                   {a.category} / {a.role}
                 </span>
               </label>

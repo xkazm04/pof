@@ -10,6 +10,7 @@ import { NewSessionPanel } from './NewSessionPanel';
 import { SessionDetail } from './SessionDetail';
 import { FindingsExplorer } from './FindingsExplorer';
 import { RegressionTrackerView } from './RegressionTrackerView';
+import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
 import { TabBar, type TabItem } from '@/components/ui/TabBar';
 import { ACCENT_ORANGE, STATUS_ERROR, STATUS_BLOCKER } from '@/lib/chart-colors';
 
@@ -132,6 +133,13 @@ export function GameDirectorModule() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto px-6 py-5">
+        {director.error && (
+          <InlineErrorRetry
+            className="mb-4"
+            message={`Could not load playtest sessions: ${director.error}`}
+            onRetry={director.retry}
+          />
+        )}
         {activeTab === 'overview' && (
           <DirectorOverview
             sessions={director.sessions}

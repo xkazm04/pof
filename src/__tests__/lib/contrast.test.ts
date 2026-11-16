@@ -29,6 +29,18 @@ describe('contrast — WCAG primitives', () => {
     expect(hexToRgb('#f87171')).toEqual([248, 113, 113]);
   });
 
+  it('expands 4-digit #rgba and ignores alpha digits in 8-digit form', () => {
+    expect(hexToRgb('#f00a')).toEqual([255, 0, 0]);
+    expect(hexToRgb('#f8717180')).toEqual([248, 113, 113]);
+  });
+
+  it('refuses to measure a non-hex colour instead of reading it as black', () => {
+    expect(() => hexToRgb('var(--text-muted)')).toThrow(/non-hex/);
+    expect(() => contrastRatio('var(--x)', '#ffffff')).toThrow(/non-hex/);
+    expect(() => hexToRgb('rgb(1, 2, 3)')).toThrow();
+    expect(() => hexToRgb('#12345')).toThrow();
+  });
+
   it('computes the canonical black/white contrast ratio (21:1)', () => {
     expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 1);
     expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 5);

@@ -102,7 +102,7 @@ describe('[guard] migrated chords still fire with focus inside a <textarea>', ()
     const ta = screen.getByRole('textbox', { name: 'notes' });
     ta.focus();
     key({ key: 'k', ctrlKey: true }, ta);
-    expect(await screen.findByRole('textbox', { name: /search checklist items/i })).toBeTruthy();
+    expect(await screen.findByRole('combobox', { name: /search checklist items/i })).toBeTruthy();
     key({ key: 'b', ctrlKey: true }, ta);
     expect(useNavigationStore.getState().sidebarMode).toBe('collapsed');
   });
@@ -142,6 +142,15 @@ describe('[guard] InputBindingsTable rebinding capture', () => {
     // One-shot: the capture ended with the key it took.
     key({ key: 'h' });
     expect(setBindingOverride).toHaveBeenCalledTimes(1);
+  });
+
+  it("(c2) a shifted key binds the physical key, not the shifted symbol (Shift+1 -> '1')", () => {
+    const setBindingOverride = vi.fn();
+    useCharacterBlueprintStore.setState({ setBindingOverride });
+    render(<InputBindingsTable moduleId="arpg-character" featureMap={new Map()} />);
+    const action = startRebind();
+    key({ key: '!', code: 'Digit1', shiftKey: true });
+    expect(setBindingOverride).toHaveBeenCalledWith(action, '1');
   });
 
   it('(c) Escape cancels the rebind without an override', () => {

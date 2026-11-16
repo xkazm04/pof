@@ -104,7 +104,7 @@ type TaskPhase =
   | { phase: 'connecting'; taskId: string | null }
   | { phase: 'streaming'; taskId: string | null; executionInfo: ExecutionInfo }
   | { phase: 'complete'; lastResult: ExecutionResult }
-  | { phase: 'error'; error: string; taskId: string | null };
+  | { phase: 'error'; error: string; taskId: string | null; outcomeUnknown?: boolean };
 
 interface TaskQueueState {
   current: TaskPhase;
@@ -129,7 +129,7 @@ type TaskQueueAction =
   | { type: 'SET_RESOLVED_MODEL'; model: string | null; effort: string | null }
   | { type: 'ABORT' }
   | { type: 'TASK_DONE' }
-  | { type: 'STUCK_RESOLVED'; success: boolean }
+  | { type: 'STUCK_RESOLVED'; success: boolean; outcomeUnknown?: boolean }
   | { type: 'CLEAR' };
 
 const INITIAL_STATE: TaskQueueState = {
@@ -188,9 +188,19 @@ function taskQueueReducer(state: TaskQueueState, action: TaskQueueAction): TaskQ
     case 'SET_RESOLVED_MODEL':
       return { ...state, resolvedModel: action.model, resolvedEffort: action.effort };
 
+    case 'STUCK_RESOLVED':
+      // A server-arbitrated END that was not a clean success must not read as Ready:
+      // a lost run ends as unknown, a failed one as an error result.
+      if (action.outcomeUnknown) {
+        return { ...state, current: { phase: 'error', error: 'Outcome unknown', taskId: getTaskId(state.current), outcomeUnknown: true } };
+      }
+      if (!action.success) {
+        return { ...state, current: { phase: 'complete', lastResult: { isError: true } } };
+      }
+      return { ...state, current: { phase: 'idle' } };
+
     case 'ABORT':
     case 'TASK_DONE':
-    case 'STUCK_RESOLVED':
       return {
         ...state,
         current: { phase: 'idle' },
@@ -224,6 +234,10 @@ function currentError(state: TaskQueueState): string | null {
   return state.current.phase === 'error' ? state.current.error : null;
 }
 
+function currentOutcomeUnknown(state: TaskQueueState): boolean {
+  return state.current.phase === 'error' && state.current.outcomeUnknown === true;
+}
+
 function currentExecutionInfo(state: TaskQueueState): ExecutionInfo | null {
   return state.current.phase === 'streaming' ? state.current.executionInfo : null;
 }
@@ -254,6 +268,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const streaming = isStreaming(state);
   const taskId = currentTaskId(state);
   const error = currentError(state);
+  const outcomeUnknown = currentOutcomeUnknown(state);
   const executionInfo = currentExecutionInfo(state);
   const result = lastResult(state);
 
@@ -386,6 +401,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     }
   }, [flushLogBuffer]);
 
+  // A prompt that arrives while a run is live is not queued: say so in the transcript
+  // instead of dropping it silently.
+  const logBusyDrop = useCallback(() => {
+    addLog({ id: `busy-${Date.now()}`, type: 'system', content: 'Busy - prompt not sent', timestamp: Date.now() });
+  }, [addLog]);
+
   const addFileChange = useCallback((change: FileChange) => {
     setFileChanges((prev) => {
       const exists = prev.some((c) => c.filePath === change.filePath && c.toolUseId === change.toolUseId);
@@ -457,6 +478,16 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     });
     completeOnce(false, { outcomeUnknown: true });
   }, [addLog, clearHeartbeat, completeOnce]);
+
+  /**
+   * A run the user aborted while its query POST was still in flight: the server
+   * spawned the CLI anyway, and this tab is its only reaper. Kill it — never open
+   * its stream (Abort already ended the run once).
+   */
+  const reapAbortedStart = useCallback((executionId: string) => {
+    void apiFetch(`/api/claude-terminal/query?executionId=${encodeURIComponent(executionId)}`, { method: 'DELETE' })
+      .catch(() => { /* best-effort: the process may have already exited */ });
+  }, []);
 
   /**
    * Surface the server's callback verdict for the current run: log it and hand any
@@ -699,7 +730,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         if (callbackStatus && obs.kind === 'status') applyServerVerdict(callbackStatus, obs.status.callbacksFailed ?? [], runTokenRef.current);
         finishRun(verdict.success, callbackStatus ? { callbackStatus } : undefined);
       }
-      dispatch({ type: 'STUCK_RESOLVED', success: verdict.success });
+      dispatch({ type: 'STUCK_RESOLVED', success: verdict.success, outcomeUnknown: verdict.outcomeUnknown });
       return;
     }
     // An open stream keeps its own watch; a hidden terminal is re-consulted by its poll.
@@ -722,7 +753,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     // dispatch in the same tick can't slip through and clobber the first.
     if (dispatchingRef.current) return;
     dispatchingRef.current = true;
-    runTokenRef.current++;
+    const runToken = ++runTokenRef.current;
     dispatchedTaskIds.current.add(task.id);
 
     let startResult = await registerTaskStart(task.id, instanceId, task.label);
@@ -741,6 +772,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       await registerTaskComplete(startResult.runningTask.taskId, instanceId, false);
       startResult = await registerTaskStart(task.id, instanceId, task.label);
     }
+    // Aborted while registering: Abort already ended the run — close the registry row, spawn nothing.
+    if (runTokenRef.current !== runToken) { void registerTaskComplete(task.id, instanceId, false); return; }
 
     assistantOutputRef.current = '';
     completedRef.current = false;
@@ -769,6 +802,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         // `callbacks`: the server settles them when the run ends (never this tab).
         body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskLabel: task.label, ...(callbacks.length > 0 ? { callbacks } : {}) }),
       });
+      if (runTokenRef.current !== runToken) { reapAbortedStart(data.executionId); return; }
       executionIdRef.current = data.executionId;
       onExecutionStartedRef.current?.(data.executionId);
       // Record which execution backs this task so a future 409-conflict
@@ -777,7 +811,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
-      dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start task' });
+      if (runTokenRef.current !== runToken) return; // aborted: Abort already ended the run
+      const message = e instanceof Error ? e.message : 'Failed to start task';
+      dispatch({ type: 'START_FAILED', error: message });
+      // No host reads the reducer's error: the transcript is where a failed start is seen.
+      addLog({ id: `start-err-${Date.now()}`, type: 'error', content: `Failed to start: ${message}`, timestamp: Date.now() });
       // Latch completion so a later stray path can't double-fire. Uses task.id
       // directly (currentTaskIdRef may not have caught up to the TASK_START yet).
       if (!completedRef.current) {
@@ -786,7 +824,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       }
       clearHeartbeat();
     }
-  }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, finishRun, enabledSkills, clearHeartbeat]);
+  }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, finishRun, enabledSkills, clearHeartbeat, reapAbortedStart]);
 
   // --- Manual submit (user input) ---
 
@@ -796,7 +834,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     // streaming-flag check that hasn't committed yet, and the second would
     // overwrite eventSourceRef/executionIdRef — orphaning the first run's
     // server process with no handle to abort it. Bail if a run is dispatching.
-    if (dispatchingRef.current) return;
+    if (dispatchingRef.current) { logBusyDrop(); return; }
     dispatchingRef.current = true;
     assistantOutputRef.current = '';
     completedRef.current = false;
@@ -805,7 +843,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     // Announce the run start synchronously — before any await — so the host's run
     // door opens before any terminal path can fire (see store/sessionRun.ts).
     onTaskStart?.(INTERACTIVE_TASK_ID);
-    runTokenRef.current++;
+    const runToken = ++runTokenRef.current;
     onDispatchRef.current?.({ prompt, taskType: opts?.taskType });
     // Echo the RAW user prompt to the log (no skills clutter); only the dispatched
     // prompt sent to the CLI carries the injected packs.
@@ -831,17 +869,21 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         // `callbacks`: the server settles them when the run ends (never this tab).
         body: JSON.stringify({ projectPath, prompt: dispatchPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined, ...attribution, taskType: opts?.taskType ?? attribution.taskType, ...(callbacks.length > 0 ? { callbacks } : {}) }),
       });
+      if (runTokenRef.current !== runToken) { reapAbortedStart(data.executionId); return; }
       executionIdRef.current = data.executionId;
       onExecutionStartedRef.current?.(data.executionId);
       dispatch({ type: 'SET_RESOLVED_MODEL', model: data.model ?? null, effort: data.effort ?? null });
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
-      dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start' });
+      if (runTokenRef.current !== runToken) return; // aborted: Abort already ended the run
+      const message = e instanceof Error ? e.message : 'unknown error';
+      dispatch({ type: 'START_FAILED', error: message });
+      addLog({ id: `start-err-${Date.now()}`, type: 'error', content: `Failed to start: ${message}`, timestamp: Date.now() });
       // Release session.isRunning for hosts that latched on SUBMIT_START.
       completeOnce(false);
     }
-  }, [projectPath, state.sessionId, addLog, connectToStream, completeOnce, onTaskStart, enabledSkills]);
+  }, [projectPath, state.sessionId, addLog, logBusyDrop, connectToStream, completeOnce, onTaskStart, enabledSkills, reapAbortedStart]);
 
   // --- Attach (re-open a live server run this page did not dispatch) ---
 
@@ -871,6 +913,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   // --- Abort ---
 
   const handleAbort = useCallback(async () => {
+    // Invalidate the current run's token: a dispatch still awaiting its query POST
+    // sees it changed and reaps the process it spawned instead of streaming it.
+    runTokenRef.current++;
     if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
     clearStreamWatch(); // Abort is a positive terminator: no server consult first
     clearHeartbeat();
@@ -987,8 +1032,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     clearHeartbeat();
     if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
     if (pendingNextTaskRef.current) { clearTimeout(pendingNextTaskRef.current); pendingNextTaskRef.current = null; }
-    if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
-  }, [visible, streaming, connectToStream, clearHeartbeat, clearStreamWatch]);
+    // Flush (not just cancel) the pending frame: lines buffered before the hide would
+    // otherwise wait for a next line that a run settling while hidden never sends.
+    if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); flushLogBuffer(); }
+  }, [visible, streaming, connectToStream, clearHeartbeat, clearStreamWatch, flushLogBuffer]);
   // `currentTaskIdRef`/`heartbeatIntervalRef` are refs (stable) — intentionally
   // not in deps; the effect re-runs on visible/streaming change, which is when
   // the heartbeat must be re-armed or torn down.
@@ -1015,6 +1062,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     executionInfo,
     lastResult: result,
     error,
+    outcomeUnknown,
     currentTaskId: taskId,
     logFilePath: state.logFilePath,
     resolvedModel: state.resolvedModel,
@@ -1024,5 +1072,6 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     attachExecution,
     handleAbort,
     handleClear,
+    logBusyDrop,
   };
 }

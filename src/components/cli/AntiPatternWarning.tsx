@@ -5,7 +5,7 @@ import { X, ArrowRight, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { apiFetch } from '@/lib/api-utils';
 import { STATUS_SUCCESS, MODULE_COLORS, STATUS_BLOCKER, STATUS_WARNING, withOpacity, OPACITY_8 } from '@/lib/chart-colors';
-import { CLI_ANIM } from '@/lib/constants';
+import { CLI_ANIM, UI_TIMEOUTS } from '@/lib/constants';
 import type { AntiPatternWarning as APWarning } from '@/types/pattern-library';
 
 interface AntiPatternWarningProps {
@@ -21,6 +21,9 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCheckedRef = useRef('');
+  /** The prompt currently in the box — a check reply for any other prompt is stale. */
+  const promptRef = useRef(prompt);
+  useEffect(() => { promptRef.current = prompt; }, [prompt]);
 
   // Render-time reset: clear warnings when prompt becomes too short
   const [prevPrompt, setPrevPrompt] = useState(prompt);
@@ -38,7 +41,7 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
     setDismissed(new Set());
   }
 
-  // Debounced check — only fires after 600ms of no typing + minimum 20 chars
+  // Debounced check — only fires after UI_TIMEOUTS.antiPatternCheckDebounce of no typing + minimum 20 chars
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -55,11 +58,13 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
         const data = await apiFetch<{ warnings: APWarning[] }>(
           `/api/pattern-library?${params}`,
         );
+        // Typed on, or submitted (input cleared) while the check was in flight: drop it.
+        if (promptRef.current.trim() !== trimmed) { lastCheckedRef.current = ''; return; }
         setWarnings(data.warnings);
       } catch {
         // Silent fail — don't block user workflow
       }
-    }, 600);
+    }, UI_TIMEOUTS.antiPatternCheckDebounce);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);

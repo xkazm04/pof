@@ -7,7 +7,8 @@
  * into the ue5BridgeStore, and exposes connect/disconnect/watch actions.
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
+import { useSuspendableSelector } from '@/hooks/useSuspend';
 import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import type {
@@ -43,25 +44,39 @@ interface UseLiveStateSyncResult {
   requestSnapshot: () => void;
 }
 
+// One reference-counted bridge for every mounted host: the store diff runs once per client
+// message however many panels use this hook.
+let bridgeHosts = 0;
+let bridgeUnsub: (() => void) | null = null;
+
+function acquireBridge(): () => void {
+  useUE5BridgeStore.getState().setLiveState(ue5LiveState.getState());
+  if (bridgeHosts++ === 0) {
+    bridgeUnsub = ue5LiveState.onStateChange((state) => {
+      useUE5BridgeStore.getState().setLiveState(state);
+    });
+  }
+  return () => {
+    if (--bridgeHosts === 0) {
+      bridgeUnsub?.();
+      bridgeUnsub = null;
+    }
+  };
+}
+
 export function useLiveStateSync(): UseLiveStateSyncResult {
   const host = useUE5BridgeStore((s) => s.host);
   const wsPort = useUE5BridgeStore((s) => s.wsPort);
   const wsStatus = useUE5BridgeStore((s) => s.wsStatus);
-  const liveSnapshot = useUE5BridgeStore((s) => s.liveSnapshot);
-  const propertyWatches = useUE5BridgeStore((s) => s.propertyWatches);
-  const wsFrameRate = useUE5BridgeStore((s) => s.wsFrameRate);
-  const setLiveState = useUE5BridgeStore((s) => s.setLiveState);
-
-  const setLiveStateRef = useRef(setLiveState);
-  useEffect(() => { setLiveStateRef.current = setLiveState; }, [setLiveState]);
-
-  // Subscribe to the singleton client and bridge into store
-  useEffect(() => {
-    const unsub = ue5LiveState.onStateChange((state) => {
-      setLiveStateRef.current(state);
-    });
-    return unsub;
-  }, []);
+  // The three frame slices change on every WS message and are only displayed, so a hidden
+  // pane skips them. Host, port and the socket bridge below stay live: connect must use
+  // current settings, and the store has to be fresh for the render that resumes.
+  const liveSnapshot = useSuspendableSelector(useUE5BridgeStore, (s) => s.liveSnapshot);
+  const propertyWatches = useSuspendableSelector(useUE5BridgeStore, (s) => s.propertyWatches);
+  const wsFrameRate = useSuspendableSelector(useUE5BridgeStore, (s) => s.wsFrameRate);
+  // Subscribe to the singleton client and bridge into store. The socket outlives this hook,
+  // so read its state first: the store is written only here and may predate the last unmount.
+  useEffect(() => acquireBridge(), []);
 
   const connectWs = useCallback(() => {
     ue5LiveState.connect(host, wsPort);

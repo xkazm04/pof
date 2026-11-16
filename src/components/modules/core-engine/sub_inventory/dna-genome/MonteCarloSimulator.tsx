@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Activity, Dice5, Sigma } from 'lucide-react';
 import {
   withOpacity,
@@ -25,14 +25,28 @@ interface Props {
 
 export function MonteCarloSimulator({ genome, rarity, level }: Props) {
   const [iterations, setIterations] = useState<number>(1000);
-  const [stats, setStats] = useState<SimulationStats | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [run, setRun] = useState<{ key: string; stats: SimulationStats } | null>(null);
+  const [isPending, setIsPending] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  // Everything simulateRolls reads from its props: stats from other inputs are stale.
+  const inputKey = JSON.stringify([
+    genome.id, genome.traits, genome.mutation, genome.minRarity,
+    genome.itemType, genome.evolution?.tier ?? 0, rarity, level,
+  ]);
+  const stats = run && run.key === inputKey ? run.stats : null;
+  const stale = run !== null && stats === null;
 
   const runSimulation = () => {
-    startTransition(() => {
+    // Yield one macrotask so "Simulating…" paints before the batch blocks the thread
+    // (a transition defers state updates, not the computation inside it).
+    setIsPending(true);
+    timerRef.current = setTimeout(() => {
       const result = simulateRolls(genome, rarity, level, DEMO_AFFIX_POOL, iterations, GOD_ROLL_THRESHOLD);
-      setStats(result);
-    });
+      setRun({ key: inputKey, stats: result });
+      setIsPending(false);
+    }, 0);
   };
 
   return (
@@ -54,7 +68,7 @@ export function MonteCarloSimulator({ genome, rarity, level }: Props) {
                 className="text-xs font-mono font-bold px-2 py-1 rounded transition-all"
                 style={{
                   backgroundColor: iterations === n ? withOpacity(ACCENT, OPACITY_25) : withOpacity(ACCENT, OPACITY_10),
-                  color: iterations === n ? ACCENT : 'rgb(148 163 184)',
+                  color: iterations === n ? ACCENT : 'var(--text-muted)',
                   border: `1px solid ${withOpacity(ACCENT, iterations === n ? OPACITY_37 : OPACITY_12)}`,
                 }}
               >
@@ -83,7 +97,11 @@ export function MonteCarloSimulator({ genome, rarity, level }: Props) {
         <div className="flex items-center justify-center py-8">
           <div className="text-center space-y-2">
             <Sigma className="w-7 h-7 text-text-muted/30 mx-auto" />
-            <p className="text-xs text-text-muted">Run a batch to see the real distribution across thousands of attempts</p>
+            <p className="text-xs text-text-muted">
+              {stale
+                ? 'Genome, rarity or level inputs changed since the last batch - run again for current results'
+                : 'Run a batch to see the real distribution across thousands of attempts'}
+            </p>
           </div>
         </div>
       ) : (

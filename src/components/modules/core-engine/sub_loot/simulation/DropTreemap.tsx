@@ -16,6 +16,7 @@ export function DropTreemap() {
   const [treemapHover, setTreemapHover] = useState<string | null>(null);
   const [treemapDrill, setTreemapDrill] = useState<string | null>(null);
   const treemapLayout = useMemo(() => computeTreemapLayout(TREEMAP_DATA, 260, 120), []);
+  const toggleDrill = (name: string) => setTreemapDrill((prev) => (prev === name ? null : name));
 
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
@@ -27,8 +28,17 @@ export function DropTreemap() {
               key={rect.item.name}
               onMouseEnter={() => setTreemapHover(rect.item.name)}
               onMouseLeave={() => setTreemapHover(null)}
-              onClick={() => setTreemapDrill((prev) => prev === rect.item.name ? null : rect.item.name)}
-              className="cursor-pointer"
+              onFocus={() => setTreemapHover(rect.item.name)}
+              onBlur={() => setTreemapHover(null)}
+              onClick={() => toggleDrill(rect.item.name)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleDrill(rect.item.name); }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`${rect.item.name}: ${rect.item.probability}% drop rate`}
+              aria-expanded={treemapDrill === rect.item.name}
+              className="cursor-pointer focus-ring"
             >
               <rect
                 x={rect.x} y={rect.y} width={Math.max(rect.w, 0)} height={Math.max(rect.h, 0)}

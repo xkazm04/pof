@@ -58,7 +58,10 @@ export function RollerTab({
             <input
               id={levelId}
               type="number" min={1} max={100} value={rollLevel}
-              onChange={(e) => setRollLevel(parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10);
+                setRollLevel(Number.isFinite(v) ? Math.max(1, Math.min(100, v)) : 1);
+              }}
               className="w-16 text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none"
             />
           </div>

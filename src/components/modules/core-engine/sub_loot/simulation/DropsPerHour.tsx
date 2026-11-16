@@ -2,18 +2,22 @@
 
 import { useState, useMemo } from 'react';
 import { Clock } from 'lucide-react';
-import { ACCENT_CYAN, STATUS_WARNING } from '@/lib/chart-colors';
+import { ACCENT_CYAN, ACCENT_VIOLET, STATUS_INFO, STATUS_MUTED, STATUS_WARNING } from '@/lib/chart-colors';
 import { LiveMetricGauge } from '../../unique-tabs/_shared';
-import { DROPS_PER_HOUR_GAUGE, GOLD_PER_HOUR_GAUGE, DROP_SOURCE_BREAKDOWN } from '../_shared/data';
+import { DROPS_PER_HOUR_GAUGE, GOLD_PER_HOUR_GAUGE } from '../_shared/data';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import { useLootTuningStore } from '../_shared/lootTuningStore';
-import { deriveEconomy, ECONOMY_KILLS_PER_HOUR } from './lootSimEngine';
+import { deriveEconomy, deriveDropSources, ECONOMY_KILLS_PER_HOUR } from './lootSimEngine';
+
+const SOURCE_COLORS: Record<string, string> = { Minion: STATUS_MUTED, Standard: STATUS_INFO, Elite: ACCENT_VIOLET, Boss: STATUS_WARNING };
 
 export function DropsPerHour() {
   const [playerLevel, setPlayerLevel] = useState(20);
   const levelMultiplier = 1 + (playerLevel - 1) * 0.04;
   const bindings = useLootTuningStore((s) => s.bindings);
   const rarityGold = useLootTuningStore((s) => s.rarityGold);
+  const baseline = useLootTuningStore((s) => s.baseline);
+  const sources = useMemo(() => deriveDropSources(bindings, baseline), [bindings, baseline]);
   const eco = useMemo(
     () => deriveEconomy(bindings, rarityGold, ECONOMY_KILLS_PER_HOUR, 'casual'),
     [bindings, rarityGold],
@@ -55,19 +59,19 @@ export function DropsPerHour() {
       <div className="space-y-1">
         <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Drop Source Breakdown</div>
         <div className="flex h-4 rounded overflow-hidden w-full">
-          {DROP_SOURCE_BREAKDOWN.map((src) => (
+          {sources.map((src) => (
             <div
               key={src.source}
-              title={`${src.source}: ${src.pct}%`}
-              style={{ width: `${src.pct}%`, backgroundColor: src.color }}
+              title={`${src.source}: ${Math.round(src.pct)}%`}
+              style={{ width: `${src.pct}%`, backgroundColor: SOURCE_COLORS[src.source] }}
             />
           ))}
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {DROP_SOURCE_BREAKDOWN.map((src) => (
+          {sources.map((src) => (
             <span key={src.source} className="flex items-center gap-1 text-2xs text-text-muted">
-              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: src.color }} />
-              {src.source} {src.pct}%
+              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: SOURCE_COLORS[src.source] }} />
+              {src.source} {Math.round(src.pct)}%
             </span>
           ))}
         </div>

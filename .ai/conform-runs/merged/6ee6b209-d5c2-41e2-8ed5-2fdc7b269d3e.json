@@ -1,0 +1,104 @@
+{
+ "schema": "conform-run/1",
+ "worker": "6ee6b209-d5c2-41e2-8ed5-2fdc7b269d3e",
+ "subject": "docs-sync",
+ "evaluatedAt": "2026-11-07T04:09:50.304740+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "coach-and-guidance",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "docs/research/impact-map.md:56 The doc claims that this context's coachProvenance and ProduceLogPanel are in the Shared Component Manifest. Neither name appears in any .claude/*.md, now or in history (git log -S found no commit adding either), so the claim was false when written and nothing caught it.",
+   "techniques": [
+    {
+     "technique": "doc-rot-detection",
+     "verdict": "deviation",
+     "evidence": "docs/research/impact-map.md:56 Claim false at birth: stepEvidence and StepLibraryPicker are manifest rows (.claude/rules/catalog-pipeline.md:36-37), but coachProvenance and ProduceLogPanel never were. No check compares this claim with the manifest."
+    },
+    {
+     "technique": "source-doc-mapping",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/coachProvenance.ts:2 ui-shell.md's file table covers GlobalCoach, NextStepCoach, coachLadder, globalCoachModel, ProduceErrorBanner, DriftBanner and RefreshFromServer. coachProvenance.ts and RefreshCatalogFromServer.tsx appear in no docs/architecture or docs/catalog file, and no coverage check reports the gap."
+    },
+    {
+     "technique": "dated-corrections",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/coachProvenance.ts:10 The figure behind the correction is dated and carries its predicate (316/342 shape-only, from the 2026-07-07 gap audit), not a bare number."
+    }
+   ]
+  },
+  {
+   "context": "core-engine-scan-telemetry",
+   "subject": "docs-sync",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "docs/architecture/state-and-persistence.md:43 The doc that explains how ScanTab's fetchAndMergeFindings rebuilds scanResults pins moduleStore's partialize to line 222 and the exclusion comment to line 228, but they now sit at lines 417 and 428. The stale line claims shipped with no check to catch them.",
+   "techniques": [
+    {
+     "technique": "doc-rot-detection",
+     "verdict": "deviation",
+     "evidence": "docs/architecture/state-and-persistence.md:43 src/stores/moduleStore.ts:417 is `partialize: (state) => ({` and :428 holds the comment `restored from DB on mount via ScanTab's fetchAndMergeFindings`. Lines 222 and 228 hold unrelated code."
+    },
+    {
+     "technique": "source-doc-mapping",
+     "verdict": "deviation",
+     "evidence": "src/components/modules/core-engine/TelemetryEvolution/index.tsx:17 Half of this context, TelemetryEvolution, is named by no docs/architecture, docs/catalog or docs/README.md file; only harness scan reports mention it. No map makes the gap visible. ScanTab is covered (state-and-persistence.md:714-721, claims verified against useScanTab.ts:72-90)."
+    }
+   ],
+   "registryProposal": "Line-number references in prose (\"at line 222\") are a distinct high-rot coupling form; doc-rot-detection could name them as a cheap mechanical staleness signal (resolve the cited line, compare the quoted symbol)."
+  }
+ ],
+ "declined": [
+  {
+   "subject": "docs-sync",
+   "context": "ue5-state-sync",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "project-setup-core",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "docs-sync",
+   "context": "gdd-compliance",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T04:09:50.304740+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "dated-corrections",
+    "doc-rot-detection",
+    "source-doc-mapping"
+   ],
+   "deviations": 1,
+   "context": "coach-and-guidance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T04:09:50.304740+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "docs-sync"
+   ],
+   "techniques": [
+    "doc-rot-detection",
+    "source-doc-mapping"
+   ],
+   "deviations": 1,
+   "context": "core-engine-scan-telemetry",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

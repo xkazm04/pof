@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Settings, Save } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import {
@@ -29,6 +29,14 @@ export function ProfileEditor({ profile, onSave, onClose }: {
     platformSettings: { ...DEFAULT_PLATFORM_SETTINGS, ...profile.platformSettings },
   });
 
+  // The raw text the person is typing. Deriving the value from the parsed array
+  // dropped the space after each flag on the same render, so a second flag could
+  // never be typed; the array is still updated on every keystroke for Save.
+  const [flagsText, setFlagsText] = useState(() => form.platformSettings?.customFlags?.join(' ') ?? '');
+
+  const uid = useId();
+  const fid = (k: string) => `${uid}-${k}`;
+
   const update = <K extends keyof BuildProfile>(key: K, value: BuildProfile[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -51,8 +59,9 @@ export function ProfileEditor({ profile, onSave, onClose }: {
           {/* Basic settings */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">Profile Name</label>
+              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider" htmlFor={fid('name')}>Profile Name</label>
               <input
+                id={fid('name')}
                 value={form.name ?? ''}
                 onChange={(e) => update('name', e.target.value)}
                 placeholder="My Build"
@@ -60,8 +69,9 @@ export function ProfileEditor({ profile, onSave, onClose }: {
               />
             </div>
             <div>
-              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">Platform</label>
+              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider" htmlFor={fid('platform')}>Platform</label>
               <select
+                id={fid('platform')}
                 value={form.platform ?? 'Win64'}
                 onChange={(e) => update('platform', e.target.value as PlatformId)}
                 className={selectClass}
@@ -75,8 +85,8 @@ export function ProfileEditor({ profile, onSave, onClose }: {
 
           {/* Build config */}
           <div>
-            <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">Configuration</label>
-            <div className="grid grid-cols-4 gap-1.5 mt-1">
+            <span id={fid('config')} className="text-2xs text-text-muted font-medium uppercase tracking-wider">Configuration</span>
+            <div role="group" aria-labelledby={fid('config')} className="grid grid-cols-4 gap-1.5 mt-1">
               {CONFIG_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -97,8 +107,9 @@ export function ProfileEditor({ profile, onSave, onClose }: {
           {/* Output settings */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">Output Directory</label>
+              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider" htmlFor={fid('output')}>Output Directory</label>
               <input
+                id={fid('output')}
                 value={form.outputDir ?? ''}
                 onChange={(e) => update('outputDir', e.target.value)}
                 placeholder="Default staging directory"
@@ -106,8 +117,9 @@ export function ProfileEditor({ profile, onSave, onClose }: {
               />
             </div>
             <div>
-              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">Archive Directory</label>
+              <label className="text-2xs text-text-muted font-medium uppercase tracking-wider" htmlFor={fid('archive')}>Archive Directory</label>
               <input
+                id={fid('archive')}
                 value={form.archiveDir ?? ''}
                 onChange={(e) => update('archiveDir', e.target.value)}
                 placeholder="Archive output path"
@@ -149,13 +161,17 @@ export function ProfileEditor({ profile, onSave, onClose }: {
 
           {/* Custom flags */}
           <div>
-            <label className="text-2xs text-text-muted font-medium uppercase tracking-wider">Custom UAT Flags</label>
+            <label className="text-2xs text-text-muted font-medium uppercase tracking-wider" htmlFor={fid('flags')}>Custom UAT Flags</label>
             <input
-              value={form.platformSettings?.customFlags?.join(' ') ?? ''}
-              onChange={(e) => update('platformSettings', {
-                ...(form.platformSettings ?? DEFAULT_PLATFORM_SETTINGS),
-                customFlags: e.target.value.split(' ').filter((f) => f.trim()),
-              })}
+              id={fid('flags')}
+              value={flagsText}
+              onChange={(e) => {
+                setFlagsText(e.target.value);
+                update('platformSettings', {
+                  ...(form.platformSettings ?? DEFAULT_PLATFORM_SETTINGS),
+                  customFlags: e.target.value.split(/\s+/).filter(Boolean),
+                });
+              }}
               placeholder="-nocompile -nop4"
               className={`${inputClass} mt-1`}
             />

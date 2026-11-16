@@ -11,7 +11,7 @@ import {
   type BuildSessionState,
   type BuildSessionStep,
 } from '@/lib/implementation-planner/build-session';
-import { generatePlan, type PlanItem } from '@/lib/implementation-planner/plan-generator';
+import { generatePlan, featureKeyName, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import type { PlanDispatchResult } from '@/lib/implementation-planner/plan-dispatch';
 import type { CallbackStatus } from '@/lib/cli-task';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -46,7 +46,6 @@ export interface UseBuildSessionResult {
 }
 
 const DEFAULT_BUDGET = 120;
-const shortName = (key: string) => key.slice(key.indexOf('::') + 2);
 
 /**
  * A budgeted build session over the plan's ONE dispatch door. Nothing dispatches
@@ -94,7 +93,7 @@ export function useBuildSession({ dispatch, isRunning, moduleId }: UseBuildSessi
       dispatch(item); // the door's gate is readiness, so a ready item is never refused
       return;
     }
-    const why = item ? `still blocked by ${item.unmetDeps.map(shortName).join(', ')}` : 'no longer in the plan';
+    const why = item ? `still blocked by ${item.unmetDeps.map(featureKeyName).join(', ')}` : 'no longer in the plan';
     const timer = setTimeout(() => apply({ type: 'stop', why }), UI_TIMEOUTS.callbackSettleMax);
     return () => clearTimeout(timer);
   }, [run, statusMap, dispatch, apply]);

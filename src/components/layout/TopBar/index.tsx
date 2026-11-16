@@ -79,7 +79,7 @@ export function TopBar({ onMenuClick }: TopBarProps = {}) {
                 }}
                 aria-label={`Project: ${projectName}`}
                 aria-expanded={dropdownOpen}
-                aria-haspopup="menu"
+                aria-haspopup="dialog"
                 className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface focus-ring touch-target"
               >
                 {projectName}

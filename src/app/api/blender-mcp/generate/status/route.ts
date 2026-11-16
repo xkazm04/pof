@@ -1,12 +1,16 @@
 import { NextRequest } from 'next/server';
+import { requireOperator } from '@/lib/api-auth';
 import { apiError, apiSuccess, respondFromResult, withRoute } from '@/lib/api-utils';
 import { getService } from '@/lib/blender-mcp/service';
 import { mcpGateForJob } from '@/lib/blender-mcp/mcp-gate';
 import { ledger } from '@/lib/blender-mcp/generation-ledger';
-import { isGenerationProvider } from '@/app/api/blender-mcp/_lib/provider';
+import { isGenerationProvider, PROVIDER_REFUSAL_ERROR } from '@/app/api/blender-mcp/_lib/provider';
 
 // GET /api/blender-mcp/generate/status?jobId=...&provider=...
 export const GET = withRoute(async (req: NextRequest) => {
+  // A completed job with a provider URL makes the gate download a mesh: not for a cross-site page.
+  const denied = requireOperator(req);
+  if (denied) return denied;
   const { searchParams } = new URL(req.url);
   const jobId = searchParams.get('jobId');
   const provider = searchParams.get('provider');
@@ -14,7 +18,7 @@ export const GET = withRoute(async (req: NextRequest) => {
   if (!jobId || !provider)
     return apiError('jobId and provider are required', 400);
   if (!isGenerationProvider(provider))
-    return apiError('provider must be hyper3d or hunyuan3d', 400);
+    return apiError(PROVIDER_REFUSAL_ERROR, 400);
 
   const result = await getService().pollJobStatus(jobId, provider);
   if (!result.ok) return respondFromResult(result);

@@ -64,6 +64,53 @@ export function apiMacroFor(moduleName: string): string {
 export { resolveEventOverride, deriveFunctionSignature } from '@/lib/blueprint-cpp-surface';
 export type { EventOverride } from '@/lib/blueprint-cpp-surface';
 
+/**
+ * Engine header for each common Blueprint parent class, keyed by the prefixed
+ * UE name. Unprefixed Blueprint spellings (`Character`, `Pawn`) resolve by
+ * trying both prefixes.
+ */
+const PARENT_INCLUDES: Readonly<Record<string, string>> = {
+  AActor: 'GameFramework/Actor.h',
+  APawn: 'GameFramework/Pawn.h',
+  ADefaultPawn: 'GameFramework/DefaultPawn.h',
+  ACharacter: 'GameFramework/Character.h',
+  AController: 'GameFramework/Controller.h',
+  APlayerController: 'GameFramework/PlayerController.h',
+  AAIController: 'AIController.h',
+  AGameModeBase: 'GameFramework/GameModeBase.h',
+  AGameMode: 'GameFramework/GameMode.h',
+  AGameStateBase: 'GameFramework/GameStateBase.h',
+  AGameState: 'GameFramework/GameState.h',
+  APlayerState: 'GameFramework/PlayerState.h',
+  AHUD: 'GameFramework/HUD.h',
+  AInfo: 'GameFramework/Info.h',
+  UObject: 'UObject/Object.h',
+  UActorComponent: 'Components/ActorComponent.h',
+  USceneComponent: 'Components/SceneComponent.h',
+  UPrimitiveComponent: 'Components/PrimitiveComponent.h',
+  UStaticMeshComponent: 'Components/StaticMeshComponent.h',
+  USkeletalMeshComponent: 'Components/SkeletalMeshComponent.h',
+  UGameInstance: 'Engine/GameInstance.h',
+  UGameInstanceSubsystem: 'Subsystems/GameInstanceSubsystem.h',
+  UWorldSubsystem: 'Subsystems/WorldSubsystem.h',
+  UDataAsset: 'Engine/DataAsset.h',
+  UPrimaryDataAsset: 'Engine/DataAsset.h',
+  USaveGame: 'GameFramework/SaveGame.h',
+  UUserWidget: 'Blueprint/UserWidget.h',
+  UAnimInstance: 'Animation/AnimInstance.h',
+};
+
+/**
+ * The header a class deriving from `parentClass` must include, or null when the
+ * parent is not a known engine class. Any other `*Component` parent falls back
+ * to the ActorComponent header (the surface treats it as a component).
+ */
+export function parentIncludeFor(parentClass: string, isComponent = false): string | null {
+  const hit = PARENT_INCLUDES[parentClass] ?? PARENT_INCLUDES[`A${parentClass}`] ?? PARENT_INCLUDES[`U${parentClass}`];
+  if (hit) return hit;
+  return isComponent ? 'Components/ActorComponent.h' : null;
+}
+
 export function overrideDeclaration(o: EventOverride): string {
   return `virtual void ${o.name}(${o.params}) override;`;
 }
@@ -135,15 +182,17 @@ export function generateCppFromBlueprint(
 
   const includes = new Set<string>(['CoreMinimal.h']);
 
-  // Determine parent include
-  if (parentClass === 'ACharacter' || parentClass === 'Character') {
-    includes.add('GameFramework/Character.h');
-  } else if (parentClass === 'APawn' || parentClass === 'Pawn') {
-    includes.add('GameFramework/Pawn.h');
-  } else if (parentClass === 'AActor' || parentClass === 'Actor') {
-    includes.add('GameFramework/Actor.h');
-  } else if (isComponent) {
-    includes.add('Components/ActorComponent.h');
+  // Determine parent include — a class cannot derive from an incomplete type,
+  // so an unknown parent is reported rather than silently left out.
+  const parentInclude = parentIncludeFor(parentClass, isComponent);
+  if (parentInclude) {
+    includes.add(parentInclude);
+  } else {
+    warnings.push({
+      message: `No known header for parent class "${parentClass}" — add its #include to the generated header `
+        + 'before compiling, or the class derives from an undeclared type.',
+      severity: 'warning',
+    });
   }
 
   // `<Class>.generated.h` MUST be the final include — UHT errors on anything
@@ -179,8 +228,18 @@ export function generateCppFromBlueprint(
       if (p.tooltip) {
         headerLines.push(`\t/** ${p.tooltip} */`);
       }
+      // The same typed-literal rule as pin defaults: the raw export string used
+      // to be pasted after `=`, so `FString Greeting = Hello;` and
+      // `FVector Spawn = (X=1,Y=2,Z=3);` reached a header no compiler accepts.
+      const init = p.defaultValue ? renderPropertyDefault(p.name, p.variable.type, p.defaultValue) : null;
+      if (init && !init.ok) {
+        warnings.push({
+          message: `Default of "${p.name}" was not emitted — ${init.reason}; set it in the constructor or the Blueprint defaults.`,
+          severity: 'warning',
+        });
+      }
       headerLines.push(`\tUPROPERTY(${p.specifiers.join(', ')})`);
-      headerLines.push(`\t${p.cppType} ${p.name}${p.defaultValue ? ` = ${p.defaultValue}` : ''};`);
+      headerLines.push(`\t${p.cppType} ${p.name}${init?.ok ? ` = ${init.code}` : ''};`);
       headerLines.push('');
     }
   }
@@ -274,12 +333,16 @@ export function generateCppFromBlueprint(
     const { returnType, entryNode } = fn;
     sourceLines.push(ufunctionDefinitionSignature(cppClassName, fn));
     sourceLines.push('{');
+    let bodyLogic: string | undefined;
     if (entryNode) {
-      sourceLines.push(generateNodeLogic(fn.graph, entryNode, cppClassName, warnings, ledger));
+      bodyLogic = generateNodeLogic(fn.graph, entryNode, cppClassName, warnings, ledger);
+      sourceLines.push(bodyLogic);
     } else {
       sourceLines.push('\t// TODO: Implement function logic');
     }
-    if (returnType !== 'void') {
+    // A top-level `return <expr>;` from the Result node already ends the body.
+    const returnsFromGraph = bodyLogic !== undefined && /^\treturn .*;$/m.test(bodyLogic);
+    if (returnType !== 'void' && !returnsFromGraph) {
       sourceLines.push(`\treturn ${returnType === 'bool' ? 'false' : returnType.includes('*') ? 'nullptr' : `${returnType}()`};`);
     }
     sourceLines.push('}');
@@ -438,6 +501,9 @@ export function renderPinLiteral(pin: BlueprintPin): PinExpression {
     return { ok: false, reason: `pin "${pin.name}" has no literal value` };
   }
   const type = pin.type.toLowerCase();
+  // FText has no constructor from a TCHAR literal; a bare TEXT("...") passed to
+  // an FText parameter does not compile.
+  if (type === 'text') return { ok: true, code: `FText::FromString(${cppStringLiteral(raw)})` };
   if (STRING_PIN_TYPES.has(type)) return { ok: true, code: cppStringLiteral(raw) };
   if (type === 'bool') {
     const v = raw.trim().toLowerCase();
@@ -453,6 +519,18 @@ export function renderPinLiteral(pin: BlueprintPin): PinExpression {
     ok: false,
     reason: `pin "${pin.name}" default "${raw}" is a Blueprint ${pin.type} literal with no C++ equivalent`,
   };
+}
+
+/**
+ * A UPROPERTY default rendered as a C++ initializer of the property's type, via
+ * the pin-literal rule. FText has no conversion from `TEXT()`, so a text
+ * default is refused rather than emitted as an initializer that cannot compile.
+ */
+export function renderPropertyDefault(name: string, type: string, raw: string): PinExpression {
+  if (type.toLowerCase() === 'text') {
+    return { ok: false, reason: `"${raw}" is a text default — FText cannot be initialised from a string literal` };
+  }
+  return renderPinLiteral({ name, type, direction: 'input', defaultValue: raw });
 }
 
 /**
@@ -565,7 +643,26 @@ export function generateNodeLogic(
   ledger?: NodeLedger,
 ): string {
   const lines: string[] = [];
-  const visited = new Set<string>();
+  // Cycle guard, scoped to the CURRENT exec path. It used to be one set for the
+  // whole walk, so a node reached by both arms of a Branch (the "do A or B,
+  // then C" shape) was emitted under Then and silently skipped under Else —
+  // the C++ never ran C on the false path. A converged tail is now emitted on
+  // every path that reaches it; only a node already on this path (a loop) stops.
+  const onPath = new Set<string>();
+  // Re-emitting a shared tail must not double its warnings (one per node).
+  const warned = new Set<string>();
+  // Inlining converged tails can grow with nested diamonds; past this budget the
+  // walker refuses instead of emitting an unbounded body.
+  const stepBudget = Math.max(256, graph.nodes.length * 16);
+  let steps = 0;
+
+  function warn(w: TranspileWarning) {
+    if (w.nodeId !== undefined) {
+      if (warned.has(w.nodeId)) return;
+      warned.add(w.nodeId);
+    }
+    warnings.push(w);
+  }
 
   // Resolve every exec-edge endpoint (pin id *or* node id) to its owning node
   // in O(1). `linkedTo` holds pin ids in UE5 commandlet exports and node ids in
@@ -582,7 +679,7 @@ export function generateNodeLogic(
     const member = node.memberName ? ` — ${node.memberName}` : '';
     stub(node, indent, `[${node.type}] ${node.name}${member}`, reason);
     recordDisposition(ledger, node.id, 'refused', reason);
-    warnings.push({
+    warn({
       nodeId: node.id,
       message: `Node "${node.name}" (${node.type}) needs manual translation: ${reason}`,
       severity: 'info',
@@ -605,8 +702,20 @@ export function generateNodeLogic(
   }
 
   function walk(node: BlueprintNode, indent: string) {
-    if (visited.has(node.id)) return;
-    visited.add(node.id);
+    if (onPath.has(node.id)) return;
+    if (++steps > stepBudget) {
+      untranslated(node, indent, `exec paths converge too often to inline (over ${stepBudget} steps) — translate this tail by hand`);
+      return;
+    }
+    onPath.add(node.id);
+    try {
+      walkNode(node, indent);
+    } finally {
+      onPath.delete(node.id);
+    }
+  }
+
+  function walkNode(node: BlueprintNode, indent: string) {
 
     // Find exec output pin
     const execOut = node.pins.find((p) => p.direction === 'output' && p.type === 'exec');
@@ -624,7 +733,9 @@ export function generateNodeLogic(
         (p) => p.direction === 'input' && ['instring', 'string', 'text'].includes(p.name.toLowerCase()),
       );
       const literal = textPin
-        ? renderPinLiteral(textPin)
+        // UE_LOG takes a raw TEXT() format string, so an FText-typed pin is
+        // read as the string it holds (an FText argument would not compile).
+        ? renderPinLiteral({ ...textPin, type: textPin.type.toLowerCase() === 'text' ? 'string' : textPin.type })
         : { ok: false as const, reason: 'no string input pin' };
       if (literal.ok && literal.code.startsWith('TEXT(')) {
         lines.push(`${indent}UE_LOG(LogTemp, Log, ${literal.code});`);
@@ -712,11 +823,27 @@ export function generateNodeLogic(
     } else if (node.type.includes('SpawnActor')) {
       stub(node, indent, 'SpawnActor', 'use GetWorld()->SpawnActor<>()');
       recordDisposition(ledger, node.id, 'refused', 'SpawnActor requires manual completion — use GetWorld()->SpawnActor<>()');
-      warnings.push({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
+      warn({ nodeId: node.id, message: 'SpawnActor requires manual completion', severity: 'info' });
+    } else if (node.type.includes('FunctionResult')) {
+      // The result node is where the graph says what the function returns. The
+      // signature already takes its type from the first value pin, so the same
+      // pin supplies the value; an underivable one is refused, never defaulted.
+      const returnPin = valueInputPins(node)[0];
+      if (!returnPin) {
+        recordDisposition(ledger, node.id, 'structural');
+      } else {
+        const value = resolveInputExpression(returnPin, endpointIndex);
+        if (value.ok) {
+          lines.push(`${indent}return ${value.code};`);
+          emitted(node, [value]);
+        } else {
+          untranslated(node, indent, `return value not emitted — ${value.reason}`);
+        }
+      }
     } else if (!node.type.includes('Event') && !node.type.includes('FunctionEntry')) {
       stub(node, indent, `[${node.type}] ${node.name}${node.memberName ? ` — ${node.memberName}` : ''}`);
       recordDisposition(ledger, node.id, 'refused', `no translation rule for node type "${node.type}"`);
-      warnings.push({ nodeId: node.id, message: `Node type "${node.type}" needs manual translation`, severity: 'info' });
+      warn({ nodeId: node.id, message: `Node type "${node.type}" needs manual translation`, severity: 'info' });
     } else {
       // An event or function entry becomes the member itself, not a statement.
       recordDisposition(ledger, node.id, 'structural');

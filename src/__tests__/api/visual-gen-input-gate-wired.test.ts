@@ -202,4 +202,27 @@ describe('POST /api/visual-gen/generate — Tier-0 input gate', () => {
     expect(deps.subject?.startsWith('a battle axe')).toBe(true);
     expect(deps.subject!.length).toBeLessThanOrEqual(120);
   });
+
+  it('multiview-to-3d gates its FRONT view: a failing front is refused before any Tripo task', async () => {
+    gateInputImage.mockResolvedValue(card('fail', 20, ['cluttered scene']));
+    const res = await POST(req({
+      mode: 'multiview-to-3d', providerId: 'tripo3d', viewDataUrls: { front: PNG, back: PNG },
+    }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/cluttered scene/);
+    expect(gateInputImage).toHaveBeenCalledTimes(1);
+    expect(started()).toBe(0);
+  });
+
+  it('multiview-to-3d with a passing front generates and stamps the outcome; gateInput:false skips', async () => {
+    const ok = await POST(req({ mode: 'multiview-to-3d', providerId: 'tripo3d', viewDataUrls: { front: PNG } }));
+    expect(ok.status).toBe(202);
+    expect((await ok.json()).data.inputGate.ran).toBe(true);
+    gateInputImage.mockClear();
+    const skipped = await POST(req({
+      mode: 'multiview-to-3d', providerId: 'tripo3d', viewDataUrls: { front: PNG }, gateInput: false,
+    }));
+    expect(skipped.status).toBe(202);
+    expect(gateInputImage).not.toHaveBeenCalled();
+  });
 });

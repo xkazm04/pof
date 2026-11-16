@@ -42,15 +42,15 @@ export function formatBytes(bytes: number, options: FormatBytesOptions = {}): st
  */
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  if (ms < 3_600_000) {
-    const mins = Math.floor(ms / 60_000);
-    const secs = Math.round((ms % 60_000) / 1000);
-    return `${mins}m ${secs}s`;
+  if (ms < 59_950) return `${(ms / 1000).toFixed(1)}s`;
+  // Round to the displayed unit BEFORE splitting, so a remainder never prints as
+  // 60 of the unit below (119 600 ms is 2m 0s, not 1m 60s).
+  const totalSecs = Math.round(ms / 1000);
+  if (totalSecs < 3600) {
+    return `${Math.floor(totalSecs / 60)}m ${totalSecs % 60}s`;
   }
-  const hours = Math.floor(ms / 3_600_000);
-  const mins = Math.round((ms % 3_600_000) / 60_000);
-  return `${hours}h ${mins}m`;
+  const totalMins = Math.round(ms / 60_000);
+  return `${Math.floor(totalMins / 60)}h ${totalMins % 60}m`;
 }
 
 /**
@@ -62,4 +62,16 @@ export function formatDurationBetween(startIso: string, endIso: string | null): 
   const start = new Date(startIso).getTime();
   const end = endIso ? new Date(endIso).getTime() : Date.now();
   return formatDuration(Math.max(0, end - start));
+}
+
+/**
+ * Slider readout precision follows the step: whole numbers for a unit-or-larger
+ * step, otherwise at least two decimals and as many as the step itself carries
+ * (a live parent's 0 - 0.07 scalar steps by 0.0007 and must not read "0.00").
+ * A value-based rule changes the decimal count mid-drag, so key off the step.
+ */
+export function readoutDecimals(step: number): number {
+  if (step >= 1) return 0;
+  const frac = String(step).split('.')[1] ?? '';
+  return Math.min(6, Math.max(2, frac.length));
 }

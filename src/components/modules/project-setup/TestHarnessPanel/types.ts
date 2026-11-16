@@ -20,6 +20,8 @@ export interface SuiteRunResult {
   startedAt: number;
   finishedAt: number;
   testResults: PofTestResult[];
+  /** Scenarios the suite held when the run started: `testResults` can be shorter (lost read-back, abort). */
+  expectedCount: number;
   snapshotReport: PofSnapshotDiffReport | null;
   status: 'passed' | 'failed' | 'partial' | 'error';
 }

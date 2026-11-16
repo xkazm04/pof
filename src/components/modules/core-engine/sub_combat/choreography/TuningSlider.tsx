@@ -29,6 +29,7 @@ export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color
           value={value}
           onChange={onChange}
           accentColor={c}
+          ariaLabel={label}
         />
         <div
           className="absolute top-1/2 -translate-y-1/2 w-[2px] h-2.5 rounded-full pointer-events-none z-0"
@@ -55,15 +56,6 @@ export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color
           <X className="w-2.5 h-2.5 text-text-muted hover:text-text" />
         </button>
       )}
-    </div>
-  );
-}
-
-export function StatBox({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div className="p-1.5 rounded-md bg-black/30 border border-border/30 text-center">
-      <div className="text-xs font-mono font-bold" style={{ color }}>{value}</div>
-      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</div>
     </div>
   );
 }

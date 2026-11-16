@@ -80,7 +80,9 @@ describe('startMeshFinishJob', () => {
     await settle();
     const job = getMeshFinishJob(id);
     expect(job?.status).toBe('done');
-    expect(job?.critique).toBeUndefined();
+    // The finish still succeeds, but the job says the gate errored instead of being silent.
+    expect(job?.critique?.ok).toBe(false);
+    expect(job?.critique?.error).toContain('trimesh venv missing');
   });
 
   it('surfaces a thrown runner as an error rather than a hung job', async () => {

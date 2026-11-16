@@ -21,10 +21,6 @@ function getChecklistSizes(): Record<string, number> {
   return sizes;
 }
 
-function getModuleLabel(moduleId: SubModuleId): string {
-  return SUB_MODULE_MAP[moduleId]?.label ?? moduleId;
-}
-
 /** Tiny 16px SVG arc showing proportional completion. */
 function MiniProgressArc({ progress }: { progress: number }) {
   const size = 16;
@@ -135,7 +131,7 @@ export function RecommendedNextBanner({ moduleId, accentColor }: RecommendedNext
               {unmetPrereqs.map((p) => (
                 <PrerequisitePill
                   key={p.moduleId}
-                  label={getModuleLabel(p.moduleId)}
+                  label={p.label}
                   progress={p.progress}
                   completed={p.completed}
                   total={p.total}
@@ -160,7 +156,7 @@ export function RecommendedNextBanner({ moduleId, accentColor }: RecommendedNext
                   onClick={() => navigateToModule(r.moduleId)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-text hover:text-text transition-colors cursor-pointer border border-border hover:border-text-muted bg-surface-hover"
                 >
-                  <span>{getModuleLabel(r.moduleId)}</span>
+                  <span>{r.label}</span>
                   <ArrowRight className="w-3 h-3 text-text-muted" />
                 </button>
               ))}

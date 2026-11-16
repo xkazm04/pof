@@ -69,7 +69,7 @@ describe('/api/evaluator/deep-eval', () => {
     expect(polledJson.data.job.scanId).toBe(startedJson.data.scanId);
     expect(polledJson.data.job.progress.passStatuses.audio).toBeDefined();
 
-    const again = await POST(post({ projectPath: 'C:/p', moduleIds: ['audio'] }));
+    const again = await POST(post({ projectPath: 'C:/p', ueVersion: '5.5', moduleIds: ['audio'] }));
     expect(again.status).toBe(409);
 
     const cancelled = await DELETE(new NextRequest(`${URL_BASE}?project=${encodeURIComponent('C:/p')}`, { method: 'DELETE' }));
@@ -91,4 +91,34 @@ describe('/api/evaluator/deep-eval', () => {
     const json = await res.json();
     expect(json.data.job).toBeNull();
   });
+});
+
+describe('POST /api/evaluator/deep-eval refuses a ueVersion no pass can run under', () => {
+  for (const ueVersion of [undefined, '', 'abc', '4.27', 42]) {
+    it(`answers ${JSON.stringify(ueVersion)} with a 400 naming the field, starting no job`, async () => {
+      const before = startExecution.mock.calls.length;
+      const res = await POST(post({ projectPath: 'C:/refused', moduleIds: ['audio'], ...(ueVersion === undefined ? {} : { ueVersion }) }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toContain('ueVersion');
+      expect(startExecution.mock.calls.length).toBe(before);
+      const polled = await GET(new NextRequest(`${URL_BASE}?project=${encodeURIComponent('C:/refused')}`));
+      expect((await polled.json()).data.job).toBeNull();
+    });
+  }
+});
+
+describe('POST /api/evaluator/deep-eval refuses module ids outside the module universe', () => {
+  for (const ids of [['nope'], ['audio', 'arpg-combt'], ['constructor']]) {
+    it(`answers ${JSON.stringify(ids)} with a 400 naming the unknown id, starting no job`, async () => {
+      const before = startExecution.mock.calls.length;
+      const project = `C:/unknown-${ids.join('-')}`;
+      const res = await POST(post({ projectPath: project, ueVersion: '5.5', moduleIds: ids }));
+      expect(res.status).toBe(400);
+      const unknown = ids.filter((id) => id !== 'audio');
+      expect((await res.json()).error).toContain(unknown.join(', '));
+      expect(startExecution.mock.calls.length).toBe(before);
+      const polled = await GET(new NextRequest(`${URL_BASE}?project=${encodeURIComponent(project)}`));
+      expect((await polled.json()).data.job).toBeNull();
+    });
+  }
 });

@@ -33,8 +33,8 @@ interface PacingReportPanelProps {
 
 export function PacingReportPanel({ doc, accentColor, onSelectRoom }: PacingReportPanelProps) {
   const result = useMemo(() => lintLevelPacing(doc), [doc]);
-  const [severityFilter, setSeverityFilter] = useState<PacingSeverity | 'all'>('all');
-  const [ruleFilter, setRuleFilter] = useState<PacingRuleId | 'all'>('all');
+  const [pickedSeverity, setSeverityFilter] = useState<PacingSeverity | 'all'>('all');
+  const [pickedRule, setRuleFilter] = useState<PacingRuleId | 'all'>('all');
 
   const ruleCounts = useMemo(() => {
     const counts: Partial<Record<PacingRuleId, number>> = {};
@@ -43,6 +43,12 @@ export function PacingReportPanel({ doc, accentColor, onSelectRoom }: PacingRepo
     }
     return counts;
   }, [result.findings]);
+
+  // A filter is only live while its chip / option is on screen. Fixing the last
+  // finding of a rule removes that option; holding the stale pick hid EVERY
+  // finding behind "No findings match" while the select read "All rules".
+  const ruleFilter = pickedRule !== 'all' && !ruleCounts[pickedRule] ? 'all' : pickedRule;
+  const severityFilter = pickedSeverity !== 'all' && result.counts[pickedSeverity] === 0 ? 'all' : pickedSeverity;
 
   const filtered = useMemo(() => {
     return result.findings.filter((f) => {
@@ -123,8 +129,9 @@ export function PacingReportPanel({ doc, accentColor, onSelectRoom }: PacingRepo
 
         {/* Rule filter */}
         <div className="flex items-center gap-1 ml-auto">
-          <Filter className="w-3 h-3 text-text-muted" />
+          <Filter className="w-3 h-3 text-text-muted" aria-hidden="true" />
           <select
+            aria-label="Filter findings by rule"
             value={ruleFilter}
             onChange={(e) => setRuleFilter(e.target.value as PacingRuleId | 'all')}
             className="px-2 py-1 bg-surface border border-border rounded text-2xs text-text outline-none focus:border-border-bright transition-colors"
@@ -170,6 +177,7 @@ export function PacingReportPanel({ doc, accentColor, onSelectRoom }: PacingRepo
                       roomNames={f.roomIds
                         .map((id) => roomById.get(id)?.name)
                         .filter((n): n is string => Boolean(n))}
+                      jumpRoomName={roomById.get(f.roomIds[0])?.name ?? ''}
                       onJump={() => f.roomIds[0] && onSelectRoom(f.roomIds[0])}
                     />
                   ))}
@@ -198,7 +206,9 @@ function SummaryChip({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={active}
       className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-2xs font-medium uppercase tracking-wider transition-all"
       style={{
         backgroundColor: active ? `${accent}${OPACITY_20}` : `${accent}${OPACITY_10}`,
@@ -220,10 +230,13 @@ function SummaryChip({
 function FindingCard({
   finding,
   roomNames,
+  jumpRoomName,
   onJump,
 }: {
   finding: PacingFinding;
   roomNames: string[];
+  /** The room Jump selects (the first affected one), so the button can name its target. */
+  jumpRoomName: string;
   onJump: () => void;
 }) {
   const color = SEVERITY_COLORS[finding.severity];
@@ -283,7 +296,9 @@ function FindingCard({
                 <span className="text-2xs text-text-muted">+{roomNames.length - 6}</span>
               )}
               <button
+                type="button"
                 onClick={onJump}
+                aria-label={`Jump to ${jumpRoomName || 'affected room'}: ${finding.title}`}
                 className="ml-auto text-2xs uppercase tracking-wider font-medium px-2 py-0.5 rounded transition-colors hover:bg-surface"
                 style={{ color }}
               >

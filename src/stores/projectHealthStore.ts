@@ -50,6 +50,14 @@ interface ProjectHealthState {
 
 /* ---- Store ------------------------------------------------------- */
 
+/**
+ * Latest-wins token for `fetchHealth`. Two views call it with different inputs and
+ * one re-fires when crash stats land, so POSTs overlap; only the most recent dispatch
+ * may write. Minted synchronously before the request leaves; a stale completion is
+ * inert (success and failure alike), not an error.
+ */
+let latestHealthRequest = 0;
+
 export const useProjectHealthStore = create<ProjectHealthState>((set) => ({
   summary: null,
   moduleHealth: EMPTY_MODULE_HEALTH,
@@ -65,6 +73,7 @@ export const useProjectHealthStore = create<ProjectHealthState>((set) => ({
   fetchHealth: async (
     checklistProgress, scanHistory, lastScan, perfInput = null, crashInput = null, completionLedger = {},
   ) => {
+    const token = ++latestHealthRequest;
     set({ isLoading: true, error: null });
     try {
       const data = await apiFetch<ProjectHealthSummary>('/api/project-health', {
@@ -72,6 +81,7 @@ export const useProjectHealthStore = create<ProjectHealthState>((set) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ checklistProgress, scanHistory, lastScan, perfInput, crashInput, completionLedger }),
       });
+      if (token !== latestHealthRequest) return;
       set({
         summary: data,
         moduleHealth: data.moduleHealth,
@@ -83,6 +93,7 @@ export const useProjectHealthStore = create<ProjectHealthState>((set) => ({
         isLoading: false,
       });
     } catch (err) {
+      if (token !== latestHealthRequest) return;
       set({ error: err instanceof Error ? err.message : String(err), isLoading: false });
     }
   },

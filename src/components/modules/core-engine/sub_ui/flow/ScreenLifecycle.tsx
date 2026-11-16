@@ -62,7 +62,9 @@ function ResolvedScreenLifecycle({ entity }: { entity: ScreenEntry }) {
 export function ScreenWorklistHeader({ entries }: { entries: readonly ScreenEntry[] }) {
   const wl = useMemo(() => screenWorklist(entries, SCREEN_STEPS), [entries]);
   const nextEntity = wl.next ? entries.find((e) => e.id === wl.next!.entityId) : undefined;
-  const idle = wl.verified === wl.total ? 'All screens verified' : 'No runnable step';
+  // 0/0 is an empty catalog, not a finished one.
+  const idle = wl.total === 0 ? 'No catalog screens'
+    : wl.verified === wl.total ? 'All screens verified' : 'No runnable step';
   return (
     <div data-testid="screen-worklist" className="flex flex-wrap items-center justify-between gap-2 px-1">
       <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">

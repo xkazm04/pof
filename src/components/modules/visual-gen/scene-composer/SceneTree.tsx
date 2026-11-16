@@ -102,14 +102,12 @@ export function SceneTree() {
           Scene is empty — no objects to show.
         </div>
       ) : (
-        <ul role="listbox" aria-label="Scene objects" className="space-y-0.5">
+        <ul aria-label="Scene objects" className="space-y-0.5">
           {sceneInfo.objects.map((obj) => {
             const selected = selectedObject === obj.name;
             return (
               <li
                 key={obj.name}
-                role="option"
-                aria-selected={selected}
                 className={`group flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${
                   selected
                     ? 'bg-accent/10 text-accent'
@@ -118,6 +116,7 @@ export function SceneTree() {
               >
                 <button
                   onClick={() => selectObject(obj.name)}
+                  aria-pressed={selected}
                   className="focus-ring flex-1 flex items-center gap-2 min-w-0 text-left"
                 >
                   <Box className="w-3 h-3 shrink-0" />

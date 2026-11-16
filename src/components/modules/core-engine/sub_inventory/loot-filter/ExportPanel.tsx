@@ -1,18 +1,19 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, Cable, ShieldCheck, Loader2 } from 'lucide-react';
-import { postArtifact, fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
+import { postArtifact, fetchArtifactsResult } from '@/components/layout-lab/labArtifactClient';
 import { runPython } from '@/lib/bridge/run-python';
 import { downloadBlob } from '@/lib/download';
 import { usePofBridge } from '@/hooks/usePofBridge';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
-import { STATUS_SUCCESS, STATUS_MUTED, withOpacity, OPACITY_15 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_MUTED, STATUS_WARNING, withOpacity, OPACITY_15 } from '@/lib/chart-colors';
 import type { AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { LifecycleState } from '@/lib/catalog/types';
 import type { LootFilterRuleset } from '@/lib/loot-filter/types';
 import {
   LOOT_FILTER_CATALOG_ID, STEP_GENERATE, STEP_WIRE, STEP_VERIFY, STEP_TIER, deriveLifecycle,
+  generatedJsonHash, hashExportJson, isExportStale,
 } from '@/lib/loot-filter/pipeline';
 import { dataTableAssetPath, rulesetToDataTableRows, rulesetToDataTableJson } from '@/lib/loot-filter/export';
 
@@ -44,16 +45,26 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
   const [lifecycle, setLifecycle] = useState<LifecycleState>('planned');
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // Hash of the json the recorded generate artifact exported; the staleness reference.
+  const [generatedHash, setGeneratedHash] = useState<string | null>(null);
 
   const assetPath = dataTableAssetPath(ruleset);
 
   // Hydrate lifecycle from the persisted pipeline artifacts (the pipeline truth).
   useEffect(() => {
     let alive = true;
-    fetchArtifacts(LOOT_FILTER_CATALOG_ID, ruleset.id).then((arts) => {
+    // A failed read is not an empty pipeline: say the state is unknown rather than Planned.
+    fetchArtifactsResult(LOOT_FILTER_CATALOG_ID, ruleset.id).then((r) => {
       if (!alive) return;
-      setLifecycle(deriveLifecycle(Array.isArray(arts) ? arts : []));
-      setNote(null);
+      if (r.ok) {
+        const arts = Array.isArray(r.data) ? r.data : [];
+        setLifecycle(deriveLifecycle(arts));
+        setGeneratedHash(generatedJsonHash(arts));
+        setNote(null);
+      } else {
+        setLifecycle('planned');
+        setNote(`Pipeline state unknown: ${r.error}`);
+      }
     });
     return () => { alive = false; };
   }, [ruleset.id]);
@@ -62,13 +73,19 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
     setBusy(STEP_GENERATE);
     const rows = rulesetToDataTableRows(ruleset);
     const json = rulesetToDataTableJson(ruleset);
-    await postArtifact({
+    const write = await postArtifact({
       catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step: STEP_GENERATE,
-      data: { json, rowCount: rows.length, assetPath, name: ruleset.name },
+      data: { json, jsonHash: hashExportJson(json), rowCount: rows.length, assetPath, name: ruleset.name },
       ueAssets: [assetPath], status: 'pass', tier: STEP_TIER[STEP_GENERATE],
     });
-    setLifecycle((cur) => (RANK[cur] > RANK.generated ? cur : 'generated'));
-    setNote(`Generated ${rows.length} rows → ${assetPath}`);
+    // The lifecycle is the pipeline's truth: advance it only when the write was recorded.
+    if (write.ok) {
+      setLifecycle((cur) => (RANK[cur] > RANK.generated ? cur : 'generated'));
+      setGeneratedHash(hashExportJson(json));
+      setNote(`Generated ${rows.length} rows → ${assetPath}`);
+    } else {
+      setNote(`Pipeline write failed: ${write.error} (DataTable downloaded, not recorded)`);
+    }
     downloadBlob(new Blob([json], { type: 'application/json' }), `${assetPath.split('/').pop()}.json`);
     setBusy(null);
   }, [ruleset, assetPath]);
@@ -86,9 +103,13 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
       { assetPath, rows: rulesetToDataTableRows(ruleset) },
       { bridgeUrl: `http://localhost:${port}/pof/python/run`, authToken: authToken || undefined });
     if (res.ok) {
-      setLifecycle((cur) => (RANK[cur] > RANK[okState] ? cur : okState));
-      setNote(okMsg);
-      await postArtifact({ catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step, data: { assetPath }, ueAssets: [assetPath], status: 'pass', tier });
+      const write = await postArtifact({ catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step, data: { assetPath }, ueAssets: [assetPath], status: 'pass', tier });
+      if (write.ok) {
+        setLifecycle((cur) => (RANK[cur] > RANK[okState] ? cur : okState));
+        setNote(okMsg);
+      } else {
+        setNote(`${okMsg} Pipeline write failed: ${write.error} (not recorded)`);
+      }
     } else {
       setNote(res.error);
       await postArtifact({ catalogId: LOOT_FILTER_CATALOG_ID, entityId: ruleset.id, step, data: { assetPath }, ueAssets: [assetPath], status: 'deferred', tier, reason: res.error });
@@ -97,6 +118,8 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
   }, [isConnected, ruleset, assetPath, port, authToken]);
 
   const rank = RANK[lifecycle];
+  const currentJson = useMemo(() => rulesetToDataTableJson(ruleset), [ruleset]);
+  const stale = isExportStale(generatedHash, currentJson);
   const anyBusy = busy !== null;
 
   return (
@@ -115,11 +138,11 @@ export function ExportPanel({ ruleset, accent }: { ruleset: LootFilterRuleset; a
         <div className="flex items-center gap-1">
           {STAGES.map((st, i) => {
             const reached = rank >= RANK[st.state];
-            const c = reached ? STATUS_SUCCESS : STATUS_MUTED;
+            const c = !reached ? STATUS_MUTED : stale ? STATUS_WARNING : STATUS_SUCCESS;
             return (
               <Fragment key={st.state}>
                 {i > 0 && <span className="h-px w-3" style={{ backgroundColor: withOpacity(STATUS_MUTED, OPACITY_15) }} />}
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: c, backgroundColor: withOpacity(c, OPACITY_15) }}>{st.label}</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: c, backgroundColor: withOpacity(c, OPACITY_15) }}>{reached && stale ? `${st.label} · Stale` : st.label}</span>
               </Fragment>
             );
           })}

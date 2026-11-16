@@ -1,6 +1,8 @@
 import { X } from 'lucide-react';
 import { TRANSITION_STYLES } from './constants';
-import type { StreamingZone, ZoneTransition, TransitionStyle } from './types';
+import type { StreamingZone, ZoneTransition, TransitionStyle, TransitionTrigger } from './types';
+
+const TRIGGERS: TransitionTrigger[] = ['proximity', 'interaction', 'automatic'];
 
 interface TransitionListProps {
   transitions: ZoneTransition[];
@@ -11,7 +13,7 @@ interface TransitionListProps {
 
 export function TransitionList({ transitions, zones, deleteTransition, updateTransition }: TransitionListProps) {
   return (
-    <div className="bg-[#03030a] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4 flex-1 overflow-y-auto">
+    <div className="bg-[var(--schematic-surface)] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4 flex-1 overflow-y-auto">
       <div className="text-xs uppercase font-mono tracking-widest text-violet-400 mb-3 font-bold border-b border-violet-900/30 pb-2">
         Zone Pipelines ({transitions.length})
       </div>
@@ -33,6 +35,8 @@ export function TransitionList({ transitions, zones, deleteTransition, updateTra
                   <span className="text-violet-200 capitalize font-bold">{to.name}</span>
                 </div>
                 <button
+                  type="button"
+                  aria-label={`Remove transition ${from.name} to ${to.name}`}
                   onClick={() => deleteTransition(tr.id)}
                   className="text-text-muted hover:text-red-400 transition-colors p-1 bg-surface rounded hover:bg-surface-hover"
                 >
@@ -42,6 +46,7 @@ export function TransitionList({ transitions, zones, deleteTransition, updateTra
 
               <div className="flex items-center gap-2">
                 <select
+                  aria-label={`Style of ${from.name} to ${to.name}`}
                   value={tr.style}
                   onChange={(e) => updateTransition(tr.id, { style: e.target.value as TransitionStyle })}
                   className="flex-1 text-xs bg-black/40 border border-violet-900/40 rounded px-1.5 py-1 text-violet-200 outline-none uppercase font-mono tracking-wide"
@@ -54,15 +59,25 @@ export function TransitionList({ transitions, zones, deleteTransition, updateTra
                   ))}
                 </select>
 
-                <span className="text-[11px] text-violet-400 font-mono tracking-wider uppercase px-2 py-1 rounded bg-violet-900/20">{tr.triggerType}</span>
+                <select
+                  aria-label={`Trigger of ${from.name} to ${to.name}`}
+                  value={tr.triggerType}
+                  onChange={(e) => updateTransition(tr.id, { triggerType: e.target.value as TransitionTrigger })}
+                  className="flex-1 text-xs bg-black/40 border border-violet-900/40 rounded px-1.5 py-1 text-violet-300 outline-none uppercase font-mono tracking-wide"
+                >
+                  {TRIGGERS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
 
               {/* Condition */}
-              {tr.condition && (
-                <div className="text-[11px] text-amber-400/90 truncate bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded font-mono mt-1">
-                  REQ: {tr.condition}
-                </div>
-              )}
+              <input
+                type="text"
+                aria-label={`Condition of ${from.name} to ${to.name}`}
+                placeholder="Condition (optional)"
+                value={tr.condition}
+                onChange={(e) => updateTransition(tr.id, { condition: e.target.value })}
+                className="text-xs text-amber-400/90 placeholder:text-text-muted bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded font-mono outline-none focus:border-amber-500/60"
+              />
             </div>
           );
         })}

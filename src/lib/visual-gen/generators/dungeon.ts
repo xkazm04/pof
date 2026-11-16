@@ -35,6 +35,8 @@ export interface DungeonResult {
   rooms: Room[];
   width: number;
   height: number;
+  /** Why `rooms` is empty. Absent whenever at least one room was placed. */
+  reason?: string;
 }
 
 export const DEFAULT_DUNGEON_CONFIG: DungeonConfig = {
@@ -225,5 +227,12 @@ export function generateDungeon(config: DungeonConfig): DungeonResult {
     }
   }
 
+  if (rooms.length === 0) {
+    const reason =
+      config.minRoomSize > config.maxRoomSize
+        ? `no rooms: minRoomSize (${config.minRoomSize}) is above maxRoomSize (${config.maxRoomSize}), so no room can satisfy both`
+        : `no rooms: no partition of the ${width}x${height} grid is large enough for a ${config.minRoomSize}-cell room plus its walls`;
+    return { grid, rooms, width, height, reason };
+  }
   return { grid, rooms, width, height };
 }

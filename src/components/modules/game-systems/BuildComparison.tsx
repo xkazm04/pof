@@ -1,13 +1,33 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowLeftRight, ArrowUp, ArrowDown, Clock, HardDrive, AlertTriangle, AlertCircle, Tag, FolderOpen, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeftRight, ArrowUp, ArrowDown, Clock, HardDrive, AlertTriangle, AlertCircle, Tag, FolderOpen, CheckCircle, XCircle, Ban } from 'lucide-react';
 import type { BuildRecord } from '@/lib/packaging/build-history-store';
 import { platformLabel } from '@/lib/packaging/build-profiles';
-import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_NEUTRAL } from '@/lib/chart-colors';
 import { formatBytes, formatDuration } from '@/lib/format';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * All three arms of the status union, matching BuildRow: a cancelled cook was judged
+ * by nothing, so it is neither labelled nor coloured as a failure.
+ */
+const STATUS_VISUAL = {
+  success: { color: STATUS_SUCCESS, Icon: CheckCircle, suffix: '' },
+  failed: { color: STATUS_ERROR, Icon: XCircle, suffix: '(failed)' },
+  cancelled: { color: STATUS_WARNING, Icon: Ban, suffix: '(cancelled)' },
+} as const;
+
+function StatusCell({ status }: { status: BuildRecord['status'] }) {
+  const v = STATUS_VISUAL[status] ?? STATUS_VISUAL.failed;
+  return (
+    <span className="inline-flex items-center gap-1" style={{ color: v.color }}>
+      <v.Icon className="w-3 h-3" aria-hidden="true" />
+      {status}
+    </span>
+  );
+}
 
 interface BuildComparisonProps {
   builds: BuildRecord[];
@@ -142,7 +162,7 @@ export function BuildComparison({ builds, initialPair }: BuildComparisonProps) {
   }
 
   const buildOption = (b: BuildRecord) =>
-    `#${b.id} ${platformLabel(b.platform)} ${b.config} ${b.status === 'success' ? '' : '(failed)'} ${b.version ?? ''}`.trim();
+    `#${b.id} ${platformLabel(b.platform)} ${b.config} ${(STATUS_VISUAL[b.status] ?? STATUS_VISUAL.failed).suffix} ${b.version ?? ''}`.trim();
 
   const swap = () => {
     setLeftId(rightId);
@@ -240,22 +260,8 @@ export function BuildComparison({ builds, initialPair }: BuildComparisonProps) {
           <CompareRow
             label="Status"
             icon={<AlertCircle className="w-2.5 h-2.5" />}
-            leftVal={
-              <span className="inline-flex items-center gap-1" style={{ color: left.status === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}>
-                {left.status === 'success'
-                  ? <CheckCircle className="w-3 h-3" aria-hidden="true" />
-                  : <XCircle className="w-3 h-3" aria-hidden="true" />}
-                {left.status}
-              </span>
-            }
-            rightVal={
-              <span className="inline-flex items-center gap-1" style={{ color: right.status === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}>
-                {right.status === 'success'
-                  ? <CheckCircle className="w-3 h-3" aria-hidden="true" />
-                  : <XCircle className="w-3 h-3" aria-hidden="true" />}
-                {right.status}
-              </span>
-            }
+            leftVal={<StatusCell status={left.status} />}
+            rightVal={<StatusCell status={right.status} />}
           />
 
           <CompareRow

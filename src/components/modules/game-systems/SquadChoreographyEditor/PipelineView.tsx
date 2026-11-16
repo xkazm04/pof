@@ -3,21 +3,11 @@ import { Info, ArrowRight } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { OPACITY_10, OPACITY_15 } from '@/lib/chart-colors';
 import { TEXT_SCALE } from '@/lib/typography-scale';
-import { runtimeTestOrder, testOrderDiffers } from '@/lib/ai-director/eqs-catalog';
-import type { ComposedEQSStep, DirectorResult } from '@/types/squad-tactics';
-import { ACCENT, STEP_KIND_COLORS } from './constants';
+import { runtimeTestOrder, testOrderDiffers, KIND_STYLE } from '@/lib/ai-director/eqs-catalog';
+import type { DirectorResult } from '@/types/squad-tactics';
+import { ACCENT } from './constants';
 
 /* ── EQS Pipeline View ────────────────────────────────────────────────────── */
-
-/** Readable badge text per step kind — one lookup instead of an inline ternary chain. */
-const KIND_LABELS: Record<ComposedEQSStep['kind'], string> = {
-  context: 'Context',
-  generator: 'Generator',
-  'test-score': 'Score',
-  'test-filter': 'Filter',
-  director: 'Director',
-  result: 'Result',
-};
 
 export function PipelineView({ result }: { result: DirectorResult }) {
   const headingId = useId();
@@ -74,7 +64,7 @@ export function PipelineView({ result }: { result: DirectorResult }) {
             aria-hidden="true"
           >
             {steps.map((step, i) => {
-              const color = STEP_KIND_COLORS[step.kind] ?? ACCENT;
+              const color = KIND_STYLE[step.kind].color;
               return (
                 <div key={i} className="flex items-center gap-1">
                   <span
@@ -97,7 +87,7 @@ export function PipelineView({ result }: { result: DirectorResult }) {
               relies on is conveyed structurally and not by arrow glyphs alone. */}
           <ol className="p-3 space-y-1.5" aria-label="Pipeline steps in execution order">
             {steps.map((step, i) => {
-              const color = STEP_KIND_COLORS[step.kind] ?? ACCENT;
+              const color = KIND_STYLE[step.kind].color;
 
               return (
                 <li key={i}>
@@ -141,7 +131,7 @@ export function PipelineView({ result }: { result: DirectorResult }) {
                         className={`${TEXT_SCALE.meta} font-medium px-1.5 py-0.5 rounded shrink-0 ${step.cost || !step.simulated ? '' : 'ml-auto'}`}
                         style={{ color, backgroundColor: `${color}${OPACITY_15}` }}
                       >
-                        {KIND_LABELS[step.kind]}
+                        {KIND_STYLE[step.kind].label}
                       </span>
                     </div>
                     <div className="px-3 pb-2 space-y-0.5">
@@ -157,7 +147,7 @@ export function PipelineView({ result }: { result: DirectorResult }) {
                     <div className="flex items-center justify-center py-0.5" aria-hidden="true">
                       <ArrowRight
                         className="w-3.5 h-3.5"
-                        style={{ color: STEP_KIND_COLORS[steps[i + 1].kind] ?? ACCENT }}
+                        style={{ color: KIND_STYLE[steps[i + 1].kind].color }}
                       />
                     </div>
                   )}

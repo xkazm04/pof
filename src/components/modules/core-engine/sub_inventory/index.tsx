@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { Package, LayoutGrid } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motionSafe } from '@/lib/motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { TabHeader, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
@@ -35,12 +36,12 @@ function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: ItemCatalog
             {i > 0 && <span className="text-text-subtle mx-0.5">{'>'}</span>}
             <button
               onClick={() => onNavigate(step.key)}
+              aria-current={isActive ? 'step' : undefined}
               className="px-1.5 py-0.5 rounded transition-all cursor-pointer"
               style={{
-                color: isActive ? ACCENT : isPast ? withOpacity(ACCENT, '99') : 'var(--text-muted)',
+                color: isActive ? ACCENT : isPast ? withOpacity(ACCENT, '99') : 'var(--text-subtle)',
                 backgroundColor: isActive ? withOpacity(ACCENT, OPACITY_10) : 'transparent',
                 fontWeight: isActive ? 700 : isPast ? 600 : 400,
-                opacity: !isActive && !isPast ? 0.5 : 1,
               }}
             >
               {step.narrative}
@@ -69,6 +70,7 @@ interface ItemCatalogProps {
 export function ItemCatalog({ moduleId }: ItemCatalogProps) {
   const { featureMap, stats, isLoading } = useTabFeatures(moduleId);
   const [activeTab, setActiveTab] = useState<ItemCatalogSubtab>('catalog-gear');
+  const prefersReduced = useReducedMotion();
 
   const tabs: SubTab[] = useMemo(() => [
     { id: 'features', label: 'Features', icon: LayoutGrid },
@@ -108,10 +110,10 @@ export function ItemCatalog({ moduleId }: ItemCatalogProps) {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: prefersReduced ? 0 : 16 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: prefersReduced ? 0 : -8 }}
+            transition={motionSafe({ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const }, prefersReduced)}
           >
           {activeTab === 'features' && <FeatureMapTab moduleId={moduleId} renderMetric={renderItemMetric} />}
           {activeTab === 'catalog-gear' && (

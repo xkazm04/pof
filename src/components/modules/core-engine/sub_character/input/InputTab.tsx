@@ -55,6 +55,7 @@ export function InputTab({ moduleId, featureMap }: Props) {
                   <button
                     key={s.key}
                     onClick={() => setSortKey(s.key)}
+                    aria-pressed={active}
                     className="px-2 py-0.5 rounded text-[11px] font-mono font-bold border transition-colors cursor-pointer"
                     style={{
                       color: active ? ACCENT_VIOLET : 'var(--text-muted)',

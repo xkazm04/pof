@@ -6,18 +6,18 @@ import type {
 } from '@/types/pof-bridge';
 import type { TestSuite, SuiteRunResult, HarnessTab } from './types';
 import { TEMPLATE_SCENARIO } from './constants';
-import { generateId } from './helpers';
+import { deriveSuiteStatus, generateId, parseScenariosDraft } from './helpers';
 
 /** Per-pixel diff threshold (%) every harness capture compares at. */
 const SNAPSHOT_DIFF_THRESHOLD = 0.5;
 
 export function useTestHarnessPanel() {
-  const { runTest, results: testResults, isRunning: isTestRunning, error: testError, clearResults } = useTestRunner();
+  const { runTest, results: testResults, isRunning: isTestRunning, error: testError, clearResults, abort: abortTest } = useTestRunner();
   const { capture, acceptBaselines, diffReport, isCapturing, error: snapError, refreshDiff } = useSnapshots();
 
   // ── Suites ──
   const [suites, setSuites] = useState<TestSuite[]>([]);
-  const [activeSuiteId, setActiveSuiteId] = useState<string | null>(null);
+  const [activeSuiteId, setActiveSuiteIdState] = useState<string | null>(null);
   const [suiteRunHistory, setSuiteRunHistory] = useState<SuiteRunResult[]>([]);
 
   // ── UI state ──
@@ -38,6 +38,13 @@ export function useTestHarnessPanel() {
     [suites, activeSuiteId],
   );
 
+  /** The JSON draft and the expanded row belong to the suite they were opened on. */
+  const setActiveSuiteId = useCallback((id: string | null) => {
+    setActiveSuiteIdState(id);
+    setJsonEditorOpen(false);
+    setEditingScenarioIdx(null);
+  }, []);
+
   // ── Suite CRUD ──
 
   const createSuite = useCallback(() => {
@@ -52,12 +59,12 @@ export function useTestHarnessPanel() {
     };
     setSuites((prev) => [...prev, newSuite]);
     setActiveSuiteId(id);
-  }, [suites.length]);
+  }, [suites.length, setActiveSuiteId]);
 
   const deleteSuite = useCallback((id: string) => {
     setSuites((prev) => prev.filter((s) => s.id !== id));
     if (activeSuiteId === id) setActiveSuiteId(null);
-  }, [activeSuiteId]);
+  }, [activeSuiteId, setActiveSuiteId]);
 
   const duplicateSuite = useCallback((id: string) => {
     const source = suites.find((s) => s.id === id);
@@ -72,7 +79,7 @@ export function useTestHarnessPanel() {
     };
     setSuites((prev) => [...prev, dup]);
     setActiveSuiteId(newId);
-  }, [suites]);
+  }, [suites, setActiveSuiteId]);
 
   const updateSuiteField = useCallback((id: string, field: keyof TestSuite, value: unknown) => {
     setSuites((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
@@ -139,16 +146,12 @@ export function useTestHarnessPanel() {
   }, [activeSuite]);
 
   const applyJsonDraft = useCallback(() => {
-    if (!activeSuiteId) return;
-    try {
-      const parsed = JSON.parse(jsonDraft) as PofTestSpec[];
-      if (!Array.isArray(parsed)) return;
-      updateSuiteField(activeSuiteId, 'scenarios', parsed);
-      setJsonEditorOpen(false);
-    } catch {
-      // invalid JSON — don't apply
-    }
-  }, [activeSuiteId, jsonDraft, updateSuiteField]);
+    if (!activeSuiteId || !jsonEditorOpen) return;
+    const parsed = parseScenariosDraft(jsonDraft);
+    if (!parsed.ok) return; // SuitesTab shows the same reason and keeps Apply disabled
+    updateSuiteField(activeSuiteId, 'scenarios', parsed.data);
+    setJsonEditorOpen(false);
+  }, [activeSuiteId, jsonEditorOpen, jsonDraft, updateSuiteField]);
 
   // ── Run suite ──
 
@@ -181,10 +184,6 @@ export function useTestHarnessPanel() {
     }
 
     const finishedAt = Date.now();
-    const allPassed = runResults.every((r) => r.status === 'passed');
-    const anyFailed = runResults.some((r) => r.status === 'failed' || r.status === 'error');
-    // A suite with presets passes only on a read-back report that passed; a failed capture is not a pass.
-    const snapshotPassed = !snapshotsRan || snapshotReport?.overallStatus === 'passed';
 
     const suiteResult: SuiteRunResult = {
       suiteId: activeSuite.id,
@@ -192,8 +191,16 @@ export function useTestHarnessPanel() {
       startedAt,
       finishedAt,
       testResults: runResults,
+      expectedCount: activeSuite.scenarios.length,
       snapshotReport,
-      status: anyFailed || !snapshotPassed ? 'failed' : allPassed ? 'passed' : 'partial',
+      status: deriveSuiteStatus({
+        results: runResults,
+        expectedCount: activeSuite.scenarios.length,
+        // A suite with presets passes only on a read-back report that passed; a failed capture is not a pass.
+        snapshots: activeSuite.snapshotPresets.length === 0
+          ? 'none'
+          : !snapshotsRan ? 'skipped' : snapshotReport?.overallStatus === 'passed' ? 'passed' : 'failed',
+      }),
     };
 
     setSuiteRunHistory((prev) => [suiteResult, ...prev].slice(0, 20));
@@ -202,7 +209,8 @@ export function useTestHarnessPanel() {
 
   const abortRun = useCallback(() => {
     runAbortRef.current = true;
-  }, []);
+    abortTest();
+  }, [abortTest]);
 
   // ── Render helpers ──
 

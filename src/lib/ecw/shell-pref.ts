@@ -9,14 +9,21 @@ const KEY = 'pof.shell';
  * SSR-safe — returns 'ecw' with no window. Single source of truth shared by `page.tsx`'s
  * gate and both shell switches; the parsing itself is `parseShellRoute`.
  */
+/** The stored preference, or null when storage is unavailable (blocked site data throws). */
+function readStored(): string | null {
+  try { return localStorage.getItem(KEY); } catch { return null; }
+}
+
 export function readShellPref(): ShellPref {
   if (typeof window === 'undefined') return 'ecw';
-  return parseShellRoute(window.location.search, localStorage.getItem(KEY)).shell;
+  return parseShellRoute(window.location.search, readStored()).shell;
 }
 
 export function writeShellPref(pref: ShellPref): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(KEY, pref);
+  // Blocked site data makes setItem throw (SecurityError) — and quota can too.
+  // The preference is a convenience; the URL `switchShell` pushes still names the shell.
+  try { localStorage.setItem(KEY, pref); } catch { /* storage unavailable */ }
 }
 
 /**

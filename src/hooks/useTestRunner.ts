@@ -8,18 +8,16 @@
  * the same component lifecycle.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { PofTestSpec, PofTestResult } from '@/types/pof-bridge';
-
-/** Polling interval while waiting for test results (ms). */
-const TEST_POLL_INTERVAL = 2_000;
-
-/** Maximum time to wait for a single test before giving up (ms). */
-const TEST_POLL_TIMEOUT = 120_000;
 
 interface UseTestRunnerResult {
   runTest: (spec: PofTestSpec) => Promise<PofTestResult | null>;
+  /** Ends the in-flight poll at its next wake (within one UI_TIMEOUTS.testPollInterval); the run resolves null. */
+  abort: () => void;
   results: PofTestResult[];
   isRunning: boolean;
   error: string | null;
@@ -31,18 +29,15 @@ export function useTestRunner(): UseTestRunnerResult {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mountedRef = useRef(true);
+  const isMounted = useIsMounted();
   // Use a ref to allow aborting ongoing polls on unmount
   const abortRef = useRef(false);
+  const lastPollErrorRef = useRef<string | null>(null);
 
-  // Clean up on unmount
-  useState(() => {
-    // This runs once on mount (initializer)
-    return () => {
-      mountedRef.current = false;
-      abortRef.current = true;
-    };
-  });
+  useEffect(() => {
+    abortRef.current = false;
+    return () => { abortRef.current = true; };
+  }, []);
 
   // ── Poll for test result ───────────────────────────────────────────────────
 
@@ -50,11 +45,11 @@ export function useTestRunner(): UseTestRunnerResult {
     const startTime = Date.now();
 
     while (!abortRef.current) {
-      if (Date.now() - startTime > TEST_POLL_TIMEOUT) {
+      if (Date.now() - startTime > UI_TIMEOUTS.testPollTimeout) {
         return null; // Timed out waiting
       }
 
-      await new Promise((resolve) => setTimeout(resolve, TEST_POLL_INTERVAL));
+      await new Promise((resolve) => setTimeout(resolve, UI_TIMEOUTS.testPollInterval));
 
       if (abortRef.current) return null;
 
@@ -62,7 +57,11 @@ export function useTestRunner(): UseTestRunnerResult {
         `/api/pof-bridge/test?testId=${encodeURIComponent(testId)}`,
       );
 
-      if (!result.ok) continue; // Retry on transient errors
+      if (!result.ok) {
+        lastPollErrorRef.current = result.error; // Retry on transient errors; kept so a timeout can name it
+        continue;
+      }
+      lastPollErrorRef.current = null;
 
       if (result.data.status !== 'running') {
         return result.data;
@@ -75,9 +74,12 @@ export function useTestRunner(): UseTestRunnerResult {
   // ── Run test ───────────────────────────────────────────────────────────────
 
   const runTest = useCallback(async (spec: PofTestSpec): Promise<PofTestResult | null> => {
+    // A suite loop can outlive its panel; an unmounted runner sends nothing more to UE.
+    if (!isMounted()) return null;
     setIsRunning(true);
     setError(null);
     abortRef.current = false;
+    lastPollErrorRef.current = null;
 
     // Submit the test spec — the proxy reads `{ action, spec }` and forwards `body.spec`.
     const submitResult = await tryApiFetch<PofTestResult>('/api/pof-bridge/test', {
@@ -87,7 +89,7 @@ export function useTestRunner(): UseTestRunnerResult {
     });
 
     if (!submitResult.ok) {
-      if (mountedRef.current) {
+      if (isMounted()) {
         setError(submitResult.error);
         setIsRunning(false);
       }
@@ -96,7 +98,7 @@ export function useTestRunner(): UseTestRunnerResult {
 
     // If the result came back immediately (not running), we're done
     if (submitResult.data.status !== 'running') {
-      if (mountedRef.current) {
+      if (isMounted()) {
         setResults((prev) => [...prev, submitResult.data]);
         setIsRunning(false);
       }
@@ -106,17 +108,22 @@ export function useTestRunner(): UseTestRunnerResult {
     // Poll until completion
     const finalResult = await pollForResult(spec.testId);
 
-    if (!mountedRef.current) return finalResult;
+    if (!isMounted()) return finalResult;
 
     if (finalResult) {
       setResults((prev) => [...prev, finalResult]);
     } else {
-      setError(`Test "${spec.testId}" timed out or was aborted`);
+      const reason = lastPollErrorRef.current;
+      setError(`Test "${spec.testId}" timed out or was aborted${reason ? ` (last poll failed: ${reason})` : ''}`);
     }
 
     setIsRunning(false);
     return finalResult;
-  }, [pollForResult]);
+  }, [pollForResult, isMounted]);
+
+  const abort = useCallback(() => {
+    abortRef.current = true;
+  }, []);
 
   // ── Clear results ──────────────────────────────────────────────────────────
 
@@ -127,6 +134,7 @@ export function useTestRunner(): UseTestRunnerResult {
 
   return {
     runTest,
+    abort,
     results,
     isRunning,
     error,

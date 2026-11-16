@@ -58,7 +58,7 @@ describe('auditPromptString', () => {
 describe('summarizeAudit', () => {
   it('reports the count + "all required" when nothing required is missing', () => {
     const summary = summarizeAudit(auditPromptString(FULL_PROMPT));
-    expect(summary).toMatch(/\d+ of 7 sections populated/);
+    expect(summary).toMatch(/\d+ of 9 sections populated/);
     expect(summary).toContain('all required');
   });
 
@@ -78,8 +78,8 @@ describe('PromptInspector', () => {
   it('renders one chip per canonical section with a state attribute reflecting presence', () => {
     const { container } = render(<PromptInspector prompt={FULL_PROMPT} />);
     const chips = Array.from(container.querySelectorAll('[data-section]'));
-    // 7 sections total — every chip should appear once.
-    expect(chips).toHaveLength(7);
+    // 9 sections total — every chip should appear once.
+    expect(chips).toHaveLength(9);
     const taskChip = chips.find((c) => c.getAttribute('data-section') === 'taskInstructions')!;
     expect(taskChip.getAttribute('data-state')).toBe('present');
   });

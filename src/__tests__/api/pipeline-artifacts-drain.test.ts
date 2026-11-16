@@ -127,3 +127,30 @@ describe('POST /api/pipeline-artifacts/drain — in-flight lock', () => {
     expect(retry.status).toBe(200);
   });
 });
+
+describe('POST /api/pipeline-artifacts/drain — body parsing never widens scope', () => {
+  const raw = (body: string) => new NextRequest('http://localhost/api/pipeline-artifacts/drain', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+  });
+
+  it('refuses an unparseable body with 400 instead of running a GLOBAL drain', async () => {
+    // A truncated single-entity body used to parse as `{}` = no filter = every deferred gate.
+    const res = await POST(raw('{"catalogId":"items","entityId":"item-1"'));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/not valid JSON/i);
+    expect(drainAllMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses a non-object JSON body with 400', async () => {
+    const res = await POST(raw('["items"]'));
+    expect(res.status).toBe(400);
+    expect(drainAllMock).not.toHaveBeenCalled();
+  });
+
+  it('still treats an EMPTY body as the explicit global drain', async () => {
+    drainAllMock.mockImplementationOnce(async () => ({ ran: 0, passed: 0, failed: 0, skipped: 0, results: [] }));
+    const res = await POST(new NextRequest('http://localhost/api/pipeline-artifacts/drain', { method: 'POST' }));
+    expect(res.status).toBe(200);
+    expect(drainAllMock).toHaveBeenCalledTimes(1);
+  });
+});

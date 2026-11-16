@@ -1,4 +1,4 @@
-import { siblingStepsBlock, SIBLING_STEPS_MAX_CHARS } from '@/lib/catalog/siblingSteps';
+import { siblingStepsBlock, SIBLING_OMITTED_HEADING, SIBLING_STEPS_MAX_CHARS } from '@/lib/catalog/siblingSteps';
 import type { LabStepArtifact } from '../../labPipelineStore';
 
 /**
@@ -24,9 +24,6 @@ export const RECONCILE_STEPS: ReadonlySet<string> = new Set(['Localization']);
 
 /** The cap the prompt's sibling section stops at, re-exported so copy never hard-codes it. */
 export const SIBLING_CAP = SIBLING_STEPS_MAX_CHARS;
-
-/** The omission heading `siblingStepsBlock` writes (siblingSteps.ts `omissionBlock`). */
-const OMITTED_HEADING = 'Omitted by prompt size cap';
 
 /** Loc-key shapes: UPPER_SNAKE with 3+ segments (`CODEX_X_TITLE`) or dotted camel (`input.action.lightAttack`). */
 const KEY_SHAPE = /\b(?:[A-Z][A-Z0-9]*(?:_[A-Z0-9]+){2,}|[a-z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*){2,})\b/g;
@@ -77,7 +74,7 @@ export function promptReach(block: string): { carried: Set<string>; dropped: Set
   for (const line of block.split('\n')) {
     if (line.startsWith('## ')) {
       const heading = line.slice(3);
-      inOmitted = heading === OMITTED_HEADING;
+      inOmitted = heading === SIBLING_OMITTED_HEADING;
       // A carried heading may carry a ` (seeded …)` / ` (… template …)` suffix after the label.
       if (!inOmitted) carried.add(heading);
     } else if (inOmitted && line.startsWith('- ')) {

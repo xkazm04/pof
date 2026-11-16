@@ -52,12 +52,12 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
             onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onGenerate()}
             placeholder="e.g., 'Dark Souls heavy but with faster dodges' or 'Hades snappy with more weight'"
-            className="flex-1 text-xs font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus:outline-none focus:border-violet-500/50"
+            className="flex-1 text-xs font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-subtle focus:outline-none focus:border-violet-500/50"
           />
           <button
             onClick={onGenerate}
             disabled={!customPrompt.trim() || isRunning}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40 focus-ring"
             style={{
               backgroundColor: withOpacity(ACCENT_VIOLET, OPACITY_12),
               color: ACCENT_VIOLET,
@@ -73,7 +73,7 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
             <button
               key={hint}
               onClick={() => onPromptChange(hint)}
-              className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded-full transition-colors hover:bg-surface/50"
+              className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded-full transition-colors hover:bg-surface/50 focus-ring"
               style={{
                 backgroundColor: 'var(--surface-deep)',
                 color: 'var(--text-muted)',

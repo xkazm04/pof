@@ -16,7 +16,12 @@ import { CRAFTING_ACTIONS, CURRENCIES } from './constants';
 import { applyCraft, canAfford, defaultWallet, isEligible, zeroWallet } from './craftingKernel';
 import type { CraftCtx, CraftOutcome, CraftState, Rng, Wallet } from './craftingKernel';
 
-export interface CraftGoal { rarity: Rarity; targetTags: string[] }
+export interface CraftGoal {
+  rarity: Rarity;
+  targetTags: string[];
+  /** Optional per-tag magnitude floors: a target is held only at or above its floor. */
+  minMagnitude?: Record<string, number>;
+}
 
 export interface Dist { mean: number; p50: number; p90: number }
 
@@ -47,19 +52,45 @@ const DEFAULT_RUNS = 400;
 const DEFAULT_MAX_STEPS = 1000;
 const LOCK_COSTS = CRAFTING_ACTIONS.find((a) => a.id === 'lock_prefix')?.costs ?? {};
 
-const holdsGoal = (affixes: CraftedAffix[], targets: string[]) => {
+const holdsTags = (affixes: CraftedAffix[], targets: string[]) => {
   const tags = new Set(affixes.map((a) => a.tag));
   return targets.every((t) => tags.has(t));
 };
 
+const floorMet = (a: CraftedAffix, floors?: Record<string, number>) => a.magnitude >= (floors?.[a.tag] ?? -Infinity);
+
+const holdsFloors = (affixes: CraftedAffix[], floors?: Record<string, number>) =>
+  affixes.every((a) => floorMet(a, floors));
+
+const holdsGoal = (affixes: CraftedAffix[], goal: CraftGoal) =>
+  holdsTags(affixes, goal.targetTags) && holdsFloors(affixes, goal.minMagnitude);
+
+/** Tags held, a floor unmet: free a locked miss, protect a side of met targets, else re-roll. */
+function nextMagnitudeAction(state: Pick<CraftState, 'affixes' | 'wallet'>, goal: CraftGoal): CraftingActionId {
+  const { affixes } = state;
+  const floors = goal.minMagnitude;
+  if (affixes.some((a) => a.locked && !floorMet(a, floors))) return 'unlock';
+  for (const prefix of [true, false]) {
+    const side = affixes.filter((a) => a.bIsPrefix === prefix);
+    const allMet = side.length > 0 && side.every((a) => goal.targetTags.includes(a.tag) && floorMet(a, floors));
+    if (allMet && !side.every((a) => a.locked) && canAfford(state.wallet, LOCK_COSTS)) {
+      return prefix ? 'lock_prefix' : 'lock_suffix';
+    }
+  }
+  return 'divine_roll';
+}
+
 /**
  * The pricer's policy: null when every target is held; augment while a slot is
  * open; on a full item, free locked strays (unlock), protect a side made only
- * of targets (lock, if affordable), else annul a stray (remove_add).
+ * of targets (lock, if affordable), else annul a stray (remove_add). Once every
+ * tag is held but a magnitude floor is not, Divine Roll chases the floors
+ * (locking sides that already meet them).
  */
 export function nextCraftAction(state: Pick<CraftState, 'affixes' | 'wallet'>, goal: CraftGoal): CraftingActionId | null {
   const { affixes } = state;
-  if (holdsGoal(affixes, goal.targetTags)) return null;
+  if (holdsGoal(affixes, goal)) return null;
+  if (holdsTags(affixes, goal.targetTags)) return nextMagnitudeAction(state, goal);
   if (affixes.length < RARITY_AFFIX_COUNTS[goal.rarity].max) return 'augment';
   const targets = new Set(goal.targetTags);
   if (!affixes.some((a) => !targets.has(a.tag) && !a.locked)) return 'unlock';
@@ -113,7 +144,7 @@ function runOnce(goal: CraftGoal, start: CraftedAffix[], wallet: Wallet, ctx: Cr
     if (out.refused) return { kind: out.refused === 'cannot afford' ? 'walletExhausted' : 'stuck' };
     state = out.state;
   }
-  return holdsGoal(state.affixes, goal.targetTags)
+  return holdsGoal(state.affixes, goal)
     ? { kind: 'success', spent: state.totalSpent, crafts: state.craftCount }
     : { kind: 'stepCap' };
 }
@@ -124,7 +155,7 @@ function runOnce(goal: CraftGoal, start: CraftedAffix[], wallet: Wallet, ctx: Cr
  */
 export function priceCraftGoal(args: PriceCraftGoalArgs): CraftGoalReport {
   const pool = args.pool ?? AFFIX_POOL;
-  const goal: CraftGoal = { rarity: args.rarity, targetTags: [...new Set(args.targetTags)] };
+  const goal: CraftGoal = { rarity: args.rarity, targetTags: [...new Set(args.targetTags)], minMagnitude: args.minMagnitude };
   const reason = goalUnreachableReason(goal, pool);
   if (reason) return { status: 'unreachable', rarity: goal.rarity, targetTags: goal.targetTags, reason };
 

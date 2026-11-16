@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { buildProposalPrompt } from '@/lib/one-shot/design-prompts';
-import { proposalEnvelope, seededLinkContext } from '@/lib/one-shot/proposal-issues';
+import { proposalEnvelope } from '@/lib/one-shot/proposal-issues';
+import { seededLinkContext } from '@/lib/one-shot/proposal-link-context';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
 import { resolveDispatchModelChoice } from '@/lib/model-policy';
 import { UI_TIMEOUTS } from '@/lib/constants';

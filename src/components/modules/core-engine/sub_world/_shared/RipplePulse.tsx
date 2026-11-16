@@ -27,14 +27,13 @@ interface RipplePulseProps {
 export function RipplePulse({ trigger, color, children, className }: RipplePulseProps) {
   const prefersReduced = useReducedMotion();
   const ringOpacity = useMotionValue(0);
-  const isFirst = useRef(true);
+  /* Compares values, not "first run": StrictMode replays the mount effect. */
+  const lastTrigger = useRef(trigger);
 
   useEffect(() => {
     // Don't pulse on first mount — only on genuine downstream changes.
-    if (isFirst.current) {
-      isFirst.current = false;
-      return;
-    }
+    if (lastTrigger.current === trigger) return;
+    lastTrigger.current = trigger;
     if (prefersReduced) return;
     ringOpacity.set(0.9);
     const controls = animate(ringOpacity, 0, { duration: 0.25, ease: EASE_OUT });

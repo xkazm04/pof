@@ -163,12 +163,40 @@ export function generateLinearProp(config: LinearPropConfig): LinearPropResult {
 
   const pts = centerlinePoints(config);
   const positions: number[] = [];
+  let right: Vec3 = { x: 0, y: 0, z: 0 };
+  let prevTangent: Vec3 = { x: 0, y: 0, z: 0 };
   for (let i = 0; i < pts.length; i++) {
     // Local tangent, one-sided at the ends.
     const tangent = norm(sub(pts[Math.min(i + 1, pts.length - 1)], pts[Math.max(i - 1, 0)]));
-    // Any reference not parallel to the tangent gives a stable enough frame for a prop.
-    const ref = Math.abs(tangent.y) > 0.9 ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 };
-    const right = norm(cross(tangent, ref));
+    if (i === 0) {
+      // One reference, chosen once, for the first ring only.
+      const ref = Math.abs(tangent.y) > 0.9 ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 };
+      right = norm(cross(tangent, ref));
+    } else {
+      // Parallel transport: carry the previous `right` by the minimal rotation taking the
+      // previous tangent to this one, so the cross-section never rolls between rings.
+      const axis = cross(prevTangent, tangent);
+      const sinA = Math.hypot(axis.x, axis.y, axis.z);
+      const cosA = prevTangent.x * tangent.x + prevTangent.y * tangent.y + prevTangent.z * tangent.z;
+      if (sinA > 1e-12) {
+        const k = { x: axis.x / sinA, y: axis.y / sinA, z: axis.z / sinA };
+        const kxr = cross(k, right);
+        const kdr = (k.x * right.x + k.y * right.y + k.z * right.z) * (1 - cosA);
+        right = {
+          x: right.x * cosA + kxr.x * sinA + k.x * kdr,
+          y: right.y * cosA + kxr.y * sinA + k.y * kdr,
+          z: right.z * cosA + kxr.z * sinA + k.z * kdr,
+        };
+      }
+      // Re-orthogonalise against the new tangent to stop drift.
+      const along = right.x * tangent.x + right.y * tangent.y + right.z * tangent.z;
+      right = norm({
+        x: right.x - tangent.x * along,
+        y: right.y - tangent.y * along,
+        z: right.z - tangent.z * along,
+      });
+    }
+    prevTangent = tangent;
     const up = norm(cross(right, tangent));
     for (let j = 0; j < sides; j++) {
       const a = (j / sides) * Math.PI * 2;

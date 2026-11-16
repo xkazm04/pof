@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Plus, Trash2 } from 'lucide-react';
 import { motionSafe } from '@/lib/motion';
@@ -90,9 +90,43 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
     onMove(drag.enemyId, cellX, cellY, e.shiftKey ? selectedWave : undefined);
   }, [enemies, selectedWave, onMove]);
 
+  const [focusIdx, setFocusIdx] = useState(0);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const wantFocus = useRef(false);
+  useEffect(() => {
+    if (!wantFocus.current) return;
+    wantFocus.current = false;
+    gridRef.current?.querySelector<HTMLElement>(`[data-cell="${focusIdx}"]`)?.focus();
+  }, [focusIdx]);
+
+  /** Roving-tabindex cell semantics: arrows move focus, Alt+arrow moves an enemy, Enter/Space acts. */
+  const cellProps = (x: number, y: number, enemy: PlacedEnemy | undefined, act: () => void, label: string) => {
+    const i = y * GRID_COLS + x;
+    return {
+      role: 'gridcell' as const, 'data-cell': i, tabIndex: i === focusIdx ? 0 : -1,
+      'aria-label': `${label}, column ${x + 1}, row ${y + 1}`,
+      onFocus: () => setFocusIdx(i),
+      onKeyDown: (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); return; }
+        const d = ({ ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] } as Record<string, number[]>)[e.key];
+        if (!d) return;
+        e.preventDefault();
+        const nx = x + d[0], ny = y + d[1];
+        if (nx < 0 || nx >= GRID_COLS || ny < 0 || ny >= GRID_ROWS) return;
+        if (e.altKey && enemy) {
+          if (waveEnemies.some((w) => w.gridX === nx && w.gridY === ny)) return;
+          onMove(enemy.id, nx, ny);
+        }
+        wantFocus.current = true;
+        setFocusIdx(ny * GRID_COLS + nx);
+      },
+    };
+  };
+
   return (
     <div className="inline-block">
       <div
+        ref={gridRef} role="grid" aria-label="Encounter placement grid"
         className="grid gap-0.5"
         style={{
           gridTemplateColumns: `repeat(${GRID_COLS}, ${CELL_SIZE}px)`,
@@ -101,9 +135,10 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {Array.from({ length: GRID_ROWS * GRID_COLS }, (_, i) => {
-          const x = i % GRID_COLS;
-          const y = Math.floor(i / GRID_COLS);
+        {Array.from({ length: GRID_ROWS }, (_, y) => (
+          <div key={y} role="row" className="contents">
+        {Array.from({ length: GRID_COLS }, (_, x) => {
+          const i = y * GRID_COLS + x;
           const enemy = waveEnemies.find((e) => e.gridX === x && e.gridY === y);
           const prevGhost = !enemy ? prevWaveEnemies.find((e) => e.gridX === x && e.gridY === y) : null;
           const nextGhost = !enemy && !prevGhost ? nextWaveEnemies.find((e) => e.gridX === x && e.gridY === y) : null;
@@ -119,6 +154,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 style={{ width: CELL_SIZE, height: CELL_SIZE, borderColor: color, backgroundColor: `${withOpacity(color, OPACITY_12)}`, opacity: beingDragged ? 0.4 : 1, transition: 'opacity 0.15s' }}
                 onPointerDown={(e) => handleDragStart(e, enemy)}
                 onClick={() => { if (!isDragging) onRemove(enemy.id); }}
+                {...cellProps(x, y, enemy, () => onRemove(enemy.id), `${ENEMY_ARCHETYPES.find((a) => a.id === enemy.archetypeId)?.name ?? enemy.archetypeId} Lv${enemy.level}, Enter removes, Alt+arrow moves`)}
                 title={`${ENEMY_ARCHETYPES.find((a) => a.id === enemy.archetypeId)?.name} Lv${enemy.level} — drag to move, click to remove`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color }}>{icon}</span>
@@ -137,6 +173,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 className="relative flex items-center justify-center rounded-md cursor-pointer hover:border-border/50 transition-colors"
                 style={{ width: CELL_SIZE, height: CELL_SIZE, border: `1px dashed ${withOpacity(color, OPACITY_25)}`, backgroundColor: `${withOpacity(color, OPACITY_5)}`, opacity: 0.45 }}
                 onClick={() => onPlace(x, y)}
+                {...cellProps(x, y, undefined, () => onPlace(x, y), 'Previous wave ghost, Enter places')}
                 title={`Previous wave: ${ENEMY_ARCHETYPES.find((a) => a.id === prevGhost.archetypeId)?.name ?? prevGhost.archetypeId} Lv${prevGhost.level}`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color }}>{icon}</span>
@@ -155,6 +192,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 animate={{ borderColor: [`${withOpacity(color, OPACITY_12)}`, `${withOpacity(color, OPACITY_30)}`, `${withOpacity(color, OPACITY_12)}`], boxShadow: [`0 0 0px ${withOpacity(color, OPACITY_0)}`, `0 0 6px ${withOpacity(color, OPACITY_20)}`, `0 0 0px ${withOpacity(color, OPACITY_0)}`] }}
                 transition={motionSafe({ duration: 2, repeat: Infinity, ease: 'easeInOut' } as const, prefersReduced)}
                 onClick={() => onPlace(x, y)}
+                {...cellProps(x, y, undefined, () => onPlace(x, y), 'Next wave ghost, Enter places')}
                 title={`Next wave: ${ENEMY_ARCHETYPES.find((a) => a.id === nextGhost.archetypeId)?.name ?? nextGhost.archetypeId} Lv${nextGhost.level}`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color, opacity: 0.35 }}>{icon}</span>
@@ -170,6 +208,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
               }`}
               style={{ width: CELL_SIZE, height: CELL_SIZE, ...(isDropTarget ? { borderColor: ACCENT_CYAN, backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_10)}`, boxShadow: `inset 0 0 8px ${withOpacity(ACCENT_CYAN, OPACITY_12)}` } : {}) }}
               onClick={() => { if (!isDragging) onPlace(x, y); }}
+              {...cellProps(x, y, undefined, () => onPlace(x, y), 'Empty, Enter places')}
             >
               {isDropTarget
                 ? <span className="text-xs font-mono font-bold" style={{ color: ACCENT_CYAN, opacity: 0.7 }}>+</span>
@@ -177,6 +216,8 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
             </div>
           );
         })}
+          </div>
+        ))}
       </div>
       {isDragging && (
         <div className="text-xs font-mono text-text-muted/60 mt-1 flex items-center gap-1">

@@ -50,7 +50,6 @@ export function generateUE5Export(
   lines.push(`UPROPERTY(EditAnywhere, Category = "Tuning") float CritMultiplierMul = ${tuning.critMultiplierMul.toFixed(2)}f;`);
   lines.push(`UPROPERTY(EditAnywhere, Category = "Tuning") float PlayerHealthMul = ${tuning.playerHealthMul.toFixed(2)}f;`);
   lines.push(`UPROPERTY(EditAnywhere, Category = "Tuning") float PlayerArmorMul = ${tuning.playerArmorMul.toFixed(2)}f;`);
-  lines.push(`UPROPERTY(EditAnywhere, Category = "Tuning") float HealingMul = ${tuning.healingMul.toFixed(2)}f;`);
 
   return lines.join('\n');
 }

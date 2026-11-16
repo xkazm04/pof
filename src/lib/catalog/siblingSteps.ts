@@ -29,9 +29,12 @@ function orderedLabels(
     });
 }
 
+/** The heading `omissionBlock` writes; readers that parse the block (the `?ux=sibling-check` desk) import it. */
+export const SIBLING_OMITTED_HEADING = 'Omitted by prompt size cap';
+
 function omissionBlock(labels: readonly string[]): string {
   return labels.length
-    ? `## Omitted by prompt size cap\n${labels.map((label) => `- ${label}`).join('\n')}`
+    ? `## ${SIBLING_OMITTED_HEADING}\n${labels.map((label) => `- ${label}`).join('\n')}`
     : '';
 }
 

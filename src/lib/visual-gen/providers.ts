@@ -197,14 +197,6 @@ export function defaultProviderForMode(mode: GenerationMode): GenerationProvider
   return runnable.find((p) => p.official) ?? runnable[0];
 }
 
-export function getAvailableProviders(mode: GenerationMode): GenerationProvider[] {
-  return GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
-}
-
-export function getFreeProviders(): GenerationProvider[] {
-  return GENERATION_PROVIDERS.filter((p) => p.status === 'free');
-}
-
 /** The default image-to-3D provider used across PoF (Hunyuan3D). Falls back to the
  *  first runner-backed provider if none is flagged official. */
 export function getOfficialProvider(): GenerationProvider {

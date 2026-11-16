@@ -1,0 +1,130 @@
+{
+  "claude-A": {
+    "subject": "claude-A",
+    "guards": [
+      {
+        "guard": "story",
+        "state": "green",
+        "basis": "gtai-campaign baseline + 0 ledger quests",
+        "findings": []
+      },
+      {
+        "guard": "economy",
+        "state": "green",
+        "basis": "quest-economy.json r2 (provisional)",
+        "findings": [
+          {
+            "code": "CASH_VS_SOUL_UPGRADE",
+            "severity": "info",
+            "message": "cash 1500 = 0.75 x the cheapest soul-upgrade tier (2000)"
+          }
+        ]
+      },
+      {
+        "guard": "lines",
+        "state": "red",
+        "basis": "structural only; judge unmeasured",
+        "findings": [
+          {
+            "code": "EDITORIAL_TELL",
+            "severity": "warn",
+            "ref": "rivet-who-is-this",
+            "message": "editorial (unmeasured): rivet-who-is-this: \"it's not X, it's Y\" reversal [not-x-its-y]"
+          },
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "error",
+            "ref": "nurse",
+            "message": "nurse has no voice bible in games/gtai/voices/"
+          },
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "error",
+            "ref": "gunsmith",
+            "message": "gunsmith has no voice bible in games/gtai/voices/"
+          },
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "error",
+            "ref": "scientist",
+            "message": "scientist has no voice bible in games/gtai/voices/"
+          },
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "warn",
+            "ref": "dock-guard",
+            "message": "dock-guard has no voice bible in games/gtai/voices/ (new character: write one before the voice pass)"
+          }
+        ]
+      },
+      {
+        "guard": "uniqueness",
+        "state": "green",
+        "basis": "0 ledger quests",
+        "findings": []
+      }
+    ],
+    "blockedBy": [
+      "lines"
+    ],
+    "blocked": true
+  },
+  "grok-A": {
+    "subject": "grok-A",
+    "guards": [
+      {
+        "guard": "story",
+        "state": "green",
+        "basis": "gtai-campaign baseline + 0 ledger quests",
+        "findings": []
+      },
+      {
+        "guard": "economy",
+        "state": "green",
+        "basis": "quest-economy.json r2 (provisional)",
+        "findings": [
+          {
+            "code": "CASH_VS_SOUL_UPGRADE",
+            "severity": "info",
+            "message": "cash 1200 = 0.60 x the cheapest soul-upgrade tier (2000)"
+          }
+        ]
+      },
+      {
+        "guard": "lines",
+        "state": "red",
+        "basis": "structural only; judge unmeasured",
+        "findings": [
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "error",
+            "ref": "nurse",
+            "message": "nurse has no voice bible in games/gtai/voices/"
+          },
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "error",
+            "ref": "gunsmith",
+            "message": "gunsmith has no voice bible in games/gtai/voices/"
+          },
+          {
+            "code": "NO_VOICE_BIBLE",
+            "severity": "error",
+            "ref": "scientist",
+            "message": "scientist has no voice bible in games/gtai/voices/"
+          }
+        ]
+      },
+      {
+        "guard": "uniqueness",
+        "state": "green",
+        "basis": "0 ledger quests",
+        "findings": []
+      }
+    ],
+    "blockedBy": [
+      "lines"
+    ],
+    "blocked": true
+  }
+}

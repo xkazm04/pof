@@ -4,7 +4,7 @@ import { Loader2, Wrench } from 'lucide-react';
 import { GlbPreviewPanel, GLB_PREVIEW_LABEL } from '@/components/layout-lab/steps/shared/GlbPreviewPanel';
 import type { LabTheme } from '@/components/layout-lab/theme';
 import { useForgeStore, type GenerationJob } from './useForgeStore';
-import { meshPreview } from './forgeJobStatus';
+import { meshPreview } from '@/lib/visual-gen/forgeJobStatus';
 
 /**
  * The remedy row under a delivered card's verdict — the answer to "is this fixable

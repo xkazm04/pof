@@ -10,8 +10,8 @@ const nextConfig: NextConfig = {
   // from `better-sqlite3/lib/database.js`. That surfaces as a Playwright
   // `webServer` timeout with a bare "module-not-found" link and no named module,
   // which is very hard to read back to its cause. Pinning removes the inference.
-  turbopack: { root: __dirname },
-  outputFileTracingRoot: __dirname,
+  turbopack: { root: process.env.POF_TURBOPACK_ROOT || __dirname },
+  outputFileTracingRoot: process.env.POF_TURBOPACK_ROOT || __dirname,
   serverExternalPackages: ['better-sqlite3'],
   experimental: {
     // Tree-shake large/barrel packages so each route only bundles the exports it
@@ -27,14 +27,16 @@ const nextConfig: NextConfig = {
 // Turbopack loader is only registered when launched via `npm run dev:inspect`
 // (which sets DEV_INSPECT=1), so a normal `npm run dev` and every production
 // build are completely unaffected. See scripts/dev-inspector/.
+// Resolved from __dirname, like the root pin above: the launch directory must not
+// decide where the loader lives or which root its source locations are relative to.
 if (process.env.DEV_INSPECT === "1") {
-  const loader = path.join(process.cwd(), "scripts", "dev-inspector", "source-loc-loader.cjs");
+  const loader = path.join(__dirname, "scripts", "dev-inspector", "source-loc-loader.cjs");
   nextConfig.turbopack = {
     ...nextConfig.turbopack,
     rules: {
       ...nextConfig.turbopack?.rules,
-      "*.tsx": { loaders: [{ loader, options: { rootDir: process.cwd() } }] },
-      "*.jsx": { loaders: [{ loader, options: { rootDir: process.cwd() } }] },
+      "*.tsx": { loaders: [{ loader, options: { rootDir: __dirname } }] },
+      "*.jsx": { loaders: [{ loader, options: { rootDir: __dirname } }] },
     },
   };
 }

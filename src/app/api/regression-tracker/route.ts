@@ -58,12 +58,16 @@ export async function GET(req: NextRequest) {
 // POST body: { action: 'process-session', sessionId } | { action: 'dismiss', alertId } | { action: 'resolve', fingerprintId }
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => undefined);
+    // A body that is not a JSON object is the caller's error (400), not a server fault.
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
     const { action } = body;
 
     if (action === 'process-session') {
       const { sessionId } = body;
-      if (!sessionId) return apiError('sessionId required', 400);
+      if (typeof sessionId !== 'string' || !sessionId) return apiError('sessionId required', 400);
       const session = getSession(sessionId);
       if (!session) return apiError('Session not found', 404);
       if (session.status !== 'complete') return apiError('Session must be complete to process', 400);
@@ -73,15 +77,15 @@ export async function POST(req: NextRequest) {
 
     if (action === 'dismiss') {
       const { alertId } = body;
-      if (!alertId) return apiError('alertId required', 400);
-      dismissAlert(alertId);
+      if (typeof alertId !== 'string' || !alertId) return apiError('alertId required', 400);
+      if (!dismissAlert(alertId)) return apiError(`Alert not found: ${alertId}`, 404);
       return apiSuccess({ dismissed: true });
     }
 
     if (action === 'resolve') {
       const { fingerprintId } = body;
-      if (!fingerprintId) return apiError('fingerprintId required', 400);
-      markResolved(fingerprintId);
+      if (typeof fingerprintId !== 'string' || !fingerprintId) return apiError('fingerprintId required', 400);
+      if (!markResolved(fingerprintId)) return apiError(`Fingerprint not found: ${fingerprintId}`, 404);
       return apiSuccess({ resolved: true });
     }
 

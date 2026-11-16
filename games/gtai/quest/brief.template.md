@@ -1,0 +1,80 @@
+# Quest brief: {{act}}
+
+Run {{runId}}, {{date}}. You are one seat of a two-seat council. Write {{variantWord}} for GTAI: Uprising.
+Do not write or edit any file. Do not run tools that change anything. Read, think, reply.
+
+## The owner's goal (verbatim)
+
+{{goal}}
+
+## The owner's constraints (verbatim)
+
+{{constraints}}
+
+## The act
+
+{{actRow}}
+
+Economy band for this act (provisional, `quest-economy.json` r{{economyRevision}}):
+
+{{economyBand}}
+
+Stay inside the band. A timer is allowed only if `timerAllowed` is true.
+
+## Cast
+
+{{cast}}
+
+Souls unlocked by the end of this act: {{souls}}.
+
+## Protected canon: hard rule
+
+These are owner-only. No quest may resolve, hint the answer to, or contradict them:
+- The betrayer: Don Fax or Vend-Etta. Neither may betray, be cleared, or be shown reporting to anyone.
+- The act-antagonist order and allegiance (King, Servo, Torque, Kronk). Do not place them in an act or say who they serve.
+- Never write the story variables `betrayer` or `act_antagonist_order`.
+
+The souls are the four ghosts in story order (owner, 2026-11-06): Dent, Tonnage, Kerf, Ohm. A ghost may
+speak only from the act it unlocks in (the list above); never name a ghost before its unlock.
+
+## Tone (pitch §6)
+
+{{tone}}
+
+## Madness (pitch §5)
+
+{{madness}}
+
+## No quest is filler
+
+Every line must be funny, or move a character, or move the game forward. Tag each line with the purposes it earns:
+`funny`, `character`, `progression`. A line that earns none is cut. `whyNotFiller` names the specific laugh, reveal or turn.
+
+{{voices}}
+
+## Story variables
+
+`story.reads` and `story.writes` use these names only.
+
+{{storyVars}}
+
+## Ledger: quests that exist
+
+Do not repeat these shapes (same giver, core verb and payoff kind).
+
+{{ledger}}
+
+{{contrast}}
+
+## What to deliver
+
+Reply with only a JSON array of exactly {{deliverShape}}. No prose, no code fence.
+Each object is valid against `proposal.schema.json` in this folder (schema `gtai.questProposal/1`). Set:
+- `"schema": "gtai.questProposal/1"`, `"seat": "<your seat>"`, `"variant": "A"` or `"B"`, `"pathId": "<seat>-<variant>"`, `"act": "{{act}}"`.
+- {{linesRule}} At least 3 beats. Every `lineIds` entry names a line in `lines`. Every line `speaker` is a `characters` id.
+- Line ids are kebab and unique. Every line has `"audio": null`.
+- Use existing cast ids as written above. Include `rivet` when Rivet speaks.
+- {{newRule}} Every new character (`"status": "new"`) needs a `designNote`: a one-line look for top-down cutout art.
+- `difficulty.timeLimitS` is `null` for no timer. `fingerprint.newMechanic` is `null` when the quest adds no mechanic.
+- `autosavePoints`: where the save engine may checkpoint the quest. At least one point, each `{ "id": "as-<beat id>", "beat": "<an id in beats>", "at": "start" | "end", "why": "<one sentence: what replaying from here saves the player>" }`. Ids are unique. Place a point where a failure should not cost the player what came before: after a long fight, before a boss, after a conversation they would not want to sit through again. Do not place one on every beat out of habit; the quest's end is always an autosave, so you need not declare it. A point with no reason is rejected.
+- Omit a key that does not apply (`target`, `location`, `when`). Do not send it as null.

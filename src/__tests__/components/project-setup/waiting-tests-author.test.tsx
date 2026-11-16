@@ -115,6 +115,16 @@ describe('authorReducer (case 6)', () => {
     expect(verified.phase === 'verified' && verified.settle).toMatchObject({ settled: 1, passed: 0, failed: 1 });
   });
 
+  it('a re-run replaces the shown verdict, and a run that did not settle leaves it', () => {
+    const authored = authorReducer(authorReducer(preview, { type: 'dispatch' }), { type: 'cli-complete', success: true });
+    const first = authorReducer(authored, { type: 'run-outcome', testName: 'VSDialogBranchTest', outcome: { kind: 'settled', bridgeResult: {}, outcome: SETTLED } });
+    const fixedOutcome = { ...SETTLED, passed: 1, failed: 0 };
+    const second = authorReducer(first, { type: 'run-outcome', testName: 'VSDialogBranchTest', outcome: { kind: 'settled', bridgeResult: {}, outcome: fixedOutcome } });
+    expect(second.phase === 'verified' && second.settle).toMatchObject({ passed: 1, failed: 0 });
+    const refused = authorReducer(second, { type: 'run-outcome', testName: 'VSDialogBranchTest', outcome: { kind: 'bridge-error', error: 'down' } });
+    expect(refused).toBe(second);
+  });
+
   it('a settle before the CLI finished (or before dispatch) is not a verification', () => {
     const early: AuthorState = authorReducer(preview, { type: 'run-outcome', testName: 'VSDialogBranchTest', outcome: { kind: 'settled', bridgeResult: {}, outcome: SETTLED } });
     expect(early.phase).toBe('preview');

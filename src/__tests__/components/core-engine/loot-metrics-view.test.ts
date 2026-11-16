@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { lootMetricsView } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
+import { lootMetricsView, LOOT_PIPELINE_STAGES } from '@/components/modules/core-engine/sub_loot/metrics/lootMetricsView';
 import { initialTunerState, tunerReducer, exactEV, type TunerState } from '@/components/modules/core-engine/sub_loot/_shared/bindingTuner';
 import { DEFAULT_ENEMY_LOOT_BINDINGS, DEFAULT_RARITY_GOLD } from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
 import { findPercentileKill } from '@/components/modules/core-engine/sub_loot/_shared/math';
-import { getAllSectionIds } from '@/components/modules/core-engine/unique-tabs/feature-map-config';
+import { getAllSectionIds, getSections } from '@/components/modules/core-engine/unique-tabs/feature-map-config';
 
 // The loot Feature Map's glyphs read ONE typed view over live module state (the
 // tuned roster + the pity threshold), not 11 import-time constants.
@@ -14,7 +14,15 @@ const LEGENDARY_RATE = 0.02;
 describe('lootMetricsView', () => {
   it('timer reads the live pity threshold', () => {
     const v = lootMetricsView({ tuning: untuned(), pityThreshold: 35 });
-    expect(v.timer).toMatchObject({ value: 35, unit: 'pulls', basis: 'live' });
+    expect(v.timer).toMatchObject({ value: 35, unit: 'kills', basis: 'live' });
+  });
+
+  it('timer counts the pity threshold in the unit drought and the Pity tab use (kills, never pulls)', () => {
+    const v = lootMetricsView({ tuning: untuned(), pityThreshold: 35 });
+    // findPercentileKill caps the dry streak at the threshold, so it is a kill count.
+    expect(v.timer.unit).toBe(v.drought.unit);
+    expect(v.timer.detail).toMatch(/35 kills/);
+    expect(`${v.timer.unit} ${v.timer.detail}`).not.toMatch(/pull/i);
   });
 
   it('drought is the Legendary p95 with the live pity, and moves with it', () => {
@@ -50,6 +58,13 @@ describe('lootMetricsView', () => {
     expect(impact.label).not.toBe('untuned');
   });
 
+  it('pipeline is the stage count with the stage flow as its detail (the glyph prints it)', () => {
+    const v = lootMetricsView({ tuning: untuned(), pityThreshold: 20 });
+    expect(v.pipeline).toMatchObject({ value: LOOT_PIPELINE_STAGES.length, unit: 'stages', basis: 'fixture' });
+    expect(LOOT_PIPELINE_STAGES).toHaveLength(5);
+    expect(v.pipeline.detail).toBe(LOOT_PIPELINE_STAGES.join(' → '));
+  });
+
   it('has exactly one reading per arpg-loot Feature Map section', () => {
     const v = lootMetricsView({ tuning: untuned(), pityThreshold: 20 });
     const ids = getAllSectionIds('arpg-loot');
@@ -64,5 +79,10 @@ describe('lootMetricsView', () => {
     expect(v.timer.basis).toBe('live');
     expect(v.drought.basis).toBe('live');
     expect(v.impact.basis).toBe('tuned');
+  });
+
+  it('the Pipeline card summary names every stage the glyph draws', () => {
+    const summary = getSections('arpg-loot').find((x) => x.id === 'pipeline')?.summary ?? '';
+    for (const stage of LOOT_PIPELINE_STAGES) expect(summary, stage).toContain(stage);
   });
 });

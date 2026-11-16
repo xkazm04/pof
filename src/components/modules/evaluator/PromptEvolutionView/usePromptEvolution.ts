@@ -71,6 +71,9 @@ export function usePromptEvolution() {
   // Handled at the onChange site to avoid set-state-in-effect.
   const handleSelectModule = useCallback((next: SubModuleId | null) => {
     setSelectedModule(next);
+    // The rewrite was built from this module's history; saved as a challenger under
+    // another module it would race that module's baseline.
+    usePromptEvolutionStore.setState({ lastOptimization: null });
     setNewChecklistItemId('');
     setFormErrors({});
   }, [setSelectedModule]);
@@ -223,12 +226,34 @@ export function usePromptEvolution() {
       toast.info(`“${winner.label}” is already the version in use`);
       return;
     }
+    // Same rule set as the test card. This path has no preview, so a win that
+    // carries a caution goes to its card, where the caution is read before adopting.
+    const decidedTest = abTests.find((t) =>
+      t.status === 'concluded' && t.moduleId === moduleId && t.checklistItemId === checklistItemId && t.winnerId === winner.id);
+    if (decidedTest) {
+      const plan = planAdoption({ test: decidedTest, variants, tests: abTests });
+      if (!plan.ok) {
+        toast.error(plan.error.message);
+        return;
+      }
+      if (plan.data.caution) {
+        toast.info(`${plan.data.caution} Review it on the test card before adopting.`);
+        setExpandedTestId(decidedTest.id);
+        setActiveSubTab('tests');
+        return;
+      }
+      await adoptPlanned(plan.data);
+      return;
+    }
     const incumbent = variants.find((v) => v.checklistItemId === checklistItemId && v.active) ?? null;
     await adoptPlanned({ winner, incumbent });
-  }, [getBestVariant, variants, adoptPlanned]);
+  }, [getBestVariant, variants, abTests, adoptPlanned, setActiveSubTab]);
 
   // An adopted winner stops being re-suggested.
-  const visibleSuggestions = useMemo(() => filterAdoptSuggestions(suggestions, variants), [suggestions, variants]);
+  const visibleSuggestions = useMemo(
+    () => filterAdoptSuggestions(suggestions, variants, abTests),
+    [suggestions, variants, abTests],
+  );
 
   // Group variants by checklist item
   const variantsByItem = useMemo(() => {

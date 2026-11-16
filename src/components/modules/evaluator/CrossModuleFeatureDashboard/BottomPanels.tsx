@@ -5,12 +5,13 @@ import {
   Hammer,
   ChevronRight,
 } from 'lucide-react';
-import { STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS, statusBorder } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_BLOCKER, statusBorder } from '@/lib/chart-colors';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import type { PlanItem } from '@/lib/implementation-planner/plan-generator';
 import type { SubModuleId } from '@/types/modules';
 import type { CellData } from './types';
 import { BuildButton } from './CellDrillPanel';
+import { completionColor } from './helpers';
 
 export function BottomPanels({
   lowestModules,
@@ -18,6 +19,7 @@ export function BottomPanels({
   handleCellClick,
   onBuild,
   isBuilding,
+  buildError,
 }: {
   lowestModules: CellData[];
   /** `buildableNow(plan)`: the highest-impact ready features across modules. */
@@ -25,14 +27,16 @@ export function BottomPanels({
   handleCellClick: (moduleId: SubModuleId) => void;
   onBuild: (item: PlanItem) => void;
   isBuilding: boolean;
+  /** Why the last Build was refused or failed — shown here when no drill is open to show it. */
+  buildError?: string | null;
 }) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {/* Lowest-scoring modules */}
-      <div className="bg-surface border border-[#f87171]/20 rounded-lg p-4">
+      <div className="bg-surface border rounded-lg p-4" style={{ borderColor: statusBorder(STATUS_ERROR) }}>
         <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-3.5 h-3.5 text-[#f87171]" />
-          <span className="text-xs font-semibold text-[#f87171] uppercase tracking-wider">
+          <AlertTriangle className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: STATUS_ERROR }}>
             Lowest Completion
           </span>
         </div>
@@ -53,13 +57,13 @@ export function BottomPanels({
                     className="h-full rounded-full"
                     style={{
                       width: `${pct}%`,
-                      backgroundColor: pct >= 40 ? STATUS_WARNING : pct > 0 ? STATUS_ERROR : 'var(--text-muted)',
+                      backgroundColor: completionColor(pct),
                     }}
                   />
                 </div>
                 <span
                   className="text-xs font-medium w-7 text-right"
-                  style={{ color: pct >= 40 ? STATUS_WARNING : pct > 0 ? STATUS_ERROR : 'var(--text-muted)' }}
+                  style={{ color: completionColor(pct) }}
                 >
                   {pct}%
                 </span>
@@ -91,6 +95,9 @@ export function BottomPanels({
           </span>
           <span className="text-2xs text-text-muted">every dependency done · by impact</span>
         </div>
+        {buildError && (
+          <p role="alert" className="text-2xs mb-2 px-3" style={{ color: STATUS_BLOCKER }}>{buildError}</p>
+        )}
         <div className="space-y-1.5">
           {buildable.map((item) => (
             <div

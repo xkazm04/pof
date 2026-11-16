@@ -21,6 +21,7 @@ describe('AdvancedTexturePanel — Scenario PBR tile', () => {
   it('shows a configure hint when SCENARIO_API_KEY is not configured', async () => {
     mockFetch({ status: 500, body: { success: false, error: 'SCENARIO_API_KEY not configured' } });
     render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
     fireEvent.click(screen.getByTestId('scenario-generate'));
     await waitFor(() => expect(screen.getByTestId('scenario-error').textContent).toMatch(/configure/i));
   });
@@ -52,6 +53,7 @@ describe('AdvancedTexturePanel — seam check', () => {
   it('a clean tile says the check RAN — not nothing, which reads as never checked', async () => {
     mockFetch({ body: { success: true, data: { albedoUrl: 'a.png', seam: { ...seamData.seam, hasSeam: false, worstEdge: undefined } } } });
     render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
     fireEvent.click(screen.getByTestId('scenario-generate'));
 
     await waitFor(() => expect(screen.getByTestId('pbr-albedo')).toBeTruthy());
@@ -63,6 +65,7 @@ describe('AdvancedTexturePanel — seam check', () => {
   it('a texture the seam pass could not read says so, rather than looking clean', async () => {
     mockFetch({ body: { success: true, data: { albedoUrl: 'a.png', seam: null } } });
     render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
     fireEvent.click(screen.getByTestId('scenario-generate'));
 
     await waitFor(() => expect(screen.getByTestId('pbr-albedo')).toBeTruthy());
@@ -86,28 +89,38 @@ describe('AdvancedTexturePanel — seam check', () => {
 });
 
 describe('AdvancedTexturePanel — Upscaler tile', () => {
-  it('posts mode=upscale with the image id + style and shows the job id', async () => {
-    const fetchMock = mockFetch({ body: { success: true, data: { upscaleJobId: 'up-1' } } });
+  it('posts mode=upscale with the image id + style and shows the image', async () => {
+    const fetchMock = mockFetch({ body: { success: true, data: { imageBase64: 'QUJD', variationId: 'up-1', variationDeleted: true } } });
     render(<AdvancedTexturePanel />);
     fireEvent.change(screen.getByTestId('upscale-image-id'), { target: { value: 'img-7' } });
     fireEvent.click(screen.getByTestId('upscale-run'));
 
-    await waitFor(() => expect(screen.getByTestId('upscale-job').textContent).toContain('up-1'));
+    await waitFor(() => expect(screen.getByTestId('upscale-result').getAttribute('src')).toContain('QUJD'));
+    expect(screen.queryByTestId('upscale-not-deleted')).toBeNull();
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/leonardo');
     expect(JSON.parse((init as RequestInit).body as string)).toMatchObject({ mode: 'upscale', imageId: 'img-7', style: 'GENERAL' });
   });
+
+  it('warns when Leonardo refused the delete, and says the id must be live', async () => {
+    mockFetch({ body: { success: true, data: { imageBase64: 'QUJD', variationId: 'up-1', variationDeleted: false } } });
+    const { container } = render(<AdvancedTexturePanel />);
+    expect(container.textContent).toMatch(/PoF deletes its own generations/);
+    fireEvent.change(screen.getByTestId('upscale-image-id'), { target: { value: 'img-7' } });
+    fireEvent.click(screen.getByTestId('upscale-run'));
+    await waitFor(() => expect(screen.getByTestId('upscale-not-deleted').textContent).toContain('up-1'));
+  });
 });
 
 describe('AdvancedTexturePanel — Unzoom tile', () => {
-  it('posts mode=unzoom with the image id (+ optional prompt) and shows the job id', async () => {
-    const fetchMock = mockFetch({ body: { success: true, data: { unzoomJobId: 'uz-1' } } });
+  it('posts mode=unzoom with the image id (+ optional prompt) and shows the image', async () => {
+    const fetchMock = mockFetch({ body: { success: true, data: { imageBase64: 'REVG', variationId: 'uz-1', variationDeleted: true } } });
     render(<AdvancedTexturePanel />);
     fireEvent.change(screen.getByTestId('unzoom-image-id'), { target: { value: 'img-3' } });
     fireEvent.change(screen.getByTestId('unzoom-prompt'), { target: { value: 'more floor' } });
     fireEvent.click(screen.getByTestId('unzoom-run'));
 
-    await waitFor(() => expect(screen.getByTestId('unzoom-job').textContent).toContain('uz-1'));
+    await waitFor(() => expect(screen.getByTestId('unzoom-result').getAttribute('src')).toContain('REVG'));
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/leonardo');
     expect(JSON.parse((init as RequestInit).body as string)).toMatchObject({ mode: 'unzoom', imageId: 'img-3', prompt: 'more floor' });

@@ -25,6 +25,7 @@ export function PrestigePreview() {
       <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-violet-500/10 transition-colors duration-1000" />
       <SectionLabel icon={RotateCcw} label="Prestige / NG+ Preview" color={ACCENT_VIOLET} />
 
+      <p data-testid="basis-prestige" className="mt-2 text-2xs font-mono text-text-muted relative z-10">Illustrative sample cycles and hours, not derived from your curve.</p>
       <div className="mt-2.5 space-y-4 relative z-10">
         <div className="flex items-center gap-3 bg-surface/50 rounded-lg p-3 border border-border/30">
           <div className="flex items-center gap-2">

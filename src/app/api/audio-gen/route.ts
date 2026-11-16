@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, readJsonObject } from '@/lib/api-utils';
 import { getAudioDb as db } from '@/lib/audio-db-conn';
 import { getAudioProvider } from '@/lib/audio-gen/registry';
 import { computePromptHash } from '@/lib/audio-gen/prompt-hash';
@@ -16,8 +16,9 @@ import {
   ensureAudioDir,
   findAssetByPromptHash,
   getAsset,
-  getDiskFootprint,
+  getCachedDiskFootprint,
   getSet,
+  invalidateDiskFootprint,
   getUsageSummary,
   listAllAssets,
   listSets,
@@ -32,6 +33,7 @@ import {
 import { audioPromptFor } from '@/lib/media-prompts/audioPrompts';
 import { AUDIO_KINDS, type AudioKind } from '@/lib/audio-gen/types';
 import { isAudioKind, refusalMessage, supportsKind } from '@/lib/audio-gen/capabilities';
+import { ProviderNotConfiguredError } from '@/lib/audio-gen/errors';
 
 /** Start-of-current-month epoch ms — the window the usage meter counts within. */
 function startOfMonth(): number {
@@ -73,8 +75,9 @@ interface PostBody {
 }
 
 export async function POST(request: NextRequest) {
-  let body: PostBody;
-  try { body = await request.json() as PostBody; } catch { return apiError('Invalid JSON body', 400); }
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data as PostBody;
 
   const { provider, kind, prompt } = body;
   if (!provider || !kind || !prompt || (!body.setId && !body.setName)) {
@@ -133,7 +136,7 @@ export async function POST(request: NextRequest) {
     result = await p.generate({ kind, prompt: composedPrompt, durationSeconds: body.durationSeconds });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'generation failed';
-    if (msg.includes('ELEVENLABS_API_KEY')) return apiError(msg, 503);
+    if (e instanceof ProviderNotConfiguredError) return apiError(msg, 503);
     return apiError(msg, 502);
   }
 
@@ -147,12 +150,22 @@ export async function POST(request: NextRequest) {
   if (!existsSync(setDir)) mkdirSync(setDir, { recursive: true });
   const assetId = randomUUID();
   const filename = `${assetId}.${result.format}`;
+  const relPath = `${set.id}/${filename}`;
   writeFileSync(join(setDir, filename), result.bytes);
+  invalidateDiskFootprint();
 
-  const asset = addAsset(db(), {
-    setId: set.id, filename, relPath: `${set.id}/${filename}`,
-    prompt, provider: p.id, durationMs: result.durationMs, format: result.format, promptHash,
-  });
+  // The file exists before its row does. If the row cannot be written, remove the file:
+  // with no row pointing at it, no DELETE could ever reach it again.
+  let asset;
+  try {
+    asset = addAsset(db(), {
+      setId: set.id, filename, relPath,
+      prompt, provider: p.id, durationMs: result.durationMs, format: result.format, promptHash,
+    });
+  } catch (e) {
+    const fileRemoval = removeAssetFile(relPath);
+    return apiError(`Could not record the generated clip: ${e instanceof Error ? e.message : 'asset insert failed'}`, 500, { fileRemoval });
+  }
   logUsage(db(), { provider: p.id, kind, promptHash, cached: false, durationMs: result.durationMs });
 
   return apiSuccess({ asset, set, cached: false });
@@ -167,15 +180,17 @@ export async function GET() {
   // the import CLI a `~/.pof/audio/...` path, but `~` is not expanded by PowerShell
   // env-var assignment — the dispatch carried an unusable path that only an
   // (absent) script's expanduser would have saved.
-  // `disk` is the module's REAL footprint under AUDIO_DIR (bytes never had a surface).
-  return apiSuccess({ sets, assets, usage, audioDir: AUDIO_DIR, disk: getDiskFootprint() });
+  // `disk` is the module's REAL footprint under AUDIO_DIR (bytes never had a surface),
+  // cached and invalidated by this route's own writes (DISK_FOOTPRINT_TTL_MS bounds outside edits).
+  return apiSuccess({ sets, assets, usage, audioDir: AUDIO_DIR, disk: getCachedDiskFootprint() });
 }
 
 interface PatchBody { assetId?: string; favorite?: boolean }
 
 export async function PATCH(request: NextRequest) {
-  let body: PatchBody;
-  try { body = await request.json() as PatchBody; } catch { return apiError('Invalid JSON body', 400); }
+  const parsedBody = await readJsonObject(request);
+  if (!parsedBody.ok) return parsedBody.error;
+  const body = parsedBody.data as PatchBody;
   if (!body.assetId || typeof body.favorite !== 'boolean') {
     return apiError('Pass assetId + favorite:boolean', 400);
   }

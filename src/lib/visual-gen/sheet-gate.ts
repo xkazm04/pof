@@ -109,7 +109,9 @@ export function gradeSheet(input: SheetGateInput): SheetGateVerdict {
 
   const seams = input.seamContrasts ?? [];
   const interior = input.interiorContrast;
-  const measured = seams.length > 0 && typeof interior === 'number' && interior > 0;
+  const measured =
+    seams.length > 0 && seams.every(Number.isFinite) &&
+    typeof interior === 'number' && Number.isFinite(interior) && interior > 0;
   const seamRatio = measured ? Math.max(...seams) / interior! : null;
   const seamNote = !measured
     ? 'seam contrast was not measured for this sheet'

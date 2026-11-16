@@ -11,6 +11,9 @@
  */
 
 import type { StoryEdgeKind, StoryGraph, StoryNode, StoryNodeKind } from '@/lib/story/types';
+import type { OrreryBuildOptions, OrreryStatus } from '@/lib/story/orrery/status';
+
+export type { OrreryBuildOptions, OrreryStatus } from '@/lib/story/orrery/status';
 
 /** Index into `OrreryModel.R`. `-1` means "none"; the virtual dataset root sits at index `N`. */
 export type NodeIx = number;
@@ -202,6 +205,12 @@ export interface OrreryModel {
   out: OrreryEdge[][];
   inn: OrreryEdge[][];
   cohorts: string[];
+  /**
+   * Per-cell evidence status (verified / stale / unverified) for every cell the lens can show, read
+   * off the same merged evidence as the lens values. Optional so a hand-built model still type-checks;
+   * absent means "no status known", which draws no marker.
+   */
+  status?: OrreryStatus;
   prov: OrreryProvenance;
   /** 98th-percentile choice spread, the reference the impact rim normalises against. */
   spreadRef: number;
@@ -221,7 +230,7 @@ export interface OrreryModel {
  * Build the whole model from a storygraph document. Pure: same input, same output, no DOM, no
  * globals, no clock. This is the one entry point the React surface calls.
  */
-export declare function buildOrreryModel(raw: StoryGraph, key: string): OrreryModel;
+export declare function buildOrreryModel(raw: StoryGraph, key: string, opts?: OrreryBuildOptions): OrreryModel;
 
 /* ------------------------------------------------------------------ the camera */
 

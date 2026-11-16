@@ -1,0 +1,114 @@
+{
+  "schema": "conform-run/1",
+  "worker": "98049f13-6130-4a27-a81b-6c154573c9db",
+  "subject": "image-to-3d-input-gating",
+  "evaluatedAt": "2026-11-10T00:13:30.974411+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "visual-gen-quality-and-animation",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "scripts/visual-gen/pof_vlm_critique.py:63 This script defines the SCORE/DEFECTS/VERDICT reply contract that the repo's image-to-3D input gate says it shares (input-gate.ts:25), but it asks for free-text defects and a prose verdict sentence where the standard requires a closed defect vocabulary and a verdict token from a closed set, so defect classes cannot be counted across a batch.",
+      "techniques": [
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "deviation",
+          "evidence": "scripts/visual-gen/pof_vlm_critique.py:63 DEFECTS is open 'comma-separated visual problems' and VERDICT is a sentence. Both are named as failures by the technique. The rest is right: the integer scale is stated, and a missing score is an error (POF_VLM_ERROR), not a pass."
+        }
+      ],
+      "registryProposal": "The technique could say outright whether an output critic that defines a protocol an input gate inherits falls under the closed-vocabulary rule. The subject defers output acceptance to a sibling subject, but here the shared contract came from the output side."
+    },
+    {
+      "context": "asset-forge",
+      "subject": "image-to-3d-input-gating",
+      "bundle": "game-production",
+      "state": "deviation",
+      "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:20 The forge can only submit text or one reference image, never a view set, even though the generate route accepts multiview-to-3d with front/left/back/right views; and its 2D→3D handoff passes the exact 2D image on with no brief that strips lettering. So a character is always reconstructed from the master view alone, and symbolic content gets to the paid stage unchecked.",
+      "techniques": [
+        {
+          "technique": "multi-view-master-reference",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:20 There is no multiview mode or view slots on the client, though route.ts accepts viewDataUrls for multiview-to-3d. A character never gets the front+back views the technique calls highest-return."
+        },
+        {
+          "technique": "text-is-never-geometry",
+          "verdict": "deviation",
+          "evidence": "src/components/modules/visual-gen/asset-forge/Image2DPanel.tsx:112 A 2D image made from a free prompt is staged as-is for reconstruction, with no text-free brief or stripping step. The 'no lettering' clause exists only in contact-sheet.ts (icon sets), and the server input-gate criteria do not list lettering either."
+        },
+        {
+          "technique": "score-defect-verdict-protocol",
+          "verdict": "conformant",
+          "evidence": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:294 The forge carries the gate's note (ran/unavailable/skipped) onto the job (useForgeStore inputGateNote) and shows it verbatim, so an ungated submit never reads as a pass. This verdict covers the in-context reporting only; see notes for the middle-band leak in the route."
+        },
+        {
+          "technique": "reference-role-tagging",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:106 ForgeReference holds a single image, and single-reference reconstructions are the technique's own stated exception."
+        },
+        {
+          "technique": "scene-partition-is-the-gated-unit",
+          "verdict": "not-applicable",
+          "evidence": "src/components/modules/visual-gen/asset-forge/referenceHandoff.ts:87 The forge has no scene-decompose mode. One reference means one asset."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "image-to-3d-input-gating",
+      "context": "character-overview-input",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor (data.ts:27) is only the Wizard subtitle 'template, Mixamo, Quixel…'. It does not name Blender, which the evidence claims, and it does not show that no image-to-3D path exists. The 'zero hits' claim rests on a search I could not confirm, and the search terms leave out the repo's own vocab"
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-10T00:13:30.974411+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "single-subject-plain-background"
+      ],
+      "deviations": 0,
+      "context": "character-overview-input",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T00:13:30.974411+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "score-defect-verdict-protocol"
+      ],
+      "deviations": 1,
+      "context": "visual-gen-quality-and-animation",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-10T00:13:30.974411+00:00",
+      "bundle": "game-production",
+      "subjects": [
+        "image-to-3d-input-gating"
+      ],
+      "techniques": [
+        "multi-view-master-reference",
+        "reference-role-tagging",
+        "scene-partition-is-the-gated-unit",
+        "score-defect-verdict-protocol",
+        "text-is-never-geometry"
+      ],
+      "deviations": 1,
+      "context": "asset-forge",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

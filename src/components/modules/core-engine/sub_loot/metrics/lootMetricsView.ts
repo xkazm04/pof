@@ -48,6 +48,9 @@ export interface LootMetricsInput {
   pityThreshold: number;
 }
 
+/** The loot pipeline, in order: PipelineMetric draws one dot per stage and prints the count from the view. */
+export const LOOT_PIPELINE_STAGES = ['LootTable', 'WeightedRandom', 'WorldItem', 'Pickup', 'Inventory'] as const;
+
 /** A co-occurrence cell at or above this share is a "hot" affix-pair conflict. */
 export const AFFIX_HOT_THRESHOLD = 0.7;
 
@@ -90,14 +93,15 @@ const fixture = (value: number | null, unit: string, detail: string): MetricRead
 export function lootMetricsView({ tuning, pityThreshold }: LootMetricsInput): Record<LootSectionId, MetricReading> {
   const hot = AFFIX_COOCCURRENCE_CELLS.filter((c) => c.value >= AFFIX_HOT_THRESHOLD).length;
   return {
-    pipeline: fixture(null, 'stages', 'Roll -> rarity -> affix -> drop flow'),
+    pipeline: fixture(LOOT_PIPELINE_STAGES.length, 'stages', LOOT_PIPELINE_STAGES.join(' → ')),
     weights: fixture(RARITY_TIERS.length, 'tiers', 'Rarity weight split'),
     'world-items': fixture(WORLD_ITEMS.length, 'world items', 'World item beams'),
     treemap: fixture(TREEMAP_DATA.length, 'nodes', 'Drop chance hierarchy'),
     histogram: fixture(RARITY_TIERS.length, 'brackets', 'Rarity weight histogram'),
     simulator: fixture(AFFIX_POOL.length, 'affixes in pool', 'Affix pool'),
     'co-occurrence': fixture(hot, 'hot cells', `${hot} of ${AFFIX_COOCCURRENCE_CELLS.length} affix pairs >= ${AFFIX_HOT_THRESHOLD * 100}%`),
-    timer: { value: pityThreshold, unit: 'pulls', basis: 'live', detail: `${pityThreshold} pulls until pity` },
+    // Kills, the unit findPercentileKill and the Pity tab count the threshold in.
+    timer: { value: pityThreshold, unit: 'kills', basis: 'live', detail: `${pityThreshold} kills until pity` },
     drought: droughtReading(pityThreshold),
     beacon: fixture(BEACON_CONFIGS.length, 'beacons', 'Rarity beacon configs'),
     impact: impactReading(tuning),

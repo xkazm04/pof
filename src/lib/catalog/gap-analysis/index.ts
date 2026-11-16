@@ -78,15 +78,27 @@ function pickStratifiedSample(entities: StoredCatalogEntity[], path: string, max
   return out;
 }
 
-/** Fallback when no plugin is registered: histogram the first 3 top-level keys of `data`. */
+/** Keys that name or describe ONE entity — a histogram of them is an id list or prose, never a distribution. */
+const NON_DIMENSION_KEYS = new Set(['id', 'name', 'displayName', 'label', 'title', 'description']);
+
+const isScalar = (v: unknown): boolean => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean';
+
+/**
+ * Fallback when no plugin is registered: histogram the first 3 top-level `data` keys that hold
+ * scalars and are not identity/prose keys. None qualifying = `[]`, which lets `analyzeCatalog`
+ * fall back to the envelope facets instead of bucketing descriptions or `[object Object]`.
+ */
 function inferDimensions(entities: StoredCatalogEntity[]): string[] {
-  const keys = new Set<string>();
+  const keys = new Map<string, boolean>();
   for (const e of entities.slice(0, 20)) {
     if (e.data && typeof e.data === 'object') {
-      for (const k of Object.keys(e.data)) keys.add(k);
+      for (const [k, v] of Object.entries(e.data)) {
+        if (NON_DIMENSION_KEYS.has(k) || v == null) continue;
+        keys.set(k, (keys.get(k) ?? true) && isScalar(v));
+      }
     }
   }
-  return [...keys].slice(0, 3);
+  return [...keys].filter(([, scalar]) => scalar).map(([k]) => k).slice(0, 3);
 }
 
 export function analyzeCatalog(
@@ -99,10 +111,11 @@ export function analyzeCatalog(
   const dimensions = plugin?.dimensions ?? inferDimensions(entities);
   const expected = plugin?.expectedShare ?? {};
   const { byAttribute, coverage, unmeasured, degenerate } = measureDimensions(dimensions, entities, expected);
-  // Stale or absent plugin: every declared dimension measured nothing. Fall back to the envelope
-  // facets so the catalog still has a histogram; they carry no expected share (no gaps invented).
+  // Stale, absent or degenerate-only plugin: no declared dimension produced a histogram. Fall back to
+  // the envelope facets so the catalog still has one; they carry no expected share (no gaps invented).
+  // `degenerate` is still reported beside them, so an id-list dimension is not mistaken for balance.
   let primary = dimensions[0] ?? '';
-  if (entities.length > 0 && Object.keys(byAttribute).length === 0 && degenerate.length === 0) {
+  if (entities.length > 0 && Object.keys(byAttribute).length === 0) {
     const facets = measureDimensions(FACET_DIMENSIONS, entities);
     Object.assign(byAttribute, facets.byAttribute);
     Object.assign(coverage, facets.coverage);

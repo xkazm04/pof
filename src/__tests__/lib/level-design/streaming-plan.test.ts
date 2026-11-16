@@ -101,14 +101,48 @@ describe('buildStreamingZonePrompt reads the lib plan', () => {
       toConfig(initialStreamingPlan()),
       { projectName: 'Did', projectPath: 'C:/UE/Did', ueVersion: '5.5' },
     );
-    expect(prompt).toHaveLength(15804);
+    expect(prompt).toHaveLength(16571);
     expect(createHash('sha256').update(prompt).digest('hex'))
-      .toBe('7310cc59f0aa9c3f106d47a4690d448ea5077a056bdcf76a5d01d7752c31d372');
+      .toBe('dd60172442a9b1f2b16718f8b7e05ca3237dfa28910aafc7abcd06ee7a2534c3');
   });
 
   it('src/lib/prompts/level-design.ts takes its plan types from lib, never from components', () => {
     const src = readFileSync(path.resolve(process.cwd(), 'src/lib/prompts/level-design.ts'), 'utf8');
     expect(src).toMatch(/import type \{[^}]*StreamingZonePlannerConfig[^}]*\} from '@\/lib\/level-design\/streaming-plan'/);
     expect(src.match(/from '@\/components\//g) ?? []).toHaveLength(0);
+  });
+});
+
+describe('applyStreamingOp — undo / redo', () => {
+  const doc = (s: StreamingPlanState) => ({ zones: s.zones, transitions: s.transitions, gridSize: s.gridSize });
+
+  it('erase of a linked zone, then undo, deep-equals the prior document (zones AND transitions)', () => {
+    const s0 = initialStreamingPlan();
+    const erased = run(s0, { type: 'erase', x: 2, y: 2 }); // z-town carries tr-1 and tr-3
+    expect(erased.transitions.length).toBeLessThan(s0.transitions.length);
+    const undone = run(erased, { type: 'undo' });
+    expect(doc(undone)).toEqual(doc(s0));
+    expect(doc(run(undone, { type: 'redo' }))).toEqual(doc(erased));
+  });
+
+  it('mode and selection are not history: a mode change is no step, undo keeps the mode', () => {
+    const s0 = initialStreamingPlan();
+    expect(run(s0, { type: 'setErase' }, { type: 'select', zoneId: 'z-town' }).history.past).toHaveLength(0);
+    const s = run(s0, { type: 'paint', x: 0, y: 0, zoneType: 'forest' }, { type: 'setErase' });
+    const undone = run(s, { type: 'undo' });
+    expect(undone.zones).toHaveLength(s0.zones.length);
+    expect(undone.mode).toEqual({ kind: 'erase' });
+  });
+
+  it('a linked gesture is one step, a new edit clears redo, and undo with no history is a no-op', () => {
+    const s0 = initialStreamingPlan();
+    expect(run(s0, { type: 'undo' })).toBe(s0);
+    const linked = run(s0, { type: 'startLink', from: 'z-forest' }, { type: 'cellClick', x: 5, y: 2 });
+    expect(linked.history.past).toHaveLength(1);
+    const back = run(linked, { type: 'undo' });
+    expect(back.transitions).toEqual(s0.transitions);
+    const edited = run(back, { type: 'paint', x: 0, y: 0, zoneType: 'hub' });
+    expect(edited.history.future).toHaveLength(0);
+    expect(run(edited, { type: 'redo' })).toBe(edited);
   });
 });

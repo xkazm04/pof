@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocalizationPipelineStore } from '@/stores/localizationPipelineStore';
 import { useProjectStore } from '@/stores/projectStore';
-import type { StringContext } from '@/types/localization-pipeline';
+import type { StringContext, LocalizableString } from '@/types/localization-pipeline';
 import { LOW_CONFIDENCE } from '@/lib/localization/definitions';
 import { DEFAULT_PSEUDO_KNOBS } from '@/lib/localization/pseudo-locale';
 import type { PseudoKnobs } from '@/lib/localization/pseudo-locale';
 import { assessReadiness } from '@/lib/localization/readiness';
+import { isTranslatable } from '@/lib/localization/scan-engine';
 import type { ViewTab, StringPreset, TranslationPreset } from './types';
+
+/** One search rule for both tabs (they share the query): source text or LOCTEXT key. */
+function matchesQuery(s: LocalizableString, q: string): boolean {
+  return s.sourceText.toLowerCase().includes(q) || s.locKey.toLowerCase().includes(q);
+}
 
 export function useLocalizationPipelineView() {
   const config = useLocalizationPipelineStore((s) => s.config);
@@ -67,14 +73,20 @@ export function useLocalizationPipelineView() {
     return map;
   }, [strings]);
 
-  // Set of string IDs that have translations
-  const translatedStringIds = useMemo(() => {
-    const ids = new Set<string>();
+  // Translatable strings lacking a non-pending entry in at least one target locale.
+  // Already-LOCTEXT strings are never translated by this pipeline, so they are not "missing".
+  const missingTranslationIds = useMemo(() => {
+    const done = new Set<string>();
     for (const e of entries) {
-      if (e.status !== 'pending') ids.add(e.stringId);
+      if (e.status !== 'pending') done.add(`${e.stringId}:${e.locale}`);
+    }
+    const locales = config?.targetLocales ?? [];
+    const ids = new Set<string>();
+    for (const s of strings) {
+      if (isTranslatable(s) && locales.some((l) => !done.has(`${s.id}:${l}`))) ids.add(s.id);
     }
     return ids;
-  }, [entries]);
+  }, [entries, strings, config]);
 
   // Keys (`stringId:locale`) of entries with at least one QA finding — powers the
   // "QA" preset chip on the Translations tab.
@@ -89,9 +101,7 @@ export function useLocalizationPipelineView() {
     let result = strings;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (s) => s.sourceText.toLowerCase().includes(q) || s.locKey.toLowerCase().includes(q),
-      );
+      result = result.filter((s) => matchesQuery(s, q));
     }
     if (contextFilter !== 'all') {
       result = result.filter((s) => s.context === contextFilter);
@@ -103,7 +113,7 @@ export function useLocalizationPipelineView() {
       result = result.filter((s) => s.detectionConfidence < LOW_CONFIDENCE);
     }
     if (stringPresets.has('missing-translations')) {
-      result = result.filter((s) => !translatedStringIds.has(s.id));
+      result = result.filter((s) => missingTranslationIds.has(s.id));
     }
     if (stringPresets.has('critical-hazards')) {
       result = result.filter((s) =>
@@ -111,7 +121,7 @@ export function useLocalizationPipelineView() {
       );
     }
     return result;
-  }, [strings, searchQuery, contextFilter, stringPresets, translatedStringIds, criticalHazardStringIds]);
+  }, [strings, searchQuery, contextFilter, stringPresets, missingTranslationIds, criticalHazardStringIds]);
 
   // Filtered translations
   const filteredEntries = useMemo(() => {
@@ -121,7 +131,7 @@ export function useLocalizationPipelineView() {
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      const matchIds = new Set(strings.filter((s) => s.sourceText.toLowerCase().includes(q)).map((s) => s.id));
+      const matchIds = new Set(strings.filter((s) => matchesQuery(s, q)).map((s) => s.id));
       result = result.filter((e) => matchIds.has(e.stringId));
     }
     if (translationPresets.has('low-confidence')) {

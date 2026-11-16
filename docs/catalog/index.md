@@ -67,6 +67,7 @@ Author the spec + its test, reach config-complete, pass the blocking gate, commi
 | [`QUALITY-GATE.md`](QUALITY-GATE.md) | the blocking content-fidelity + wiring review |
 | [`L3-L4-RUNNER.md`](L3-L4-RUNNER.md) | the live-UE runner that drains deferred runtime/visual gates |
 | [`LEGACY-SALVAGE.md`](LEGACY-SALVAGE.md) | UE gotchas / known asset paths migrated into the Canon |
+| [`CONTRACTS.md`](CONTRACTS.md) | the GTAI `contracts` row: quest packages mirrored from `games/gtai/quests/`, the ledger + sync routes |
 
 ## Code map
 

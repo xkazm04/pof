@@ -17,6 +17,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mesh", required=True)
     args = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a piped Windows stdout is cp1252
     try:
         import numpy as np  # noqa: F401  (trimesh pulls it; kept explicit)
         import trimesh
@@ -64,7 +65,8 @@ def main() -> int:
             nd = mesh.nondegenerate_faces()
             emit("DEGENERATE_FACES", int((~nd).sum()))
         except Exception:
-            emit("DEGENERATE_FACES", 0)
+            # Not 0: that reads as a measured clean mesh. The parser refuses nan as no measurement.
+            emit("DEGENERATE_FACES", "nan")
         print("POF_CRITIQUE_DONE=ok")
         return 0
     except Exception as e:  # noqa: BLE001 — any failure is a parseable marker

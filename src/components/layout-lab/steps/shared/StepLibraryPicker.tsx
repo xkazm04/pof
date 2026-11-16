@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { InlineErrorRetry } from '@/components/modules/shared/InlineErrorRetry';
+import { LoadingRow } from '@/components/ui/LoadingRow';
 import { LabInput } from '../controls';
 import type { LibraryAsset, AssetCategory } from '@/types/asset-library';
 import type { LabTheme } from '../../theme';
@@ -35,12 +36,18 @@ export function StepLibraryPicker({ t, referencedIds, onPick, onUnpick }: {
   const [q, setQ] = useState('');
   const [category, setCategory] = useState<AssetCategory | 'all'>('all');
 
+  // Latest-wins: every keystroke is a request, and a slow earlier one must not overwrite
+  // the list for what the box says now. A superseded response is inert, not an error.
+  const latestLoad = useRef(0);
+
   const load = useCallback(async (query: string, cat: AssetCategory | 'all') => {
+    const token = ++latestLoad.current;
     setError(null);
     const params = new URLSearchParams();
     if (query.trim()) params.set('q', query.trim());
     if (cat !== 'all') params.set('category', cat);
     const res = await tryApiFetch<LibraryAsset[]>(`/api/visual-gen/library?${params}`);
+    if (token !== latestLoad.current) return;
     if (res.ok) setAssets(res.data);
     else { setAssets(null); setError(res.error); }
   }, []);
@@ -90,6 +97,8 @@ export function StepLibraryPicker({ t, referencedIds, onPick, onUnpick }: {
           </div>
 
           {error && <InlineErrorRetry dense message={`Couldn’t read the asset library: ${error}`} onRetry={() => void load(q, category)} />}
+
+          {assets === null && !error && <LoadingRow variant="inline" label="Reading the asset library…" color={t.muted} />}
 
           {assets?.length === 0 && (
             <span data-testid="step-library-empty" className={t.fontMono} style={{ fontSize: 13, color: t.muted, lineHeight: 1.5 }}>

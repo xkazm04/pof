@@ -5,6 +5,7 @@ import type { AnalyticsDashboard, PromptSuggestion } from '@/types/session-analy
 import { apiFetch } from '@/lib/api-utils';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { useIsSuspended } from '@/hooks/useSuspend';
+import { invalidateRunEvidence } from '@/hooks/useModuleRunEvidence';
 import type { SubModuleId } from '@/types/modules';
 
 const EMPTY_DASHBOARD: AnalyticsDashboard = {
@@ -62,6 +63,10 @@ export interface UsePromptSuggestionsResult {
 export function usePromptSuggestions(moduleId: SubModuleId): UsePromptSuggestionsResult {
   const [suggestions, setSuggestions] = useState<PromptSuggestion[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Latest-wins token: every keystroke (including a clear) mints one, and only the
+  // request carrying the current token may write — a clear cancels the armed
+  // debounce AND makes any in-flight answer inert.
+  const latestRef = useRef(0);
   const suspended = useIsSuspended();
 
   // Clear debounce timer when suspended or on unmount
@@ -77,19 +82,21 @@ export function usePromptSuggestions(moduleId: SubModuleId): UsePromptSuggestion
 
   const fetchSuggestions = useCallback(async (prompt: string) => {
     if (suspended) return;
+    const token = ++latestRef.current;
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = undefined;
     if (!prompt.trim() || !moduleId) {
       setSuggestions([]);
       return;
     }
 
     // Debounce
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(async () => {
       try {
         const data = await apiFetch<{ suggestions: PromptSuggestion[] }>(
           `/api/session-analytics?action=suggestions&moduleId=${encodeURIComponent(moduleId)}&prompt=${encodeURIComponent(prompt)}`
         );
-        setSuggestions(data.suggestions ?? []);
+        if (token === latestRef.current) setSuggestions(data.suggestions ?? []);
       } catch {
         // Silently ignore — suggestions are non-critical
       }
@@ -109,8 +116,6 @@ export async function recordSessionOutcome(data: {
   success: boolean;
   durationMs: number;
   startedAt: string;
-  /** Prompt-evolution variant this run dispatched (or 'static'). */
-  promptVariantId?: string;
 }): Promise<void> {
   try {
     await apiFetch<unknown>('/api/session-analytics', {
@@ -121,6 +126,8 @@ export async function recordSessionOutcome(data: {
         completedAt: new Date().toISOString(),
       }),
     });
+    // The NBA run-evidence cache reads these rows; a new one must reach it.
+    invalidateRunEvidence(data.moduleId);
   } catch (err) {
     console.error('Failed to record session outcome:', err);
   }

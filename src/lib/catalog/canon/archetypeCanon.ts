@@ -17,4 +17,8 @@ export const ARCHETYPE_CANON: Record<string, RuleCategory[]> = {
   checklist: ['project'],
   manifest: ['project'],
   graph: ['game', 'project'],
+  // Bespoke steps (python-driven wiring/visual gates). Decided, not defaulted: they carry every
+  // category, which is what an unmapped key used to give them implicitly. Narrow deliberately,
+  // never by deleting the key (undefined = unfiltered canon).
+  custom: ['art', 'game', 'project'],
 };

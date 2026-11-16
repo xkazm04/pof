@@ -5,7 +5,8 @@ import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { swimlaneCtxFromReads, readNotices, assembleLanes, stepsFor } from '@/lib/status/statusReads';
 import { sortLanes, judgedContentOfRow } from '@/lib/status/statusModel';
-import { craftForCell, type CraftVerdictView } from '@/lib/craft/craftCell';
+import { craftForCell, craftStepOf, type CraftVerdictView } from '@/lib/craft/craftCell';
+import { LENS_VERSIONS } from '@/lib/craft/lens-versions';
 import { ReadNotices } from '@/components/status/MiniSwimlane';
 import type { CatalogArtifacts } from '@/components/status/statusArtifactSource';
 import type { StatusVerdictRead } from '@/components/status/statusVerdictSource';
@@ -91,6 +92,61 @@ describe('assembleLanes', () => {
       expect(r.craft!.get(`${A} ${s.label}`)).toEqual(expected ?? undefined);
     }
     void judgedContentOfRow;
+  });
+});
+
+describe('assembleLanes craft join and synthetic fixtures', () => {
+  const CAT = 'achievements';
+  const STEP = 'Concept Brief';
+  const step = craftStepOf(CAT, STEP)!;
+  const realRow = { catalogId: CAT, entityId: 'e1', step: STEP, status: 'pass', tier: 'L0', data: { a: 1 }, updatedAt: '2026-01-01 00:00:00' };
+  const view = (entityId: string, aLevel: 'A1' | 'A2'): CraftVerdictView => ({
+    catalogId: CAT, entityId, step: STEP, lens: step.lens, aLevel, lensVersion: LENS_VERSIONS[step.lens], artifactUpdatedAt: realRow.updatedAt,
+  });
+  const assemble = (views: CraftVerdictView[]) =>
+    assembleLanes({
+      catalogs: [{ catalogId: CAT, rows: [realRow] as never, loaded: true, error: null }],
+      byCatalog: new Map(),
+      craftByCatalog: new Map([[CAT, views]]),
+    }).craft!.get(`${CAT} ${STEP}`)!;
+
+  it('a synthetic fixture gauge never floors a real entity (isSyntheticEntity, as the rest of the map)', () => {
+    const cc = assemble([view('e1', 'A2'), view('test-headless-mcp', 'A1')]);
+    expect(cc.craft.level).toBe('A2');
+  });
+
+  it('the seeded control: the fixture filter is what lifts it, the real gauge alone reads A2', () => {
+    expect(assemble([view('e1', 'A2')]).craft.level).toBe('A2');
+    expect(assemble([view('test-headless-mcp', 'A1')]).craft.level).toBe('A0');
+  });
+});
+
+describe('assembleLanes craft coverage', () => {
+  const CAT = 'achievements';
+  const STEP = 'Concept Brief';
+  const step = craftStepOf(CAT, STEP)!;
+  const row = (entityId: string) => ({ catalogId: CAT, entityId, step: STEP, status: 'pass', tier: 'L0', data: { a: 1 }, updatedAt: '2026-01-01 00:00:00' });
+  const view = (entityId: string): CraftVerdictView => ({
+    catalogId: CAT, entityId, step: STEP, lens: step.lens, aLevel: 'A2', lensVersion: LENS_VERSIONS[step.lens], artifactUpdatedAt: '2026-01-01 00:00:00',
+  });
+  const read = (entities: string[], gauged: string[]) =>
+    assembleLanes({
+      catalogs: [{ catalogId: CAT, rows: entities.map(row) as never, loaded: true, error: null }],
+      byCatalog: new Map(),
+      craftByCatalog: new Map([[CAT, gauged.map(view)]]),
+    }).craft!.get(`${CAT} ${STEP}`)!;
+
+  it('a level from partial gauging carries gauged/total', () => {
+    expect(read(['e1', 'e2', 'e3'], ['e1']).coverage).toEqual({ gauged: 1, total: 3 });
+  });
+
+  it('a fully gauged cell carries no coverage mark, and neither does an A0 one', () => {
+    expect(read(['e1', 'e2'], ['e1', 'e2']).coverage).toBeUndefined();
+    expect(read(['e1'], []).coverage).toBeUndefined();
+  });
+
+  it('fixture rows are not entities of the step, so they do not make a cell partial', () => {
+    expect(read(['e1', 'test-headless-mcp'], ['e1']).coverage).toBeUndefined();
   });
 });
 

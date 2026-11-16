@@ -12,7 +12,11 @@ export const POF_BRIDGE = {
   DEFAULT_PORT: 30040,
 } as const;
 
-/** Resolve the `?port=` override from a request's search params, falling back to the default. */
+/**
+ * Resolve the `?port=` override from a request's search params, falling back to the default.
+ * Strict on purpose: garbage comes back NaN, which `proxyToPofBridge` refuses as `invalid-port`.
+ */
 export function resolvePofPort(searchParams: URLSearchParams): number {
-  return parseInt(searchParams.get('port') || String(POF_BRIDGE.DEFAULT_PORT), 10);
+  const raw = searchParams.get('port');
+  return raw ? Number(raw) : POF_BRIDGE.DEFAULT_PORT;
 }

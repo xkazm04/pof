@@ -113,8 +113,10 @@ export function ComboChainBuilder() {
         <div className="flex items-center justify-between">
           <SectionHeader icon={Plus} label="Ability Palette" color={MODULE_COLORS.core} />
           <button
+            type="button"
             onClick={clearChain}
-            className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors cursor-pointer px-2 py-0.5 rounded border border-border/40 hover:border-border"
+            className={`flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors cursor-pointer px-2 py-0.5 rounded border border-border/40 hover:border-border ${FOCUS_RING_CLASS}`}
+            style={focusRingStyle(MODULE_COLORS.core)}
           >
             <RotateCcw className="w-3 h-3" /> Clear
           </button>

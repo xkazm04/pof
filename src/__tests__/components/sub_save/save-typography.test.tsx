@@ -52,9 +52,10 @@ describe('BudgetAlerting typography', () => {
     expect(label.className).toContain('text-xs');
   });
 
-  it('promotes the projected value to a hero-sized number', () => {
+  it('shows no projected value while only one schema generation exists', () => {
     const { container } = render(<BudgetAlerting />);
-    expect(container.querySelector('.text-lg')).toBeTruthy();
+    expect(container.querySelector('.text-lg')).toBeNull();
+    expect(container.textContent).not.toContain('Projected');
   });
 
   it('still renders status badges as uppercase codes', () => {

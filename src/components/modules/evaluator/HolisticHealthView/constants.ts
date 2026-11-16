@@ -7,7 +7,8 @@ export const STATUS_COLORS: Record<ModuleHealthStatus, string> = {
   healthy: ACCENT_EMERALD,
   warning: STATUS_WARNING,
   critical: STATUS_ERROR,
-  'not-started': '#4b5563',
+  // Same neutral the subsystem signals use for 'inactive'.
+  'not-started': STATUS_NEUTRAL,
 };
 
 export const STATUS_BADGE: Record<ModuleHealthStatus, 'success' | 'warning' | 'error' | 'default'> = {

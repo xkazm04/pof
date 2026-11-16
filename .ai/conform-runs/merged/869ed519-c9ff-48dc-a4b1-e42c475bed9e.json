@@ -1,0 +1,165 @@
+{
+ "schema": "conform-run/1",
+ "worker": "869ed519-c9ff-48dc-a4b1-e42c475bed9e",
+ "subject": "catalog-pipeline-authoring",
+ "evaluatedAt": "2026-11-07T23:58:04.984606+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "catalog-acceptance",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "conformant",
+   "evidence": "src/lib/catalog/acceptance/packagingVerify.ts:57 Packaging coverage has exactly two legitimate states: own a packaging step, or declare a non-empty exemption reason. The drain reports exempt pipelines read from the registry, so an exemption reads as a decision rather than as silence.",
+   "techniques": [
+    {
+     "technique": "packaging-exempt-two-state-rule",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/packagingVerify.ts:57 Pure packagingCoverage returns step/exempt/none; whitespace is not a reason. The summary carries exempt[] (line 142). packaging-coverage.test.ts fails on 'none' and ratchets the exempt list to four."
+    },
+    {
+     "technique": "view-produce-accept-triad",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:16 Produce stub and acceptance live in one module for gallery steps and grade the selected candidate, not a bare index. The allOf empty composition defers instead of passing (combinators.ts:16), and a test pins the selection gate as the last allOf member."
+    },
+    {
+     "technique": "producer-facts-are-observed-not-declared",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/stepGradability.ts:114 A self-reported producer status the server cannot observe is kept but stamped UNGRADED, so it never stands where a verified status is expected."
+    },
+    {
+     "technique": "seed-entities-and-walker-coverage",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/acceptance/galleryArtifact.ts:44 The acceptance layer keeps the walker's terminal set (pass, or deferred L3/L4 with a reason) and excludes pending."
+    }
+   ]
+  },
+  {
+   "context": "catalog-database",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "conformant",
+   "evidence": "src/app/api/pipeline-artifacts/route.ts:53 The artifact write door lets a client declare only an engine it can honestly claim about itself. Unverifiable engine claims (explicit or smuggled) are recorded as unknown unless the server already recorded them for that row, so provenance cannot be fabricated by a caller.",
+   "techniques": [
+    {
+     "technique": "producer-facts-are-observed-not-declared",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/route.ts:53 Client allow-list for its own engine; a claim the server already recorded for the same row survives the round trip. _provenance is a non-content key and cannot move a verdict."
+    },
+    {
+     "technique": "view-produce-accept-triad",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/route.ts:40 Accept is derived from the persisted data by the step's own checker; the caller's status is discarded for registered steps."
+    },
+    {
+     "technique": "seed-entities-and-walker-coverage",
+     "verdict": "conformant",
+     "evidence": "src/lib/catalog/seed-materials.ts:8 Seeds are real representative entities with calibration notes, not placeholders. seed.ts:10 also refuses to let a missing server-side entity read as an exemption."
+    },
+    {
+     "technique": "packaging-exempt-two-state-rule",
+     "verdict": "conformant",
+     "evidence": "src/app/api/pipeline-artifacts/package/route.ts:67 The package route reports the declared reason, and reports 'none' separately (line 68), so exempt and omission stay distinguishable to the operator."
+    }
+   ]
+  },
+  {
+   "context": "audio-view-and-catalog",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/audioEventCatalogStore.ts:68 The audio event catalog is a scene-scoped zustand/localStorage module editor, not a catalog pipeline step. A case-insensitive search of the whole audio module directory found no CliProduce, StepFrame, useStepAcceptance, pipeline-artifacts or packagingExempt.",
+   "techniques": [],
+   "absenceTerms": [
+    "CliProduce",
+    "StepFrame",
+    "useStepAcceptance",
+    "pipeline-artifacts",
+    "packagingExempt"
+   ]
+  },
+  {
+   "context": "animation-state-machine-editor",
+   "subject": "catalog-pipeline-authoring",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/animations/StateMachineEditor/draftStore.ts:6 The state-machine editor is a module tool whose only project write is an Apply plan dispatched through the module CLI rail, not a catalog pipeline step. A case-insensitive search of the animations module directory found no CliProduce, StepFrame, useStepAcceptance, pipeline-artifacts or packagingExempt.",
+   "techniques": [],
+   "absenceTerms": [
+    "CliProduce",
+    "StepFrame",
+    "useStepAcceptance",
+    "pipeline-artifacts",
+    "packagingExempt"
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "catalog-pipeline-authoring",
+   "context": "catalog-gap-analysis",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-07T23:58:04.984606+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [
+    "packaging-exempt-two-state-rule",
+    "producer-facts-are-observed-not-declared",
+    "seed-entities-and-walker-coverage",
+    "view-produce-accept-triad"
+   ],
+   "deviations": 0,
+   "context": "catalog-acceptance",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T23:58:04.984606+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [
+    "packaging-exempt-two-state-rule",
+    "producer-facts-are-observed-not-declared",
+    "seed-entities-and-walker-coverage",
+    "view-produce-accept-triad"
+   ],
+   "deviations": 0,
+   "context": "catalog-database",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T23:58:04.984606+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "audio-view-and-catalog",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-07T23:58:04.984606+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "catalog-pipeline-authoring"
+   ],
+   "techniques": [],
+   "deviations": 0,
+   "context": "animation-state-machine-editor",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

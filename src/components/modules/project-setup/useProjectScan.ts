@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { apiFetch } from '@/lib/api-utils';
-import { missingRequirements } from '@/lib/project-setup/toolchain';
+import { missingRequirements, TOOLCHAIN } from '@/lib/project-setup/toolchain';
 
 export interface DetectedEngine {
   version: string;
@@ -29,6 +29,8 @@ export interface ChecklistItem {
   ok: boolean;
   detail: string;
   subDetail?: string;
+  /** The probe for this row failed, so nothing was measured: neither present nor missing. */
+  unknown?: boolean;
 }
 
 /** Lifecycle of the project scan, for deterministic test waits. */
@@ -44,6 +46,9 @@ export function useProjectScan(projectPath: string) {
   const [projectFiles, setProjectFiles] = useState<string[]>([]);
   const [scanning, setScanning] = useState(false);
   const [scanState, setScanState] = useState<ScanState>('idle');
+  // Why the project folder could not be listed; null when it was (or no path is set).
+  // A folder that does not exist yet lists fine, so this is never the "new project" case.
+  const [projectReadError, setProjectReadError] = useState<string | null>(null);
   // The path the auto-scan last ran for. Comparing by VALUE (not a boolean)
   // keeps the StrictMode double-mount protection while still rescanning when
   // the user switches projects — a stale checklist here drives the
@@ -65,7 +70,10 @@ export function useProjectScan(projectPath: string) {
     setScanState('scanning');
     const items: ChecklistItem[] = [];
     let detectedEngines: DetectedEngine[] = [];
+    let enginesProbeFailed = false;
+    let toolsProbeFailed = false;
     let dirData: ListResponse | null = null;
+    let readError: string | null = null;
 
     // 1. Detect engines
     try {
@@ -76,7 +84,7 @@ export function useProjectScan(projectPath: string) {
       });
       detectedEngines = data.engines ?? [];
     } catch {
-      // Non-critical
+      enginesProbeFailed = true;
     }
     if (!isCurrent()) return; // superseded by a newer scan
     setEngines(detectedEngines);
@@ -89,6 +97,14 @@ export function useProjectScan(projectPath: string) {
         ok: true,
         detail: `UE ${eng.version} detected`,
         subDetail: eng.path,
+      });
+    } else if (enginesProbeFailed) {
+      items.push({
+        id: 'engine',
+        label: 'Unreal Engine',
+        ok: false,
+        unknown: true,
+        detail: 'Could not check',
       });
     } else {
       items.push({
@@ -109,7 +125,15 @@ export function useProjectScan(projectPath: string) {
       });
       detectedTools = data.tools ?? [];
     } catch {
-      // Non-critical
+      toolsProbeFailed = true;
+    }
+
+    // A failed probe yields no rows, which would read as "nothing missing".
+    if (toolsProbeFailed) {
+      for (const row of TOOLCHAIN) {
+        if (row.id === 'engine') continue;
+        items.push({ id: row.checklistId, label: row.name, ok: false, unknown: true, detail: 'Could not check' });
+      }
     }
 
     for (const tool of detectedTools) {
@@ -137,8 +161,8 @@ export function useProjectScan(projectPath: string) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'list', path: projectPath }),
         });
-      } catch {
-        // Non-critical
+      } catch (e) {
+        readError = e instanceof Error ? e.message : 'The project folder could not be read';
       }
     }
 
@@ -146,7 +170,12 @@ export function useProjectScan(projectPath: string) {
     if (dirData?.isUEProject) {
       items.push({ id: 'uproject', label: 'UE Project', ok: true, detail: dirData.uprojectFiles[0] });
     } else {
-      items.push({ id: 'uproject', label: 'UE Project', ok: false, detail: 'No .uproject found' });
+      items.push({
+        id: 'uproject',
+        label: 'UE Project',
+        ok: false,
+        detail: readError ? 'Could not read the project folder' : 'No .uproject found',
+      });
     }
 
     // Source directory check
@@ -155,7 +184,7 @@ export function useProjectScan(projectPath: string) {
       id: 'source',
       label: 'Source Directory',
       ok: hasSource,
-      detail: hasSource ? 'Source/ found' : 'No Source/ folder',
+      detail: hasSource ? 'Source/ found' : readError ? 'Not checked' : 'No Source/ folder',
     });
 
     // Build files check — list Source ONCE here and reuse below for the
@@ -179,11 +208,12 @@ export function useProjectScan(projectPath: string) {
       id: 'build',
       label: 'Build Files',
       ok: hasBuildFiles,
-      detail: hasBuildFiles ? 'Build files found' : 'No build files',
+      detail: hasBuildFiles ? 'Build files found' : readError ? 'Not checked' : 'No build files',
     });
 
     if (!isCurrent()) return; // superseded by a newer scan
     setChecklist(items);
+    setProjectReadError(readError);
 
     // Build project files list if project exists
     const files: string[] = [];
@@ -225,6 +255,8 @@ export function useProjectScan(projectPath: string) {
   const hasProject = checklist.find((c) => c.id === 'uproject')?.ok ?? false;
   const okCount = checklist.filter((c) => c.ok).length;
   const missingToolCount = missingRequirements(checklist).length;
+  // Requirements whose probe failed: unmeasured, so no next step may be derived from them.
+  const unknownToolCount = checklist.filter((c) => c.unknown).length;
 
   return {
     engines,
@@ -236,5 +268,7 @@ export function useProjectScan(projectPath: string) {
     hasProject,
     okCount,
     missingToolCount,
+    unknownToolCount,
+    projectReadError,
   };
 }

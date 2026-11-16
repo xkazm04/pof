@@ -70,8 +70,8 @@ export function withGeneratedImages(
 /** An asset PATH is a TARGET the drain writes — never evidence that a file exists. */
 export function AssetTarget({ t, path }: { t: LabTheme; path: string }) {
   return (
-    <span data-testid="asset-target" className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>
-      ✓ asset target: {path} <span style={{ color: t.muted }}>(written by the drain)</span>
+    <span data-testid="asset-target" className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>
+      → asset target: {path} <span style={{ color: t.muted }}>(written by the drain)</span>
     </span>
   );
 }

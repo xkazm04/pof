@@ -20,7 +20,7 @@ export function SparklineBar({ height, isEmpty, color, dayName, total, success, 
       }}
       tabIndex={0}
       role="img"
-      aria-label={`${dayName}: ${total} sessions, ${success} successful, ${pct}% success rate`}
+      aria-label={total > 0 ? `${dayName}: ${total} sessions, ${success} successful, ${pct}% success rate` : `${dayName}: no sessions`}
     >
       {/* CSS-only tooltip */}
       <div

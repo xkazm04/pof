@@ -17,7 +17,7 @@ export function SlotTypesSection({
           <Package className="w-4 h-4 text-violet-400" />
         </div>
         <div>
-          <h4 className="text-[11px] font-bold uppercase text-violet-200 mb-1">Supported Asset Classifications</h4>
+          <h4 className="text-xs font-bold uppercase text-violet-200 mb-1">Supported Asset Classifications</h4>
           <p className="text-xs font-mono text-violet-400/60 leading-relaxed uppercase tracking-wider">
             Define the permissible item typologies managed by this grid. Mapped directly to EItemType enumerations.
           </p>

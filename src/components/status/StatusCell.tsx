@@ -21,7 +21,7 @@ import {
   BLOCKED_FILL,
 } from '@/lib/status/readiness';
 import { craftCode, craftLabel } from '@/lib/status/craft';
-import type { CellCraft } from '@/lib/craft/craftCell';
+import type { CellCraftReading } from '@/lib/status/statusReads';
 
 export function StatusCell({
   cell,
@@ -33,9 +33,13 @@ export function StatusCell({
   /** The parallel A-axis reading (AAA-craft lens) — display-only, attached by the page
    *  the way realization is; absent = the step was never audited OR gauges failed to
    *  load, and no chip renders (absence is never painted as A0). */
-  craft?: CellCraft;
+  craft?: CellCraftReading;
 }) {
   const { counts } = cell;
+  const coverage = craft?.coverage;
+  const craftTitle = craft
+    ? `${craftLabel(craft.craft)} · lens ${craft.lens} · roof ${craft.ceiling}${coverage ? ` · gauged on ${coverage.gauged} of ${coverage.total} entities, the rest are unmeasured` : ''}`
+    : '';
   const readiness = readinessOf(cell);
   // Where the engine NAME came from. The map's whole premise is that a cell says what is
   // behind it, and until now an audited fact, a step-authored declaration and a heuristic
@@ -47,7 +51,7 @@ export function StatusCell({
     || cell.engineSource === 'authored-demotion';
   const title = [
     `${cell.label} — ${readinessLabel(readiness)}`,
-    craft ? `craft: ${craftLabel(craft.craft)} · lens ${craft.lens} · roof ${craft.ceiling}` : '',
+    craft ? `craft: ${craftTitle}` : '',
     `engine: ${cell.engine} [${src.word}] — ${src.note}`,
     // WHY that engine's pass reads the way it does. Without it a cell demoted for its engine
     // class just came back a different colour — a silent re-colour on the map whose premise
@@ -230,7 +234,8 @@ export function StatusCell({
             data-testid="craft-code"
             data-craft={craft.craft.level}
             data-craft-state={craft.craft.state}
-            title={`${craftLabel(craft.craft)} · lens ${craft.lens} · roof ${craft.ceiling}`}
+            data-craft-partial={coverage ? `${coverage.gauged}/${coverage.total}` : undefined}
+            title={craftTitle}
             style={{
               flexShrink: 0,
               fontFamily: 'var(--lab-font-mono)',
@@ -249,6 +254,7 @@ export function StatusCell({
             }}
           >
             {craftCode(craft.craft)}
+            {coverage && ` ${coverage.gauged}/${coverage.total}`}
           </span>
         )}
       </span>

@@ -3,21 +3,12 @@
 import { create } from 'zustand';
 import { apiFetch } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { hashChecklist, type ChecklistProgress } from '@/lib/checklist-hash';
 import type { SubModuleId } from '@/types/modules';
 import type { ComplianceReport, ReconciliationSuggestion } from '@/types/gdd-compliance';
 
 const EMPTY_MODULES: ComplianceReport['modules'] = [];
 const EMPTY_SUGGESTIONS: ReconciliationSuggestion[] = [];
-
-type ChecklistProgress = Record<string, Record<string, boolean>>;
-
-/** Canonical hash of the checked items, stable across key-order differences. */
-function hashChecklist(cp: ChecklistProgress): string {
-  return Object.keys(cp)
-    .sort()
-    .map((m) => `${m}:${Object.keys(cp[m]).filter((k) => cp[m][k]).sort().join(',')}`)
-    .join('|');
-}
 
 /**
  * Flip one gap's resolved flag on a copy of the report and recompute the open-gap
@@ -71,6 +62,12 @@ function applyResolvedMarkers(
     criticalGaps: allGaps.filter((g) => g.severity === 'critical' && !g.resolved).length,
   };
 }
+
+// Latest-wins audit token + the scope the in-flight audit was asked for. A project
+// switch while an audit runs must audit the new project, and the older reply must
+// not land over it (the sibling useGameDesignDoc hook already holds this rule).
+let auditSeq = 0;
+let inflightAuditKey: string | null = null;
 
 interface GDDComplianceState {
   report: ComplianceReport | null;
@@ -179,14 +176,18 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
 
   runAudit: async (checklistProgress?: ChecklistProgress, projectPath?: string) => {
     const cp = checklistProgress ?? {};
+    const seq = ++auditSeq;
+    const scope = projectPath ?? get().reportProjectPath ?? '';
+    inflightAuditKey = `${scope}::${hashChecklist(cp)}`;
     set({ isAuditing: true, error: null, refreshFailed: false });
     try {
-      const scope = projectPath ?? get().reportProjectPath ?? '';
       const fresh = await apiFetch<ComplianceReport>('/api/gdd-compliance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'audit', checklistProgress: cp, projectPath: scope }),
       });
+      if (seq !== auditSeq) return; // superseded by a newer audit
+      inflightAuditKey = null;
       // A project switch starts with a clean slate (gap ids are only unique
       // within a project); a re-audit of the same project preserves the user's
       // manual resolutions by merging them back onto the fresh report. The server
@@ -213,6 +214,8 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
       // its error state on `!report`, so the stale numbers stayed on screen
       // looking current. Keep the report (it is the last thing we actually knew),
       // flag it stale, and log — never swallow the reason into state alone.
+      if (seq !== auditSeq) return;
+      inflightAuditKey = null;
       const message = (err as Error).message;
       logger.error(`[gddComplianceStore] compliance audit failed: ${message}`);
       set({ error: message, isAuditing: false, refreshFailed: !!get().report });
@@ -222,8 +225,10 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
   ensureAudit: async (checklistProgress, projectPath) => {
     if (!projectPath) return; // no project yet — don't audit an empty checklist
     const { isAuditing, report, reportProjectPath, reportChecklistHash } = get();
-    if (isAuditing) return;
     const hash = hashChecklist(checklistProgress);
+    // Only an audit for THIS scope makes a second one redundant; one for another
+    // project (a switch mid-audit) is superseded instead.
+    if (isAuditing && inflightAuditKey === `${projectPath}::${hash}`) return;
     // The report is a singleton with no project identity: a project switch (or
     // an audit that ran before the new project's checklist hydrated) otherwise
     // leaves project A's scores on screen for project B. Re-audit whenever the

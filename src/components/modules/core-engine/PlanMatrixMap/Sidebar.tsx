@@ -12,6 +12,7 @@ export function Sidebar({ pm }: { pm: PlanMatrixState }) {
     plan, moduleIds, expandedModules, moduleSectors,
     toggleModuleExpansion, containerRef, zoomToFit,
     handleSectorSelect, selectedSectorId,
+    query, setQuery, searchRef, selectFirstMatch,
   } = pm;
 
   if (!plan) return null;
@@ -25,7 +26,7 @@ export function Sidebar({ pm }: { pm: PlanMatrixState }) {
             <Layers className="w-4 h-4 text-blue-400" />
             Project Map
           </h2>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-1 hover:bg-surface-hover rounded-md text-text-muted hover:text-text transition-colors">
+          <button onClick={() => setIsSidebarOpen(false)} aria-label="Hide navigator" title="Hide navigator" className="p-1 hover:bg-surface-hover rounded-md text-text-muted hover:text-text transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -34,7 +35,16 @@ export function Sidebar({ pm }: { pm: PlanMatrixState }) {
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
+              ref={searchRef}
               type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); selectFirstMatch(); }
+                else if (e.key === 'Escape') setQuery('');
+                e.stopPropagation(); // keep typing out of the canvas shortcuts
+              }}
+              aria-label="Search features"
               placeholder="Search features (Cmd+K)..."
               className="w-full bg-background/50 border border-border/50 rounded-md pl-8 pr-3 py-1.5 text-xs text-text outline-none focus:border-blue-500/50 transition-colors"
             />
@@ -67,6 +77,8 @@ export function Sidebar({ pm }: { pm: PlanMatrixState }) {
                 <div className={`flex items-center rounded-md transition-colors ${isSelected ? 'bg-surface-hover' : 'hover:bg-surface-hover/50'}`}>
                   <button
                     onClick={() => toggleModuleExpansion(moduleId)}
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${getModuleLabel(moduleId as SubModuleId)} sectors`}
                     className="p-1.5 text-text-muted hover:text-text"
                   >
                     {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}

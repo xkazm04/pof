@@ -29,7 +29,7 @@ function priorityColor(p: CoachPriority, t: LabTheme): string {
  *
  * Unobtrusive by default: one slim row showing the single most-urgent move, with a
  * disclosure that expands the next few (up to `GLOBAL_COACH_TOP_N`) and, when more
- * blockers exist beyond that cut, a "show all N blockers" expansion — the list is
+ * candidates exist beyond that cut, a "show all N next steps" expansion — the list is
  * never silently truncated. Clicking any entry navigates through the existing
  * one-shot `pendingNavigation` mechanism (LayoutLab's store subscription drives
  * catalog + entity + the flagged `stepIndex`).
@@ -55,7 +55,9 @@ export function GlobalCoach({ t }: Props) {
   const [top, ...rest] = candidates;
   const failedNames = failedCatalogs.map((f) => f.label).join(', ');
   // Collapsed disclosure shows the rest of the top-N; everything past it is reachable
-  // through the explicit "show all blockers" control (so the cap is stated, not hidden).
+  // through the explicit "show all" control (so the cap is stated, not hidden). It counts NEXT
+  // STEPS, not blockers: most candidates are pending/deferred/unproduced, and "blocked" is the
+  // Matrix's word for a failed gate.
   const shown = showAll ? rest : rest.slice(0, GLOBAL_COACH_TOP_N - 1);
   const beyond = rest.length - shown.length;
   const moreCount = Math.min(rest.length, GLOBAL_COACH_TOP_N - 1);
@@ -71,7 +73,8 @@ export function GlobalCoach({ t }: Props) {
         display: 'flex', flexDirection: 'column',
         background: 'var(--lab-panel)',
         borderBottom: '1px solid var(--lab-line)',
-        borderLeft: `4px solid ${top ? priorityColor(top.priority, t) : t.bad}`,
+        // No candidate: red only when a fetch actually failed — a loading bar is not a failure.
+        borderLeft: `4px solid ${top ? priorityColor(top.priority, t) : failedCatalogs.length > 0 ? t.bad : t.muted}`,
         ...(t.glass ? { backdropFilter: 'blur(var(--lab-glass-blur))' } : {}),
       }}
     >
@@ -93,8 +96,11 @@ export function GlobalCoach({ t }: Props) {
             <span className="sr-only">Reading project status…</span>
           </span>
         ) : (
-          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
-            Nothing to advise — no catalog status could be read.
+          // Reached only with failed catalogs and no candidate. The hook names the failures but
+          // not how many catalogs DID load, so the sentence speaks only for those — "no catalog
+          // could be read" was false whenever one of many failed and the rest were clear.
+          <span data-testid="global-coach-empty" style={{ flex: 1, minWidth: 0, fontSize: 'var(--lab-fs-sm)', color: 'var(--lab-muted)' }}>
+            Nothing to advise in the catalogs that could be read.
           </span>
         )}
         {moreCount > 0 && (
@@ -158,7 +164,7 @@ export function GlobalCoach({ t }: Props) {
               >
                 {showAll
                   ? `Show top ${Math.min(candidates.length, GLOBAL_COACH_TOP_N)} only`
-                  : `Show all ${candidates.length} blockers (${beyond} more)`}
+                  : `Show all ${candidates.length} next steps (${beyond} more)`}
               </button>
             </li>
           )}
@@ -185,7 +191,9 @@ function CoachRow({
       data-priority={c.priority}
       data-step-index={c.stepIndex}
       onClick={() => onJump(c)}
-      aria-label={`${hint.actionWord}: ${c.entityName} in ${c.catalogLabel} — ${c.step}. ${shownHint}`}
+      // The name STARTS with the visible text, in its visible order (WCAG 2.5.3), so a voice
+      // command that reads the row aloud hits it; the generic hint follows only when no reason shows.
+      aria-label={`${hint.actionWord}: ${c.catalogLabel} · ${c.entityName} — ${c.step}${c.reason ? ` · ${c.reason}` : `. ${shownHint}`}`}
       className={`focus-ring ${t.fontBody}`}
       style={{
         flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)',

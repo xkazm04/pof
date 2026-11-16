@@ -1,3 +1,5 @@
+import { readoutDecimals } from '@/lib/format';
+
 export function AdjustSlider({
   label,
   value,
@@ -18,7 +20,8 @@ export function AdjustSlider({
   onReset: () => void;
 }) {
   const isModified = value !== defaultValue;
-  const format = (v: number) => (v > 1 ? v.toFixed(1) : v.toFixed(2));
+  const decimals = readoutDecimals(step);
+  const format = (v: number) => v.toFixed(decimals);
   const display = format(value);
   // A bare number tells a screen-reader user nothing about the scale, nor whether
   // this value still matches what the analysis inferred.

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { readdir } from 'node:fs/promises';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateQuests } from '@/lib/quest-generator';
 import { getAllDocs, getDoc } from '@/lib/level-design-db';
@@ -15,8 +16,25 @@ interface ScanResponse {
 // as "not provided", matching the original graceful behaviour.
 const questGenerationBodySchema = z.object({
   projectPath: z.string().optional(),
+  moduleName: z.string().optional(),
   levelDocId: z.number().int().optional(),
 });
+
+/**
+ * scan-project refuses a UE5 project without a moduleName. When the caller did not
+ * name one, use the .uproject file's basename (the UE convention for the primary
+ * module); undefined for a non-UE5 folder, which scan-project does not need it for.
+ */
+async function resolveModuleName(projectPath: string, explicit?: string): Promise<string | undefined> {
+  if (explicit) return explicit;
+  try {
+    const entries = await readdir(projectPath);
+    const uproject = entries.find((e) => e.endsWith('.uproject'));
+    return uproject ? uproject.slice(0, -'.uproject'.length) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,11 +60,12 @@ export async function POST(req: NextRequest) {
     if (body.projectPath) {
       try {
         // Read from the dynamic context if available, or scan fresh
+        const moduleName = await resolveModuleName(body.projectPath, body.moduleName);
         const scanUrl = new URL('/api/filesystem/scan-project', req.url);
         const scanRes = await fetch(scanUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ projectPath: body.projectPath }),
+          body: JSON.stringify({ projectPath: body.projectPath, ...(moduleName ? { moduleName } : {}) }),
         });
         const scanJson = (await scanRes.json()) as { success: boolean; data?: ScanResponse; error?: string };
         if (scanJson.success && scanJson.data) {

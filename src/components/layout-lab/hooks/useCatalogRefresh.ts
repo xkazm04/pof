@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { refreshCatalogFromServer, type CatalogRefreshOutcome } from '../labCatalogRefresh';
 
 /**
@@ -23,36 +23,46 @@ export interface CatalogRefreshState {
   dismiss: () => void;
 }
 
-/** The last refresh result, stamped with the catalog it describes. */
+/** The last refresh result for one catalog. */
 interface Landed {
-  catalogId: string;
   outcome: CatalogRefreshOutcome | null;
   error: string | null;
 }
 
 export function useCatalogRefresh(catalogId: string, entities: { id: string; name: string }[]): CatalogRefreshState {
-  const [landed, setLanded] = useState<Landed | null>(null);
-  const [refreshingFor, setRefreshingFor] = useState<string | null>(null);
+  // Keyed BY CATALOG, one slot each: a single shared slot let whichever of two in-flight
+  // refreshes (A, switch boards, B) landed last overwrite the other's report.
+  const [landed, setLanded] = useState<Record<string, Landed>>({});
+  // catalogId -> the attempt token of its latest refresh (latest-wins). Written only in the
+  // callback, before the request leaves, so an older answer landing after a newer one is inert.
+  const latest = useRef(new Map<string, number>());
+  const [inFlight, setInFlight] = useState<Record<string, number>>({});
 
   const refresh = useCallback(() => {
-    setLanded(null);
-    setRefreshingFor(catalogId);
+    const token = (latest.current.get(catalogId) ?? 0) + 1;
+    latest.current.set(catalogId, token);
+    setLanded((m) => { const { [catalogId]: _drop, ...rest } = m; void _drop; return rest; });
+    setInFlight((m) => ({ ...m, [catalogId]: token }));
     void refreshCatalogFromServer(catalogId, entities)
-      .then((res) => setLanded(res.ok
-        ? { catalogId, outcome: res.data, error: null }
-        : { catalogId, outcome: null, error: res.error }))
-      .finally(() => setRefreshingFor((cur) => (cur === catalogId ? null : cur)));
+      .then((res) => {
+        if (latest.current.get(catalogId) !== token) return; // superseded — a newer refresh owns the slot
+        setLanded((m) => ({ ...m, [catalogId]: res.ok ? { outcome: res.data, error: null } : { outcome: null, error: res.error } }));
+      })
+      .finally(() => setInFlight((m) => {
+        if (m[catalogId] !== token) return m;
+        const { [catalogId]: _done, ...rest } = m; void _done; return rest;
+      }));
   }, [catalogId, entities]);
 
   const dismiss = useCallback(
-    () => setLanded((l) => (l && l.catalogId === catalogId ? null : l)),
+    () => setLanded((m) => { if (!(catalogId in m)) return m; const { [catalogId]: _drop, ...rest } = m; void _drop; return rest; }),
     [catalogId],
   );
 
-  const mine = landed?.catalogId === catalogId ? landed : null;
+  const mine = landed[catalogId] ?? null;
   return {
     refresh,
-    refreshing: refreshingFor === catalogId,
+    refreshing: catalogId in inFlight,
     error: mine?.error ?? null,
     outcome: mine?.outcome ?? null,
     dismiss,

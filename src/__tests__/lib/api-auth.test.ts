@@ -1,4 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { requireOperator } from '@/lib/api-auth';
 
 /** Minimal stand-in for NextRequest — the guard only reads headers. */
@@ -96,5 +98,22 @@ describe('requireOperator — local-dev mode (no token configured)', () => {
     delete process.env.POF_OPERATOR_TOKEN;
     const denied = requireOperator(req({ origin: 'http://localhost:3000' }));
     expect(denied!.status).toBe(403);
+  });
+});
+
+describe('requireOperator — constant-time compare', () => {
+  const TOKEN = 's3cret-operator-token';
+
+  it('rejects a same-length wrong token, a prefix, an extension, and a multibyte look-alike', () => {
+    process.env.POF_OPERATOR_TOKEN = TOKEN;
+    for (const bad of [TOKEN.slice(0, -1) + 'X', TOKEN.slice(0, -1), TOKEN + 'x', 'é'.repeat(TOKEN.length)]) {
+      expect(requireOperator(req({ 'x-operator-token': bad }))?.status, bad).toBe(401);
+    }
+  });
+
+  it('compares with crypto.timingSafeEqual, never a short-circuiting !==/===', () => {
+    const src = readFileSync(join(process.cwd(), 'src/lib/api-auth.ts'), 'utf-8');
+    expect(src).toContain('timingSafeEqual(');
+    expect(src).not.toMatch(/presented\s*[!=]==\s*token/);
   });
 });

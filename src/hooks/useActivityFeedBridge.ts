@@ -44,7 +44,11 @@ export function useActivityFeedBridge() {
       addEvent({
         type: 'quality-change',
         title: 'Project Scan Complete',
-        description: `Overall score: ${overallScore}/100. ${recommendationCount} recommendations.`,
+        description: `Overall score: ${overallScore}/100. ${
+          recommendationCount === 0
+            ? 'No recommendations'
+            : `${recommendationCount} recommendation${recommendationCount === 1 ? '' : 's'}`
+        }.`,
         meta: { score: overallScore },
       });
     });

@@ -1,0 +1,247 @@
+---
+name: gta
+description: Continue the dual development of the game GTAI: Uprising and the PoF tool that manages it, from wherever the last session ended. Every run reads the current state (games/gtai/STATE.md, the design baseline, the overnight-spike workspace, git, fleet memory, the live PoF game workspace), shows the owner a short state brief, agrees today's or tonight's plan with them (the handshake), then executes it so that every game-development operation goes through a PoF pipeline, and any PoF gap the game exposes becomes PoF work. It ends by writing the new state back. Invoke with /gta, /gta status, /gta night, /gta morning, /gta --quest [act] [goal].
+---
+
+# /gta: GTAI: Uprising + PoF, developed together
+
+> The game is the proof that PoF works. PoF is how the game gets made.
+
+Every session continues the same campaign. Nothing important lives only in a conversation:
+- **`games/gtai/STATE.md`** is the campaign's memory: phase, decisions, next steps, PoF gaps and the session log.
+- **`games/gtai/pitch.md`** is the design truth: tagged **[owner]**, **[proposal]** and **[open]**, plus the open-decisions table.
+
+This skill reads both at the start and writes STATE.md at the end.
+
+## Modes
+
+| Invocation | What it does |
+|---|---|
+| `/gta` | State brief, then handshake, then execute, then wrap. The default |
+| `/gta status` | State brief only. Change nothing |
+| `/gta night` | Handshake about unattended work. Then **prepare everything before the owner leaves** (prep, preflight GO), launch, and report what is running |
+| `/gta morning` | Review what ran overnight (scoreboard, evidence, journals, cost), take the owner's verdicts, record them, then plan the day |
+| `/gta --quest [act] [goal]` | Design and execute one quest through the council and the fuse (see **Quest mode**) |
+| `/gta --voice` | A human-gated voice session: Claude generates takes and voices, the owner judges in the PoF Voice room (see **Voice mode**) |
+
+## 1. State brief: always, before any question
+
+Run these and read the results. Do not skip any, and do not trust memory over them:
+
+1. `git fetch -q; git status --porcelain | head -40; git log --oneline -15 -- games/gtai src/lib/games .claude/skills/gta`
+   - Note foreign WIP. Never sweep it into a commit.
+2. Read `games/gtai/STATE.md` in full. Read `games/gtai/pitch.md` §10 (open decisions).
+3. `grep -nE "\[(gtai|games)\]" .claude/fleet-memory.md | tail -8`. Follow the DECISION lines; never contradict one silently.
+4. Overnight work. If `C:\Users\kazda\kiro\gtai-spike\spike.json` exists, run `node games/gtai/spike/spike.mjs status`. If `SCOREBOARD.md` exists there, read it.
+   - When a lane says `LIMIT` or `BLOCKED`, or the billing line says the key was drained, report it plainly.
+5. Live PoF.
+   - Check whether the dev server on :3001 answers: `curl -s -m 5 localhost:3001/api/games/gtai/intake`. Port 3000 is Vibeman, not PoF.
+   - If it is up, report pending intake proposals and whether the pitch is still a placeholder. If it is down, say so. Do not start one unless the plan needs it.
+6. `df -h /c`. The drive has hit 0 bytes before.
+
+Then print the **state brief**, at most about 15 lines:
+- the phase and its exit criterion;
+- what changed since the last session entry in STATE.md (commits, overnight results);
+- the owner decisions that are still open, with the most blocking first;
+- the top 3 next steps from STATE.md;
+- anything broken.
+
+## 2. Handshake: agree the plan before working
+
+Use **one** `AskUserQuestion` call, with up to 4 questions:
+- **Session shape:** a day session (interactive, owner in the loop) or a night session (unattended, until a set time).
+- **What to do:** 2 to 4 concrete options built from STATE.md's next steps and the open decisions. Put the recommended option first, marked "(Recommended)". Write the trade-off in each option's description. Use multiSelect when the items can be combined.
+- **Owner decisions that block progress.** Ask them directly, as single-select questions with the scouted options; for example camera pitch or art variant.
+
+Rules:
+- The handshake **decides**; it is not ceremony. When the owner answers with a doctrine rather than an option, it outranks the options. Record it.
+- Never ask what STATE.md, pitch.md or the repo already answers.
+- Write the agreed plan into STATE.md's session log **before** starting work (`### <date> <day|night>: plan`). A killed session then loses nothing.
+
+## 3. Execute: dual development
+
+**The game's operations go through PoF.**
+- Canon goes through the pitch intake in the Canon view (`/layout?g=gtai`, then Canon).
+- Missions and branches go through the story-decision-graph (`/story`).
+- Assets go through the catalog pipelines in the GTAI manifest (`src/lib/games/gtai.ts`), and acceptance through the derived acceptance ladder.
+
+The owner must be able to open the PoF UI and see the current state of each operation in its pipeline page.
+
+**When PoF cannot do an operation the game needs**, that is the point of the campaign, not an obstacle:
+1. Record it in STATE.md under `## PoF gaps found by the game`: what was needed, what PoF lacked, and its severity.
+2. Then do one of two things:
+   - **(a)** build the missing PoF capability. Use `/spark` for a feature-sized gap, or a direct fix for a small one.
+   - **(b)** do the game step by hand *this once*, and mark the gap `worked around`.
+
+   Ask in the handshake which one to take when the gap is bigger than an hour.
+
+**Tools that already exist. Reuse them; do not reinvent them:**
+
+| Need | Tool |
+|---|---|
+| A design fork with no agreed shape | `/contest` (all CLI providers with remaining usage may be seated for GTAI; fleet DECISION 2026-11-01) |
+| A PoF feature | `/spark` |
+| Engine choice, or other overnight engineering experiments | `games/gtai/spike/spike.mjs` (`init`, `prep`, `preflight`, `run`, `status`, `report`) |
+| Concept art | `POST /api/visual-gen/generate-2d` (Leonardo, or `qwen-image` when Leonardo's API credit is out), or the owner pastes `games/gtai/art-direction/LEONARDO-PROMPTS.md` into Leonardo |
+
+The concept-art row is for concept art only. **Production assets are Blender + code** (fleet DECISION 2026-11-01).
+
+## Night sessions
+
+A night session is development only. Everything else happens **before the owner leaves**:
+1. Downloads, project bootstrap and toolchain proofs: `spike.mjs prep` or its equivalent.
+2. Preflight must be GO. Check sleep (`powercfg /change standby-timeout-ac 0`), that Unity Hub is running (Unity batchmode takes its licence token from the Hub), and disk.
+3. Billing follows the owner's rule: **drain the Anthropic API key in `.env` first, then the Claude subscription.**
+   - `spike.mjs run` does this by default (`--billing api-first`). It switches every lane when the key is refused or out of credit, and records the switch in `billing.json`.
+   - The key line in `.env` may be spelled `ANTRHOPIC_API_KEY`; both spellings are read.
+4. Launch, confirm the first iteration of every lane started (`spike.mjs status`), and give the owner the exact morning command.
+5. Write the night plan and the launch time into STATE.md.
+
+Unattended runs need clear briefs. Each lane brief carries the honesty rules: evidence or it is not done; unmeasured is not zero; never fake a frame. It also says to kill only your own PIDs, and never to touch the PoF repo or the PoF UE project.
+
+## Morning sessions
+
+1. `node games/gtai/spike/spike.mjs report`, then open `compare.html` and `SCOREBOARD.md`. Read every lane's `REPORT.md` and its top frictions.
+2. **Open the evidence files themselves** (frames, `autoplay.json`, the build exe). Never accept a scorecard on its own word.
+3. The owner plays each build and gives verdicts. Record them in STATE.md and, for design decisions, in pitch.md (move the item from **[open]** to **[owner]**).
+4. Re-plan the day from the results.
+5. **Clean up after every evaluation** (owner rule, 2026-11-03: "Clean artifacts from last session which we won't need to keep files cleaner after each evaluation"). Once the verdicts are taken and the approved branches are merged and pushed:
+   - Archive what is worth keeping. The lanes' `REPORT.md` and `JOURNAL.md` go into the game repo (`docs/day/<date>/<lane>/`, done by the merge), and each runner root's `SCOREBOARD.md` goes to `games/gtai/day/<date>/scoreboards/`.
+   - Delete the merged lane worktrees (`git worktree remove`), plus scratch and trial worktrees and their branches. Delete the finished runner roots (logs, billing).
+   - **PoF worktrees:** first unlink the `node_modules` junction with a non-recursive delete of the link itself. A recursive delete through the junction would wipe the main checkout's `node_modules`.
+   - In the masters folder, keep every file a `frames.json` names, plus the art sources. Delete the regenerable scratch: raw `.avi` captures (the `.mp4` stays), Godot import files (`.import`, `.ctex`, `.md5`, `.godot`), and unreferenced iteration frames under `<lane>/frames/` and `<lane>/raw*/`. Report the GB freed.
+   - Never delete a verdict page or a frames file the owner has not finished judging.
+
+## Quest mode
+
+`/gta --quest [act] [goal]` takes one quest from the owner's goal to a playable package. The tooling is in
+`games/gtai/quest/` (its `README.md` has the commands and the file layout). The doctrine: **no quest is
+filler.** Every voice line must be funny or move a character or the game forward.
+
+1. **Brief handshake.** One `AskUserQuestion` with up to 4 questions: the act, the owner's goal, constraints,
+   and day or night execution. Never ask what STATE.md or pitch.md answers. The goal and constraints go
+   into the brief verbatim.
+2. **Council.**
+   - `node games/gtai/quest/council.mjs brief --act <act> --goal "<goal>" [--constraints "<text>"]`
+   - then `node games/gtai/quest/council.mjs run games/gtai/quests/_council/<runId>`.
+   - Two seats (Claude Opus 5.5 and Grok 4.7, both at high effort) each write variant A (the act's expected
+     tone) and variant B (a swerve: different giver, verb and payoff). That makes 4 paths.
+   - `run` probes each seat first. **A skipped seat is reported to the owner, with its reason from
+     `seats.json`.** Never fill its slot by hand. Report the cost from `seats.json`.
+   - **Shape options on `brief`,** used when the owner asks for them:
+     - `--variants 1`: one design per seat;
+     - `--fresh-cast`: names and positions only, no voice bibles, no prototype traits;
+     - `--max-new N`: allow more new characters;
+     - `--lines min-max`: change the line range.
+
+     The shape is stored in `run.json`, and `run` validates against it.
+3. **Assess, render, publish.**
+   - `council.mjs assess <runDir>`, then `council.mjs render <runDir>`.
+   - Publish `<runDir>/fuse.html` with the Artifact tool, `capabilities: {db:{}, user:{}}`, and give the
+     owner the link.
+   - **Hard stop. Wait for the owner** to fuse the paths and press "Save fusion".
+4. **Read the fusion and compose the package.**
+   - ArtifactData `get` of `fusion/current` on that artifact, or the JSON the owner pasted.
+   - Compose `games/gtai/quests/<id>/quest.json` (`gtai.quest/1`) following the fusion's sources, with
+     `provenance.ownerNotes` copied verbatim. Carry the fused design's `autosavePoints` (id, beat, `at`,
+     `why`); if the fusion dropped or moved a beat, move its points and keep each `why` true.
+   - Run `council.mjs check games/gtai/quests/<id>`. A red guard means: fix it, or ask the owner for an
+     override, which is recorded in `overrides` with the reason. Exit 1 means blocked.
+5. **Execute end to end.**
+   - **Character art:** each new character as Trivet top-down cutout parts through the Codex `image_gen`
+     route, following STATE.md's decisions (chroma-green parts sheets, the layout template, flat fills).
+   - **Animation:** the cutout rig's procedural motion.
+   - **Lines:**
+     - Generate wide under rotating constraints (registry `llm-dialogue-quality-control`), with the
+       speaker's voice bible (`games/gtai/voices/<id>.md`) in every prompt.
+     - Then `council.mjs judge games/gtai/quests/<id> --author <seat that wrote them>`. The judge is the
+       other family and is blind to authorship.
+     - Fix every `LINE_NOT_EARNED`. Each line keeps `audio: null` until the voice pass.
+   - **Mechanics:** new game mechanics go into the Godot project through the quest runtime (`game/quest/`).
+     A PoF gap goes into STATE.md under "PoF gaps found by the game", or gets built.
+   - **Copy the package** into the Godot project's `quests/<id>/`.
+6. **Verify.**
+   - `check` is green, or red with a recorded owner override (the vocabulary and autosave guards cannot be
+     overridden). The autosave guard must be green: every
+     point names a real beat, `at` is `start`/`end`, ids are unique, each has a `why`.
+   - `verdicts/lines.judge.json` is present.
+   - A headless Godot run of the quest reaches completion, with a frame as evidence.
+   - The `contracts` pipeline in PoF shows the quest's state.
+7. **Wrap.** The normal `/gta` wrap below, plus a ledger line in STATE.md (quest id, act, title, fingerprint).
+
+**Every quest report carries a cast register** (owner rule, 2026-11-02): each name with who it is, and a bullet
+timeline of that character's involvement so far, one quest per bullet, in play order. The fuse page renders
+it from the quest ledger. The chat report and the wrap repeat it for every character the quest touches.
+
+Honesty rules for quest mode: a skipped seat is reported, never faked; `unmeasured` is never green; a red
+guard without a recorded override blocks; a frame or it did not play.
+
+## Voice mode
+
+`/gta --voice` turns quest lines into recorded voice, line by line, in chronological play order. Quest mode is
+unchanged: its example lines stay as they are, with `audio: null`, until this mode proves them. The room is
+`/layout?g=gtai&c=spellbook&v=game&room=voice` in PoF (a cold link needs a `c=`, or it lands on Catalogs; the "Voice room" button on the GTAI game home also opens it); the headless side is `games/gtai/voice/voice.mjs` (its header has
+every command). **Voice is human gated, enforced:** a take verdict and a cast are clicks in the Voice room only.
+The routes refuse any other caller (403), and `voice.mjs` has no approve, reject or cast command.
+
+1. **State brief.** Add `node games/gtai/voice/voice.mjs status` to the normal brief: proven / total lines,
+   per quest, and the next unproven lines in play order.
+2. **One handshake.** One `AskUserQuestion`: how much today (a few lines, one quest, several quests), and any
+   character whose voice the owner wants to redesign. Lines are worked in play order unless the owner says otherwise.
+3. **Open the room.** Make sure the PoF dev server on `:3001` is up (start it if not), then give the owner the
+   Voice room link.
+4. **The loop, per line:**
+   - **A main character with no voice yet: run casting rounds** (owner, 2026-11-06). First read
+     `games/gtai/voice/casting/CASTING.md` and the character's log beside it. Write a round of 5 candidates,
+     each with its own description, and run `voice.mjs round --character <id> --file <round.json>`. Give the
+     owner the link `/layout?g=gtai&c=spellbook&v=game&room=voice&cast=<id>`. The owner marks each candidate
+     cast, iterate or decline, and closes the round with a comment. Read it with `voice.mjs casting
+     --character <id>`, then write the next round: every iterate becomes a child with `parentVoiceId` (same
+     seed, refined description), and the other slots follow the comment. **After a cast, add a lesson to
+     `CASTING.md`:** which words carried the winning description, and what the notes kept asking for.
+   - A minor speaker with no voice yet: `voice.mjs design --character <id> --n 3` from the voice bible, or
+     `voice.mjs stock ...` for a premade voice (`stock --casting <casting.json>` imports a whole casting file). The owner listens to the previews and casts one in the room.
+     Never imitate or clone a real person's voice; no recordings are uploaded.
+   - `voice.mjs takes --line <id> --n 3 --direction "<words>"`, with directions written from the speaker's bible
+     (`games/gtai/voices/<id>.md`) and the owner's notes. On `eleven_v3` the direction becomes audio tags. The
+     profanity in the lines is kept as written.
+   - Each new take is read back by a local Whisper within about half a minute (`voice.mjs line` prints
+     "heard N% wrong"). A take over 15 % likely garbled or dropped words: tell the owner which one, and offer a
+     fresh take; never delete or hide it. The read-back hears words only, never the acting.
+   - The owner listens and judges in the room (approve or reject, with a note). Approve, and Cast for a voice
+     with a preview, unlock only after the owner has played it through; "Next to judge" walks the waiting lines.
+     The room plays each take as the game will (mastered to the game's voice level, with the speaker's device
+     filter if the game declares one), so takes compare at matched loudness; the provider original is one
+     click away. Do not judge a direction by the delivered LUFS: the level is set at export.
+     `voice.mjs status` counts lines with a flagged take (read-back or long pause): point the owner there first.
+   - `voice.mjs verdicts --since <the last round's start, e.g. 30m>` reads every verdict and note since then,
+     grouped by line (`voice.mjs line --line <id>` shows one line's takes, class and scene); Claude writes the
+     next round's directions from them. A line is done only when the owner has approved a take. Fix order when a render is wrong (registry
+     `speech-synthesis-script-writing`): another take first, then the words (propose the edit to the owner; the
+     quest package is the text's only home, and an edit makes the older takes stale), settings last. Keep
+     style at 0 and let the words and tags carry the feeling. Casting a different voice un-proves that
+     character's lines (a re-cast event).
+5. **Claude never approves, casts or exports by itself.** Export (`voice.mjs export --quest <id>`, or the
+   room's Export button) runs only when the owner asks; it writes only approved takes into the game, mastered
+   to the game's `audio_mix.json` voice target; relay any OFF LEVEL or TREATMENT REFUSED line it prints.
+6. **Wrap.** The normal wrap, plus a voice line in STATE.md: the proven count (before and after), the characters
+   spent this session (`status` prints the running total), and the voices cast.
+
+## 4. Wrap: every session, even a short one
+
+1. **STATE.md:**
+   - append the session log entry: done, evidence (commits, files), what is still open;
+   - update `## Now` (phase, next 3 steps), the decisions log and the PoF gaps.
+2. **pitch.md:** any owner decision taken today moves from **[open]**/**[proposal]** to **[owner]**, with the date.
+3. **Commit your own paths only:** `git add <paths>`, then `git commit --only <paths>`. Never push. Never `git add -A` or `.`. After committing, confirm with `git log --oneline -1`.
+4. **Fleet memory:** at most 2 lines (a DECISION and/or DELIVERED, tagged `[gtai]`), committed with `git commit --only .claude/fleet-memory.md`. If the file is over 200 entries, run `node scripts/fleet-memory-cap.mjs --prune` and commit both files.
+5. **Auto-memory:** keep `project_gtai_uprising.md` current. It holds the phase, the next step and the blockers.
+6. **End with:** what is done, what is next, and what is waiting on the owner.
+
+## Repo law that applies here
+- Read `.claude/CLAUDE.md`.
+- Commit on the current branch and never push.
+- Never `git stash` or `git reset --hard`.
+- Never kill processes by name.
+- Docs stay in sync with structural changes; `docs/architecture/game-workspaces.md` covers games.
+- PoF code conventions: `@/` imports, `logger` instead of console, no hex colours, and the API envelope.

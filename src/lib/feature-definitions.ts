@@ -1,12 +1,18 @@
 import type { SubModuleId, PartialModuleMap } from '@/types/modules';
 import { isFeatureDone } from '@/lib/feature-done';
+import { getModuleChecklist, getModuleLabel } from '@/lib/module-registry';
+import { countChecklist } from '@/lib/checklist-progress';
 
 // ─── Module-level prerequisite graph ──────────────────────────────────────────
 // Defines which modules should be completed before starting another.
 // Derived from the implicit aRPG curriculum order and cross-module feature deps.
 
-export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> = {
+// Exhaustive over SubModuleId (enforced by feature-definitions-wiring.test.ts): `[]` means
+// "decided: no prerequisites", never "not yet decided".
+export const MODULE_PREREQUISITES: Record<SubModuleId, SubModuleId[]> = {
   // Core Engine — aRPG curriculum sequence
+  'arpg-character': [],
+  'core-engine-plan': [],
   'arpg-animation': ['arpg-character'],
   'arpg-gas': ['arpg-character'],
   'arpg-combat': ['arpg-gas', 'arpg-animation'],
@@ -20,6 +26,7 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'arpg-polish': ['arpg-combat', 'arpg-world'],
 
   // Content modules — lighter dependencies
+  'models': [],
   'animations': ['models'],
   'materials': ['models'],
   'level-design': ['models', 'materials'],
@@ -34,6 +41,9 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'input-handling': [],
   'dialogue-quests': [],
   'packaging': [],
+  // Owner to confirm: curriculum position of the transpiler (no prerequisite enforced today)
+  'blueprint-transpiler': [],
+  'game-design-doc': [],
 
   // Visual Generation (Asset Studio)
   'asset-viewer': [],
@@ -46,6 +56,15 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'procedural-engine': ['asset-viewer'],
   'scene-composer': ['asset-viewer', 'blender-pipeline'],
 };
+
+/**
+ * Done items of one module, counted by the ONE checklist counting rule
+ * (`countChecklist`): only ids the registry still declares. Persisted progress
+ * outlives renamed / removed items, and a stale `true` must not satisfy a prerequisite.
+ */
+function doneItems(moduleId: string, progress: Record<string, boolean> | undefined): number {
+  return countChecklist({ checklist: getModuleChecklist(moduleId as SubModuleId) }, progress).done;
+}
 
 /** Modules that depend on `moduleId` (i.e. moduleId is a prerequisite for them). */
 function getDependents(moduleId: SubModuleId): SubModuleId[] {
@@ -76,10 +95,10 @@ export interface RecommendedNextModule {
  * Compute recommended next modules for a user based on their checklist progress.
  *
  * Strategy:
- * 1. Find modules that are substantially complete (>= 70% checklist)
- * 2. For those, find dependent modules that haven't been started much (< 30%)
+ * 1. Only when the current module is substantially complete (>= 50% checklist)
+ * 2. Take the modules that list it as a prerequisite and are < 50% complete
  * 3. Only recommend modules whose prerequisites are all >= 50% complete
- * 4. Sort by: all-prereqs-done first, then by number of prereqs satisfied
+ * 4. Sort by number of prerequisites (most first); return at most 3
  */
 export function getRecommendedNextModules(
   currentModuleId: SubModuleId,
@@ -90,8 +109,7 @@ export function getRecommendedNextModules(
     const progress = checklistProgress[modId];
     const total = checklistSizes[modId] ?? 0;
     if (!progress || total === 0) return 0;
-    const done = Object.values(progress).filter(Boolean).length;
-    return Math.round((done / total) * 100);
+    return Math.round((doneItems(modId, progress) / total) * 100);
   }
 
   const currentProgress = moduleProgress(currentModuleId);
@@ -118,7 +136,7 @@ export function getRecommendedNextModules(
       ? `Ready — builds on this module`
       : `Ready — all ${prereqs.length} prerequisites met`;
 
-    results.push({ moduleId: depId, label: depId, reason });
+    results.push({ moduleId: depId, label: getModuleLabel(depId), reason });
   }
 
   // Sort: most prerequisites satisfied first
@@ -149,11 +167,11 @@ export function getUnmetPrerequisites(
     let completed = 0;
     let pct = 0;
     if (progress && total > 0) {
-      completed = Object.values(progress).filter(Boolean).length;
+      completed = doneItems(prereqId, progress);
       pct = Math.round((completed / total) * 100);
     }
     if (pct < 50) {
-      unmet.push({ moduleId: prereqId, label: prereqId, progress: pct, completed, total });
+      unmet.push({ moduleId: prereqId, label: getModuleLabel(prereqId), progress: pct, completed, total });
     }
   }
   return unmet;

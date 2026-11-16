@@ -9,11 +9,22 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import type { BalanceAlertSeverity } from '@/types/combat-simulator';
 import { severityColor, findingTimeLabel, type BalanceAlert } from './types';
 
+/** Stable finding identity: kind plus where it sits; a repeat of the same pair gets an occurrence suffix. */
+function findingKeys(alerts: BalanceAlert[]): string[] {
+  const seen = new Map<string, number>();
+  return alerts.map((a) => {
+    const base = `${a.kind}@${a.timeSec}-${a.endTimeSec ?? ''}`;
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    return n ? `${base}#${n}` : base;
+  });
+}
+
 export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
   const listRef = useRef<HTMLDivElement>(null);
-  const firstCritRef = useRef<HTMLDivElement>(null);
   const [flashIdx, setFlashIdx] = useState<number | null>(null);
-  const prevAlertsLen = useRef(alerts.length);
+  const keys = useMemo(() => findingKeys(alerts), [alerts]);
+  const seenCritical = useRef(new Set(alerts.flatMap((a, i) => (a.severity === 'critical' ? [keys[i]] : []))));
 
   const counts = useMemo(() => {
     const c = { critical: 0, warning: 0, info: 0 };
@@ -22,20 +33,18 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
   }, [alerts]);
 
   useEffect(() => {
-    if (alerts.length === 0) { prevAlertsLen.current = 0; return; }
-    if (alerts.length !== prevAlertsLen.current) {
-      prevAlertsLen.current = alerts.length;
-      const critIdx = alerts.findIndex(a => a.severity === 'critical');
-      if (critIdx !== -1) {
-        const raf = requestAnimationFrame(() => {
-          setFlashIdx(critIdx);
-          firstCritRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        });
-        const timer = setTimeout(() => setFlashIdx(null), 600);
-        return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
-      }
-    }
-  }, [alerts]);
+    const critical = alerts.flatMap((a, i) => (a.severity === 'critical' ? [i] : []));
+    const fresh = critical.filter((i) => !seenCritical.current.has(keys[i]));
+    seenCritical.current = new Set(critical.map((i) => keys[i]));
+    if (fresh.length === 0) return;
+    const critIdx = fresh[0];
+    const raf = requestAnimationFrame(() => {
+      setFlashIdx(critIdx);
+      listRef.current?.children[critIdx]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    const timer = setTimeout(() => setFlashIdx(null), 600);
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
+  }, [alerts, keys]);
 
   const SEVERITY_PILLS: { key: BalanceAlertSeverity; label: string; color: string }[] = [
     { key: 'critical', label: 'Critical', color: severityColor('critical') },
@@ -72,11 +81,9 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
         ) : (
           alerts.map((alert, i) => {
             const color = severityColor(alert.severity);
-            const isFirstCrit = i === alerts.findIndex(a => a.severity === 'critical');
             return (
               <div
-                key={i}
-                ref={isFirstCrit ? firstCritRef : undefined}
+                key={keys[i]}
                 className="flex items-start gap-1.5 p-1.5 rounded-md border transition-colors"
                 style={{
                   borderColor: `${withOpacity(color, OPACITY_20)}`,

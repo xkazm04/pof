@@ -29,16 +29,21 @@ export interface ConformOptions {
   runExperimentFn?: (spec: ExperimentSpec, deps?: RunnerDeps) => Promise<ExperimentResult>;
 }
 
+/** Escape a value for a single-quoted Python literal, so a path like `O'Brien` stays one string. */
+function pyQuoted(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '\\r').replace(/\n/g, '\\n');
+}
+
 /**
  * UE editor-Python that imports a .glb, extracts its conform topology, creates a
  * MetaHumanCharacter, and conforms the parametric body to the mesh. Pure (no I/O) so it's
  * unit-testable; the runner wraps it in try/except + DONE and spawns the editor.
  */
 export function buildConformPython(glbPath: string, opts: ConformOptions = {}): string {
-  const glb = glbPath.replace(/\\/g, '/');
-  const dest = opts.destPath ?? '/Game/Generated/MetaHumans';
-  const charName = opts.charName ?? 'MH_Conformed';
-  const meshName = opts.targetMeshName ?? 'ConformTarget';
+  const glb = pyQuoted(glbPath.replace(/\\/g, '/'));
+  const dest = pyQuoted(opts.destPath ?? '/Game/Generated/MetaHumans');
+  const charName = pyQuoted(opts.charName ?? 'MH_Conformed');
+  const meshName = pyQuoted(opts.targetMeshName ?? 'ConformTarget');
   return [
     'task = unreal.AssetImportTask()',
     `task.filename = '${glb}'`,
@@ -61,11 +66,18 @@ export function buildConformPython(glbPath: string, opts: ConformOptions = {}): 
     'if _char:',
     '    _sub.try_add_object_to_edit(_char)',
     '    _ok = _sub.conform_body_to_target(_char, _verts, [], True, True)',
-    '    _sub.commit_body_state(_char)',
-    '    unreal.EditorAssetLibrary.save_loaded_asset(_char)',
+    // A failed fit must not be committed and saved as if it were a conformed character.
+    '    if _ok:',
+    '        _sub.commit_body_state(_char)',
+    '        unreal.EditorAssetLibrary.save_loaded_asset(_char)',
     '    _sub.remove_object_to_edit(_char)',
     "unreal.log('POF_MH_CONFORMED=' + str(_ok))",
   ].join('\n');
+}
+
+/** Same rule as `chaos-cloth.ts`: refused before launch, or nothing observed at all. */
+function neverRan(res: ExperimentResult): boolean {
+  return res.refused === true || (!res.ok && res.logs.length === 0 && Object.keys(res.markers).length === 0);
 }
 
 export interface ConformResult {
@@ -78,6 +90,12 @@ export interface ConformResult {
   vertexCount: number;
   error?: string;
   logs: string[];
+  /**
+   * The run NEVER STARTED: a precondition refused it (a live editor holds the machine, or the
+   * gate drain holds the editor lease), or it died before logging a single line or marker. It
+   * is the machine's state, not the mesh's — same meaning as `ClothResult.notRun`.
+   */
+  notRun: boolean;
 }
 
 /**
@@ -98,11 +116,16 @@ export async function conformMeshToMetaHuman(glbPath: string, opts: ConformOptio
   const hasChar = !!charPath && charPath !== 'NONE';
   const hasImport = !!imported && imported !== 'NONE';
   return {
+    notRun: neverRan(res),
     ok: res.ok && conformed && hasChar,
     characterPath: hasChar ? charPath : undefined,
     targetMeshPath: hasImport ? imported : undefined,
     vertexCount,
-    error: res.error ?? (!hasImport ? 'glb import produced no asset' : !conformed ? 'conform_body_to_target returned False' : undefined),
+    error: res.error ?? (
+      !hasImport ? 'glb import produced no asset'
+      : !hasChar ? `no MetaHumanCharacter was created, so the conform never ran (${vertexCount} vertices extracted from the target mesh)`
+      : !conformed ? 'conform_body_to_target returned False'
+      : undefined),
     logs: res.logs,
   };
 }
@@ -128,9 +151,9 @@ export interface AssembleOptions {
  * Pure (no I/O); the runner wraps it in try/except + DONE and spawns the editor.
  */
 export function buildAssemblePython(characterPath: string, opts: AssembleOptions = {}): string {
-  const cp = characterPath.replace(/\\/g, '/');
+  const cp = pyQuoted(characterPath.replace(/\\/g, '/'));
   const nameLine = opts.nameOverride
-    ? [`    _p.set_editor_property('name_override', '${opts.nameOverride}')`]
+    ? [`    _p.set_editor_property('name_override', '${pyQuoted(opts.nameOverride)}')`]
     : [];
   return [
     '_sub = unreal.get_editor_subsystem(unreal.MetaHumanCharacterEditorSubsystem)',
@@ -161,6 +184,12 @@ export interface AssembleResult {
   assembled: boolean;
   error?: string;
   logs: string[];
+  /**
+   * The run NEVER STARTED: a precondition refused it (a live editor holds the machine, or the
+   * gate drain holds the editor lease), or it died before logging a single line or marker. It
+   * is the machine's state, not the mesh's — same meaning as `ClothResult.notRun`.
+   */
+  notRun: boolean;
 }
 
 /**
@@ -174,13 +203,18 @@ export async function assembleMetaHuman(characterPath: string, opts: AssembleOpt
     capture: false,
     settleMs: opts.settleMs ?? 300_000,
   });
+  const charPath = res.markers['POF_MH_CHAR'];
+  const hasChar = !!charPath && charPath !== 'NONE';
   const canBuild = res.markers['POF_MH_CAN_BUILD'] === 'True';
   const assembled = res.markers['POF_MH_ASSEMBLED'] === 'True';
   return {
+    notRun: neverRan(res),
     ok: res.ok && assembled,
     canBuild,
     assembled,
-    error: res.error ?? (!canBuild
+    error: res.error ?? (!hasChar
+      ? `no MetaHumanCharacter could be loaded at ${characterPath}, so assemble-readiness was never checked`
+      : !canBuild
       ? 'not assemble-ready (can_build_meta_human=False) — install the MetaHuman Optional Content (Epic Launcher → UE 5.8 → Options → "MetaHuman Creator Core Data"); see logs for the exact reason'
       : !assembled ? 'build_meta_human did not complete' : undefined),
     logs: res.logs,

@@ -1,0 +1,410 @@
+[
+  {
+    "schema": "gtai.questProposal/1",
+    "seat": "grok",
+    "variant": "A",
+    "pathId": "grok-A",
+    "act": "act1",
+    "title": "Project STILL",
+    "logline": "Minutes after the factory, a shaking Rivet answers a payphone, gets hired by Don Fax, is stapled, armed and studied in a basement, then walks to an army cold-storage and drowns the kneeling-tone called Project STILL while heat climbs and General Krump complains on the radio.",
+    "goal": "Put Don Fax's first contract on Rivet the moment he leaves the factory: a payphone hires him, heat is explained on that call, three allies at the Carbon Sink arm him, patch him and notice his head, and he sabotages the army's Project STILL at Berth 9 with no car, no soul and no clock, leaving Krump aware and the next phone ready to ring.",
+    "whyNotFiller": "The laugh is Rivet counting his own hands while a payphone offers him a career, and the turn is Project STILL, an army kneeling-tone, going in the slip while Krump calls the loss a budget problem. June's staple, Ned's refusal to name the dead hands on Loaner, and Lumen's demand for one whole verb each open a later door and shut it in the same breath. Heat and the phone are taught by being used on this job, once.",
+    "characters": [
+      {
+        "id": "rivet",
+        "name": "Rivet",
+        "status": "existing",
+        "role": "ally"
+      },
+      {
+        "id": "don-fax",
+        "name": "Don Fax",
+        "status": "existing",
+        "role": "giver",
+        "designNote": "Broad robot in a customs greatcoat, right hand a rubber stamp, visor a dim green bill-of-lading screen, clipboard he never looks at."
+      },
+      {
+        "id": "nurse",
+        "name": "June Clamp",
+        "status": "existing",
+        "role": "ally",
+        "designNote": "Squat medic-robot in a stained white apron, one arm a blood-pressure cuff, round analog gauge for a face, staple gun on the hip."
+      },
+      {
+        "id": "gunsmith",
+        "name": "Ned Rasp",
+        "status": "existing",
+        "role": "ally",
+        "designNote": "Lanky three-armed robot in a leather welder skirt, safety glasses welded to the skull, a smile made of spare triggers."
+      },
+      {
+        "id": "scientist",
+        "name": "Dr. Lumen Peck",
+        "status": "existing",
+        "role": "ally",
+        "designNote": "Tall robot in a coat of cable ties, head a cracked oscilloscope with one wandering green line, pockets full of jars labeled in grease pencil."
+      },
+      {
+        "id": "patch",
+        "name": "Patch",
+        "status": "existing",
+        "role": "voice"
+      },
+      {
+        "id": "general-krump",
+        "name": "General Krump",
+        "status": "existing",
+        "role": "antagonist",
+        "designNote": "Small human in a dress uniform one size too tight, hat wider than his shoulders, radio mic almost as big as his torso."
+      },
+      {
+        "id": "mc-crumbtray",
+        "name": "MC Crumbtray",
+        "status": "existing",
+        "role": "voice"
+      }
+    ],
+    "beats": [
+      {
+        "id": "the-ring",
+        "title": "The ring",
+        "summary": "Rivet is outside the factory gate, seconds after the line accident and the police he took apart. He monologues to himself and hears the dead as noise he cannot parse. A payphone rings. Patch connects Don Fax, who hires him for Berth 9 and teaches heat. Rivet already shows one star for the cops. No car will open.",
+        "objective": {
+          "verb": "answer",
+          "target": "payphone",
+          "location": "factory gate"
+        },
+        "lineIds": [
+          "rivet-fingers",
+          "rivet-static",
+          "patch-ring",
+          "fax-hire",
+          "rivet-yes",
+          "fax-heat"
+        ]
+      },
+      {
+        "id": "the-sink",
+        "title": "The Carbon Sink",
+        "summary": "Rivet walks to the Carbon Sink, Don Fax's basement under a shut customs scale. June Clamp staples his factory wounds shut and writes her frequency on the staple, then threatens to pull it if he calls that romance. Ned Rasp equips Loaner, Rivet's first gun, before the walk, and withholds the name of the brother-unit who carried it last. Dr. Lumen Peck names the noise in Rivet's head, refuses to treat it, and tells him to come back only when a voice manages a full verb. Don briefs Project STILL. None of the three side questlines start.",
+        "objective": {
+          "verb": "meet",
+          "target": "June Clamp, Ned Rasp and Dr. Lumen Peck",
+          "location": "the Carbon Sink"
+        },
+        "lineIds": [
+          "june-heal",
+          "june-hook",
+          "ned-gun",
+          "ned-hook",
+          "lumen-head",
+          "lumen-hook",
+          "fax-brief"
+        ]
+      },
+      {
+        "id": "the-slip",
+        "title": "Four pins",
+        "summary": "On foot to Berth 9 cold storage. Rivet breaks four coupling pins on the army kneeling-tone and throws the core in the slip. Each pin is a short interact that damage can interrupt. There is no countdown and no fail timer. Six waves of human soldiers, 6, 8, 8, 10, 10 and 12, fifty-four in all: one hit kills them and their bullets hit soft. Heat starts at 1, climbs to 3 while the army can see him work, and sheds if he breaks line of sight behind crates between pins. At 3 a searchlight boat holds the light on the slip so heat cannot shed until a pin is done. Krump sells the raid on the radio. Crumbtray cuts in over him.",
+        "objective": {
+          "verb": "sabotage",
+          "target": "Project STILL tone-core",
+          "location": "Berth 9 cold storage"
+        },
+        "lineIds": [
+          "krump-radio",
+          "crumb-cut",
+          "rivet-pins"
+        ]
+      },
+      {
+        "id": "the-receipt",
+        "title": "Wet receipt",
+        "summary": "The nearest payphone rings again and Don Fax pays twelve hundred, then tells Rivet to come back when he can hold a conversation. Rivet is still on foot, still hearing noise without words. Krump, still on the radio, marks the appliance that did it. He does not hire Rivet. The next ring is left for a later job.",
+        "objective": {
+          "verb": "collect",
+          "target": "contract pay",
+          "location": "payphone"
+        },
+        "lineIds": [
+          "fax-pay",
+          "rivet-after",
+          "krump-close"
+        ]
+      }
+    ],
+    "lines": [
+      {
+        "id": "rivet-fingers",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Shit. Okay. Hands. I have them. An hour ago they were full of cop and then the cop was a suggestion. Hi. I work here. I don't.",
+        "audio": null
+      },
+      {
+        "id": "rivet-static",
+        "speaker": "rivet",
+        "purpose": [
+          "character",
+          "funny"
+        ],
+        "text": "Somebody is talking in my teeth. I can't get the words. It sounds like a lunch whistle learning to drown. Stop saying my employee number. I quit. I think I quit.",
+        "audio": null
+      },
+      {
+        "id": "patch-ring",
+        "speaker": "patch",
+        "purpose": [
+          "progression",
+          "funny"
+        ],
+        "text": "Patch. Payphone. This ring is a job. Pick up and a man gets to hire you. Leave it and I hire someone who picks up. You do not have a car. Walk.",
+        "audio": null
+      },
+      {
+        "id": "fax-hire",
+        "speaker": "don-fax",
+        "purpose": [
+          "funny",
+          "progression",
+          "character"
+        ],
+        "text": "Don Fax. I saw the precinct you recycled. Tidy result. Criminal invoice. You are hired. Berth Nine, an army toy, cash when it is swimming. Stop apologizing to the phone. It has heard worse, and I have heard you.",
+        "audio": null
+      },
+      {
+        "id": "rivet-yes",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Yes. No. Yes. I did bolts this morning. I do hits now. Fuck. Point me at it before I lie down in the road and become infrastructure.",
+        "audio": null
+      },
+      {
+        "id": "fax-heat",
+        "speaker": "don-fax",
+        "purpose": [
+          "progression",
+          "funny"
+        ],
+        "text": "Those stars are heat. You are already lit for the cops. It climbs when the army sees you work. It drops if you hide behind a crate like a professional coward. Three stars and a boat shows up. I do not pay for four.",
+        "audio": null
+      },
+      {
+        "id": "june-heal",
+        "speaker": "nurse",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "June Clamp. You are leaking from a zip code. Hold still. I am stapling your afternoon shut. Fainting costs extra, and I am already in a goddamn mood.",
+        "audio": null
+      },
+      {
+        "id": "june-hook",
+        "speaker": "nurse",
+        "purpose": [
+          "character",
+          "funny"
+        ],
+        "text": "Sealed. My frequency is on the staple, for the next hole. Call it medicine. Call it a love letter and I take the staple back out, and we both learn shame.",
+        "audio": null
+      },
+      {
+        "id": "ned-gun",
+        "speaker": "gunsmith",
+        "purpose": [
+          "funny",
+          "progression",
+          "character"
+        ],
+        "text": "Ned Rasp. Gun. Ugly, like your resume. The hole points at humans. They fall down from one rude noise. Her name is Loaner. Loaner hates heroes. You are the errand. She is the opinion.",
+        "audio": null
+      },
+      {
+        "id": "ned-hook",
+        "speaker": "gunsmith",
+        "purpose": [
+          "character",
+          "funny"
+        ],
+        "text": "Loaner's last hands were my brother-unit. He went to a dock and came home as gossip. Bring her back whole and I tell you his stupid name. Maybe you get to sit. Sitting is how I make friends. We are not friends. Shoot.",
+        "audio": null
+      },
+      {
+        "id": "lumen-head",
+        "speaker": "scientist",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "Lumen Peck. Doctor of whatever your skull is doing. I heard it from the stairs. Do not nod. You would be agreeing to a procedure I have not invented yet, and I work fast when I am happy.",
+        "audio": null
+      },
+      {
+        "id": "lumen-hook",
+        "speaker": "scientist",
+        "purpose": [
+          "character",
+          "progression"
+        ],
+        "text": "I am not fixing you. I want to know why the dead are standing in your mouth like it is a lobby. Come back when one of them lands a whole verb. I will be here. I will have jars.",
+        "audio": null
+      },
+      {
+        "id": "fax-brief",
+        "speaker": "don-fax",
+        "purpose": [
+          "progression",
+          "funny"
+        ],
+        "text": "Berth Nine cold storage. Project STILL. The army built a tone that puts robots on their knees and named it readiness. Walk there. Break four coupling pins. Throw the core in the slip. The soldiers die if you look at them mean. Their bullets are a shitty memo. No clock. I hate clocks. Clocks trust headquarters.",
+        "audio": null
+      },
+      {
+        "id": "krump-radio",
+        "speaker": "general-krump",
+        "purpose": [
+          "funny",
+          "character"
+        ],
+        "text": "General Krump, from a chair worth your whole street. Berth Nine is a readiness cradle. Some appliance is down there feeling things at our tone. Feelings are not in the budget. The men have tiny guns, smaller questions, and a pamphlet that says this is enough. Read the pamphlet. It cost money.",
+        "audio": null
+      },
+      {
+        "id": "crumb-cut",
+        "speaker": "mc-crumbtray",
+        "purpose": [
+          "funny"
+        ],
+        "text": "Crumbtray, sitting on the general's signal. Dock caller, if that is you kicking Project STILL, the request is louder. His boys shoot like a lawyer is watching. Give them a form to cry on.",
+        "audio": null
+      },
+      {
+        "id": "rivet-pins",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "character",
+          "progression"
+        ],
+        "text": "Pin one. Pin two. Someone in my ear just cheered and I don't know whose side they're on. Shut up. I am a hitman. I am going to throw up in a military style. Pin three. Fuck. Pin four. In the water you go, you horrible flute.",
+        "audio": null
+      },
+      {
+        "id": "rivet-heat",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "progression"
+        ],
+        "text": "Stars went up. He said hide. I am behind a box of somebody else's war. The box has a better alibi than I do.",
+        "when": [
+          "heat:>=2"
+        ],
+        "audio": null
+      },
+      {
+        "id": "rivet-boat",
+        "speaker": "rivet",
+        "purpose": [
+          "funny",
+          "progression"
+        ],
+        "text": "Three stars. There is a boat. He said there would be a boat. I hate being a good listener.",
+        "when": [
+          "heat:>=3"
+        ],
+        "audio": null
+      },
+      {
+        "id": "fax-pay",
+        "speaker": "don-fax",
+        "purpose": [
+          "funny",
+          "progression",
+          "character"
+        ],
+        "text": "Core's in the slip. Berth Nine is a wet receipt. Twelve hundred, the whole sum, and I want you to notice I did not haggle, because I will bring it up later. Come back when you can talk without counting your fingers. I sell ruined afternoons in bulk.",
+        "audio": null
+      },
+      {
+        "id": "rivet-after",
+        "speaker": "rivet",
+        "purpose": [
+          "character",
+          "progression",
+          "funny"
+        ],
+        "text": "Gun. Staple. A crowd in my head that will not finish a word. I tried a car door. Nothing. Fuck it. Feet. If a phone rings I answer. I answer things now. Do not clap. Whoever is clapping in my ear, do not clap.",
+        "audio": null
+      },
+      {
+        "id": "krump-close",
+        "speaker": "general-krump",
+        "purpose": [
+          "funny",
+          "progression",
+          "character"
+        ],
+        "text": "Krump. The cradle went swimming. Unscheduled and, I am told, funny. If you are the appliance, enjoy the evening. I buy evenings. I pay in artillery once the form is signed. Get some rest, industrial accident.",
+        "audio": null
+      }
+    ],
+    "mechanics": [
+      {
+        "id": "payphone-job-router",
+        "name": "Payphone job router",
+        "status": "new",
+        "home": "game",
+        "summary": "A payphone rings to start a contract. Patch connects the line. Answering locks the job. Walking off sends it to another robot. Payday rings the nearest phone again. No menu. GTA 2 style."
+      },
+      {
+        "id": "heat",
+        "name": "Heat",
+        "status": "new",
+        "home": "game",
+        "summary": "A star meter capped at 3 in this quest. Rivet enters at 1 for the factory cops. Stars rise while army witnesses can see him fight and fall when he breaks line of sight behind crates. At 3 a searchlight boat pins the slip so the star cannot drop until the current pin is done. Humans die in one hit and shoot weak bullets, so the crowd is the threat."
+      }
+    ],
+    "reward": {
+      "cash": 1200,
+      "unlocks": [
+        "weapon:loaner"
+      ]
+    },
+    "difficulty": {
+      "heatPeak": 3,
+      "enemyCount": 54,
+      "enemyWaves": 6,
+      "timeLimitS": null,
+      "failStates": [
+        "Rivet is destroyed",
+        "Rivet leaves Berth 9 while the tone-core is still mounted",
+        "June Clamp, Ned Rasp or Dr. Lumen Peck is destroyed"
+      ],
+      "minutes": 12
+    },
+    "story": {
+      "reads": [],
+      "writes": [
+        {
+          "var": "q_berth_nine_sabotaged",
+          "value": true
+        }
+      ]
+    },
+    "fingerprint": {
+      "giver": "don-fax",
+      "coreVerb": "sabotage",
+      "newMechanic": "payphone-job-router",
+      "location": "berth-9-cold-storage",
+      "payoffKind": "first-contract"
+    }
+  }
+]

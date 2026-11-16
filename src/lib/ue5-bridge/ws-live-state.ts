@@ -22,7 +22,7 @@ import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
 import { createStateEmitter } from '@/lib/state-emitter';
 import { createReconnectScheduler } from '@/lib/connection-lifecycle';
-import { recordWrite, observeUpdate, writeKey } from '@/lib/ue5-bridge/sync-ledger';
+import { recordWrite, observeUpdate, applyAck, writeKey } from '@/lib/ue5-bridge/sync-ledger';
 import type {
   WSConnectionStatus,
   WSInboundMessage,
@@ -38,6 +38,33 @@ import type {
 // ── Types ───────────────────────────────────────────────────────────────────
 
 type LiveStateHandler = (state: LiveEditorState) => void;
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const isVec = (v: unknown, keys: string[]): boolean =>
+  isRecord(v) && keys.every((k) => typeof v[k] === 'number');
+
+/**
+ * The one validation door for state.snapshot frames. Panels read viewport,
+ * selectedActors and friends unguarded, so a frame missing any of them
+ * (plugin version mismatch) must be rejected here, not crash a render.
+ */
+export function isValidSnapshot(p: unknown): p is UE5EditorSnapshot {
+  if (!isRecord(p)) return false;
+  const vp = p.viewport;
+  return typeof p.timestamp === 'number'
+    && typeof p.editorState === 'string'
+    && typeof p.openLevel === 'string'
+    && Array.isArray(p.selectedActors)
+    && Array.isArray(p.dirtyPackages)
+    && (p.pieState == null || isRecord(p.pieState))
+    && isRecord(vp)
+    && typeof vp.fov === 'number'
+    && typeof vp.viewMode === 'string'
+    && isVec(vp.cameraLocation, ['x', 'y', 'z'])
+    && isVec(vp.cameraRotation, ['pitch', 'yaw', 'roll']);
+}
 
 // ── Live State Client ───────────────────────────────────────────────────────
 
@@ -177,12 +204,12 @@ class UE5LiveStateClient {
    * in the ledger, with the value currently watched on the exact key as base.
    */
   setProperty(objectPath: string, propertyName: string, value: unknown): WriteReceipt {
-    const sent = this.send({ type: 'set.property', payload: { objectPath, propertyName, value } });
+    const seq = ++this.seq;
+    const sent = this.send({ type: 'set.property', payload: { objectPath, propertyName, value, requestId: seq } });
     let watched: PropertyWatchUpdate | undefined;
     for (const w of this.state.propertyWatches.values()) {
       if (w.objectPath === objectPath && w.propertyName === propertyName) watched = w;
     }
-    const seq = ++this.seq;
     const writes = recordWrite(this.state.writes, {
       objectPath, propertyName,
       base: watched?.value, baseKnown: watched !== undefined,
@@ -207,6 +234,8 @@ class UE5LiveStateClient {
   private openSocket(host: string, wsPort: number) {
     try {
       this.ws = new WebSocket(`ws://${host}:${wsPort}/pof/live`);
+      // The engine's socket only writes binary frames; a Blob would never parse.
+      this.ws.binaryType = 'arraybuffer';
     } catch (e) {
       logger.warn('[UE5-WS] Failed to create WebSocket:', e);
       this.reconnect.schedule();
@@ -237,7 +266,8 @@ class UE5LiveStateClient {
     this.ws.onmessage = (event) => {
       this.messageCount++;
       try {
-        const msg = JSON.parse(event.data as string) as WSInboundMessage;
+        const text = typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data as ArrayBuffer);
+        const msg = JSON.parse(text) as WSInboundMessage;
         this.handleMessage(msg);
       } catch (e) {
         logger.warn('[UE5-WS] Failed to parse message:', e);
@@ -318,6 +348,12 @@ class UE5LiveStateClient {
         }
         break;
 
+      case 'set.ack': {
+        const writes = applyAck(this.state.writes, msg.payload);
+        if (writes !== this.state.writes) this.setState({ writes: new Map(writes) });
+        break;
+      }
+
       case 'pong':
         // Keepalive acknowledged
         break;
@@ -325,6 +361,10 @@ class UE5LiveStateClient {
   }
 
   private handleSnapshot(snapshot: UE5EditorSnapshot) {
+    if (!isValidSnapshot(snapshot)) {
+      logger.warn('[UE5-WS] Rejected malformed state.snapshot frame');
+      return;
+    }
     this.setState({
       snapshot,
       lastSnapshotTime: snapshot.timestamp,
@@ -358,7 +398,10 @@ class UE5LiveStateClient {
     });
   }
 
-  private handlePropertyUpdate(update: PropertyWatchUpdate) {
+  private handlePropertyUpdate(raw: PropertyWatchUpdate) {
+    // The plugin's timestamp is FPlatformTime (arbitrary origin), not wall
+    // clock; stamp arrival on the client so the panel's freshness label is true.
+    const update: PropertyWatchUpdate = { ...raw, timestamp: Date.now() };
     this.watchValues.set(update.watchId, update);
     const next = new Map(this.state.propertyWatches);
     next.set(update.watchId, update);

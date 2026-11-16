@@ -10,7 +10,7 @@ vi.mock('@react-three/drei', () => ({
   OrbitControls: () => null,
   Bounds: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Html: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  useGLTF: (url: string) => ({ scene: { url } }),
+  useGLTF: (url: string) => { if (url.includes('broken')) throw new Error('404'); return { scene: { url } }; },
 }));
 
 import { GlbViewer } from '@/components/layout-lab/steps/shared/GlbViewer';
@@ -29,5 +29,19 @@ describe('GlbViewer', () => {
   it('applies the requested height', () => {
     const { getByTestId } = render(<GlbViewer url="/x.glb" height={320} />);
     expect(getByTestId('glb-viewer').style.height).toBe('320px');
+  });
+});
+
+describe('GlbViewer after a failed mesh', () => {
+  afterEach(cleanup);
+
+  it('tries the next url instead of staying on the failure message', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { rerender, queryByText, getByTestId } = render(<GlbViewer url="/broken.glb" />);
+    expect(queryByText('Could not load mesh')).not.toBeNull();
+    rerender(<GlbViewer url="/good.glb" />);
+    expect(queryByText('Could not load mesh')).toBeNull();
+    expect(getByTestId('canvas')).toBeDefined();
+    spy.mockRestore();
   });
 });

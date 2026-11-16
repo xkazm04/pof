@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { diffPrompts, rowText, type DiffRow } from '@/lib/text-diff';
+import { diffPrompts, lcsTableCells, rowText, type DiffRow } from '@/lib/text-diff';
 
 /** Concatenate every row's text on a given side for quick reconstruction checks. */
 function joinSide(rows: DiffRow[], side: 'before' | 'after'): string {
@@ -120,5 +120,42 @@ describe('diffPrompts — edge cases', () => {
     const { summary } = diffPrompts('gone\nnow', '');
     expect(summary.removed).toBe(2);
     expect(summary.added).toBe(0);
+  });
+});
+
+describe('diffPrompts — shared ends and line endings', () => {
+  const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i}`);
+
+  it('sizes the LCS table by the changed hunk, not the whole prompt', () => {
+    const before = lines(2000);
+    const after = [...before];
+    after[1000] = 'edited';
+    expect(lcsTableCells(before.join('\n'), after.join('\n'))).toBeLessThan(10);
+    const { summary } = diffPrompts(before.join('\n'), after.join('\n'));
+    expect(summary).toEqual({ added: 1, removed: 1, unchanged: 1999 });
+  });
+
+  it('stays an optimal, reconstructing diff against a full-table LCS on random inputs', () => {
+    let seed = 7;
+    const rnd = (n: number) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+    for (let t = 0; t < 200; t++) {
+      const a = Array.from({ length: rnd(12) }, () => 'abc'[rnd(3)]);
+      const b = Array.from({ length: rnd(12) }, () => 'abc'[rnd(3)]);
+      const dp = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
+      for (let i = a.length - 1; i >= 0; i--) {
+        for (let j = b.length - 1; j >= 0; j--) {
+          dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+      }
+      const { unified, summary } = diffPrompts(a.join('\n'), b.join('\n'));
+      expect(summary.unchanged).toBe(dp[0][0]);
+      expect(joinSide(unified, 'before')).toBe(a.join('\n'));
+      expect(joinSide(unified, 'after')).toBe(b.join('\n'));
+    }
+  });
+
+  it('treats CRLF and LF copies of one text as unchanged', () => {
+    const { summary } = diffPrompts('one\r\ntwo\r\nthree', 'one\ntwo\nthree');
+    expect(summary).toEqual({ added: 0, removed: 0, unchanged: 3 });
   });
 });

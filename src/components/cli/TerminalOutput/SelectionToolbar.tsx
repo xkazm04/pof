@@ -4,6 +4,9 @@ import { MODULE_COLORS } from '@/lib/chart-colors';
 import { TOOLBAR_PADDING, TOOLBAR_GAP, CARET_INSET } from './constants';
 import type { SelectionToolbarState, ToolbarPosition } from './types';
 
+// Buttons act on mousedown so the text selection survives the press; a keyboard
+// Enter/Space fires only a click with detail 0, which onClick handles (a mouse
+// click has detail >= 1 and was already handled on mousedown).
 export function SelectionToolbar({ state, containerRef, onCopy, onSearch, onFix }: {
   state: SelectionToolbarState;
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -106,6 +109,7 @@ export function SelectionToolbar({ state, containerRef, onCopy, onSearch, onFix 
       )}
       <button
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onCopy(); }}
+        onClick={(e) => { if (e.detail === 0) onCopy(); }}
         className="flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs font-medium text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
         title="Copy selected text"
       >
@@ -115,6 +119,7 @@ export function SelectionToolbar({ state, containerRef, onCopy, onSearch, onFix 
       <div className="w-px h-4 bg-border" />
       <button
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onSearch(); }}
+        onClick={(e) => { if (e.detail === 0) onSearch(); }}
         className="flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs font-medium text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
         title="Search in project"
       >
@@ -124,6 +129,7 @@ export function SelectionToolbar({ state, containerRef, onCopy, onSearch, onFix 
       <div className="w-px h-4 bg-border" />
       <button
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onFix(); }}
+        onClick={(e) => { if (e.detail === 0) onFix(); }}
         className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs font-medium hover:bg-accent-subtle transition-colors`}
         style={{ color: MODULE_COLORS.setup }}
         title="Fix with Claude"

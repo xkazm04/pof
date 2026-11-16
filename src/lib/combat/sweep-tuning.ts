@@ -55,7 +55,6 @@ export const COMBAT_TUNING_LEVERS: readonly CombatTuningLever[] = [
   { lever: 'playerArmorMul', label: 'Player armor', range: [0.5, 2] },
   { lever: 'critMultiplierMul', label: 'Crit multiplier', range: [0.5, 2] },
   { lever: 'armorEffectivenessWeight', label: 'Armor effectiveness', range: [0.5, 2] },
-  { lever: 'healingMul', label: 'Healing', range: [0.5, 2] },
 ];
 
 export function leverInfo(lever: CombatLever): CombatTuningLever {

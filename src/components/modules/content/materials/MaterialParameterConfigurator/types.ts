@@ -73,6 +73,8 @@ export interface ParamDef {
   max: number;
   defaultValue: number;
   step: number;
+  /** A live parent's scalar with no numeric manifest default: reads "not overridden" until moved. */
+  unset?: boolean;
   /** Which surface types this param applies to. Empty = all. */
   surfaces?: SurfaceType[];
   /** Plain-language decoder for Explain Mode. Shape mirrors PPParamPlain. */

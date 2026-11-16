@@ -28,7 +28,7 @@ links = mat.node_tree.links
 bsdf = nodes["Principled BSDF"]
 
 tex_node = nodes.new('ShaderNodeTexImage')
-tex_node.image = bpy.data.images.load(r"${py(params.texturePath)}")
+tex_node.image = bpy.data.images.load(${pyStr(params.texturePath)})
 ${isNonColor ? 'tex_node.image.colorspace_settings.name = "Non-Color"' : ''}
 
 links.new(tex_node.outputs["Color"], bsdf.inputs["${inputName}"])

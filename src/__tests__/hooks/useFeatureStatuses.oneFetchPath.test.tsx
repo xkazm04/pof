@@ -92,7 +92,7 @@ describe('useFeatureStatuses — one fetch path', () => {
 
     await waitFor(() => expect(screen.getByTestId('p6').textContent).toBe(String(STATUSES.length)));
     // ...and give any stray per-consumer fetch a chance to fire before asserting.
-    await waitFor(() => expect(screen.getByRole('img', { name: /feature constellation/i })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('group', { name: /feature constellation/i })).toBeTruthy());
 
     expect(statusCalls(fetchMock)).toBe(1);
   });
@@ -133,7 +133,7 @@ describe('FeatureConstellation — a failed load is not a dark sky', () => {
     expect(alert.textContent).toMatch(/Retry/);
 
     // The lie the direction targets: no constellation, and no "0/N lit" claim.
-    expect(screen.queryByRole('img', { name: /feature constellation/i })).toBeNull();
+    expect(screen.queryByRole('group', { name: /feature constellation/i })).toBeNull();
     expect(screen.queryByText(/\d+\/\d+ lit/)).toBeNull();
   });
 
@@ -148,7 +148,7 @@ describe('FeatureConstellation — a failed load is not a dark sky', () => {
     const retry = screen.getByRole('button', { name: /retry/i });
     await act(async () => { retry.click(); });
 
-    await waitFor(() => expect(screen.getByRole('img', { name: /feature constellation/i })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('group', { name: /feature constellation/i })).toBeTruthy());
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

@@ -30,7 +30,8 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
-    const parsed = artifactUpsertSchema.safeParse(await req.json());
+    // Malformed JSON is the caller's error: `undefined` fails the schema → 400, not a 500.
+    const parsed = artifactUpsertSchema.safeParse(await req.json().catch(() => undefined));
     if (!parsed.success) return withCors(apiError('Invalid tune payload', 400, parsed.error.issues));
     const p = parsed.data;
     if (!isPreviewHydratable(p.catalogId)) {

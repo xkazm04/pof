@@ -43,7 +43,7 @@ function pyNumber(script: string, name: string): number {
 
 beforeEach(() => {
   fetchMock = vi.fn(async () =>
-    new Response(JSON.stringify({ success: true, data: { output: 'Created ok' } }), {
+    new Response(JSON.stringify({ success: true, data: { output: 'Created ok\nPOF_RESULT={"kind": "terrain-mesh", "faces": 1, "verts": 4}\n' } }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     }),

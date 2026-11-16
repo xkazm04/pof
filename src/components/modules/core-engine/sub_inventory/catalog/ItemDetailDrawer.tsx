@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AFFIX_CATEGORY_COLORS, STATUS_SUBDUED,
@@ -12,10 +13,19 @@ import { RARITY_COLORS } from '../_shared/data';
 interface ItemDetailDrawerProps {
   item: ItemData | null;
   onClose: () => void;
+  /** Keyboard opens scroll the drawer into view; pointer opens keep the page where it is. */
+  scrollIntoView?: boolean;
 }
 
-export function ItemDetailDrawer({ item, onClose }: ItemDetailDrawerProps) {
+export function ItemDetailDrawer({ item, onClose, scrollIntoView = false }: ItemDetailDrawerProps) {
   const color = item ? (RARITY_COLORS[item.rarity] ?? STATUS_SUBDUED) : STATUS_SUBDUED;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const itemId = item?.id;
+  // The drawer mounts below the grid; land focus on its heading so a keyboard user is not left
+  // tabbing past every card. Closing is handled by the owner (it knows the originating card).
+  useEffect(() => {
+    if (itemId) headingRef.current?.focus({ preventScroll: !scrollIntoView });
+  }, [itemId, scrollIntoView]);
 
   return (
     <AnimatePresence>
@@ -36,7 +46,7 @@ export function ItemDetailDrawer({ item, onClose }: ItemDetailDrawerProps) {
             {/* Header row */}
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold text-text"
+                <h3 ref={headingRef} tabIndex={-1} className="text-base font-bold text-text outline-none"
                   style={{ textShadow: `0 0 14px ${withOpacity(color, OPACITY_30)}` }}>{item.name}</h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-xs font-mono uppercase tracking-widest px-2 py-0.5 rounded border"

@@ -20,9 +20,12 @@ import {
   type CoachCandidate,
 } from '../globalCoachModel';
 import { useLabPipelineStore } from '../labPipelineStore';
+import { useGameCatalogScope } from '../useLabCatalogData';
+import { entitiesInGame } from '@/lib/games/scope';
 import { useAllJudgeVerdicts } from './useStepJudgeVerdicts';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
+import type { CatalogEntityBase } from '@/lib/catalog/types';
 
 /** How many next-step candidates the coach surfaces before "show all blockers". */
 export const GLOBAL_COACH_TOP_N = 5;
@@ -99,14 +102,39 @@ function sameDeps(a: unknown[] | undefined, b: unknown[]): boolean {
 }
 
 export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResult {
-  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  const allEntitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  const allDraftsByCatalog = useCatalogStore((s) => s.draftEntitiesByCatalog);
+  // The ACTIVE game only: its catalogs and its entities. The entity set is the one the tree
+  // LISTS (`labEntitiesOf`: code seeds, then persisted rows) — a non-default game has no code
+  // seeds at all, so a seeds-only coach never coached it. A catalog with only seeds (or only
+  // persisted rows) keeps its original inner object, so the per-catalog memo below still hits.
+  const { gameId, scope } = useGameCatalogScope();
+  const entitiesByCatalog = useMemo(() => {
+    const visible = new Set(scope.visible);
+    const seeds = entitiesInGame(allEntitiesByCatalog, gameId);
+    const drafts = entitiesInGame(allDraftsByCatalog, gameId);
+    const out: Record<string, Readonly<Record<string, CatalogEntityBase>>> = {};
+    for (const c of new Set([...Object.keys(seeds), ...Object.keys(drafts)])) {
+      if (!visible.has(c)) continue;
+      const s = seeds[c];
+      const d = drafts[c];
+      out[c] = s && d ? { ...s, ...d } : (s ?? d);
+    }
+    return out;
+  }, [allEntitiesByCatalog, allDraftsByCatalog, gameId, scope]);
   const localByEntity = useLabPipelineStore((s) => s.byEntity);
   const version = useArtifactCacheVersion();
   // Cross-catalog judge verdicts (ONE unscoped cached read) so a coach candidate speaks the
   // same acceptance truth as the rail, the matrix and the step banner.
   const verdicts = useAllJudgeVerdicts();
 
-  const catalogIds = useMemo(() => CATALOG_SECTIONS.map((s) => s.catalogId), []);
+  // The active game's catalogs only: a catalog the game does not show is neither fetched nor
+  // counted toward `loading` (it could hold the Do-next row on its skeleton for nothing).
+  const sections = useMemo(() => {
+    const visible = new Set(scope.visible);
+    return CATALOG_SECTIONS.filter((s) => visible.has(s.catalogId));
+  }, [scope]);
+  const catalogIds = useMemo(() => sections.map((s) => s.catalogId), [sections]);
 
   // Kick off one deduped whole-catalog SUMMARY fetch per catalog (status/tier/reason +
   // content hashes — no produce bodies). `ensureSummary` is a no-op once
@@ -136,16 +164,16 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
     const candidates: CoachCandidate[] = [];
     const failedCatalogs: GlobalCoachResult['failedCatalogs'] = [];
     // Unsettled = neither loaded nor errored: the pre-fetch state on first paint AND
-    // every in-flight fetch. Counted over ALL sections (not just those with entities)
+    // every in-flight fetch. Counted over ALL visible sections (not just those with entities)
     // so an unhydrated catalog store still reads as "still loading", never as "clear".
     // A catalog whose FULL artifacts are already cached counts as settled even if its
     // summary has not landed — the coach can already derive it.
-    const loading = CATALOG_SECTIONS.some((s) => {
+    const loading = sections.some((s) => {
       const sum = getCachedSummary(s.catalogId);
       return !sum.loaded && !sum.error && !getCachedArtifacts(s.catalogId).loaded;
     });
     const live = new Set<string>();
-    for (const section of CATALOG_SECTIONS) {
+    for (const section of sections) {
       const entMap = entitiesByCatalog[section.catalogId];
       if (!entMap || Object.keys(entMap).length === 0) continue;
 
@@ -171,7 +199,7 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
       // derived from blobs and from its projection must not share a memo slot.
       // `localByEntity` is keyed by entity, so only this catalog's entity rows matter — a
       // produce elsewhere must not invalidate this catalog.
-      const deps: unknown[] = [useFull, useFull ? full.arts : summary.rows, catalogVerdicts, entMap];
+      const deps: unknown[] = [useFull, useFull ? full.arts : summary.rows, catalogVerdicts, entMap, allEntitiesByCatalog];
       for (const id of Object.keys(entMap)) deps.push(localByEntity[id]);
 
       const hit = cache.get(section.catalogId);
@@ -187,6 +215,7 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
         steps: resolveCatalogSteps(section.catalogId),
         entities,
         localByEntity,
+        entitiesByCatalog: allEntitiesByCatalog, // the rail's index, so link-aware steps grade the same here
       };
       let fresh: CoachCandidate[];
       if (useFull) {
@@ -215,5 +244,5 @@ export function useGlobalCoach(topN = Number.POSITIVE_INFINITY): GlobalCoachResu
     // list `buildGlobalCoach` would have assembled in one pass.
     return { candidates: rankCoachCandidates(candidates, topN), loading, failedCatalogs };
     // `version` is the "cache changed" signal — recompute as each catalog's fetch resolves.
-  }, [entitiesByCatalog, localByEntity, version, topN, verdictsByCatalog]);
+  }, [entitiesByCatalog, allEntitiesByCatalog, sections, localByEntity, version, topN, verdictsByCatalog]);
 }

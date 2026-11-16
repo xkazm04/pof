@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Library, Sparkles, Copy, Trash2, GitMerge, Lock, RotateCcw } from 'lucide-react';
 import {
   ACCENT_PINK, STATUS_SUCCESS, STATUS_WARNING,
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_37,
 } from '@/lib/chart-colors';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { ItemGenome } from '@/types/item-genome';
 import { ACCENT } from './data';
@@ -23,8 +24,12 @@ interface LibraryTabProps {
 /* ── Library / Gallery + Lineage View ──────────────────────────────────── */
 
 export function LibraryTab({
-  genomes, selectedId, onSelect, onDuplicate, onDelete, onResetPresets,
+  genomes, selectedId, onSelect, onDuplicate, onDelete: deleteNow, onResetPresets,
 }: LibraryTabProps) {
+  // Delete is permanent (persisted store): every site asks first.
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDelete = genomes.find((g) => g.id === pendingDeleteId) ?? null;
+  const onDelete = (id: string) => setPendingDeleteId(id);
   const presets = useMemo(() => genomes.filter((g) => g.isPreset), [genomes]);
   const custom = useMemo(
     () => genomes.filter((g) => !g.isPreset && (!g.parents || g.parents.length === 0)),
@@ -105,6 +110,17 @@ export function LibraryTab({
           </div>
         )}
       </Section>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={() => { if (pendingDelete) deleteNow(pendingDelete.id); }}
+        title="Delete this genome?"
+        description={pendingDelete
+          ? `"${pendingDelete.name}" will be removed permanently${pendingDelete.parents?.length ? ', including its breeding lineage link' : ''}. This cannot be undone.`
+          : ''}
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

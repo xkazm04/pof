@@ -30,7 +30,9 @@ export function OverallSummary({
   return (
     <>
       {/* ── Overall progress cards ─────────────────────── */}
-      <div className="grid grid-cols-5 gap-3">
+      {/* "Overall" + one card per STATUS_KEYS entry = 6 columns (a static class for
+          Tailwind's JIT; CrossModuleOverallSummary.grid.test pins it to the key count). */}
+      <div className="grid grid-cols-6 gap-3">
         <SummaryCard
           icon={TrendingUp}
           label="Overall"

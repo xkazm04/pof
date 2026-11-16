@@ -1,10 +1,14 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { applyStyle, styleRequestOf } from '@/lib/visual-gen/style-apply';
 import { getDb } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
-type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
+const MODES = ['image', 'upscale', 'unzoom', 'texture3d'] as const;
+type Mode = (typeof MODES)[number];
+const isMode = (v: unknown): v is Mode => MODES.includes(v as Mode);
 
 /**
  * The hardcoded-Leonardo route. Its in-app callers are the Material Lab's
@@ -21,9 +25,15 @@ type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
  */
 
 export async function POST(request: Request) {
+  // Spends Leonardo credit: refuse a cross-site POST (a text/plain form skips CORS preflight).
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = await request.json();
-    const mode: Mode = body?.mode ?? 'image';
+    const body = await readJsonObject(request);
+    if (!body) return apiError(MALFORMED_BODY_ERROR, 400);
+    const mode = body.mode ?? 'image';
+    // Before the key check: a request that could never be served is wrong on every machine.
+    if (!isMode(mode)) return apiError(`Unknown mode "${String(mode)}"`, 400);
 
     if (!process.env.LEONARDO_API_KEY) {
       return apiError('LEONARDO_API_KEY not configured', 500);
@@ -33,7 +43,13 @@ export async function POST(request: Request) {
       const prompt = body?.prompt;
       if (!prompt || typeof prompt !== 'string') return apiError('Missing or invalid "prompt" field', 400);
       if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
-      const opts: GenerateImageOptions = body?.opts ?? {};
+      // `cleanup` and `pollIntervalMs` are library seams, not request options: forwarding a
+      // caller's `cleanup: false` would leave the generation on the Leonardo account, breaking
+      // the download-then-delete contract every generation honours. No in-tree caller sends either.
+      const rawOpts = body?.opts && typeof body.opts === 'object' && !Array.isArray(body.opts) ? body.opts : {};
+      const opts: GenerateImageOptions = { ...(rawOpts as GenerateImageOptions) };
+      delete opts.cleanup;
+      delete opts.pollIntervalMs;
 
       // Opt-in style consistency through the ONE canon-aware resolver (style-apply.ts):
       // `canonProfile` (/diablo W03 D13) picks WHICH style — the project's active one for PoF's
@@ -70,20 +86,20 @@ export async function POST(request: Request) {
     if (mode === 'unzoom') {
       const imageId = body?.imageId;
       if (!imageId || typeof imageId !== 'string') return apiError('Missing "imageId" for unzoom', 400);
+      if (typeof body?.prompt === 'string' && body.prompt.length > MAX_PROMPT_LENGTH) {
+        return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
+      }
       const result = await unzoomImage(imageId, typeof body?.prompt === 'string' ? { prompt: body.prompt } : {});
       return apiSuccess(result);
     }
 
-    if (mode === 'texture3d') {
-      const { objBase64, prompt, preview } = body ?? {};
-      if (!objBase64 || typeof objBase64 !== 'string') return apiError('Missing "objBase64" for texture3d', 400);
-      if (!prompt || typeof prompt !== 'string') return apiError('Missing "prompt" for texture3d', 400);
-      const objBytes = new Uint8Array(Buffer.from(objBase64, 'base64'));
-      const result = await generateTextureOn3DModel({ objBytes, prompt, preview: Boolean(preview) });
-      return apiSuccess(result);
-    }
-
-    return apiError(`Unknown mode "${String(mode)}"`, 400);
+    const { objBase64, prompt, preview } = body;
+    if (!objBase64 || typeof objBase64 !== 'string') return apiError('Missing "objBase64" for texture3d', 400);
+    if (!prompt || typeof prompt !== 'string') return apiError('Missing "prompt" for texture3d', 400);
+    if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
+    const objBytes = new Uint8Array(Buffer.from(objBase64, 'base64'));
+    const result = await generateTextureOn3DModel({ objBytes, prompt, preview: Boolean(preview) });
+    return apiSuccess(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.warn(`[api/leonardo] ${message}`);

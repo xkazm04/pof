@@ -27,9 +27,15 @@ export function useAssetInventory() {
     };
   }, [manifest]);
 
-  const [scanResult, setScanResult] = useState<AssetScanResult | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Scan state is tagged with the project it was taken of: a switch of project
+  // (the module LRU keeps this tab mounted) or a scan resolving after one never
+  // shows the previous project's assets as this project's.
+  const [scan, setScan] = useState<{ projectPath: string; result: AssetScanResult } | null>(null);
+  const [scanningFor, setScanningFor] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ projectPath: string; message: string } | null>(null);
+  const scanResult = scan && scan.projectPath === projectPath ? scan.result : null;
+  const isScanning = scanningFor !== null && scanningFor === projectPath;
+  const error = failure && failure.projectPath === projectPath ? failure.message : null;
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<AssetType | 'all'>('all');
   const [ueFilterChoice, setUeFilter] = useState<'all' | 'not-in-manifest'>('all');
@@ -39,17 +45,17 @@ export function useAssetInventory() {
 
   const handleScan = useCallback(async () => {
     if (!projectPath) return;
-    setIsScanning(true);
-    setError(null);
+    setScanningFor(projectPath);
+    setFailure(null);
     // The route answers in the {success, data} envelope; unwrap it here, once.
     const result = await tryApiFetch<AssetScanResult>('/api/filesystem/scan-assets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectPath }),
     });
-    if (result.ok) setScanResult(result.data);
-    else setError(result.error || 'Failed to scan assets');
-    setIsScanning(false);
+    if (result.ok) setScan({ projectPath, result: result.data });
+    else setFailure({ projectPath, message: result.error || 'Failed to scan assets' });
+    setScanningFor((cur) => (cur === projectPath ? null : cur));
   }, [projectPath]);
 
   // Edges: UE's declared references (bridge connected) over the route's name
@@ -94,6 +100,14 @@ export function useAssetInventory() {
     return counts;
   }, [scanResult]);
 
+  // Epoch per asset, parsed once per scan: the 'modified' comparator runs ~2 n log2 n
+  // times per sort (every search keystroke), so it must not construct Dates itself.
+  const modifiedEpoch = useMemo(() => {
+    const epochs: Record<string, number> = {};
+    if (scanResult) for (const a of scanResult.assets) epochs[a.relativePath] = new Date(a.modifiedAt).getTime() || 0;
+    return epochs;
+  }, [scanResult]);
+
   // Filtered + sorted assets
   const displayAssets = useMemo(() => {
     if (!scanResult) return [];
@@ -119,13 +133,13 @@ export function useAssetInventory() {
         case 'name': cmp = a.name.localeCompare(b.name); break;
         case 'type': cmp = a.type.localeCompare(b.type) || a.name.localeCompare(b.name); break;
         case 'size': cmp = a.sizeBytes - b.sizeBytes; break;
-        case 'modified': cmp = new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime(); break;
+        case 'modified': cmp = (modifiedEpoch[a.relativePath] ?? 0) - (modifiedEpoch[b.relativePath] ?? 0); break;
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
 
     return list;
-  }, [scanResult, reconcile, ueFilter, typeFilter, search, sortKey, sortDir]);
+  }, [scanResult, reconcile, ueFilter, typeFilter, search, sortKey, sortDir, modifiedEpoch]);
 
   // Precompute per-asset dependency edge counts once, so each card reads from
   // the map instead of re-filtering the full edge list on every render.

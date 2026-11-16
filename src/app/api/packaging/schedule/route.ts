@@ -1,4 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import {
   getSchedule, setSchedule, getScheduleState, isRunning,
 } from '@/lib/packaging/build-schedule-store';
@@ -42,7 +43,7 @@ function sanitizeSchedulePatch(body: Record<string, unknown>): Partial<BuildSche
     patch.time = body.time;
   }
   if ('days' in body) {
-    if (!Array.isArray(body.days) || body.days.some((d) => typeof d !== 'number' || d < 0 || d > 6)) return null;
+    if (!Array.isArray(body.days) || body.days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) return null;
     patch.days = body.days as number[];
   }
   if ('profileId' in body) {
@@ -63,11 +64,18 @@ function sanitizeSchedulePatch(body: Record<string, unknown>): Partial<BuildSche
 }
 
 export async function POST(request: Request) {
+  // Starts a process (or retargets one) — operator-guarded like every spawn route.
+  const denied = requireOperator(request);
+  if (denied) return denied;
   let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return apiError('invalid JSON body', 400);
+  }
+  // A body that is not a JSON object is the caller's error (400), never a saved empty patch.
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return apiError('Request body must be a JSON object', 400);
   }
   const action = (body.action as string) ?? 'save';
 

@@ -16,8 +16,11 @@ import { aggregateJudgeByModule, detectJudgeDiscrepancies } from '@/lib/evaluato
  */
 export function QualityDiscrepancyBanner({
   cells,
+  refreshKey = 0,
 }: {
   cells: Array<{ moduleId: string; label: string; avgQuality: number | null }>;
+  /** Bumped by the dashboard on every refresh / batch-settle so verdicts re-read with the cells. */
+  refreshKey?: number;
 }) {
   const [verdicts, setVerdicts] = useState<JudgeVerdict[]>([]);
 
@@ -28,7 +31,7 @@ export function QualityDiscrepancyBanner({
     } finally { /* silent — the banner is additive, absence is fine */ }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); }, [load, refreshKey]);
 
   const flags = useMemo(() => {
     if (verdicts.length === 0) return [];

@@ -155,6 +155,30 @@ describe('resolveItemFocus', () => {
     expect(forward).toHaveLength(1);
     expect(forward[0].entityId).toBe('i');
   });
+
+  it('shows a two-way link in BOTH directions and merges a second role', () => {
+    const entitiesByCatalog = {
+      items: {
+        a: ent('items', 'a', 'A', [
+          { catalogId: 'icon-sets', entityId: 'i', role: 'icon' },
+          { catalogId: 'icon-sets', entityId: 'i', role: 'thumb' }, // second role → merged, not dropped
+        ]),
+      },
+      'icon-sets': { i: ent('icon-sets', 'i', 'Icon', [{ catalogId: 'items', entityId: 'a', role: 'owner' }]) },
+    };
+    const ctx: ItemFocusCtx = {
+      entitiesByCatalog,
+      index: buildDependencyIndex(entitiesByCatalog),
+      stepsFor: (c) => STEPS[c] ?? [],
+      artifactsFor: () => [],
+      verdictsFor: () => [],
+    };
+    const f = resolveItemFocus('items', 'a', ctx)!;
+    expect(f.forward.map((n) => n.entityId)).toEqual(['i']);
+    expect(f.forward[0].role).toBe('icon, thumb');
+    expect(f.reverse.map((n) => n.entityId)).toEqual(['i']);
+    expect(f.reverse[0].role).toBe('owner');
+  });
 });
 
 describe('buildCategoryNodes — the weakest-first category overview', () => {

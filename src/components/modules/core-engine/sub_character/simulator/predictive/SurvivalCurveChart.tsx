@@ -20,6 +20,13 @@ export function SurvivalCurveChart({ curves, width, height }: {
   const xMin = Math.min(...allPoints.map(p => p.level));
   const xMax = Math.max(...allPoints.map(p => p.level));
 
+  const pctOf = (r: number) => `${(r * 100).toFixed(0)}%`;
+  const ariaLabel = `Survival by player level, Lv.${xMin} to Lv.${xMax}: ` + entries
+    .map(([label, pts]) => pts.length > 0
+      ? `${label} ${pctOf(pts[0].survivalRate)} to ${pctOf(pts[pts.length - 1].survivalRate)}`
+      : `${label} no data`)
+    .join('; ');
+
   const pad = { l: 36, r: 8, t: 8, b: 22 };
   const w = width - pad.l - pad.r;
   const h = height - pad.t - pad.b;
@@ -45,6 +52,7 @@ export function SurvivalCurveChart({ curves, width, height }: {
   return (
     <svg
       ref={svgRef} width={width} height={height}
+      role="img" aria-label={ariaLabel}
       className="overflow-visible"
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setHoveredIdx(null)}

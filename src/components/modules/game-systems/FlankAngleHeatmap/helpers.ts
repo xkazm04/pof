@@ -1,5 +1,6 @@
 import { heatmapScale } from '@/lib/chart-colors';
 import { computeFlankAngle, ringPoint, forwardVector } from '@/lib/ai-director/eqs-geometry';
+import { ringPoints, type RingPoint as PolarPoint } from '@/components/ui/svg/polar-layout';
 import { ATTACK_DISTANCE } from './constants';
 
 // ── Flank angle color: 0°=red(front) → 90°=yellow(side) → 180°=green(behind)
@@ -14,10 +15,7 @@ export function flankColor(angleDeg: number): string {
 // helpers — the single source of truth that mirrors the C++
 // UEnvQueryTest_FlankAngle (also used by the squad simulation engine).
 
-export interface RingPoint {
-  x: number;
-  y: number;
-  angle: number;     // ring angle (radians)
+export interface RingPoint extends PolarPoint {
   flankDeg: number;  // flank angle score (degrees)
   color: string;
 }
@@ -27,11 +25,8 @@ export function generateRingPoints(
   forwardAngleRad: number,
 ): RingPoint[] {
   const { x: fwdX, y: fwdY } = forwardVector(forwardAngleRad);
-  const angleStep = (2 * Math.PI) / numPoints;
 
-  return Array.from({ length: numPoints }, (_, i) => {
-    const angle = angleStep * i;
-    const { x, y } = ringPoint(angle, ATTACK_DISTANCE);
+  return ringPoints(numPoints, ATTACK_DISTANCE).map(({ x, y, angle }) => {
     const flankDeg = computeFlankAngle(fwdX, fwdY, x, y);
     return { x, y, angle, flankDeg, color: flankColor(flankDeg) };
   });

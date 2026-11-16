@@ -17,6 +17,7 @@ import { CANON_SEED } from '@/lib/catalog/canon/canon-seed';
 import { markContentInvariant } from './contentInvariant';
 import { canonLawChecker } from './canonLaw';
 import { maxWordsPerEntry } from './dataCheckers';
+import { readNumber } from './markers';
 import type { AcceptanceResult, Checker } from './types';
 
 /* ── Canon threshold parsing (single source of truth = CANON_SEED) ─────────── */
@@ -84,10 +85,8 @@ function pick(data: Record<string, unknown>, path: string): unknown {
     data,
   );
 }
-function numOf(v: unknown): number | null {
-  const n = typeof v === 'number' ? v : Number(v);
-  return v != null && v !== '' && Number.isFinite(n) ? n : null;
-}
+/** Strict: a blank, a list or a boolean is unpopulated, never 0/1 (`readNumber`). */
+const numOf = readNumber;
 const pending = (label: string, detail: string, tier: AcceptanceResult['tier'] = 'L0'): AcceptanceResult =>
   ({ label, tier, status: 'pending', detail });
 const pass = (label: string, detail: string, tier: AcceptanceResult['tier'] = 'L0'): AcceptanceResult =>

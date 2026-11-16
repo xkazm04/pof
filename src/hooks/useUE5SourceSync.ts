@@ -15,67 +15,63 @@ interface UseUE5SourceSyncResult {
 /**
  * Hook that fetches parsed UE5 ability system data from the project's C++ source files.
  * Returns null data if no project is configured.
+ *
+ * Last request wins: an answer that is no longer the newest request for the
+ * current project is dropped, and `isLoading` is derived from the project the
+ * load was for, so abandoning a load can never leave the spinner on. Data and
+ * error are held with their project, so another project's are never returned.
  */
 export function useUE5SourceSync(): UseUE5SourceSyncResult {
   const projectPath = useProjectStore((s) => s.projectPath);
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
-  const [data, setData] = useState<ParsedUE5Data | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<{ path: string; data: ParsedUE5Data } | null>(null);
+  const [loadingPath, setLoadingPath] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ path: string; error: string } | null>(null);
   const fetchedPathRef = useRef<string | null>(null);
+  const latestRequestRef = useRef(0);
 
-  const fetchData = useCallback(async (path: string) => {
-    setIsLoading(true);
-    setError(null);
+  const load = useCallback(async (path: string) => {
+    const requestId = ++latestRequestRef.current;
+    setLoadingPath(path);
+    setFailure(null);
 
     const result = await tryApiFetch<ParsedUE5Data>('/api/ue5-source/parse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectPath: path }),
     });
+    if (requestId !== latestRequestRef.current) return;
 
     if (result.ok) {
-      setData(result.data);
+      setLoaded({ path, data: result.data });
       fetchedPathRef.current = path;
     } else {
-      setError(result.error);
+      setFailure({ path, error: result.error });
     }
-
-    setIsLoading(false);
+    setLoadingPath(null);
   }, []);
 
   useEffect(() => {
-    if (!projectPath || !isSetupComplete) return;
-    if (fetchedPathRef.current === projectPath) return;
     let cancelled = false;
-    async function load() {
-      await Promise.resolve();
-      if (cancelled) return;
-      setIsLoading(true);
-      setError(null);
-      const result = await tryApiFetch<ParsedUE5Data>('/api/ue5-source/parse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath }),
+    if (projectPath && isSetupComplete && fetchedPathRef.current !== projectPath) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) void load(projectPath);
       });
-      if (cancelled) return;
-      if (result.ok) {
-        setData(result.data);
-        fetchedPathRef.current = projectPath;
-      } else {
-        setError(result.error);
-      }
-      setIsLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
-  }, [projectPath, isSetupComplete]);
+    return () => {
+      cancelled = true;
+      latestRequestRef.current += 1; // whatever is in flight was for the previous project
+    };
+  }, [projectPath, isSetupComplete, load]);
 
   const refresh = useCallback(() => {
     if (!projectPath || !isSetupComplete) return;
     fetchedPathRef.current = null;
-    fetchData(projectPath);
-  }, [projectPath, isSetupComplete, fetchData]);
+    void load(projectPath);
+  }, [projectPath, isSetupComplete, load]);
 
+  const isLoading = isSetupComplete && loadingPath !== null && loadingPath === projectPath;
+  const data = loaded?.path === projectPath ? loaded.data : null;
+  const error = failure?.path === projectPath ? failure.error : null;
   return { data, isLoading, error, refresh };
 }

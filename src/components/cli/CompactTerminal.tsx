@@ -90,10 +90,13 @@ export function CompactTerminal({
     handleSubmit(resume);
   }, [handleSubmit]);
 
+  // Submit 'Continue' directly: the old setInput + setTimeout(handleSubmit) read the
+  // `input` of the render BEFORE the setInput, so it sent nothing (or the stale draft).
   const handleResume = useCallback(() => {
-    setInput('Continue');
-    setTimeout(() => handleSubmit(true), 0);
-  }, [handleSubmit]);
+    if (tq.isStreaming || tq.sessionId === null) return;
+    history.pushHistory('Continue');
+    void tq.submitPrompt('Continue', true);
+  }, [tq, history]);
 
   // Listen for pof-cli-prompt events + announce readiness so a just-dispatched
   // sendPrompt can target this terminal (replaces the old fixed mount-delay).
@@ -107,7 +110,8 @@ export function CompactTerminal({
       // re-render (unstable handleSubmit dep), so the prompt routinely sat
       // unsent. Submitting straight through removes the race entirely.
       const queue = tqRef.current;
-      if (typeof prompt !== 'string' || !prompt.trim() || queue.isStreaming) return;
+      if (typeof prompt !== 'string' || !prompt.trim()) return;
+      if (queue.isStreaming) { queue.logBusyDrop(); return; }
       // `resume: false` asks for a fresh Claude session (e.g. an exact Retry); by
       // default a dispatch continues the terminal's session when it has one.
       const wantsResume = resume !== false;
@@ -142,8 +146,10 @@ export function CompactTerminal({
 
   // --- Derived counts ---
 
-  const editCount = tq.fileChanges.filter(c => c.changeType === 'edit').length;
-  const writeCount = tq.fileChanges.filter(c => c.changeType === 'write').length;
+  // Distinct files — the badges read "N files edited/created", and fileChanges holds one row per tool call.
+  const distinctFiles = (type: 'edit' | 'write') => new Set(tq.fileChanges.filter(c => c.changeType === type).map(c => c.filePath)).size;
+  const editCount = distinctFiles('edit');
+  const writeCount = distinctFiles('write');
   const queuePendingCount = taskQueue.filter(t => t.status === 'pending').length;
 
   const handleCopyOutput = useCallback((): string | null => {
@@ -164,6 +170,8 @@ export function CompactTerminal({
         isStreaming={tq.isStreaming}
         executionInfo={tq.executionInfo}
         lastResult={tq.lastResult}
+        error={tq.error}
+        outcomeUnknown={tq.outcomeUnknown}
         logFilePath={tq.logFilePath}
         editCount={editCount}
         writeCount={writeCount}

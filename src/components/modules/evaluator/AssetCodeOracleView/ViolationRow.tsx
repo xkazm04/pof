@@ -15,6 +15,7 @@ export function FilterChip({
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors border ${
         active
           ? 'bg-surface-hover text-text border-border-bright'
@@ -47,6 +48,7 @@ export function ViolationRow({
     <div className="rounded-lg border border-border bg-surface-deep overflow-hidden" data-violation-id={v.id}>
       <button
         onClick={onToggle}
+        aria-expanded={expanded}
         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-surface-hover transition-colors"
       >
         {expanded ? (

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
+import { readJsonObject, MALFORMED_BODY_ERROR } from '@/app/api/blender-mcp/_lib/body';
 import { runnerDispatchFor, runnerRefusal, type RunnerMode } from '@/lib/visual-gen/runner-dispatch';
 import {
   routePromptShape,
@@ -18,6 +20,34 @@ import {
   type InputGateOutcome,
 } from '@/lib/visual-gen/input-gate';
 import { meshPromptFor } from '@/lib/media-prompts/meshPrompts';
+import { logger } from '@/lib/logger';
+
+/** TripoSR's marching-cubes grid: the default is 256, and the cost grows with the cube of it. */
+const MC_RESOLUTION_MIN = 32;
+const MC_RESOLUTION_MAX = 1024;
+
+/** The first field of a parsed body that has the wrong shape, as a refusal. Null when all fit. */
+function bodyShapeRefusal(body: Record<string, unknown>): string | null {
+  for (const field of ['mode', 'providerId', 'imageDataUrl', 'prompt', 'assetClass', 'topology']) {
+    if (body[field] != null && typeof body[field] !== 'string') return `${field} must be a string`;
+  }
+  const views = body.viewDataUrls;
+  if (views != null) {
+    if (typeof views !== 'object' || Array.isArray(views)) return 'viewDataUrls must be an object of view slot to data URL';
+    if (Object.values(views).some((v) => v != null && typeof v !== 'string')) return 'viewDataUrls entries must be strings';
+  }
+  const { maxAttempts, mcResolution } = body;
+  if (maxAttempts != null && !(Number.isInteger(maxAttempts) && (maxAttempts as number) >= 1)) {
+    return 'maxAttempts must be a whole number of at least 1';
+  }
+  if (
+    mcResolution != null
+    && !(Number.isInteger(mcResolution) && (mcResolution as number) >= MC_RESOLUTION_MIN && (mcResolution as number) <= MC_RESOLUTION_MAX)
+  ) {
+    return `mcResolution must be a whole number from ${MC_RESOLUTION_MIN} to ${MC_RESOLUTION_MAX}`;
+  }
+  return null;
+}
 
 /**
  * POST /api/visual-gen/generate
@@ -41,8 +71,14 @@ import { meshPromptFor } from '@/lib/media-prompts/meshPrompts';
  * outcome rides on the 202 as `inputGate` — including when the gate could not run.
  */
 export async function POST(request: NextRequest) {
+  const denied = requireOperator(request);
+  if (denied) return denied;
   try {
-    const body = (await request.json()) as {
+    const parsed = await readJsonObject(request);
+    if (!parsed) return apiError(MALFORMED_BODY_ERROR, 400);
+    const shapeRefusal = bodyShapeRefusal(parsed);
+    if (shapeRefusal) return apiError(shapeRefusal, 400);
+    const body = parsed as {
       mode?: string;
       providerId?: string;
       imageDataUrl?: string;
@@ -108,15 +144,25 @@ export async function POST(request: NextRequest) {
     const promptRoute = routePromptShape(prompt);
     let shapeRoute: PromptShapeRoute | undefined =
       promptRoute.route === 'generate' ? undefined : promptRoute;
-    const shapeRefusal = linearPropRefusal(promptRoute);
-    if (shapeRefusal) {
+    const linearRefusal = linearPropRefusal(promptRoute);
+    if (linearRefusal) {
       // The refusal string is for the caller; `details` is the RECORD. This is the one
       // outcome of the four that saves a credit, and it was the only one leaving no
       // structured trace - so nothing downstream could count deliberate diversions, or
       // tell one apart from a malformed request. Same shape the 202 carries in
       // `shapeRoute`, so one reader serves both.
-      if (overrideShapeRoute !== true) return apiError(shapeRefusal, 400, promptRoute);
+      if (overrideShapeRoute !== true) return apiError(linearRefusal, 400, promptRoute);
       shapeRoute = linearPropOverridden(promptRoute);
+    }
+
+    // One table, one refusal vocabulary. A miss (no runner, or a mode the runner cannot
+    // serve — e.g. multiview on the single-image local providers, which would otherwise
+    // mesh only the front view and report a multiview run that never happened) refuses
+    // with the same sentence the forge button shows. Ahead of the Tier-0 gate on purpose:
+    // that gate is a paid vision call, and a submit no runner can start must not buy one.
+    const dispatch = runnerDispatchFor(providerId);
+    if (!dispatch || !dispatch.modes.includes(mode as RunnerMode)) {
+      return apiError(runnerRefusal(providerId, mode), 400);
     }
 
     /**
@@ -135,14 +181,19 @@ export async function POST(request: NextRequest) {
      * Submit-time only: never a paid vision call per keystroke.
      */
     let inputGate: InputGateOutcome | undefined;
-    if (mode === 'image-to-3d' && imageDataUrl) {
+    // Multiview is paid too: its FRONT view is the image the gate judges (one vision call);
+    // whether the side views are gated as well is left open.
+    const gatedImageUrl = mode === 'image-to-3d' ? imageDataUrl
+      : mode === 'multiview-to-3d' ? viewDataUrls?.front
+      : undefined;
+    if (gatedImageUrl) {
       if (gateInput === false) {
         inputGate = inputGateSkipped();
       } else {
-        const image = parseVisionImage(imageDataUrl);
+        const image = parseVisionImage(gatedImageUrl);
         inputGate = image
           ? summarizeInputGate(await gateInputImage(image, { subject: prompt?.trim().slice(0, 120) || undefined }))
-          : inputGateUnavailable('imageDataUrl is not a base64 image data URL the vision seam can read');
+          : inputGateUnavailable('the gated image is not a base64 image data URL the vision seam can read');
         const refusal = inputGateRefusal(inputGate);
         if (refusal) {
           if (overrideInputGate !== true) return apiError(refusal, 400);
@@ -151,21 +202,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // One table, one refusal vocabulary. A miss (no runner, or a mode the runner cannot
-    // serve — e.g. multiview on the single-image local providers, which would otherwise
-    // mesh only the front view and report a multiview run that never happened) refuses
-    // with the same sentence the forge button shows.
-    const dispatch = runnerDispatchFor(providerId);
-    if (!dispatch || !dispatch.modes.includes(mode as RunnerMode)) {
-      return apiError(runnerRefusal(providerId, mode), 400);
-    }
     // The craft pack is composed here, after shape routing saw the RAW prompt, so the runner still
     // receives one prompt string. No pack for the class (or no prompt) leaves the prompt untouched.
     const sentPrompt = mode === 'text-to-3d' && prompt?.trim()
       ? meshPromptFor(assetClass, prompt) ?? prompt
       : prompt;
+    const startedAt = Date.now();
     const started = dispatch.start({
       mode: mode as RunnerMode, prompt: sentPrompt, imageDataUrl, viewDataUrls, assetClass, mcResolution, maxAttempts,
+    });
+    // One structured line per outcome: provider, status, duration. Never the prompt, image or error text.
+    (started.ok ? logger.info : logger.warn)('[visual-gen/generate] outcome', {
+      provider: providerId,
+      mode,
+      status: started.ok ? 202 : 400,
+      ms: Date.now() - startedAt,
     });
     if (!started.ok) return apiError(started.error, 400);
     // `inputGate` is absent on text-to-3d (nothing to gate) and on multiview without a

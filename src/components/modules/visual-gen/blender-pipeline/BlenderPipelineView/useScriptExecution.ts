@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { executeViaMCP } from '@/components/modules/visual-gen/blender-pipeline/ScriptRunner';
+import { executeViaMCP } from '@/lib/blender-mcp/dispatch';
 
 /* ─── Shared execution hook ─────────────────────────────────────────────── */
 

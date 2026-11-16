@@ -1,0 +1,225 @@
+{
+ "schema": "conform-run/1",
+ "worker": "38f01e67-3946-4342-b0b2-198272199724",
+ "subject": "seated-in-world-reading",
+ "evaluatedAt": "2026-11-09T01:31:19.873193+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "audio-scene-designer",
+   "subject": "seated-in-world-reading",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:105 The painter is a mouse-driven 2D SVG canvas in a browser panel, and a search of AudioScenePainter and AudioPropertyPanel found no webxr, immersive-vr, headset, arcminute or diopter, so no head-worn seated reading exists for the subject to govern.",
+   "techniques": [
+    {
+     "technique": "angular-legibility-floor",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/EmitterLayer.tsx:128 Labels are sized in SVG user units on a flat screen; the technique's discriminator is an angle at a head-worn eye, and flat type minimums belong to the design-token subject."
+    },
+    {
+     "technique": "panel-placement-in-the-view-band",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:108 The surface fills its page container through CSS layout; there is no seated eye, pitch band or world-locked panel to place."
+    },
+    {
+     "technique": "fade-the-content-not-the-view",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:116 Pan is a 2D translate of a canvas on a monitor, so no vestibular rest frame is involved."
+    },
+    {
+     "technique": "one-reading-depth-in-the-comfort-zone",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/audio/AudioScenePainter/AudioScenePainter.tsx:105 A flat SVG has no stereoscopic panel depth, so no focal-plane conflict can be counted."
+    }
+   ],
+   "absenceTerms": [
+    "webxr",
+    "immersive-vr",
+    "headset",
+    "arcminute",
+    "diopter"
+   ]
+  },
+  {
+   "context": "world-module",
+   "subject": "seated-in-world-reading",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:89 The world module draws its map as a flat SVG in tabbed browser panels, and a search of sub_world found no webxr, immersive-vr, headset, arcminute or diopter, so the subject's head-worn precondition does not hold.",
+   "techniques": [
+    {
+     "technique": "angular-legibility-floor",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:271 Map text is sized in flat SVG units for a monitor, outside the technique's angular unit."
+    },
+    {
+     "technique": "panel-placement-in-the-view-band",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/index.tsx:107 Panels are page tabs in DOM layout, not world-locked screens around a seated user."
+    },
+    {
+     "technique": "fade-the-content-not-the-view",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/index.tsx:193 A context change is a React tab swap on a monitor; there is no head-driven view to protect."
+    },
+    {
+     "technique": "one-reading-depth-in-the-comfort-zone",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:89 A DOM-layered SVG on a monitor has no rendered reading depth in diopters."
+    }
+   ],
+   "absenceTerms": [
+    "webxr",
+    "immersive-vr",
+    "headset",
+    "arcminute",
+    "diopter"
+   ]
+  },
+  {
+   "context": "streaming-zone-planner",
+   "subject": "seated-in-world-reading",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:67 The planner is a keyboard-and-mouse 2D SVG grid for authoring streaming zones, and a search of its directory found no webxr, immersive-vr, headset, arcminute or diopter, so nothing here is read inside a head-worn display.",
+   "techniques": [
+    {
+     "technique": "angular-legibility-floor",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneCell.tsx:133 Cell text is a flat-screen unit size, which the golden path assigns to the design-token subject."
+    },
+    {
+     "technique": "panel-placement-in-the-view-band",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:53 Placement is flexbox layout in a page, with no measured eye or surface band."
+    },
+    {
+     "technique": "fade-the-content-not-the-view",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/ZoneGrid.tsx:45 Navigation moves a 2D grid cursor; no seated user's view is carried between contexts."
+    },
+    {
+     "technique": "one-reading-depth-in-the-comfort-zone",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/level-design/StreamingZonePlanner/constants.ts:7 Geometry is expressed in screen pixels with no distance from an eye, so no vergence depth exists."
+    }
+   ],
+   "absenceTerms": [
+    "webxr",
+    "immersive-vr",
+    "headset",
+    "arcminute",
+    "diopter"
+   ]
+  },
+  {
+   "context": "hud-theme-and-inventory",
+   "subject": "seated-in-world-reading",
+   "bundle": "game-production",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:29 Both tools author and preview a flat screen-space HUD and inventory in DOM elements, and a search of HudThemeEditor and InventoryGridDesigner found no webxr, immersive-vr, headset, arcminute or diopter, so in-headset reading rules have nothing to bind to.",
+   "techniques": [
+    {
+     "technique": "angular-legibility-floor",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:128 HUD text is authored in CSS pixels for a flat game viewport; a pixel size is correct for that medium and is not an angular floor case."
+    },
+    {
+     "technique": "panel-placement-in-the-view-band",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/GridSection.tsx:56 The inventory is a CSS grid, not a world-space panel around a seated user."
+    },
+    {
+     "technique": "fade-the-content-not-the-view",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/InventoryGridDesigner/index.tsx:97 Section changes are conditional DOM renders on a monitor, with no head-worn view or rest frame."
+    },
+    {
+     "technique": "one-reading-depth-in-the-comfort-zone",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/content/ui-hud/HudThemeEditor/LivePreviewScene.tsx:28 The preview is a fixed-height flat box with no rendered depth to hold or measure."
+    }
+   ],
+   "absenceTerms": [
+    "webxr",
+    "immersive-vr",
+    "headset",
+    "arcminute",
+    "diopter"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-11-09T01:31:19.873193+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "seated-in-world-reading"
+   ],
+   "techniques": [
+    "angular-legibility-floor",
+    "fade-the-content-not-the-view",
+    "one-reading-depth-in-the-comfort-zone",
+    "panel-placement-in-the-view-band"
+   ],
+   "deviations": 0,
+   "context": "audio-scene-designer",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:31:19.873193+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "seated-in-world-reading"
+   ],
+   "techniques": [
+    "angular-legibility-floor",
+    "fade-the-content-not-the-view",
+    "one-reading-depth-in-the-comfort-zone",
+    "panel-placement-in-the-view-band"
+   ],
+   "deviations": 0,
+   "context": "world-module",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:31:19.873193+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "seated-in-world-reading"
+   ],
+   "techniques": [
+    "angular-legibility-floor",
+    "fade-the-content-not-the-view",
+    "one-reading-depth-in-the-comfort-zone",
+    "panel-placement-in-the-view-band"
+   ],
+   "deviations": 0,
+   "context": "streaming-zone-planner",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  },
+  {
+   "ts": "2026-11-09T01:31:19.873193+00:00",
+   "bundle": "game-production",
+   "subjects": [
+    "seated-in-world-reading"
+   ],
+   "techniques": [
+    "angular-legibility-floor",
+    "fade-the-content-not-the-view",
+    "one-reading-depth-in-the-comfort-zone",
+    "panel-placement-in-the-view-band"
+   ],
+   "deviations": 0,
+   "context": "hud-theme-and-inventory",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

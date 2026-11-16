@@ -44,6 +44,9 @@ const fetchDirectorData = async (): Promise<DirectorData> => {
     tryApiFetch<DirectorStats>('/api/game-director?action=stats'),
     tryApiFetch<HealthTrendPoint[]>('/api/game-director?action=trend'),
   ]);
+  // A failed session list must not render as "no playtests recorded". Stats and
+  // trend are secondary: when only those fail the sessions still show.
+  if (!sessResult.ok) throw new Error(sessResult.error);
   return {
     sessions: sessResult.ok ? sessResult.data : [],
     stats: statsResult.ok ? statsResult.data : null,
@@ -56,6 +59,10 @@ export interface UseGameDirectorResult {
   stats: DirectorStats | null;
   trend: HealthTrendPoint[];
   loading: boolean;
+  /** Why the last load failed (null = loaded). A failed load is not an empty list. */
+  error: string | null;
+  /** Re-read after a failed load. */
+  retry: () => void;
   simulating: boolean;
   refresh: () => Promise<void>;
   createSession: (payload: CreateSessionPayload) => Promise<PlaytestSession>;
@@ -82,7 +89,7 @@ export interface UseGameDirectorResult {
 }
 
 export function useGameDirector(): UseGameDirectorResult {
-  const { data, isLoading: loading, refetch: refresh, mutate } = useCRUD<DirectorData>(
+  const { data, isLoading: loading, refetch: refresh, error, retry } = useCRUD<DirectorData>(
     '/api/game-director',
     EMPTY,
     { fetcher: fetchDirectorData },
@@ -215,6 +222,8 @@ export function useGameDirector(): UseGameDirectorResult {
     stats: data.stats,
     trend: data.trend,
     loading,
+    error,
+    retry,
     simulating,
     refresh,
     createSession,

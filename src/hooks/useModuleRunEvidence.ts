@@ -56,7 +56,12 @@ const EMPTY_BY_MODULE: ReadonlyMap<string, ModuleRunEvidence> = new Map();
 
 const moduleCache = new Map<string, CacheEntry<ModuleRunEvidence>>();
 let projectCache: CacheEntry<ReadonlyMap<string, ModuleRunEvidence>> = {};
+/** Per-key drop counters: a read started before its entry was dropped never seats itself. */
+const moduleGen = new Map<string, number>();
+let projectGen = 0;
 const listeners = new Set<() => void>();
+
+const bumpModule = (moduleId: string) => moduleGen.set(moduleId, (moduleGen.get(moduleId) ?? 0) + 1);
 
 function notify() {
   for (const l of listeners) l();
@@ -64,8 +69,38 @@ function notify() {
 
 /** Exposed for tests — the caches are process-wide by design. */
 export function __resetRunEvidenceCache() {
+  for (const id of moduleCache.keys()) bumpModule(id);
+  projectGen++;
   moduleCache.clear();
   projectCache = {};
+}
+
+/**
+ * A run of `moduleId` was just recorded: drop its entry and the project aggregate
+ * and re-read them for every mounted card. Called by `recordSessionOutcome` (the
+ * one writer of these rows) — without it the odds stayed at the mount-time read
+ * until a page reload, blind to the run the user just finished.
+ */
+export function invalidateRunEvidence(moduleId: string) {
+  const prevModule = moduleCache.get(moduleId);
+  const prevProject = projectCache;
+  moduleCache.delete(moduleId);
+  bumpModule(moduleId);
+  projectCache = {};
+  projectGen++;
+  // Re-read only what was loaded (a module no card ever mounted issues no request),
+  // and keep the last good figure on screen while the re-read is in flight — the
+  // card must not flash to "no odds" for a refresh.
+  if (prevModule) {
+    void loadModule(moduleId);
+    const entry = moduleCache.get(moduleId);
+    if (prevModule.data && entry && !entry.data && !entry.error) moduleCache.set(moduleId, { ...entry, data: prevModule.data });
+  }
+  if (prevProject.data || prevProject.error || prevProject.inFlight) {
+    void loadProject();
+    if (prevProject.data && !projectCache.data && !projectCache.error) projectCache = { ...projectCache, data: prevProject.data };
+  }
+  notify();
 }
 
 /** One recorded session row, as `?action=module` returns it. */
@@ -78,9 +113,11 @@ function loadModule(moduleId: string): Promise<void> {
   if (existing?.inFlight) return existing.inFlight;
   if (existing && (existing.data || existing.error)) return Promise.resolve();
 
+  const gen = moduleGen.get(moduleId) ?? 0;
   const inFlight = tryApiFetch<{ sessions: SessionRow[] }>(
     `/api/session-analytics?action=module&moduleId=${encodeURIComponent(moduleId)}`,
   ).then((result) => {
+    if (gen !== (moduleGen.get(moduleId) ?? 0)) return;
     if (result.ok) {
       const sessions = result.data.sessions ?? [];
       let successes = 0;
@@ -107,9 +144,11 @@ function loadProject(): Promise<void> {
   if (projectCache.inFlight) return projectCache.inFlight;
   if (projectCache.data || projectCache.error) return Promise.resolve();
 
+  const gen = projectGen;
   const inFlight = tryApiFetch<{ moduleStats?: DashboardModuleStats[] }>(
     '/api/session-analytics?action=dashboard',
   ).then((result) => {
+    if (gen !== projectGen) return;
     if (result.ok) {
       // ONE aggregate read for all ~40 modules — the project card must not fan
       // out into 40 per-module requests to answer one question.
@@ -151,6 +190,7 @@ export function useModuleRunEvidence(moduleId: SubModuleId): ModuleRunEvidenceRe
 
   const retry = useCallback(() => {
     moduleCache.delete(moduleId);
+    bumpModule(moduleId);
     notify();
     void loadModule(moduleId);
   }, [moduleId]);
@@ -166,6 +206,7 @@ export function useProjectRunEvidence(): ProjectRunEvidenceResult {
   useCacheSubscription(loadProject, '__project__');
 
   const retry = useCallback(() => {
+    projectGen++;
     projectCache = {};
     notify();
     void loadProject();

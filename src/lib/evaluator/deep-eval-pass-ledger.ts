@@ -13,15 +13,13 @@
 
 import { getDb } from '@/lib/db';
 import type { EvalFinding } from './finding-collector';
-import type { EvalPass } from './module-eval-prompts';
+import { isEvalPass } from './module-eval-prompts';
 import type { PassOutcome } from './deep-eval-engine';
 
 let ensured = false;
 
-function ensureTable(): void {
-  if (ensured) return;
-  getDb().exec(`
-    CREATE TABLE IF NOT EXISTS deep_eval_passes (
+const TABLE_DDL = (name: string): string => `
+    CREATE TABLE IF NOT EXISTS ${name} (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       scan_id TEXT NOT NULL,
       project_id TEXT NOT NULL DEFAULT '',
@@ -31,9 +29,33 @@ function ensureTable(): void {
       error TEXT,
       findings_json TEXT NOT NULL DEFAULT '[]',
       finished_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE (scan_id, module_id, pass)
+      UNIQUE (scan_id, project_id, module_id, pass)
     )
-  `);
+  `;
+
+/** The pre-project-key shape: a second project reusing a scanId overwrote the first's rows. */
+const LEGACY_UNIQUE = /UNIQUE\s*\(\s*scan_id\s*,\s*module_id\s*,\s*pass\s*\)/i;
+
+function ensureTable(): void {
+  if (ensured) return;
+  const db = getDb();
+  db.exec(TABLE_DDL('deep_eval_passes'));
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='deep_eval_passes'").get() as
+    { sql: string } | undefined;
+  if (row && LEGACY_UNIQUE.test(row.sql)) {
+    // Table rebuild (SQLite cannot alter a UNIQUE): copy every row, swap, abort if any row would be lost.
+    db.transaction(() => {
+      db.exec('DROP TABLE IF EXISTS deep_eval_passes__rebuild');
+      db.exec(TABLE_DDL('deep_eval_passes__rebuild'));
+      db.exec(`INSERT INTO deep_eval_passes__rebuild (id, scan_id, project_id, module_id, pass, status, error, findings_json, finished_at)
+               SELECT id, scan_id, project_id, module_id, pass, status, error, findings_json, finished_at FROM deep_eval_passes`);
+      const before = (db.prepare('SELECT COUNT(*) AS n FROM deep_eval_passes').get() as { n: number }).n;
+      const after = (db.prepare('SELECT COUNT(*) AS n FROM deep_eval_passes__rebuild').get() as { n: number }).n;
+      if (before !== after) throw new Error(`deep_eval_passes rebuild would lose rows (${before} -> ${after}) - aborted`);
+      db.exec('DROP TABLE deep_eval_passes');
+      db.exec('ALTER TABLE deep_eval_passes__rebuild RENAME TO deep_eval_passes');
+    })();
+  }
   ensured = true;
 }
 
@@ -43,7 +65,7 @@ export function recordPassOutcome(scanId: string, projectId: string, outcome: Pa
   getDb().prepare(`
     INSERT INTO deep_eval_passes (scan_id, project_id, module_id, pass, status, error, findings_json)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (scan_id, module_id, pass) DO UPDATE SET
+    ON CONFLICT (scan_id, project_id, module_id, pass) DO UPDATE SET
       status = excluded.status,
       error = excluded.error,
       findings_json = excluded.findings_json,
@@ -59,26 +81,61 @@ interface PassRow {
   findings_json: string;
 }
 
-/** Every recorded pass of a scan, in the order they finished. */
-export function readPassLedger(scanId: string): PassOutcome[] {
+/**
+ * Every recorded pass of a scan, in the order they finished. With `projectId`, only the
+ * rows recorded for that project: a resume must never replay one project's findings
+ * into another's scan (the same rule as the client baseline's `baselineFor`).
+ */
+export function readPassLedger(scanId: string, projectId?: string): PassOutcome[] {
   ensureTable();
-  const rows = getDb()
-    .prepare('SELECT module_id, pass, status, error, findings_json FROM deep_eval_passes WHERE scan_id = ? ORDER BY id')
-    .all(scanId) as PassRow[];
-  return rows.map((r) => ({
-    moduleId: r.module_id,
-    pass: r.pass as EvalPass,
-    status: r.status === 'done' ? 'done' : 'error',
-    error: r.error,
-    findings: parseFindingsJson(r.findings_json),
-  }));
+  const rows = (projectId === undefined
+    ? getDb()
+      .prepare('SELECT module_id, pass, status, error, findings_json FROM deep_eval_passes WHERE scan_id = ? ORDER BY id')
+      .all(scanId)
+    : getDb()
+      .prepare('SELECT module_id, pass, status, error, findings_json FROM deep_eval_passes WHERE scan_id = ? AND project_id = ? ORDER BY id')
+      .all(scanId, projectId)) as PassRow[];
+  const out: PassOutcome[] = [];
+  for (const r of rows) {
+    // A pass outside the vocabulary can never match a cell of this run: not read.
+    if (!isEvalPass(r.pass)) continue;
+    const findings = parseFindingsJson(r.findings_json);
+    if (findings === null) {
+      // A resumed run REPLAYS a done row's findings into its dedup, which throws on a
+      // non-finding. Unreadable findings are unmeasured: read as error, re-run on resume.
+      out.push({ moduleId: r.module_id, pass: r.pass, status: 'error', error: 'unreadable ledger findings', findings: [] });
+      continue;
+    }
+    out.push({
+      moduleId: r.module_id,
+      pass: r.pass,
+      status: r.status === 'done' ? 'done' : 'error',
+      error: r.error,
+      findings,
+    });
+  }
+  return out;
 }
 
-function parseFindingsJson(json: string): EvalFinding[] {
+/** The fields the engine's dedup/aggregate read off every replayed finding. */
+function isReplayableFinding(v: unknown): v is EvalFinding {
+  if (typeof v !== 'object' || v === null) return false;
+  const f = v as Record<string, unknown>;
+  return typeof f.id === 'string'
+    && typeof f.moduleId === 'string'
+    && typeof f.description === 'string'
+    && typeof f.category === 'string'
+    && typeof f.severity === 'string'
+    && (f.file === null || typeof f.file === 'string')
+    && (f.line === null || typeof f.line === 'number');
+}
+
+/** The recorded findings, or null when the column is not an array of findings. */
+function parseFindingsJson(json: string): EvalFinding[] | null {
   try {
     const parsed: unknown = JSON.parse(json);
-    return Array.isArray(parsed) ? (parsed as EvalFinding[]) : [];
+    return Array.isArray(parsed) && parsed.every(isReplayableFinding) ? parsed : null;
   } catch {
-    return [];
+    return null;
   }
 }

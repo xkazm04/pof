@@ -44,7 +44,12 @@ export const GLOSSARY: Record<string, string> = {
   AnimBP: 'Animation Blueprint — UE5\'s graph-based animation state machine. The graph stays manual; Python authors the montage assets.',
 };
 
-/** Look up a glossary entry; returns undefined if not present. */
+/**
+ * Look up a glossary entry; returns undefined if not present. Own keys only —
+ * `GLOSSARY` is an object literal, so an unguarded `GLOSSARY[term]` answers
+ * `toString` / `constructor` with inherited functions (the defect
+ * `lookupCrashTerm` was fixed for).
+ */
 export function lookupGlossary(term: string): string | undefined {
-  return GLOSSARY[term];
+  return Object.hasOwn(GLOSSARY, term) ? GLOSSARY[term] : undefined;
 }

@@ -7,8 +7,11 @@ import { RadarChart } from '../../unique-tabs/_shared';
 import type { ArchetypeConfig } from '../_shared/data';
 import { RADAR_DATA } from '../_shared/data';
 import { ArchetypeIconGlyph } from './ArchetypeIconGlyph';
+import { sameStatScale } from '@/lib/bestiary/stat-vocabulary';
 
 import { ACCENT_EMERALD, ACCENT_RED, withOpacity, OPACITY_12, OPACITY_25 } from '@/lib/chart-colors';
+
+/* Stat comparability (vocabulary / scale) lives in @/lib/bestiary/stat-vocabulary. */
 
 interface ComparisonPanelProps {
   enemies: ArchetypeConfig[];
@@ -69,9 +72,9 @@ export function ComparisonPanel({ enemies, accent }: ComparisonPanelProps) {
                 }
 
                 const value = stat.value;
-                /* Average only over the enemies that actually carry this stat. */
+                /* Average only over the enemies that carry this stat on the same scale. */
                 const peerValues = enemies
-                  .filter(e => e.id !== arch.id)
+                  .filter(e => e.id !== arch.id && sameStatScale(e, arch))
                   .map(e => e.stats.find(s => s.label === label)?.value)
                   .filter((v): v is number => v !== undefined);
                 const avgOther = peerValues.length > 0

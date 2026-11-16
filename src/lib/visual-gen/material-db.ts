@@ -61,11 +61,22 @@ export interface MaterialRecord {
   updatedAt: string;
 }
 
-function rowToRecord(row: MaterialRow): MaterialRecord {
+/**
+ * One unreadable row is contained to that row: a bad `params` value used to make the list and
+ * every read of it throw. The row is logged and reads as absent.
+ */
+function rowToRecord(row: MaterialRow): MaterialRecord | null {
+  let params: Record<string, unknown>;
+  try {
+    params = JSON.parse(row.params);
+  } catch {
+    logger.warn(`materials row ${row.id} holds unreadable params and was skipped`);
+    return null;
+  }
   return {
     id: row.id,
     name: row.name,
-    params: JSON.parse(row.params),
+    params,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -81,7 +92,7 @@ export function listMaterials(): MaterialRecord[] {
   ensureMaterialTable();
   const db = getDb();
   const rows = db.prepare(`SELECT ${COLUMNS} FROM materials ORDER BY updated_at DESC`).all() as MaterialRow[];
-  return rows.map(rowToRecord);
+  return rows.map(rowToRecord).filter((m): m is MaterialRecord => m !== null);
 }
 
 export function getMaterial(id: string): MaterialRecord | null {

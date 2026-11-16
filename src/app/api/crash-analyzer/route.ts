@@ -40,14 +40,26 @@ export async function GET() {
 /* ---- POST: actions ----------------------------------------------- */
 
 export async function POST(req: NextRequest) {
+  // A malformed request is the caller's fault: answer 400 here rather than
+  // letting `body.action` / `rawText.split` throw into the 500 handler below.
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const action = body.action as string;
+    const parsed: unknown = await req.json();
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return apiError('Request body must be a JSON object', 400);
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return apiError('Invalid JSON body', 400);
+  }
+
+  try {
+    const action = body.action;
 
     /* -- Import and parse raw crash log ----------------------------- */
     if (action === 'parse-log') {
-      const rawText = body.rawText as string;
-      if (!rawText) return apiError('rawText is required', 400);
+      const rawText = body.rawText;
+      if (typeof rawText !== 'string' || !rawText) return apiError('rawText (string) is required', 400);
 
       const report = parseCrashLog(rawText);
       if (!report) return apiError('Could not parse crash log', 400);
@@ -76,8 +88,8 @@ export async function POST(req: NextRequest) {
 
     /* -- Analyze a specific crash by ID ----------------------------- */
     if (action === 'analyze') {
-      const crashId = body.crashId as string;
-      if (!crashId) return apiError('crashId is required', 400);
+      const crashId = body.crashId;
+      if (typeof crashId !== 'string' || !crashId) return apiError('crashId (string) is required', 400);
 
       const result = fullAnalysis();
       const report = result.reports.find((r) => r.id === crashId);

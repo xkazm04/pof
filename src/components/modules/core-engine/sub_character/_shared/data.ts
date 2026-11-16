@@ -8,7 +8,6 @@ import {
   User, Gamepad2, Wind, SlidersHorizontal, Sparkles, FlaskConical, Wand2,
 } from 'lucide-react';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
-import type { EntityMetadata } from '@/types/game-metadata';
 
 export const ACCENT = MODULE_COLORS.core;
 
@@ -116,7 +115,8 @@ export interface KeyDef {
   widthClass?: string;
 }
 
-/** Every non-mouse key a binding can resolve to must be drawn here (see input-bindings tests). */
+/** Every default-bound non-mouse key is drawn here (see input-bindings tests); a rebind to a key
+ *  this layout lacks renders in KeyboardVisualization's 'Other' row instead. */
 export const KEYBOARD_ROWS: KeyDef[][] = [
   [{ key: '1' }, { key: '2' }, { key: '3' }, { key: '4' }, { key: '5' }, { key: '6' }, { key: '7' }, { key: '8' }, { key: '9' }, { key: '0' }],
   [{ key: 'Q' }, { key: 'W' }, { key: 'E' }, { key: 'R' }, { key: 'T' }, { key: 'Y' }, { key: 'U' }, { key: 'I' }, { key: 'O' }, { key: 'P' }],
@@ -321,10 +321,6 @@ export const COMPARISON_STATS: CharacterStat[] = [
 
 /* ── Character Database ──────────────────────────────────────────────────── */
 
-const TIER_LEVELS: Record<string, [number, number]> = {
-  common: [1, 20], elite: [15, 35], boss: [30, 45], legendary: [40, 50],
-};
-
 interface CharDef {
   id: string; name: string; cat: string; sub: string;
   area: string; tier: string; tags: string[];
@@ -433,10 +429,13 @@ export function computeBalanceScores(characters: ComparisonCharacter[]): Balance
   });
 }
 
+/** Deviation bands (fraction of the roster mean): below `balanced` is balanced, `outlier` and above is an outlier. */
+export const DEVIATION_THRESHOLDS = { balanced: 0.1, outlier: 0.25 } as const;
+
 export function deviationColor(dev: number): string {
   const abs = Math.abs(dev);
-  if (abs < 0.1) return STATUS_SUCCESS;
-  if (abs < 0.25) return STATUS_WARNING;
+  if (abs < DEVIATION_THRESHOLDS.balanced) return STATUS_SUCCESS;
+  if (abs < DEVIATION_THRESHOLDS.outlier) return STATUS_WARNING;
   return STATUS_ERROR;
 }
 
@@ -452,15 +451,6 @@ export const PROPERTY_CAT_COLORS: Record<string, string> = {
   Combat: STATUS_ERROR,
   Camera: ACCENT_ORANGE,
 };
-
-/* ── Entity Metadata ─────────────────────────────────────────────────────── */
-
-export const CHARACTER_METADATA: EntityMetadata[] = CHAR_DEFS.map(d => ({
-  id: d.id, name: d.name, category: d.cat, subcategory: d.sub,
-  tags: d.tags, area: d.area, tier: d.tier,
-  level: TIER_LEVELS[d.tier]?.[0] ?? 1,
-  levelMax: TIER_LEVELS[d.tier]?.[1] ?? 50,
-}));
 
 /* ── Ability Categorization (Phase 2 F3) ────────────────────────────────────
  *

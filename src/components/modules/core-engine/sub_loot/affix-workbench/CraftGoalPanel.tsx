@@ -40,7 +40,7 @@ export function CraftGoalPanel({ report, onPrice, disabled = false }: CraftGoalP
 
       {!report && (
         <p className="text-xs font-mono text-text-muted">
-          Simulates crafting this affix set from an empty base with a copy of the default wallet. Your wallet and craft log are untouched.
+          Simulates crafting this affix set, each affix at or above its magnitude, from an empty base with a copy of the default wallet. Your wallet and craft log are untouched.
         </p>
       )}
 

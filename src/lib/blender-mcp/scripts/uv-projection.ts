@@ -1,4 +1,4 @@
-import { py } from '@/lib/blender-mcp/escape';
+import { py, pyNum } from '@/lib/blender-mcp/escape';
 
 /**
  * Emit Blender Python that re-UVs meshes with world-aligned planar projection:
@@ -21,7 +21,7 @@ export function worldAlignedUvScript(params: {
   return `
 import bpy
 
-TILE = ${params.tileMeters}
+TILE = ${pyNum(params.tileMeters)}
 TARGETS = [${targets}]
 
 def world_aligned_uv(obj):

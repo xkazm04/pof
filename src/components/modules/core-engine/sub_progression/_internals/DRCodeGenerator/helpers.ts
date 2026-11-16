@@ -77,8 +77,9 @@ export function generateGESource(configs: DRConfig[]): string {
 \t\tFGameplayModifierInfo& Mod = Modifiers[${i}];
 \t\tMod.Attribute = ${attrMap[c.attribute] ?? `UARPGAttributeSet::Get${c.attribute}Attribute()`};
 \t\tMod.ModifierOp = EGameplayModOp::Additive;
-\t\tMod.ModifierMagnitude = FGameplayEffectModifierMagnitude(
-\t\t\tFSetByCallerFloat(ARPGGameplayTags::Data_${c.attribute}_Bonus));
+\t\tFSetByCallerFloat SetByCaller;
+\t\tSetByCaller.DataTag = ARPGGameplayTags::Data_${c.attribute}_Bonus;
+\t\tMod.ModifierMagnitude = FGameplayEffectModifierMagnitude(SetByCaller);
 \t}`;
   }).join('\n\n');
 

@@ -144,6 +144,7 @@ function findSupport(inst: Instance, slots: Slot[], rng: () => number): Slot | n
       s.affordance.stackable &&
       s.prop.stackIndex + 1 < s.rootMaxStack &&
       footprintOf(s.size) >= inst.footprint &&
+      s.size[1] >= inst.asset.size[1] &&
       s.size[0] - s.usedWidth >= inst.asset.size[0],
   );
   if (candidates.length === 0) return null;

@@ -14,16 +14,17 @@ import type { BudgetStatus, DailySpend } from '@/types/cli-spend';
  * Every figure is labelled as a projection or a replay; nothing is stored or sent.
  */
 
-/** A typed limit: blank / invalid = no limit (mirrors the panel's save rule). */
+/** A typed limit: blank / invalid / <= 0 = no limit — the server's save rule
+ *  (`normalizeLimit` in src/app/api/cli-spend/route.ts stores 0 as "no limit"). */
 function parseLimit(input: string): number | null {
   if (input.trim() === '') return null;
   const n = Number(input);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** `3 Sep` for an instant, on the calendar of `zone`. */
+/** A short date for an instant, on the calendar of `zone`, in the viewer's locale (same as the reset time). */
 function shortDate(iso: string, zone: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: zone });
+  return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short', timeZone: zone });
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;

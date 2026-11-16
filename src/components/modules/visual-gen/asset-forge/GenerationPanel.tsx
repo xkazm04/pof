@@ -72,8 +72,8 @@ export function GenerationPanel() {
   const isMcpProvider = execution?.path === 'mcp';
 
   const composedPrompt = useMemo(
-    () => composeVisualPrompt({ subject, chipIds: selectedChipIds, mode }),
-    [subject, selectedChipIds, mode],
+    () => composeVisualPrompt({ subject, chipIds: selectedChipIds }),
+    [subject, selectedChipIds],
   );
   const effectivePrompt = (advanced ? rawPrompt : composedPrompt).trim();
   // Project style: append the active Style DNA fragment to the submitted prompt.

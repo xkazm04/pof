@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { requireOperator } from '@/lib/api-auth';
 import { verifyStaticAll, defaultStaticVerifyDeps } from '@/lib/catalog/acceptance/staticVerify';
 import { parseSweepFilter } from '@/lib/catalog/acceptance/regrade';
+import { readSweepBody } from '@/app/api/pipeline-artifacts/_lib/sweepBody';
 
 /**
  * L2 static-verify pass — runs the catalog pipelines' `staticChecks` against the REAL UE
@@ -29,8 +31,11 @@ export async function GET(req: NextRequest) {
  *  deferred when it's authored-but-not-yet-realized in UE). Body: { catalogId?, entityId? }. */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    const summary = verifyStaticAll(parseSweepFilter(body), defaultStaticVerifyDeps, { apply: true });
+    const denied = requireOperator(req);
+    if (denied) return denied;
+    const read = await readSweepBody(req);
+    if (!read.ok) return read.error;
+    const summary = verifyStaticAll(parseSweepFilter(read.data), defaultStaticVerifyDeps, { apply: true });
     return apiSuccess(summary);
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'verify-static POST failed', 500);

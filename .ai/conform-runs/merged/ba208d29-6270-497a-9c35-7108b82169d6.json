@@ -1,0 +1,128 @@
+{
+  "schema": "conform-run/1",
+  "worker": "ba208d29-6270-497a-9c35-7108b82169d6",
+  "subject": "eval-harness",
+  "evaluatedAt": "2026-11-09T00:34:21.015592+00:00",
+  "provider": "claude",
+  "model": "claude-opus-5-5",
+  "pairs": [
+    {
+      "context": "prompt-engineering",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "deviation",
+      "evidence": "src/types/prompt-evolution.ts:107 The prompt A/B rail sums duration over every trial, including failed runs and runs booked at 0 ms, then uses that mean to crown a winner on near-ties, so the tie-break compares a mix of outcomes and unmeasured runs rather than the cost of successful work.",
+      "techniques": [
+        {
+          "technique": "outcome-conditioned-cost",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/verdict.ts:158 The mean includes failed trials and has no both-succeeded view or incomplete state; the recipe path books trials with no duration, which default to 0 ms and enter the mean as instantaneous."
+        },
+        {
+          "technique": "metric-role-contract",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/verdict.ts:156 Duration acts as a second objective inside the verdict instead of a declared threshold, and no constraint can block a winner."
+        },
+        {
+          "technique": "judge-stability",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/judge-fitness.ts:136 Pass counts pool llm-panel, vlm and human judges and ignore rubricVersion and contentHash, so mixed instruments form one rate and a verdict on earlier content can be charged to the variant now stamped on the artifact."
+        },
+        {
+          "technique": "resolution-precondition",
+          "verdict": "deviation",
+          "evidence": "src/lib/prompt-evolution/ab-testing.ts:213 Decide-now crowns a winner at 3 serves per arm with no z check, by duration on a tie; auto-conclude records null below the weakest band, but this path turns a measured tie into a winner with a caution attached."
+        },
+        {
+          "technique": "candidate-write-access",
+          "verdict": "deviation",
+          "evidence": "src/app/api/checklist/complete/route.ts:79 A trial's success comes from the run's own callback and a missing field counts as success; auto-conclude can crown a winner on this self-reported basis when judged evidence is short."
+        },
+        {
+          "technique": "failure-signatures-beside-the-pass-rate",
+          "verdict": "deviation",
+          "evidence": "src/stores/promptEvolutionStore.ts:115 Each trial is one success bit, and arms carry only rates and counts, so two arms at the same rate cannot be told apart by how their runs failed."
+        },
+        {
+          "technique": "selection-over-noise",
+          "verdict": "conformant",
+          "evidence": "src/lib/prompt-evolution/verdict.ts:122 Epsilon-greedy serving gives arms unequal N, and the verdict note states both arms' counts in the same sentence as the result."
+        },
+        {
+          "technique": "treatment-election-rate",
+          "verdict": "not-applicable",
+          "evidence": "src/types/prompt-evolution.ts:157 The treatment is prompt text applied at dispatch, not a capability the candidate may decline."
+        }
+      ]
+    }
+  ],
+  "declined": [
+    {
+      "subject": "eval-harness",
+      "context": "catalog-pipeline-state",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "visual-gen-3d-model-runners",
+      "reason": "the seat returned unknown"
+    },
+    {
+      "subject": "eval-harness",
+      "context": "step-shared-primitives",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor at ProvenanceStrip.tsx:66 is the doc comment for the `explain` prop, which re-runs the step's checker. It does not show that no scenario is run, scored or aggregated here, so the anchor is incidental."
+    },
+    {
+      "subject": "eval-harness",
+      "context": "catalog-browser-ui",
+      "reason": "withdrawn after review: reviewer (sonnet): The anchor at globalCoachModel.ts:197 is a doc-comment line about re-grading through the same checker and judge bridge. It does not itself show that the precondition is absent, and the context re-derives grades."
+    }
+  ],
+  "consults": [
+    {
+      "ts": "2026-11-09T00:34:21.015592+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "step-shared-primitives",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T00:34:21.015592+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [],
+      "deviations": 0,
+      "context": "catalog-browser-ui",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    },
+    {
+      "ts": "2026-11-09T00:34:21.015592+00:00",
+      "bundle": "software-engineering",
+      "subjects": [
+        "eval-harness"
+      ],
+      "techniques": [
+        "candidate-write-access",
+        "failure-signatures-beside-the-pass-rate",
+        "judge-stability",
+        "metric-role-contract",
+        "outcome-conditioned-cost",
+        "resolution-precondition",
+        "selection-over-noise",
+        "treatment-election-rate"
+      ],
+      "deviations": 1,
+      "context": "prompt-engineering",
+      "via": "curator-multi:claude",
+      "model": "claude-opus-5-5"
+    }
+  ]
+}

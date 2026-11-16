@@ -28,8 +28,10 @@ export interface ComboScheduleOptions {
 
 export interface ScheduledCast {
   ability: ComboAbility;
-  /** Position within its own pass of the chain (0 = the opener). */
+  /** Position within its own pass of the chain (0 = the opener). Unknown ids are skipped, so this counts resolved casts only. */
   index: number;
+  /** Position of this cast's id in the RAW chain passed in (what a remove must target). */
+  chainIndex: number;
   /** Loop number (0 for a one-pass schedule). */
   loop: number;
   start: number;
@@ -93,20 +95,25 @@ export function comboCastDamage(ability: ComboAbility, multiplier: number, defen
 
 function run(ids: readonly string[], loops: number, opts: ComboScheduleOptions) {
   const table = opts.abilities ?? COMBO_ABILITY_MAP;
-  const chain = ids.map(id => table.get(id)).filter((a): a is ComboAbility => !!a);
+  const chain = ids
+    .map((id, chainIndex) => ({ ability: table.get(id), chainIndex }))
+    .filter((e): e is { ability: ComboAbility; chainIndex: number } => !!e.ability);
   const readyAt = new Map<string, number>();
   const casts: ScheduledCast[] = [];
   const loopEnds: number[] = [];
+  /** Per loop end: each distinct ability's remaining cooldown, i.e. the schedule's whole carried state. */
+  const states: number[][] = [];
+  const stateIds = [...new Set(chain.map(e => e.ability.id))].sort();
   let t = 0;
   for (let loop = 0; loop < loops; loop++) {
-    chain.forEach((ability, index) => {
+    chain.forEach(({ ability, chainIndex }, index) => {
       const ready = readyAt.get(ability.id) ?? 0;
       const waited = ready > t ? ready - t : 0;
       const start = t + waited;
       const multiplier = comboMultiplierAt(ability, index);
       const end = start + ability.animDuration;
       casts.push({
-        ability, index, loop, start, end, waited,
+        ability, index, chainIndex, loop, start, end, waited,
         waitedOn: waited > 0 ? ability.id : null,
         multiplier,
         damage: comboCastDamage(ability, multiplier, opts.defense),
@@ -115,8 +122,9 @@ function run(ids: readonly string[], loops: number, opts: ComboScheduleOptions) 
       t = end;
     });
     loopEnds.push(t);
+    states.push(stateIds.map(id => Math.max(0, (readyAt.get(id) ?? 0) - t)));
   }
-  return { casts, loopEnds };
+  return { casts, loopEnds, states };
 }
 
 /** One cooldown-legal pass of the chain (unknown ids are skipped). */
@@ -136,18 +144,39 @@ export function scheduleCombo(ids: readonly string[], opts: ComboScheduleOptions
   };
 }
 
-/** The chain looped `cycles` times (≥ 2); reports the steady period and what binds it. */
+/** Loop budget for the steady-state search; a chain that has not repeated by then reads its last loop. */
+const MAX_SUSTAINED_LOOPS = 64;
+/** Longest repeat (in loops) the steady-state search recognises. */
+const MAX_REPEAT_LOOPS = 8;
+const STATE_EPS = 1e-9;
+
+const sameState = (a: readonly number[], b: readonly number[]) =>
+  a.every((v, i) => Math.abs(v - b[i]) <= STATE_EPS);
+
+/**
+ * The chain looped at least `cycles` times (>= 2), then on until the carried cooldown state at a
+ * loop end repeats an earlier one (the schedule is then exactly periodic); reports that steady
+ * period and what binds it. A fixed window can still be inside the transient.
+ */
 export function sustainedCycle(
   ids: readonly string[], cycles = 6, opts: ComboScheduleOptions = {},
 ): SustainedCycle {
-  const loops = Math.max(2, Math.floor(cycles));
-  const { casts, loopEnds } = run(ids, loops, opts);
-  const last = casts.filter(c => c.loop === loops - 1);
-  if (last.length === 0) return { period: 0, damagePerCycle: 0, sustainedDps: 0, binding: null };
-  const period = loopEnds[loops - 1] - loopEnds[loops - 2];
-  const damagePerCycle = last.reduce((s, c) => s + c.damage, 0);
+  const minLoops = Math.max(2, Math.floor(cycles));
+  const loops = Math.max(minLoops, MAX_SUSTAINED_LOOPS);
+  const { casts, loopEnds, states } = run(ids, loops, opts);
+  if (!casts.some(c => c.loop === loops - 1)) return { period: 0, damagePerCycle: 0, sustainedDps: 0, binding: null };
+  let end = loops - 1;
+  let span = 1;
+  search: for (let k = minLoops - 1; k < loops; k++) {
+    for (let len = 1; len <= Math.min(MAX_REPEAT_LOOPS, k); len++) {
+      if (sameState(states[k], states[k - len])) { end = k; span = len; break search; }
+    }
+  }
+  const window = casts.filter(c => c.loop > end - span && c.loop <= end);
+  const period = (loopEnds[end] - loopEnds[end - span]) / span;
+  const damagePerCycle = window.reduce((sum, c) => sum + c.damage, 0) / span;
   const waitBy = new Map<string, number>();
-  for (const c of last) if (c.waitedOn) waitBy.set(c.waitedOn, (waitBy.get(c.waitedOn) ?? 0) + c.waited);
+  for (const c of window) if (c.waitedOn) waitBy.set(c.waitedOn, (waitBy.get(c.waitedOn) ?? 0) + c.waited);
   let binding: string | null = null;
   let most = 0;
   for (const [id, w] of waitBy) if (w > most) { most = w; binding = id; }

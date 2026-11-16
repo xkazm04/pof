@@ -3,7 +3,7 @@ import {
 } from 'lucide-react';
 import {
   STATUS_ERROR, ACCENT_EMERALD, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING,
-  MODULE_COLORS,
+  STATUS_MUTED, MODULE_COLORS,
 } from '@/lib/chart-colors';
 import type { EventCategory, PriorityLevel, AudioEvent } from './types';
 
@@ -44,7 +44,9 @@ export const CATEGORY_CONFIG: Record<EventCategory, {
 };
 
 export const PRIORITY_CONFIG: Record<PriorityLevel, { color: string; label: string; weight: number }> = {
-  low: { color: 'var(--text-muted)', label: 'Low', weight: 0 },
+  // A hex, not a CSS var: EventEditor tints these with `withOpacity` (a suffix
+  // concat), and `var(--text-muted)1a` is invalid CSS the browser drops.
+  low: { color: STATUS_MUTED, label: 'Low', weight: 0 },
   normal: { color: STATUS_INFO, label: 'Normal', weight: 1 },
   high: { color: STATUS_WARNING, label: 'High', weight: 2 },
   critical: { color: STATUS_ERROR, label: 'Critical', weight: 3 },
@@ -71,3 +73,15 @@ export const DEFAULT_EVENTS: AudioEvent[] = [
   { id: 'evt-12', name: 'Exploration Layer', category: 'music', trigger: 'OnExplorationStart', priority: 'normal', spatial: '2d', concurrency: 1, cooldownMs: 0, tags: ['layer', 'explore'] },
   { id: 'evt-13', name: 'Boss Theme', category: 'music', trigger: 'OnBossEncounterStart', priority: 'critical', spatial: '2d', concurrency: 1, cooldownMs: 0, tags: ['boss', 'layer'] },
 ];
+
+/** Per-event voice cap, shared by every input that edits `AudioEvent.concurrency`. */
+export const MAX_EVENT_CONCURRENCY = 16;
+
+/**
+ * Concurrency is a COUNT of voices, so a typed fraction is floored before it is
+ * stored (`2.5` used to be kept and reach the generator prompt verbatim).
+ */
+export function clampEventConcurrency(raw: string): number {
+  const n = Math.floor(Number(raw));
+  return Number.isFinite(n) ? Math.min(MAX_EVENT_CONCURRENCY, Math.max(1, n)) : 1;
+}

@@ -6,10 +6,11 @@ import { useProjectStore } from '@/stores/projectStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
 import { type CLITask, type CallbackStatus } from '@/lib/cli-task';
-import { composeTaskDispatch, STATIC_VARIANT_ID } from '@/lib/prompt-evolution/dispatch-resolve';
+import { composeTaskDispatch } from '@/lib/prompt-evolution/dispatch-resolve';
 import type { SkillId } from '@/components/cli/skills';
 import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
 import { logger } from '@/lib/logger';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import { isExpensiveTaskType } from '@/lib/cli-spend/preflight';
 import { fetchPreflightVerdict } from '@/lib/cli-spend-client';
@@ -21,6 +22,10 @@ interface DispatchMeta {
   label?: string;
   /** Prompt-evolution variant this dispatch resolved to (or 'static'). */
   variantId?: string;
+  /** Module this run is FOR, when it differs from the host the tab is shown in. */
+  moduleId?: SubModuleId;
+  /** Skill packs resolved for THIS dispatch; applied to the session before the prompt is sent. */
+  skills?: SkillId[];
 }
 
 interface UseModuleCLIOptions {
@@ -40,11 +45,27 @@ interface UseModuleCLIOptions {
    * unaffected.
    */
   onComplete?: (success: boolean, callbackStatus?: CallbackStatus) => void;
+  /**
+   * Attribute each execute()d run to its TASK's module (session analytics + the
+   * anti-pattern check) instead of the host `moduleId`. For a host mounted once that
+   * dispatches work for many modules (the Unified Summary's lift-plan Review): the
+   * tab stays in the host module, the outcome credits the module the run was for.
+   */
+  attributeToTaskModule?: boolean;
+}
+
+/** Lets a supervising host observe what execute() decided before anything launched. */
+export interface ExecuteControl {
+  /** Read after the async prepare; false drops the launch (the host cancelled meanwhile). */
+  shouldDispatch?: () => boolean;
+  /** The spend preflight was declined, so nothing launched and onComplete will not fire. */
+  onDeclined?: () => void;
 }
 
 export interface UseModuleCLIResult {
   sendPrompt: (prompt: string, meta?: DispatchMeta) => void;
-  execute: (task: CLITask) => Promise<void>;
+  /** Resolves true when a prompt was dispatched, false when nothing launched (spend preflight declined, or the host cancelled). */
+  execute: (task: CLITask, control?: ExecuteControl) => Promise<boolean>;
   isRunning: boolean;
 }
 
@@ -60,6 +81,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   const findSessionByKey = useCLIPanelStore((s) => s.findSessionByKey);
   const setActiveTab = useCLIPanelStore((s) => s.setActiveTab);
   const setSessionTaskMeta = useCLIPanelStore((s) => s.setSessionTaskMeta);
+  const setSessionSkills = useCLIPanelStore((s) => s.setSessionSkills);
 
   const isRunning = useCLIPanelStore((s) => {
     const entry = Object.values(s.sessions).find(
@@ -73,7 +95,8 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   const taskStartRef = useRef<string>('');
   // The prompt-evolution variant the last dispatch resolved to (or 'static') —
   // recorded with the outcome so A/B attribution can close the loop.
-  const lastVariantIdRef = useRef<string>(STATIC_VARIANT_ID);
+  // The module the last dispatch was FOR (null = the host module).
+  const lastRunModuleRef = useRef<SubModuleId | null>(null);
 
   // Fire onComplete from the run door's endRun transition (cliPanelStore). endRun
   // releases isRunning AND records THIS run's outcome in one store write, so the
@@ -116,15 +139,20 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
             || lastPromptRef.current.includes('## Build Command');
 
           recordSessionOutcome({
-            moduleId: moduleIdRef.current,
+            moduleId: lastRunModuleRef.current ?? moduleIdRef.current,
             sessionKey: key,
             prompt: lastPromptRef.current,
             hadProjectContext,
             success,
             durationMs,
             startedAt: taskStartRef.current,
-            promptVariantId: lastVariantIdRef.current,
           });
+          // The context belongs to THAT dispatch. A later run in this session the
+          // hook did not dispatch (a follow-up typed in the terminal, an Activity
+          // feed prompt routed into the tab) must not be recorded again under the
+          // old prompt and an inflated duration from the old start.
+          lastPromptRef.current = '';
+          taskStartRef.current = '';
         }
 
         onCompleteRef.current?.(success, callbackStatus);
@@ -137,7 +165,8 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // Track for analytics
       lastPromptRef.current = prompt;
       taskStartRef.current = new Date().toISOString();
-      lastVariantIdRef.current = meta?.variantId ?? STATIC_VARIANT_ID;
+      const runModuleId = meta?.moduleId ?? opts.moduleId;
+      lastRunModuleRef.current = meta?.moduleId ?? null;
 
       let tabId = findSessionByKey(opts.sessionKey);
       if (!tabId) {
@@ -150,6 +179,9 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
         });
       }
       setActiveTab(tabId);
+      // Applied on the session that exists NOW (new or reused), so the packs are
+      // injected into this run regardless of when the telemetry read finished.
+      if (meta?.skills?.length) setSessionSkills(tabId, meta.skills);
 
       // Attribute spend to the dispatched task type (defaults to a free-typed
       // interactive prompt). The terminal reads this back when the run's cost
@@ -163,11 +195,11 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // this; the user gets the warning post-hoc just like an ESLint warning.
       void usePatternLibraryStore
         .getState()
-        .checkPromptBeforeDispatch(prompt, opts.moduleId)
+        .checkPromptBeforeDispatch(prompt, runModuleId)
         .then((warnings) => {
           if (warnings.length > 0) {
             logger.warn(
-              `[anti-pattern] dispatched ${opts.moduleId} prompt matched ${warnings.length} known-failure pattern${warnings.length === 1 ? '' : 's'}:`,
+              `[anti-pattern] dispatched ${runModuleId} prompt matched ${warnings.length} known-failure pattern${warnings.length === 1 ? '' : 's'}:`,
               warnings.map((w) => ({
                 id: w.antiPattern.id,
                 severity: w.antiPattern.severity,
@@ -184,7 +216,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // model + effort for this run (Quality Program WS0). See src/lib/cli-dispatch.ts.
       dispatchPromptWhenReady(tabId, prompt, meta?.taskType);
     },
-    [findSessionByKey, createSession, setActiveTab, setSessionTaskMeta, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
+    [findSessionByKey, createSession, setActiveTab, setSessionTaskMeta, setSessionSkills, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
   );
 
   /**
@@ -195,24 +227,29 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
    * create the task and then call execute(task) instead of building prompts.
    */
   const execute = useCallback(
-    async (task: CLITask) => {
+    async (task: CLITask, control?: ExecuteControl) => {
       // Pre-flight budget guardrail — for resource-intensive task types (live
       // editor runs, broad scans), check the spend guard before doing any work.
       // Only interrupts under genuine budget pressure; never blocks on an error.
       if (isExpensiveTaskType(task.type)) {
         const verdict = await fetchPreflightVerdict(task.type);
         const proceed = await requestPreflightConfirm(verdict);
-        if (!proceed) return;
+        if (!proceed) {
+          control?.onDeclined?.();
+          return false;
+        }
       }
 
       // Scan project for dynamic context (uses cache if fresh)
       const scanProject = useProjectStore.getState().scanProject;
       await scanProject();
 
-      // Resolve adaptive skills from telemetry patterns (fire-and-forget on failure).
-      // The project is passed EXPLICITLY: these patterns choose which skill packs are
-      // injected into the prompt, and the route no longer serves an unscoped read.
-      resolveAndApplySkills(opts.sessionKey, useProjectStore.getState().projectPath);
+      // Resolve adaptive skills from telemetry patterns. Awaited (bounded, never
+      // rejects) alongside the dispatch composition so the packs ride WITH this
+      // dispatch instead of racing it. The project is passed EXPLICITLY: these
+      // patterns choose which skill packs are injected into the prompt, and the
+      // route no longer serves an unscoped read.
+      const skillsPending = resolveSkills(useProjectStore.getState().projectPath);
 
       const { projectName, projectPath: pp, ueVersion, dynamicContext } = useProjectStore.getState();
       const ctx = { projectName, projectPath: pp, ueVersion, dynamicContext };
@@ -222,40 +259,49 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // `seed: true` — a REAL dispatch with no adopted variant captures the
       // prompt it served as the item's baseline (v1), fire-and-forget, so the
       // A/B rail has an incumbent to challenge. Previews pass no options.
-      const { prompt: enriched, variantId } = await composeTaskDispatch(task, ctx, { seed: true });
-      sendPrompt(enriched, { taskType: task.type, label: task.label, variantId });
+      const [{ prompt: enriched, variantId }, skills] = await Promise.all([
+        composeTaskDispatch(task, ctx, { seed: true }),
+        skillsPending,
+      ]);
+      if (control?.shouldDispatch && !control.shouldDispatch()) return false;
+      sendPrompt(enriched, {
+        taskType: task.type,
+        label: task.label,
+        variantId,
+        moduleId: opts.attributeToTaskModule ? task.moduleId : undefined,
+        skills,
+      });
+      return true;
     },
-    [sendPrompt, opts.sessionKey],
+    [sendPrompt, opts.attributeToTaskModule],
   );
 
   return { sendPrompt, execute, isRunning };
 }
 
 /**
- * Resolve adaptive skills from telemetry patterns and apply to the session.
- * Non-blocking — silently skips on failure so it never blocks prompt dispatch.
+ * Resolve adaptive skills from telemetry patterns for one dispatch. Bounded by
+ * `terminalReadyFallback` and never rejects: any failure resolves to no packs, so it
+ * never blocks prompt dispatch.
  *
  * `projectPath` is required by the route: the resolved packs come from THIS project's
  * telemetry scan. With no project set the route refuses and no packs are injected —
  * which is the honest outcome, where the previous unscoped read injected whichever
  * project was scanned most recently.
  */
-function resolveAndApplySkills(sessionKey: string, projectPath: string | null): void {
-  if (!projectPath) return;
-  fetch('/api/telemetry', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'resolve-skills', projectPath }),
-  })
-    .then((res) => (res.ok ? res.json() : null))
-    .then((envelope: { success: boolean; data: { skills?: SkillId[] } } | null) => {
-      const json = envelope?.success ? envelope.data : null;
-      if (!json?.skills?.length) return;
-      const { sessions, tabOrder } = useCLIPanelStore.getState();
-      const tabId = tabOrder.find((id) => sessions[id]?.sessionKey === sessionKey);
-      if (tabId) {
-        useCLIPanelStore.getState().setSessionSkills(tabId, json.skills);
-      }
-    })
-    .catch(() => {});
+async function resolveSkills(projectPath: string | null): Promise<SkillId[]> {
+  if (!projectPath) return [];
+  try {
+    const res = await fetch('/api/telemetry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resolve-skills', projectPath }),
+      signal: AbortSignal.timeout(UI_TIMEOUTS.terminalReadyFallback),
+    });
+    if (!res.ok) return [];
+    const envelope = (await res.json()) as { success: boolean; data: { skills?: SkillId[] } } | null;
+    return envelope?.success ? (envelope.data?.skills ?? []) : [];
+  } catch {
+    return [];
+  }
 }

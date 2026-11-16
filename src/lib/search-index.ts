@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import { HIGHLIGHT_OPEN, HIGHLIGHT_CLOSE } from '@/lib/search-markers';
 import { SUB_MODULES, CATEGORIES, MODULE_LABELS } from './module-registry';
 import { MODULE_FEATURE_DEFINITIONS } from './feature-definitions';
 
@@ -223,8 +224,8 @@ export function searchIndex(
       doc_id,
       doc_type,
       module_id,
-      snippet(search_index, 3, '→', '←', '…', 24) AS title_snippet,
-      snippet(search_index, 4, '→', '←', '…', 40) AS body_snippet,
+      snippet(search_index, 3, '${HIGHLIGHT_OPEN}', '${HIGHLIGHT_CLOSE}', '…', 24) AS title_snippet,
+      snippet(search_index, 4, '${HIGHLIGHT_OPEN}', '${HIGHLIGHT_CLOSE}', '…', 40) AS body_snippet,
       rank
     FROM search_index
     WHERE search_index MATCH ?

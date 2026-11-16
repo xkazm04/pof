@@ -35,13 +35,22 @@ function cmp(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/**
+ * THE deficit rule: how many entities short a bucket is, un-rounded (`share * total - got`).
+ * `planClosure` fills the largest first and `rankCatalogGaps` orders by it, so the two agree on
+ * the top gap; `GapTarget.deficit` is the display integer and never the ordering key.
+ */
+export function gapDeficit(got: number, share: number, total: number): number {
+  return share * total - got;
+}
+
 interface Dim { attr: string; hist: Record<string, number>; total: number; share: Record<string, number> }
 
 function openGaps(d: Dim): Array<{ value: string; deficit: number }> {
   const out: Array<{ value: string; deficit: number }> = [];
   for (const [value, s] of Object.entries(d.share)) {
     const got = d.hist[value] ?? 0;
-    if (isUnderrepresented(got, s, d.total)) out.push({ value, deficit: s * d.total - got });
+    if (isUnderrepresented(got, s, d.total)) out.push({ value, deficit: gapDeficit(got, s, d.total) });
   }
   return out.sort((a, b) => b.deficit - a.deficit || cmp(a.value, b.value));
 }

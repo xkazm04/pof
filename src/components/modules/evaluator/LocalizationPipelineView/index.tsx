@@ -156,7 +156,8 @@ export function LocalizationPipelineView() {
             <SubTab
               key={t.key}
               id={tabId(t.key)}
-              controls={panelId(t.key)}
+              // Only the active panel is mounted; an id that resolves to nothing is invalid ARIA.
+              controls={viewTab === t.key ? panelId(t.key) : undefined}
               label={t.label}
               active={viewTab === t.key}
               onClick={() => setViewTab(t.key)}

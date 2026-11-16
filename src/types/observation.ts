@@ -221,6 +221,9 @@ export function buildPerfCapturePlan(
   if (!Number.isFinite(windowFrames) || windowFrames < 1) {
     throw new RangeError(`perf-capture window must cover at least one frame (totalSeconds=${s.totalSeconds})`);
   }
+  // The baseline and slack feed the same frame cap: a non-finite one would put `NaN` on the launch line.
+  if (!Number.isFinite(baselineFrames)) throw new RangeError(`perf-capture settle must be finite (settle=${s.settle})`);
+  if (!Number.isFinite(slackFrames)) throw new RangeError(`perf-capture slack must be finite (slackFrames=${slackFrames})`);
   return { fps, baselineFrames, windowFrames, captureFrameCap: baselineFrames + windowFrames + Math.max(0, slackFrames) };
 }
 
@@ -311,6 +314,18 @@ export function boundSamples(samples: readonly ObsSample[], max = EVIDENCE_MAX_S
 /** Truncate free-form judge text to the evidence cap (adds an ellipsis when clipped). Pure. */
 export function boundJudgeText(text: string, max = EVIDENCE_MAX_TEXT): string {
   return text.length <= max ? text : `${text.slice(0, max)}…`;
+}
+
+/** True when the evidence carries at least one non-empty proof field (markers, samples, stats,
+ *  screenshot or judge text). `{ kind, at }` alone is a timestamped claim, not a proof. Pure. */
+export function hasProof(e: GateEvidence): boolean {
+  return Boolean(
+    e.markers?.length ||
+    e.samples?.length ||
+    (e.stats && Object.keys(e.stats).length) ||
+    e.screenshotPath ||
+    e.judgeText,
+  );
 }
 
 /** One-line human summary of evidence for the notification payload / webhook. Pure. */

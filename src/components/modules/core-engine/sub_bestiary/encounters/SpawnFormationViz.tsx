@@ -17,21 +17,28 @@ interface SpawnFormationVizProps {
 /** Reposition spawn points based on formation type */
 function layoutPoints(points: SpawnPoint[], formation: SpawnFormation): { x: number; y: number; order: number; id: number; color?: string; role?: string }[] {
   const cy = 70;
+  // Markers are r=10 with a role label 16 below, inside a 140 box: keep centres in
+  // [MARGIN, 140 - MARGIN] and spread them horizontally so no two markers touch.
+  const MARGIN = 12;
+  const spread = (n: number, from: number, to: number) =>
+    (i: number) => (n > 1 ? from + (i * (to - from)) / (n - 1) : (from + to) / 2);
   if (formation === 'Line') {
-    const spacing = 100 / (points.length + 1);
-    return points.map((sp, i) => ({ id: sp.id, order: sp.order, x: 20 + spacing * (i + 1), y: cy, color: sp.color, role: sp.role }));
+    const xAt = spread(points.length, MARGIN, 140 - MARGIN);
+    return points.map((sp, i) => ({ id: sp.id, order: sp.order, x: xAt(i), y: cy, color: sp.color, role: sp.role }));
   }
   if (formation === 'Ambush') {
-    // Two clusters flanking top-left and bottom-right
+    // Two clusters flanking the arena: one row top-left, one row bottom-right
     const half = Math.ceil(points.length / 2);
+    const topX = spread(half, MARGIN, 70);
+    const bottomX = spread(points.length - half, 70, 140 - MARGIN);
     return points.map((sp, i) => {
-      const cluster = i < half;
-      const idx = cluster ? i : i - half;
-      const groupSize = cluster ? half : points.length - half;
-      const baseX = cluster ? 25 : 115;
-      const baseY = cluster ? 30 : 110;
-      const offsetY = groupSize > 1 ? (idx / (groupSize - 1) - 0.5) * 40 : 0;
-      return { id: sp.id, order: sp.order, x: baseX, y: baseY + offsetY, color: sp.color, role: sp.role };
+      const top = i < half;
+      return {
+        id: sp.id, order: sp.order,
+        x: top ? topX(i) : bottomX(i - half),
+        y: top ? 28 : 108,
+        color: sp.color, role: sp.role,
+      };
     });
   }
   // Default: Circle (original positions)

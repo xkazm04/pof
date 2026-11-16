@@ -1,0 +1,86 @@
+{
+ "schema": "conform-run/1",
+ "worker": "3d3404a4-0c67-4e8c-bc8a-59c3a2852dd9",
+ "subject": "prompt-assembly",
+ "evaluatedAt": "2026-11-06T03:24:10.630478+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "step-shared-primitives",
+   "subject": "prompt-assembly",
+   "bundle": "software-engineering",
+   "state": "deviation",
+   "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:33 The shared Produce primitive takes a pre-rendered prompt string from every call site instead of typed inputs. Bespoke steps such as ItemArt.tsx and ItemGate.tsx (outside this context) build their own `${entity.name} ... ${dir}` strings this way, so text the model reads bypasses the single assembler in src/lib/catalog/stepPrompt.ts: the many-doors sprawl the standard names.",
+   "techniques": [
+    {
+     "technique": "layered-composition",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/steps/shared/CliProduce.tsx:33 The door accepts prose, not data. The component's own doc (line 82) says building the prompt 'stays the caller's job'."
+    },
+    {
+     "technique": "variable-interpolation",
+     "verdict": "deviation",
+     "evidence": "src/components/layout-lab/steps/shared/libraryReference.ts:33 The list variable renders every picked asset with no cap coordinated with the budget. Missing values are handled honestly, though: NO_LICENSE here, and reasonClause's declared default at genericFixCopy.ts:61."
+    },
+    {
+     "technique": "context-budgeting",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/stepEvidence.ts:77 Heavy material (images, meshes) moves out of line: it is cited by served URL for the session to fetch, never inlined."
+    },
+    {
+     "technique": "task-envelope",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/genericFixCopy.ts:79 The corrective task's done criterion is the named acceptance criterion its checker reads. Line 80 scopes the change positively ('Change only what that criterion names')."
+    },
+    {
+     "technique": "fingerprinting-and-cache-keys",
+     "verdict": "conformant",
+     "evidence": "src/components/layout-lab/steps/shared/genHistory.ts:54 Ledger aspect only: the full prompt text is kept per produced batch (bounded to 12 batches). No digest exists, and the session-gate half does not apply to one-shot dispatch."
+    }
+   ]
+  }
+ ],
+ "declined": [
+  {
+   "subject": "prompt-assembly",
+   "context": "catalog-pipeline-state",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "prompt-evolution",
+   "reason": "evidence leans on lib/prompt-evolution/mutations.ts, which is not a tracked file"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "platform-services-api",
+   "reason": "the seat returned unknown"
+  },
+  {
+   "subject": "prompt-assembly",
+   "context": "project-ops-api",
+   "reason": "the seat returned unknown"
+  }
+ ],
+ "consults": [
+  {
+   "ts": "2026-11-06T03:24:10.630478+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "prompt-assembly"
+   ],
+   "techniques": [
+    "context-budgeting",
+    "fingerprinting-and-cache-keys",
+    "layered-composition",
+    "task-envelope",
+    "variable-interpolation"
+   ],
+   "deviations": 1,
+   "context": "step-shared-primitives",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

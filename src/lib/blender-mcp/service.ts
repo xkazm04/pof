@@ -1,4 +1,5 @@
 import net from 'net';
+import { StringDecoder } from 'string_decoder';
 import { ok, err, type Result } from '@/types/result';
 import { logger } from '@/lib/logger';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -64,6 +65,53 @@ const PROVIDER_COMMANDS: Record<
     import: 'import_generated_asset_hunyuan',
   },
 };
+
+const JOB_STATUS_WORDS: Record<string, JobStatusResult['status']> = {
+  pending: 'pending',
+  queued: 'pending',
+  waiting: 'pending',
+  submitted: 'pending',
+  processing: 'processing',
+  running: 'processing',
+  started: 'processing',
+  generating: 'processing',
+  in_progress: 'processing',
+  'in-progress': 'processing',
+  completed: 'completed',
+  complete: 'completed',
+  done: 'completed',
+  finished: 'completed',
+  success: 'completed',
+  succeeded: 'completed',
+  failed: 'failed',
+  failure: 'failed',
+  error: 'failed',
+  errored: 'failed',
+  cancelled: 'failed',
+  canceled: 'failed',
+  timeout: 'failed',
+  timed_out: 'failed',
+};
+
+/**
+ * Fold whatever status word the addon relayed into the JobStatus union. A missing status is
+ * `pending`; an unrecognised word is `processing` (never `completed`: a wrong guess must not
+ * grade an unfinished job) and is logged so the vocabulary can be extended.
+ */
+function normalizeJobStatus(raw: unknown, provider: GenerationProvider): JobStatusResult['status'] {
+  if (raw === undefined || raw === null) return 'pending';
+  const known = JOB_STATUS_WORDS[String(raw).trim().toLowerCase()];
+  if (known) return known;
+  logger.warn(`[BlenderMCP] ${provider} poll returned unknown status "${String(raw).slice(0, 40)}"; treating as processing`);
+  return 'processing';
+}
+
+/** A finite 0-100 progress; anything non-numeric reads as 0. */
+function normalizeJobProgress(raw: unknown): number {
+  const n = typeof raw === 'number' || typeof raw === 'string' ? Number(raw) : NaN;
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, n));
+}
 
 class BlenderMCPService {
   private socket: net.Socket | null = null;
@@ -270,6 +318,10 @@ class BlenderMCPService {
 
       const socket = this.socket;
       let buffer = '';
+      // One decoder per response: it holds the leading bytes of a multi-byte UTF-8
+      // character split across two TCP chunks, where a per-chunk `toString` turned
+      // each half into U+FFFD (an em dash in a raise message, an accented name).
+      const decoder = new StringDecoder('utf8');
       let settled = false;
 
       // ── Incremental parse-readiness gate ──────────────────────────────────
@@ -289,6 +341,8 @@ class BlenderMCPService {
       let escaped = false;
       let sawStructure = false;
       let scanPos = 0;
+      // The ceiling is in BYTES; `buffer.length` counts UTF-16 units and undercounts multi-byte text.
+      let receivedBytes = 0;
       const settle = (result: Result<unknown, string>) => {
         if (settled) return;
         settled = true;
@@ -322,7 +376,8 @@ class BlenderMCPService {
       const onError = (e: Error) => settle(err(`Socket error: ${e.message}`));
 
       const onData = (chunk: Buffer) => {
-        buffer += chunk.toString('utf-8');
+        buffer += decoder.write(chunk);
+        receivedBytes += chunk.length;
 
         // Bounded receive buffer. A wedged/garbage response (never closes its
         // top-level value, so the brace-depth gate below never trips) would
@@ -332,7 +387,7 @@ class BlenderMCPService {
         // with the socket instead of desyncing the next command. The cap is far
         // above any legitimate screenshot/asset payload, so valid large
         // responses are unaffected.
-        if (buffer.length > MAX_RESPONSE_BYTES) {
+        if (receivedBytes > MAX_RESPONSE_BYTES) {
           settle(
             err(
               `Response exceeded ${MAX_RESPONSE_BYTES} bytes without a complete value — connection reset to avoid a wedged buffer; reconnect to continue`,
@@ -419,7 +474,7 @@ class BlenderMCPService {
 
   async executeCode(code: string): Promise<Result<ExecuteOutput, string>> {
     if (!code.trim()) return err('Code cannot be empty');
-    if (code.length > 100_000) return err('Code exceeds 100KB limit');
+    if (Buffer.byteLength(code, 'utf8') > 100_000) return err('Code exceeds 100KB limit');
     const result = await this.sendCommand({
       type: 'execute_code',
       params: { code },
@@ -475,10 +530,14 @@ class BlenderMCPService {
     const result = await this.sendCommand({ type, params: { prompt } });
     if (!result.ok) return result;
     const data = result.data as Record<string, unknown>;
-    return ok({
-      jobId: String(data?.jobId ?? ''),
-      status: 'pending',
-    });
+    const jobId = typeof data?.jobId === 'string' || typeof data?.jobId === 'number' ? String(data.jobId) : '';
+    // No id = nothing to poll, import or ledger. Coercing it to '' filed every such job
+    // under one empty key; name the gap instead (the provider may still have billed it).
+    if (!jobId) {
+      logger.warn(`[BlenderMCP] ${type} reply carried no jobId: ${JSON.stringify(data).slice(0, 200)}`);
+      return err(`Blender addon accepted ${type} but returned no job id, so the job cannot be tracked`);
+    }
+    return ok({ jobId, status: 'pending' });
   }
 
   // ── Asset sourcing ──────────────────────────────────────────────────────
@@ -558,9 +617,8 @@ class BlenderMCPService {
     const data = result.data as Record<string, unknown>;
     return ok({
       jobId,
-      status:
-        (data?.status as JobStatusResult['status']) ?? 'pending',
-      progress: Number(data?.progress ?? 0),
+      status: normalizeJobStatus(data?.status, provider),
+      progress: normalizeJobProgress(data?.progress),
       resultUrl: data?.resultUrl as string | undefined,
     });
   }

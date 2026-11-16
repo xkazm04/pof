@@ -44,7 +44,7 @@ describe('moduleStore — server-held completion ledger', () => {
         response: {
           body: {
             success: true,
-            data: { checklistProgress: { m: { a: true } }, checklistCompletedAt: { m: { a: T } } },
+            data: { checklistProgress: { 'arpg-combat': { 'acb-1': true } }, checklistCompletedAt: { 'arpg-combat': { 'acb-1': T } } },
           },
         },
       },
@@ -52,7 +52,7 @@ describe('moduleStore — server-held completion ledger', () => {
     ]);
 
     await useModuleStore.getState().loadProgress('A');
-    expect(useModuleStore.getState().checklistCompletedAt.m?.a).toBe(T);
+    expect(useModuleStore.getState().checklistCompletedAt['arpg-combat']?.['acb-1']).toBe(T);
 
     await useModuleStore.getState().saveProgress('A');
     const post = fetchMock.mock.calls.find(
@@ -60,13 +60,13 @@ describe('moduleStore — server-held completion ledger', () => {
     );
     expect(post).toBeDefined();
     const body = JSON.parse((post![1] as RequestInit).body as string);
-    expect(body.checklistCompletedAt).toEqual({ m: { a: T } });
+    expect(body.checklistCompletedAt).toEqual({ 'arpg-combat': { 'acb-1': T } });
   });
 
   it('a same-project reload merges server and local stamps, earliest wins, pruned to done items', async () => {
     useModuleStore.setState({
       progressProjectPath: 'A',
-      checklistCompletedAt: { m: { a: T_LOCAL, gone: T_LOCAL } },
+      checklistCompletedAt: { 'arpg-combat': { 'acb-1': T_LOCAL, gone: T_LOCAL } },
     });
     mockFetchRoutes([
       {
@@ -74,12 +74,12 @@ describe('moduleStore — server-held completion ledger', () => {
         response: {
           body: {
             success: true,
-            data: { checklistProgress: { m: { a: true, b: true } }, checklistCompletedAt: { m: { a: T, b: T } } },
+            data: { checklistProgress: { 'arpg-combat': { 'acb-1': true, 'acb-2': true } }, checklistCompletedAt: { 'arpg-combat': { 'acb-1': T, 'acb-2': T } } },
           },
         },
       },
     ]);
     await useModuleStore.getState().loadProgress('A');
-    expect(useModuleStore.getState().checklistCompletedAt).toEqual({ m: { a: T_LOCAL, b: T } });
+    expect(useModuleStore.getState().checklistCompletedAt).toEqual({ 'arpg-combat': { 'acb-1': T_LOCAL, 'acb-2': T } });
   });
 });

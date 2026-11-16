@@ -251,7 +251,7 @@ const INVENTORY_DETAIL: Record<string, InventoryDetail> = {
       {
         name: 'bPenalizeLowGround',
         type: 'bool',
-        defaultValue: 'false',
+        defaultValue: String(EQS_ELEVATION_ADVANTAGE.penalizeLowGround),
         description: 'When true, lower positions receive negative scores.',
       },
     ],

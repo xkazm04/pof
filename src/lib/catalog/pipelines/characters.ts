@@ -11,7 +11,8 @@ import { VISUAL_BRIEF_CRITERIA, visualBriefWritten } from '@/lib/catalog/accepta
 import { tagRequiredFields } from '@/lib/catalog/acceptance/requiredFields';
 import type { Checker } from '@/lib/catalog/acceptance/types';
 
-const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
+import { entitySlug } from '@/lib/catalog/entitySlug';
+const slug = entitySlug;
 /** Entity-id stem per this catalog's id convention: 'char-captain-vael' → 'captain-vael'. */
 const idStem = (id: string) => id.replace(/^char-/, '');
 

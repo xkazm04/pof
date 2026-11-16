@@ -1,0 +1,60 @@
+{
+ "schema": "conform-run/1",
+ "worker": "7d4142d1-cdd9-48bf-a76f-9dd20d344ca1",
+ "subject": "ci-execution-trust",
+ "evaluatedAt": "2026-10-28T22:02:54.144896+00:00",
+ "provider": "claude",
+ "model": "claude-opus-5-5",
+ "pairs": [
+  {
+   "context": "roadmap-workflow-management",
+   "subject": "ci-execution-trust",
+   "bundle": "software-engineering",
+   "state": "not-applicable",
+   "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:43 The context's only 'execution' is a client-side call into the in-app Zustand taskDAGStore, which builds a template DAG of local CLI tasks. A case-insensitive grep of both context directories for runner|secret|token|signature|signed|.github|ci.yml|credential|webhook|pull request|contributor|fork|pipeline|gate|evidence found nothing. So there is no orchestrator-to-runner boundary, no build definition, no credential and no contribution lane for the CI-trust techniques to govern.",
+   "techniques": [
+    {
+     "technique": "control-plane-execution-boundary",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:10 Workflows come from a local browser store, not from a delivery orchestrator instructing remote machines."
+    },
+    {
+     "technique": "secret-materialization-discipline",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/constants.ts:32 The view's only inputs are module IDs and template IDs. No credential is read or passed."
+    },
+    {
+     "technique": "evidence-pipeline-provenance",
+     "verdict": "not-applicable",
+     "evidence": "src/components/modules/evaluator/WorkflowOrchestratorView/index.tsx:56 History is a display of the store's own local runs, not pipeline artefacts that a gate reads as evidence for a change."
+    }
+   ],
+   "absenceTerms": [
+    "runner",
+    "secret",
+    "credential",
+    "signature",
+    "webhook"
+   ]
+  }
+ ],
+ "declined": [],
+ "consults": [
+  {
+   "ts": "2026-10-28T22:02:54.144896+00:00",
+   "bundle": "software-engineering",
+   "subjects": [
+    "ci-execution-trust"
+   ],
+   "techniques": [
+    "control-plane-execution-boundary",
+    "evidence-pipeline-provenance",
+    "secret-materialization-discipline"
+   ],
+   "deviations": 0,
+   "context": "roadmap-workflow-management",
+   "via": "curator-multi:claude",
+   "model": "claude-opus-5-5"
+  }
+ ]
+}

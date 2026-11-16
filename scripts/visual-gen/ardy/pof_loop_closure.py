@@ -30,6 +30,15 @@ def root_relative(joints: np.ndarray, root: np.ndarray) -> np.ndarray:
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # a piped Windows stdout is cp1252
+    try:
+        return measure()
+    except Exception as e:  # noqa: BLE001 - the parser takes the cause from this marker
+        print(f"POF_LOOP_ERROR=could not measure: {e!r}")
+        return 2
+
+
+def measure() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("npz")
     ap.add_argument("--joints-key", default="posed_joints")
@@ -78,11 +87,16 @@ def main() -> int:
 
     root_travel_mm = float(np.linalg.norm(root[-1] - root[0])) * MM
 
+    # Motion amplitude: the furthest any joint strays from its frame-0 pose. A frozen export is 0
+    # on every seam axis above, so without this a motionless clip reads as a perfect loop.
+    motion_range_mm = float(np.max(np.linalg.norm(rel - rel[0], axis=-1))) * MM
+
     print(f"POF_LOOP_POSE_GAP_MM={pose_gap_mm:.4f}")
     print(f"POF_LOOP_WORST_JOINT_MM={worst_joint_mm:.4f}")
     print(f"POF_LOOP_VEL_JUMP_MM={vel_jump_mm:.4f}")
     print(f"POF_LOOP_ROOT_TRAVEL_MM={root_travel_mm:.4f}")
     print(f"POF_LOOP_FRAMES={frames}")
+    print(f"POF_LOOP_MOTION_RANGE_MM={motion_range_mm:.4f}")
     return 0
 
 
