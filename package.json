@@ -30,7 +30,7 @@
     "kpi:sweep": "node --no-warnings scripts/kpi-scan-sweep-debt.mjs"
   },
   "dependencies": {
-    "@google/genai": "^2.31.0",
+    "@google/genai": "^3.0.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "better-sqlite3": "^13.0.3",
