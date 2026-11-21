@@ -23,7 +23,9 @@ vi.mock('child_process', async (importOriginal) => {
   return {
     ...actual,
     exec: (_cmd: string, _opts: unknown, cb: (err: null, stdout: string, stderr: string) => void) => {
-      cb(null, '', '');
+      // child_process.exec only ever calls back asynchronously; settle on a later tick so the
+      // verifier's callback never runs before its own `fallbackKill` timer is initialized.
+      setImmediate(() => cb(null, '', ''));
       return { kill: () => undefined };
     },
   };
